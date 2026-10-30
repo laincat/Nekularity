@@ -33,6 +33,48 @@ Rules:
 - When Core asks for human verification, `WebViewVerifier` opens the page in a `WKWebView`, waits until the challenge markers are gone and `cf_clearance` is set, and returns the WebView's User-Agent to Core.
 - `.venera` backups are not parsed here. Core's `mobile.Core.ReadBackup(path, tempDir, knownKeysJSON)` and `PlanBackup(path, tempDir, knownKeysJSON, selectionJSON)` already unwind the archive, its sqlite tables and the type hashes, returning JSON with `history`, `folders`, `imageFavorites`, `searchHistory`, `sources` and `settingKeys`; the client only has to land that JSON in `ShelfStore` and `SearchHistoryStore` (both already have `merge`) and install the listed `sources` through the normal path. Both clients then share one parser instead of each growing its own zip/sqlite logic.
 
+## Layers of the Magpie plugin system
+
+Magpie is the iOS-only AI provider layer. It is entirely separate from the comic-source
+`plugin.Registry` and shares no registry with it:
+
+```
+Core (package magpieplugin)  reads a package, validates paths and sizes, starts one
+│                            JavaScript runtime per account, implements fetch/Headers/
+│                            URL/AbortSignal/ReadableStream, and decodes SSE into
+│                            EventText/EventReasoning/EventEnd/EventError.
+│                            Core opens no connections: the client injects them.
+NekularityKit/Magpie/
+├─ CoreMagpie                a thin wrapper over the gomobile MobileMagpie
+├─ MagpieAccounts            one runner and one cached declaration per provider
+├─ MagpieRunner              install, sign-in, usage, models, chat, check-in, options
+├─ MagpieAuthStore(Keychain) credentials stored as the exact text given, not re-encoded
+├─ MagpiePackageStore        one package per provider, replaced on reinstall, atomic index
+├─ MagpieSignIn              device-code/callback polling, cancel, timeout
+├─ MagpieChat                events as AsyncThrowingStream; stopping cancels the request
+└─ MagpieOptionStore         the switches a package declares, keyed provider|option
+App/                         the "AI providers" tab, sign-in, usage and options screens
+```
+
+Rules:
+
+- **Credentials stay on the client.** Core receives strings from `client.auth.get/set`; it
+  persists nothing itself and never carries a value across provider ids. The client writes
+  to the Keychain per provider.
+- **A package's requests go through its own loader/fetch.** Core does not reimplement a
+  vendor's refresh or sign-in, or every new provider would mean changing Core.
+- **Chat is pulled, not pushed.** gomobile cannot call back from Go into Swift, so `chatNext`
+  polls; closing a runner cancels the conversations it started rather than writing into a
+  channel nobody reads.
+- **Not reported is not zero.** A missing usage share is `null` and draws no 0% bar; a vendor
+  refusing a request is an error, not an empty list.
+- **No retry after output starts.** Once text has been sent the endpoint is locked, so a
+  fallback cannot duplicate a paragraph; failures before any output may move on.
+- **Unsupported dependencies fail loudly.** Node built-ins, npm dependencies and CLI calls
+  report `ErrUnsupportedModule` or a capability error instead of a hollow stub.
+- **Timeouts.** Sign-in and replies are both bounded, because a package that only ever says
+  "nothing yet" must not leave the screen spinning.
+
 ## Dependencies
 
 - `VeneraCatCore.xcframework`: built by `scripts/fetch-core.sh`, which runs `scripts/mac-verify.sh` in the Core repository, and placed in `Vendor/`; it is not committed.
