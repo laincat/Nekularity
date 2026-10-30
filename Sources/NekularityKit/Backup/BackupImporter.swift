@@ -100,7 +100,10 @@ public struct BackupImporter {
     ///
     /// Split out from `apply` so the mapping itself can be tested: it is the
     /// part where a wrong key would silently restore nothing.
-    public static func keptPages(from plan: BackupPlan) -> (pages: [KeptPage], picturesSkipped: Int, pagesSkipped: Int) {
+    /// `nonisolated` because it reads the plan and returns values: a test can
+    /// call it without hopping to the main actor, and so can a background
+    /// import.
+    public nonisolated static func keptPages(from plan: BackupPlan) -> (pages: [KeptPage], picturesSkipped: Int, pagesSkipped: Int) {
         var pages: [KeptPage] = []
         var picturesSkipped = 0
         var pagesSkipped = 0

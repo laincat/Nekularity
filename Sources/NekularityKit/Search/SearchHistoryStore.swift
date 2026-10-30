@@ -46,13 +46,16 @@ public final class SearchHistoryStore {
     @discardableResult
     public func merge(_ imported: [String]) -> Int {
         var added = 0
-        for query in imported.reversed() {
+        // Appended, not inserted at the front: the newest-first list keeps what
+        // this device searched first, and the imported queries follow in their
+        // own order instead of arriving reversed.
+        for query in imported {
             let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { continue }
             if queries.contains(where: { $0.compare(trimmed, options: .caseInsensitive) == .orderedSame }) {
                 continue
             }
-            queries.insert(trimmed, at: 0)
+            queries.append(trimmed)
             added += 1
         }
         if queries.count > Self.limit {
