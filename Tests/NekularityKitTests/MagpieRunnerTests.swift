@@ -260,6 +260,19 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(reason == "user cancelled")
     }
 
+    /// What the user types in the key form has to reach the package: the answers
+    /// travel through the sign-in session, and a mistyped field would otherwise
+    /// look like a rejected key.
+    @Test func theFormsAnswersReachThePackage() throws {
+        let core = StubMagpieCore()
+        let signIn = MagpieSignIn(core: core, store: MemoryMagpieAuthStore(), provider: "p",
+                                  inputs: ["token": "sk-typed", "accountId": "abc"])
+        _ = try signIn.start()
+        // Sorted by the encoder, so the expectation is order-independent.
+        #expect(core.authorizedInputs.contains("sk-typed"))
+        #expect(core.authorizedInputs.contains("accountId"))
+    }
+
     /// A key-based method declares the fields to ask for. Without them the screen
     /// has nowhere to type the key, and a working package looks broken.
     @Test func aKeyMethodDeclaresWhatToAskFor() throws {
