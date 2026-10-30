@@ -10,6 +10,8 @@ The main path is **add a comic source → search or browse → open a comic → 
 
 One real verification on macOS 27 / Xcode 27 / Swift 6.4: `swift build`, `swift test` (**119 tests / 27 suites**), Kit and App Swift 6 type checks and the iOS module all pass with 0 errors and 0 warnings; the Core surface check is 18/18; `swift test --filter Magpie` runs 61 tests. What was **not** run: an `xcodebuild` archive and signing, and there is no iOS Simulator runtime. See [docs/STATUS.en.md](docs/STATUS.en.md), which also records what that verification does not cover. Every change still goes through `scripts/check-swift.sh`, which parses all Swift files.
 
+Using it: on the "AI providers" tab tap "Install package" and pick either an extracted folder or the `.zip`/`.tar.gz` you downloaded. The plugin declares how it signs in — a device code means opening the page it names and typing the code, an API key means filling in a form in the app (password fields are not shown in clear). After signing in you can read usage, fetch the model list, and pick a model on the chat screen. The stop button cancels the **request inside Core**, not just the view.
+
 **Which AI provider packages install, up front:** of the community repository's 36 packages, the ones that actually run today are the original Copilot and `cloudflare-workers-ai`; most of the rest need Node built-ins and are refused with the reason named.
 
 ## Layout
