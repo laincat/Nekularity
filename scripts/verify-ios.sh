@@ -38,10 +38,23 @@ fi
 
 # 0. The framework in Vendor/ must expose what this client calls: a stale one
 #    fails later, inside a Swift compile, with an error that reads like a typo.
-if sh scripts/check-core-surface.sh >"$out/core-surface.log" 2>&1; then
-	pass "sh scripts/check-core-surface.sh" "$out/core-surface.log"
+#    Without Vendor/ there is still a Core to check: the header comes from gobind,
+#    which runs wherever Go does, so the same selector list is checked against a
+#    freshly generated header instead of a framework that is not there yet.
+if [ -d Vendor/VeneraCatCore.xcframework ]; then
+	if sh scripts/check-core-surface.sh >"$out/core-surface.log" 2>&1; then
+		pass "sh scripts/check-core-surface.sh" "$out/core-surface.log"
+	else
+		fail "sh scripts/check-core-surface.sh" "$out/core-surface.log"
+	fi
+elif command -v go >/dev/null 2>&1; then
+	if sh scripts/check-surface-offline.sh >"$out/core-surface.log" 2>&1; then
+		pass "sh scripts/check-surface-offline.sh (no Vendor/)" "$out/core-surface.log"
+	else
+		fail "sh scripts/check-surface-offline.sh (no Vendor/)" "$out/core-surface.log"
+	fi
 else
-	fail "sh scripts/check-core-surface.sh" "$out/core-surface.log"
+	say "SKIP  surface check: no Vendor/VeneraCatCore.xcframework and no go"
 fi
 
 # 1. Documentation pairs and root cleanliness.
