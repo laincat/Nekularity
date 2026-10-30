@@ -642,6 +642,22 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(message == "quota exhausted")
     }
 
+    /// Core ends every conversation with an end event, but a package whose
+    /// request never settles would leave the reader waiting for one that cannot
+    /// arrive; the turn is bounded.
+    @Test func aReplyThatNeverEndsTimesOut() async throws {
+        let core = StubMagpieCore()
+        core.chatEvents = []
+        var threw = false
+        do {
+            for try await _ in chat(core).send(model: "m", messages: [], timeout: .milliseconds(30)) {}
+        } catch {
+            threw = true
+        }
+        #expect(threw)
+        #expect(core.cancelledChats == [11])
+    }
+
     @Test func aFailedStartThrows() async throws {
         let core = StubMagpieCore()
         core.chatStartError = MagpieError("没有登录")

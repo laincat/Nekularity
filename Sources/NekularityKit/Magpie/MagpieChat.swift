@@ -39,14 +39,17 @@ public final class MagpieChat: @unchecked Sendable {
     /// Sends one turn and yields its events. Cancelling the reading task (or the
     /// surrounding view disappearing) cancels the request in Core, so a closed
     /// screen stops costing a vendor request.
+    /// `timeout` bounds the whole turn: a package whose request never settles
+    /// would otherwise leave the reader waiting for an end that cannot come.
     public func send(
         model: String,
         messages: [MagpieMessage],
         system: String = "",
-        maxTokens: Int = 0
+        maxTokens: Int = 0,
+        timeout: Duration = .seconds(600)
     ) -> AsyncThrowingStream<MagpieChatEvent, Error> {
         AsyncThrowingStream { continuation in
-            let task = Task { [core, pollInterval] in
+            let task = Task { [core, pollInterval, timeout] in
                 var handle: Int64?
                 defer {
                     // Whoever stopped reading — a cancelled task or a view that
@@ -61,8 +64,12 @@ public final class MagpieChat: @unchecked Sendable {
                         throw MagpieError("这一轮对话没有开始:\(started)")
                     }
                     handle = opened
+                    let deadline = ContinuousClock.now.advanced(by: timeout)
                     while true {
                         if Task.isCancelled { continuation.finish(); return }
+                        if ContinuousClock.now > deadline {
+                            throw MagpieError("回复超时,请重新发送")
+                        }
                         let answer = try core.chatNext(handle: opened)
                         if answer.isEmpty {
                             try? await Task.sleep(for: pollInterval)
