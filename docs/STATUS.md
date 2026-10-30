@@ -79,7 +79,7 @@ Core 侧已跑通:包快照与模块定位、`fetch`/`Headers`/`URL`/`ReadableSt
 
 静态计数与运行数一致:`@Test` 119、`@Suite` 27、`.swift` 56(28 Kit + 14 App + 11 Tests + `Package.swift`)。
 
-**在那之后新加的代码也已验证**:2026-10-31 在 Mac mini(macOS 27.0.1 / Xcode 27.1 / Swift 6.4)上跑同一套五项检查,全部 exit=0:`swift build` 0 error 0 warning、`swift test` **129 tests / 27 suites passed**、Kit `-typecheck` 与 App `-typecheck` 0 error 0 warning、iOS `-emit-module` 0 error;`check-core-surface` 18/18;`swift test --filter Magpie` **71 tests / 16 suites**;`check-tree` 输出 `swift=56 tests=129 suites=27 shape=8457d8e43ce3d36849577f4cdcc07a92079b4015`,与本仓库同一 shape。**仍未验证的**:`xcodebuild` 归档与签名、iOS 模拟器运行时(机器上没有)、真机与真实供应商账号。这段是对 Mac 上那棵树的结论;两边源码是否逐文件相同,由 md5 比对确认,不靠 shape 推断。
+**在那之后新加的代码也已验证**:2026-10-31 在 Mac mini(macOS 27.0.1 / Xcode 27.1 / Swift 6.4)上跑同一套五项检查,全部 exit=0:`swift build` 0 error 0 warning、`swift test` **129 tests / 27 suites passed**、Kit `-typecheck` 与 App `-typecheck` 0 error 0 warning、iOS `-emit-module` 0 error;`check-core-surface` 18/18;`swift test --filter Magpie` **71 tests / 16 suites**;`check-tree` 输出 `swift=56 tests=129 suites=27 shape=8457d8e43ce3d36849577f4cdcc07a92079b4015`,与本仓库同一 shape。**仍未验证的**:`xcodebuild` 归档与签名、iOS 模拟器运行时(机器上没有)、真机与真实供应商账号。这段是对 Mac 上那棵树的结论。两边源码是否逐文件相同,由 md5 比对确认,不靠 shape 推断 —— 实际做过:13 个 Magpie 源文件加测试文件逐一比对,最终 `MagpieAccounts.swift` `3ec891ff…`、`MagpiePackageStore.swift` `c0530a35…`、`MagpieRunnerTests.swift` `489dcf21…` 三项完全一致,其余 11 个文件本来就相同。
 
 这一轮之前是「编译绿、测试红」:同一棵树编译零错误,`swift test` 却抓出 4 个断言失败——`modalities: null` 解不出来、安装没校验插件声明的 provider(会把登录写进别的账号)、登录循环里「空/null」一处当作等待一处当作失败(根因是 `JSONSerialization` 默认不接受顶层 `null`)。修完又补了登录与对话两个超时:能被无限等待的地方,测试和用户都会撞上。
 

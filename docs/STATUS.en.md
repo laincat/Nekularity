@@ -99,7 +99,10 @@ Mac mini (macOS 27.0.1 / Xcode 27.1 / Swift 6.4) and every one exited 0: `swift 
 and `check-tree` printed `swift=56 tests=129 suites=27 shape=8457d8e43ce3d36849577f4cdcc07a92079b4015`,
 the same shape this repository prints. **Still unverified**: an `xcodebuild` archive and signing, an iOS
 Simulator runtime (absent on that machine), a real device and a real vendor account. The paragraph
-describes the tree on the Mac; whether the two trees match file for file is settled by md5, not by shape.
+describes the tree on the Mac; whether the two trees match file for file is settled by md5, not by shape — and
+that was done: thirteen Magpie sources plus the test file were compared one by one, ending with
+`MagpieAccounts.swift` `3ec891ff…`, `MagpiePackageStore.swift` `c0530a35…` and `MagpieRunnerTests.swift`
+`489dcf21…` all identical, with the other eleven already the same.
 
 The round before this one was compile-green and test-red: the same tree had zero compile
 errors while `swift test` found four assertion failures — a `null` modalities array that would
