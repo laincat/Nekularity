@@ -6,10 +6,45 @@ public struct CoreError: Error, LocalizedError, Sendable {
     public var message: String
     public init(_ message: String) { self.message = message }
     public init(_ error: NSError) { message = error.localizedDescription }
-    public var errorDescription: String? { message }
+    public var errorDescription: String? { CoreError.readable(message) }
 
     /// The call was cancelled (task cancellation or Core.Cancel).
     public var isCancelled: Bool { message.contains("context canceled") }
+
+    /// Core speaks English and its text is what a developer needs; the
+    /// interface is Chinese. Well-known failures get a Chinese sentence, and
+    /// anything else keeps Core's own words after a Chinese prefix, so a
+    /// report never shows a bare English sentence but still carries the
+    /// original for a bug report.
+    public static func readable(_ message: String) -> String {
+        let lower = message.lowercased()
+        func has(_ needle: String) -> Bool { lower.contains(needle) }
+        if has("context canceled") || has("cancelled") {
+            return "操作已取消"
+        }
+        if has("no such source") || has("source not found") || has("unknown source") {
+            return "找不到这个漫画源,可能已被删除"
+        }
+        if has("not installed") {
+            return "漫画源还未安装"
+        }
+        if has("timeout") || has("deadline exceeded") {
+            return "网络超时,请稍后重试"
+        }
+        if has("no such comic") || has("comic not found") {
+            return "源里找不到这部漫画"
+        }
+        if has("challenge") || has("cloudflare") || has("forbidden") || has("403") {
+            return "源要求人机验证或拒绝了请求"
+        }
+        if has("permission") || has("not allowed") {
+            return "没有权限执行这个操作"
+        }
+        if message.isEmpty {
+            return "操作失败,源没有给出原因"
+        }
+        return "源返回错误:" + message
+    }
 }
 
 /// Async wrapper around the gomobile `MobileCore`.

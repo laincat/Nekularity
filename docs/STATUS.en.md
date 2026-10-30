@@ -23,6 +23,7 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 
 | Part | Contents |
 |---|---|
+| Error text | Core reports in English and the interface is Chinese: `CoreError.readable` turns the usual failures (cancel, missing source, not installed, timeout, human verification, no permission) into Chinese sentences, and prefixes anything else with "源返回错误:" while keeping Core's original words, so a reader never sees a bare English sentence and a bug report still has the detail |
 | Core wrapper | `CoreClient`: async/await API that passes task cancellation to Core; `CoreHost`: implements every host interface Core needs; search calls `search.load` with the defaults Core reports for each filter group |
 | JSON | A small `JSONValue` parser and `OrderedJSONDecoder` that keep key order and number text |
 | Networking | `URLSessionTransport`: cookies isolated per source, including cookies set on redirect hops |
