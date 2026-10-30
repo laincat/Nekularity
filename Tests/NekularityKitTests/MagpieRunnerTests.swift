@@ -247,3 +247,65 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).auth(provider: "p") == nil)
     }
 }
+
+@Suite struct MagpiePackageStoreTests {
+    private func store() throws -> (MagpiePackageStore, URL) {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-packages-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return (MagpiePackageStore(directory: dir), dir)
+    }
+
+    private let files: [String: Data] = [
+        "package.json": Data(#"{"name":"@magpie-community/copilot","version":"0.2.1","main":"./index.mjs"}"#.utf8),
+        "index.mjs": Data("export async function CopilotAuthPlugin() { return {} }".utf8),
+        "endpoints.mjs": Data("export const url = 1".utf8),
+    ]
+
+    @Test func installKeepsTheFilesAndDescribesThem() throws {
+        let (store, _) = try store()
+        let package = try store.install(provider: "github-copilot", files: files)
+        #expect(package.name == "@magpie-community/copilot")
+        #expect(package.version == "0.2.1")
+        #expect(try store.list().count == 1)
+
+        let back = try #require(try store.files(provider: "github-copilot"))
+        #expect(back == files)
+    }
+
+    /// A package without a manifest is not a package; storing it would only move
+    /// the failure to load time, where the reason is less obvious.
+    @Test func aPackageWithoutAManifestIsRefused() throws {
+        let (store, _) = try store()
+        #expect(throws: MagpieError.self) {
+            try store.install(provider: "x", files: ["index.mjs": Data("export default 1".utf8)])
+        }
+    }
+
+    @Test func installingAgainReplacesTheOldCopy() throws {
+        let (store, _) = try store()
+        _ = try store.install(provider: "p", files: files)
+        var newer = files
+        newer["package.json"] = Data(#"{"name":"p","version":"0.3.0"}"#.utf8)
+        let package = try store.install(provider: "p", files: newer)
+        #expect(package.version == "0.3.0")
+        #expect(try store.list().count == 1)
+        #expect(try store.files(provider: "p")?["package.json"] == newer["package.json"])
+    }
+
+    @Test func removeForgetsIt() throws {
+        let (store, _) = try store()
+        _ = try store.install(provider: "p", files: files)
+        try store.remove(provider: "p")
+        #expect(try store.list().isEmpty)
+        #expect(try store.files(provider: "p") == nil)
+    }
+
+    /// The list survives a new store instance: it is a file, not memory.
+    @Test func theListIsOnDisk() throws {
+        let (store, dir) = try store()
+        _ = try store.install(provider: "p", files: files)
+        let reopened = MagpiePackageStore(directory: dir)
+        #expect(try reopened.list().map(\.provider) == ["p"])
+    }
+}
