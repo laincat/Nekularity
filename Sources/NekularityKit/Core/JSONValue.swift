@@ -116,11 +116,6 @@ public struct OrderedObject: Sendable, Hashable, Decodable {
 
     public init(_ entries: [(String, JSONValue)] = []) { self.entries = entries }
 
-    public var array: [JSONValue]? {
-        if case .array(let a) = self { return a }
-        return nil
-    }
-
     public subscript(key: String) -> JSONValue? {
         entries.first { $0.0 == key }?.1
     }
