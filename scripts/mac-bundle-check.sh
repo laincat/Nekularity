@@ -102,6 +102,18 @@ else
 	exit 1
 fi
 
+# 1b. The Kit's unit tests run against the real xcframework, so a wrong Core
+#     binding shows up here rather than on a device. Run in one script with the
+#     other steps because each approval on this machine costs a round trip.
+log=$work/kit-test.log
+if (cd "$work" && swift test >"$log" 2>&1); then
+	pass "swift test (Kit, macOS): $(grep -c "Test run with" "$log" 2>/dev/null || true) run, $(grep -c ' error: ' "$log" 2>/dev/null || true) errors"
+else
+	say "FAIL  swift test (Kit, macOS), log $log"
+	grep ' error: ' "$log" | head -20 || tail -40 "$log"
+	exit 1
+fi
+
 # 2. The Kit emits an iOS module: this is the shape the App compiles against.
 #    -F must point at the xcframework's slice directory, not at the
 #    xcframework itself: a module built for iOS is not found in Vendor/ alone.
