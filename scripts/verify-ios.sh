@@ -31,9 +31,15 @@ if [ $# -ge 1 ]; then
 	cp -R "$1" Vendor/
 	say "Vendor/VeneraCatCore.xcframework <= $1"
 fi
-if [ ! -d Vendor/VeneraCatCore.xcframework ]; then
-	say "Vendor/VeneraCatCore.xcframework is missing; pass its path or run scripts/fetch-core.sh"
-	exit 2
+# Without a framework the checks that do not need one still run: the surface can be
+# read from a freshly generated header, and the parser and the documentation need
+# nothing. Step 3 is where a framework becomes necessary, and that is where this
+# stops if it is missing.
+have_framework=0
+if [ -d Vendor/VeneraCatCore.xcframework ]; then
+	have_framework=1
+else
+	say "note: no Vendor/VeneraCatCore.xcframework; the steps that link Core will stop"
 fi
 
 # 0. The framework in Vendor/ must expose what this client calls: a stale one
@@ -72,6 +78,11 @@ else
 fi
 
 # 3. The Kit's unit tests. They exercise Core through the real xcframework.
+if [ "$have_framework" -eq 0 ]; then
+	say "FAIL  swift build  (no xcframework)"
+	say "      run scripts/fetch-core.sh, or pass the framework as the first argument"
+	exit 1
+fi
 if swift test >"$out/swift-test.log" 2>&1; then
 	pass "swift test" "$out/swift-test.log"
 else
