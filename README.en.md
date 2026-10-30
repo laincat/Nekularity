@@ -41,6 +41,8 @@ open Nekularity.xcodeproj
 
 `scripts/check-swift.sh` only parses, so any machine can run it: `python3 scripts/check-swift.py` (no Xcode needed; it catches unclosed strings and brackets).
 
+The Core surface can be checked here too: `scripts/check-surface-offline.sh` generates Core's ObjC header with gobind and runs the same selector list the Mac uses, in about ten seconds. It reads the **header**, not memory — a selector typed wrongly in the list used to surface only after a transfer.
+
 The client repository is not public, so Swift sources still have to travel to a second Mac; Core does not — it is public on GitHub, and `git clone` plus `scripts/mac-verify.sh` rebuilds it there. For the Swift sources, base64 segments with a checksum per segment remain more reliable than resending the archive (these tools stay for machines without network):
 
 ```sh

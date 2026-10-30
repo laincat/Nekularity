@@ -41,6 +41,8 @@ open Nekularity.xcodeproj
 
 `scripts/check-swift.sh` 只解析语法,任何机器都能跑:`python3 scripts/check-swift.py`(不需要 Xcode,能抓未闭合的字符串、括号这类错误)。
 
+接口面也能在这里查:`scripts/check-surface-offline.sh` 用 gobind 生成 Core 的 ObjC 头,再跑与 Mac 同一份选择器清单,约十秒。它查的是**头文件**,不是记忆 —— 清单里写错一个选择器,以前要等一趟传输之后才会暴露。
+
 客户端仓库不公开,所以要在另一台 Mac 上验证时,Swift 源码仍需搬过去;Core 不必 —— 它公开在 GitHub 上,直接 `git clone` 后跑 `scripts/mac-verify.sh` 即可。搬 Swift 源码时,分段传输并逐段核对 md5 比整包重传可靠(下面这套工具仍保留,用于没有网络的机器):
 
 ```sh
