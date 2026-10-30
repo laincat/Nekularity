@@ -47,7 +47,8 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 
 ## Next
 
-1. Finish the App-level check on a Mac — the last run reported one error (fixed), and the fixed tree has not been through a compiler yet.
-2. Launch the app once a simulator runtime is available, and run the main path with a real source.
-3. Backup import is wired; the next step is running it once on a simulator with a real `.venera` and checking the counts.
-4. Phase two: video sources and playback.
+1. Close out the App-level check: this round fixes the optional unwrap in `ReaderView` (a single-chapter comic has no `chapterID`), then reruns `swiftc -typecheck -swift-version 6`; four checks green finishes the compile stage.
+2. Launch the app once a simulator runtime is available, and run the main path with a real source (install, search, details, read, shelf).
+3. Backup import is wired and was checked against the real `.venera` field shapes; the next step is running it once on a simulator and checking the counts.
+4. Two items wait on product decisions: video sources and playback; mapping an old global cookie jar onto per-source partitions.
+5. Two items need system-level approval: installing an iOS simulator runtime, and installing XcodeGen on the Mac to produce an `.xcodeproj`.
