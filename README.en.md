@@ -45,6 +45,8 @@ It checks every segment's md5, joins and decodes, checks the archive's md5 and b
 
 `scripts/make-bundle.sh OUTDIR [CHUNK]` produces the segmented bundle: every `.swift` under `Package.swift`, `Sources/`, `App/` and `Tests/` is added in sorted path order with mtime and ownership zeroed, packed into a ~47 KB archive, then split into base64 segments of `CHUNK` characters (default 1650), printing the archive md5 plus each segment's md5 and tail. The same tree always yields byte-identical output, so the checksums can be compared out of band.
 
+A change to a few files does not need the whole bundle again: `scripts/make-delta.sh SINCE OUTDIR [CHUNK]` takes the `.swift` files that differ from a revision, packs them the same way into `delta.tar.gz`, and extracting it over the old tree updates those files in place. Segments default to 1548 characters, and the archive md5 plus each segment md5 are printed. Checked byte for byte against the hand-written packing command.
+
 ## Licence
 
 GPL-3.0-or-later; see [LICENSE](LICENSE).
