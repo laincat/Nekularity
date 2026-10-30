@@ -1,5 +1,5 @@
-import SwiftUI
 import NekularityKit
+import SwiftUI
 
 /// Vertical scrolling reader for one chapter, with previous/next chapter.
 struct ReaderView: View {
@@ -10,6 +10,7 @@ struct ReaderView: View {
     @State private var error: String?
     @State private var loading = true
     @State private var chromeHidden = false
+    @State private var lastPage = 0
 
     init(route: ReaderRoute) { _route = State(initialValue: route) }
 
@@ -23,11 +24,22 @@ struct ReaderView: View {
                             ReaderPage(key: .init(source: route.source, url: url, comicID: route.comicID,
                                                   chapterID: route.chapterID, isThumbnail: false),
                                        width: geo.size.width, number: i + 1)
+                                .background(GeometryReader { page in
+                                    Color.clear.preference(
+                                        key: PageOffsetKey.self,
+                                        value: [i: page.frame(in: .named("reader")).minY])
+                                })
                         }
                         if !images.isEmpty { chapterFooter }
                     }
                 }
                 .onChange(of: route.index) { proxy.scrollTo("top") }
+                .coordinateSpace(name: "reader")
+                .onPreferenceChange(PageOffsetKey.self) { offsets in
+                    // The callback may run off the main actor; the shelf is not
+                    // safe to touch there.
+                    Task { @MainActor in recordProgress(offsets) }
+                }
             }
         }
         .overlay {
@@ -63,10 +75,33 @@ struct ReaderView: View {
         .padding(24)
     }
 
+    /// The page at the top of the screen is the page the shelf remembers.
+    private func recordProgress(_ offsets: [Int: CGFloat]) {
+        guard !images.isEmpty, !offsets.isEmpty else { return }
+        let top = offsets.filter { $0.value <= 1 }.max { $0.value < $1.value }?.key
+            ?? offsets.min { $0.value < $1.value }?.key ?? 0
+        let page = top + 1
+        guard page != lastPage else { return }
+        lastPage = page
+        let percent = min(100, max(0, Int((Double(page) / Double(images.count) * 100).rounded())))
+        let comic = ShelfComic(source: route.source, id: route.comicID,
+                               title: route.comicTitle.isEmpty ? route.title : route.comicTitle,
+                               author: route.author, cover: route.cover)
+        // Scrolling is not opening a new chapter, so an existing entry is
+        // moved along instead of being written again from scratch.
+        if !shelf.updateProgress(source: route.source, id: route.comicID,
+                                 chapter: route.title, chapterIndex: route.index,
+                                 page: page, percent: percent) {
+            shelf.record(ShelfHistory(comic: comic, chapter: route.title,
+                                     chapterIndex: route.index, page: page, percent: percent))
+        }
+    }
+
     private func load() async {
         loading = true
         error = nil
         images = []
+        lastPage = 0
         defer { loading = false }
         do {
             images = try await library.core.chapterImages(key: route.source, comicID: route.comicID, chapterID: route.chapterID)
@@ -80,6 +115,14 @@ struct ReaderView: View {
         } catch {
             if (error as? CoreError)?.isCancelled != true { self.error = error.localizedDescription }
         }
+    }
+}
+
+/// How far each page sits from the top of the reader.
+private struct PageOffsetKey: PreferenceKey {
+    static let defaultValue: [Int: CGFloat] = [:]
+    static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
+        value.merge(nextValue()) { _, new in new }
     }
 }
 
