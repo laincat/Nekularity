@@ -141,6 +141,38 @@ def test_stubs_missing_methods(root: pathlib.Path, files: list[pathlib.Path]) ->
     return problems
 
 
+def duplicate_test_names(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
+    """Two tests with the same name in one suite.
+
+    Swift reports that as an invalid redeclaration; here it happens when a test is
+    copied into a file that already has it, which reads fine and fails on a Mac.
+    """
+    suite_at = re.compile(r"\s*@Suite\s+(?:struct|class|enum|actor)\s+(\w+)")
+    test_at = re.compile(r"\s*@Test\b.*?func\s+(\w+)\s*\(")
+    problems: list[tuple[str, str]] = []
+    for path in files:
+        if "Tests" not in path.relative_to(root).parts:
+            continue
+        suite = None
+        seen: dict[str, dict[str, int]] = {}
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            match = suite_at.match(line)
+            if match:
+                suite = match.group(1)
+                seen.setdefault(suite, {})
+                continue
+            match = test_at.match(line)
+            if not match or suite is None:
+                continue
+            name = match.group(1)
+            first = seen[suite].get(name)
+            if first is not None:
+                problems.append((str(path.relative_to(root)), f"{suite}.{name}(), first at line {first}"))
+            else:
+                seen[suite][name] = number
+    return problems
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quiet", action="store_true", help="only print the summary")
@@ -178,6 +210,10 @@ def main() -> int:
     for rel, detail in test_stubs_missing_methods(root, files):
         failed += 1
         print(f"{rel}: a MagpieRunner.Core stub lacks {detail}")
+
+    for rel, detail in duplicate_test_names(root, files):
+        failed += 1
+        print(f"{rel}: {detail} is declared twice")
 
     if failed:
         print(f"check-swift: {failed} of {len(files)} files do not parse")
