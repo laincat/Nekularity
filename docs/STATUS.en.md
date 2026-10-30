@@ -91,6 +91,17 @@ waiting in one branch and as failure in another (the root cause being that `JSON
 rejects a bare top-level `null` by default). Two timeouts followed, for sign-in and for a
 reply: anywhere the code can wait for ever, both a test and a user will hit it.
 
+The edges of that verification, stated rather than glossed over:
+
+- Check ⑤ runs `swiftc -typecheck -swift-version 6` over `App/*.swift` against the module
+  emitted from `NekularityKit`, which is the Swift 6 compile check an Xcode project would do.
+  A real `xcodebuild` archive and signing were **not** run (and that machine has no iOS
+  Simulator runtime; installing one is a system-level action that needs approval).
+- The verified tree has no `project.yml`. It is XcodeGen input: it takes part in neither
+  `swift build`/`swift test` nor the type checks above.
+- `manifest.sh` agrees file by file (68 files that compile or are tested), and so does the
+  `check-tree.sh` digest.
+
 The section below is the first round, from 2026-10-30, which was compiled on
 macOS 27 / Xcode 27 / Swift 6.4 and passed all five checks:
 
