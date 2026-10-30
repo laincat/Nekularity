@@ -33,7 +33,10 @@ public enum MagpieSignInOutcome: Sendable {
 public enum MagpieAuthShape {
     public static func stored(from result: String, inputs: [String: String]) throws -> String? {
         guard let data = result.data(using: .utf8), !result.isEmpty else { return nil }
-        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        // A bare `null` is valid JSON but not a top-level object to
+        // JSONSerialization unless fragments are allowed.
+        guard let object = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+                as? [String: Any] else {
             return nil
         }
         guard object["type"] as? String == "success" else { return nil }
@@ -132,8 +135,12 @@ public final class MagpieSignIn: @unchecked Sendable {
                     try store.saveAuthJSON(provider: provider, json: stored)
                     return .success(authJSON: stored)
                 }
+                // An empty or `null` answer means the package has nothing to say
+                // yet, which is the same as "still waiting": turning it into a
+                // failure would end a sign-in the user is still completing.
                 if answer.isEmpty || answer == "null" {
-                    return .failed(reason: "登录未返回结果")
+                    try? await Task.sleep(for: pollInterval)
+                    continue
                 }
                 if answer.contains(#""type":"failed""#) {
                     return .failed(reason: MagpieAuthShape.failure(from: answer))

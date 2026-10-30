@@ -7,12 +7,14 @@ public struct MagpieModel: Codable, Sendable, Hashable, Identifiable {
     /// Token limits, 0 when the vendor did not say.
     public var context: Int64
     public var output: Int64
-    public var modalities: [String]
+    /// Core emits `null` when the vendor said nothing, and a decoder cannot read
+    /// a missing array as an empty one.
+    public var modalities: [String]?
     /// The vendor's owner field, for diagnostics.
     public var vendor: String
 
     public init(id: String, name: String = "", context: Int64 = 0, output: Int64 = 0,
-                modalities: [String] = [], vendor: String = "") {
+                modalities: [String]? = nil, vendor: String = "") {
         self.id = id
         self.name = name.isEmpty ? id : name
         self.context = context

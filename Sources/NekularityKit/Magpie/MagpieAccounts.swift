@@ -93,6 +93,12 @@ public final class MagpieAccounts: @unchecked Sendable {
         // half-installed row behind.
         let runner = try makeRunner(provider, files)
         let spec = try runner.auth(provider: provider)
+        // The package has to be the one it claims to be: storing it under
+        // another id would send its sign-in to the wrong account.
+        guard let declared = spec?.provider, declared == provider else {
+            runner.close()
+            throw MagpieError("这个插件声明的是 \(spec?.provider ?? "（没有声明）"),不是 \(provider)")
+        }
         let package = try packages.install(provider: provider, files: files)
         let previous = lock.withLock { () -> MagpieRunner? in
             let old = runners[provider]

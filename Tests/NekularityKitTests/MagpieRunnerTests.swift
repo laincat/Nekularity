@@ -443,18 +443,22 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
             "package.json": #"{"name":"@magpie-community/copilot","version":"0.2.1","main":"./index.mjs"}"#,
             "index.mjs": "export async function CopilotAuthPlugin() { return {} }",
         ])
-        let row = try accounts.install(provider: "github-copilot", folder: folder)
+        // The id has to be the one the plugin declares ("p" in this stub), or the
+        // install is refused: a package stored under another id would send its
+        // sign-in to the wrong account.
+        let row = try accounts.install(provider: "p", folder: folder)
         #expect(row.name == "@magpie-community/copilot")
         #expect(row.version == "0.2.1")
         #expect(row.hasSignIn)
         #expect(row.methods == ["Sign in"])
-        #expect(try packages.files(provider: "github-copilot") != nil)
+        #expect(try packages.files(provider: "p") != nil)
     }
 
     /// A package Core refuses must not leave a row behind: an installed-looking
     /// entry that never works is worse than a clear failure now.
     @Test func aPackageCoreRefusesIsNotStored() throws {
         let core = StubMagpieCore()
+        // A plugin that declares no provider is refused, and nothing is stored.
         core.authToReturn = ""
         let (accounts, packages, _, _) = try accounts(core)
         let folder = try tempFolder([
