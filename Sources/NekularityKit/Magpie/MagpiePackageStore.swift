@@ -15,7 +15,10 @@ public struct MagpiePackage: Codable, Hashable, Sendable, Identifiable {
     /// Package-relative path to the file's bytes, base64 encoded so one JSON
     /// file can hold a whole package.
     public var files: [String: String]
-    public var installedAt: Date
+    /// When it was installed, as RFC 3339 text: a `Date` would need a custom
+    /// coding strategy, and `DateDecodingStrategy.custom`'s closure capturing a
+    /// formatter is exactly the kind of non-Sendable capture Swift 6 rejects.
+    public var installedAt: String
 
     public var id: String { provider }
 
@@ -44,7 +47,7 @@ public struct MagpiePackage: Codable, Hashable, Sendable, Identifiable {
             encoded[path] = body.base64EncodedString()
         }
         return MagpiePackage(provider: provider, name: name, version: version,
-                             files: encoded, installedAt: Date())
+                             files: encoded, installedAt: Date().ISO8601Format())
     }
 }
 
@@ -52,15 +55,11 @@ public struct MagpiePackage: Codable, Hashable, Sendable, Identifiable {
 public final class MagpiePackageStore: @unchecked Sendable {
     private let directory: URL
     private let lock = NSLock()
-    private let formatter: ISO8601DateFormatter
 
     /// `directory` is the app's Application Support folder, or a temporary one
     /// in tests.
     public init(directory: URL) {
         self.directory = directory
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        self.formatter = formatter
     }
 
     private var indexURL: URL { directory.appendingPathComponent("magpie-packages.json") }
@@ -107,23 +106,13 @@ public final class MagpiePackageStore: @unchecked Sendable {
     private func read() throws -> [MagpiePackage] {
         guard FileManager.default.fileExists(atPath: indexURL.path) else { return [] }
         let data = try Data(contentsOf: indexURL)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let text = try decoder.singleValueContainer().decode(String.self)
-            if let date = self.formatter.date(from: text) { return date }
-            throw MagpieError("包记录里的时间无法解析:\(text)")
-        }
-        return try decoder.decode([MagpiePackage].self, from: data)
+        return try JSONDecoder().decode([MagpiePackage].self, from: data)
     }
 
     private func write(_ packages: [MagpiePackage]) throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .custom { date, encoder in
-            var container = encoder.singleValueContainer()
-            try container.encode(self.formatter.string(from: date))
-        }
         // Written beside and moved into place: a crash mid-write must not leave
         // the list unreadable and take every installed package with it.
         let temporary = indexURL.appendingPathExtension("tmp")
