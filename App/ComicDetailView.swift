@@ -96,15 +96,29 @@ struct ComicDetailView: View {
                 ForEach(groups(d.chapters), id: \.name) { group in
                     Section(group.name ?? "章节") {
                         ForEach(group.items, id: \.offset) { i, chapter in
-                            NavigationLink(chapter.title,
-                                           value: ReaderRoute(source: route.source, comicID: route.comic.id,
-                                                             comicTitle: d.title.isEmpty ? route.comic.title : d.title,
-                                                             author: route.comic.subtitle,
-                                                             cover: route.comic.cover,
-                                                             chapters: d.chapters, index: i))
+                            NavigationLink(value: ReaderRoute(source: route.source, comicID: route.comic.id,
+                                                              comicTitle: d.title.isEmpty ? route.comic.title : d.title,
+                                                              author: route.comic.subtitle,
+                                                              cover: route.comic.cover,
+                                                              chapters: d.chapters, index: i)) {
+                                chapterRow(chapter, index: i)
+                            }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /// One chapter. The one the shelf stopped on says so, so the list and the
+    /// "继续阅读" button agree.
+    private func chapterRow(_ chapter: ComicDetails.Chapter, index: Int) -> some View {
+        let here = shelf.entry(source: route.source, id: route.comic.id)?.chapterIndex == index
+        return HStack {
+            Text(chapter.title)
+            Spacer()
+            if here {
+                Text("读到").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
