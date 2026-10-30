@@ -899,6 +899,8 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         let cold = MagpieAccounts(packages: packages, auth: auth) { _, _ in
             throw MagpieError("listing providers must not need a runtime")
         }
+        // Stored with the files, not written again afterwards.
+        #expect(try packages.list().first?.specJSON != nil)
         let rows = try cold.rows()
         #expect(rows.count == 1)
         #expect(rows.first?.provider == "p")

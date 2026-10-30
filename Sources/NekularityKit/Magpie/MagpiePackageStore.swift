@@ -40,7 +40,8 @@ public struct MagpiePackage: Codable, Hashable, Sendable, Identifiable {
     /// Reads the parts of `package.json` worth showing: a package's own name and
     /// version. Core reads the same file when it loads the package; this is for
     /// the list, before anything runs.
-    public static func describe(files: [String: Data], provider: String) -> MagpiePackage {
+    public static func describe(files: [String: Data], provider: String,
+                               specJSON: String? = nil) -> MagpiePackage {
         var name = provider
         var version = ""
         if let manifest = files["package.json"],
@@ -53,7 +54,8 @@ public struct MagpiePackage: Codable, Hashable, Sendable, Identifiable {
             encoded[path] = body.base64EncodedString()
         }
         return MagpiePackage(provider: provider, name: name, version: version,
-                             files: encoded, installedAt: Date().ISO8601Format())
+                             files: encoded, installedAt: Date().ISO8601Format(),
+                             specJSON: specJSON)
     }
 }
 
@@ -78,14 +80,18 @@ public final class MagpiePackageStore: @unchecked Sendable {
 
     /// Stores a package under its provider id, replacing any earlier copy.
     @discardableResult
-    public func install(provider: String, files: [String: Data]) throws -> MagpiePackage {
+    /// `specJSON`, when given, is stored with the package in the same write:
+    /// writing it afterwards would rewrite the whole file table, which for a
+    /// package of a few megabytes is a second copy of everything.
+    public func install(provider: String, files: [String: Data],
+                        specJSON: String? = nil) throws -> MagpiePackage {
         guard files["package.json"] != nil else {
             throw MagpieError("这个包没有 package.json,不能当插件安装")
         }
         lock.lock()
         defer { lock.unlock() }
         var packages = try read()
-        let package = MagpiePackage.describe(files: files, provider: provider)
+        let package = MagpiePackage.describe(files: files, provider: provider, specJSON: specJSON)
         packages.removeAll { $0.provider == provider }
         packages.append(package)
         packages.sort { $0.provider < $1.provider }

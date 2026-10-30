@@ -82,6 +82,13 @@ public final class MagpieAccounts: @unchecked Sendable {
         }
     }
 
+    /// The declaration as text, for storing beside the package. `nil` when the
+    /// plugin declared nothing, which is a package that cannot be a provider.
+    private func declarationJSON(_ spec: MagpieAuthSpec?) -> String? {
+        guard let spec, let encoded = try? JSONEncoder().encode(spec) else { return nil }
+        return String(decoding: encoded, as: UTF8.self)
+    }
+
     /// One row, from a package and whatever its plugin declared. Kept in one
     /// place so a stored declaration and a freshly evaluated one cannot produce
     /// different lists.
@@ -131,13 +138,11 @@ public final class MagpieAccounts: @unchecked Sendable {
             runner.close()
             throw MagpieError("这个插件声明的是 \(spec?.provider ?? "（没有声明）"),不是 \(provider)")
         }
-        var package = try packages.install(provider: provider, files: files)
         // Remembering what the plugin declared keeps the list from starting a
-        // runtime per provider on every refresh.
-        if let spec, let encoded = try? JSONEncoder().encode(spec) {
-            package.specJSON = String(decoding: encoded, as: UTF8.self)
-            try? packages.replace(package)
-        }
+        // runtime per provider on every refresh. It goes in with the files, in
+        // one write, rather than as a second pass over the whole table.
+        let package = try packages.install(provider: provider, files: files,
+                                           specJSON: declarationJSON(spec))
         let previous = lock.withLock { () -> MagpieRunner? in
             let old = runners[provider]
             runners[provider] = runner
@@ -185,7 +190,8 @@ public final class MagpieAccounts: @unchecked Sendable {
             runner.close()
             throw MagpieError("这个插件没有声明 auth.provider,无法作为供应商使用")
         }
-        let package = try packages.install(provider: provider, files: files)
+        let package = try packages.install(provider: provider, files: files,
+                                           specJSON: declarationJSON(spec))
         let previous = lock.withLock { () -> MagpieRunner? in
             let old = runners[provider]
             runners[provider] = runner
@@ -193,15 +199,7 @@ public final class MagpieAccounts: @unchecked Sendable {
             return old
         }
         previous?.close()
-        return MagpieProviderRow(
-            provider: provider,
-            name: package.name,
-            version: package.version,
-            hasSignIn: (spec?.methods.isEmpty == false),
-            signedIn: (try auth.loadAuthJSON(provider: provider)) != nil,
-            methods: spec?.methods.map(\.label) ?? [],
-            optionCount: spec?.options.count ?? 0
-        )
+        return row(for: package, spec: spec)
     }
 
     public func remove(provider: String) throws {
