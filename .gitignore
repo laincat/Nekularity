@@ -1,0 +1,12 @@
+.build/
+.swiftpm/
+build/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+*.ipa
+*.dSYM/
+.DS_Store
+# Built from VeneraCat Core by scripts/fetch-core.sh; never committed.
+/Vendor/

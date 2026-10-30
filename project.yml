@@ -1,0 +1,41 @@
+# XcodeGen spec. Generate the project with `xcodegen generate` after
+# scripts/fetch-core.sh has placed VeneraCatCore.xcframework in Vendor/.
+name: Nekularity
+options:
+  bundleIdPrefix: com.laincat
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+packages:
+  NekularityKit:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    SUPPORTS_MACCATALYST: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_STRICT_CONCURRENCY: complete
+targets:
+  Nekularity:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    dependencies:
+      - package: NekularityKit
+        product: NekularityKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.laincat.nekularity
+        PRODUCT_NAME: Nekularity
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Nekularity
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO

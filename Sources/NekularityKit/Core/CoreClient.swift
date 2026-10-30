@@ -1,0 +1,298 @@
+import Foundation
+import VeneraCatCore
+
+/// Errors from Core calls.
+public struct CoreError: Error, LocalizedError, Sendable {
+    public var message: String
+    public init(_ message: String) { self.message = message }
+    public init(_ error: NSError) { message = error.localizedDescription }
+    public var errorDescription: String? { message }
+
+    /// The call was cancelled (task cancellation or Core.Cancel).
+    public var isCancelled: Bool { message.contains("context canceled") }
+}
+
+/// Async wrapper around the gomobile `MobileCore`.
+///
+/// gomobile methods block until Core is done, so every call runs on a
+/// dedicated background queue and is cancelled through Core's call IDs when
+/// the Swift task is cancelled. Screens use this type only; they never touch
+/// the generated `Mobile*` types.
+/// `@unchecked Sendable`: the only stored state is the immutable Core
+/// handle, and Go synchronises calls into it.
+public final class CoreClient: @unchecked Sendable {
+    private let core: MobileCore
+    public let host: CoreHost
+
+    /// Concurrent: Core serialises work per source itself, and different
+    /// sources may run in parallel.
+    private let queue = DispatchQueue(label: "nekularity.core", qos: .userInitiated, attributes: .concurrent)
+
+    public init(config: CoreConfig, host: CoreHost) throws {
+        var err: NSError?
+        let json = try String(decoding: JSONEncoder().encode(config), as: UTF8.self)
+        guard let core = MobileNew(json, host, &err) else {
+            throw err.map(CoreError.init) ?? CoreError("Core did not start")
+        }
+        self.core = core
+        self.host = host
+        host.attach(core)
+    }
+
+    deinit { try? core.close() }
+
+    // MARK: Plumbing
+
+    /// Runs a blocking Core call off the caller's thread. `body` receives a
+    /// call ID that cancels the call when the task is cancelled.
+    private func run<T: Sendable>(cancellable: Bool = true, _ body: @escaping @Sendable (MobileCore, Int64) throws -> T) async throws -> T {
+        // MobileCore is an Objective-C class without a Sendable annotation;
+        // Core is safe to call from any thread.
+        nonisolated(unsafe) let core = self.core
+        let id = cancellable ? core.newCall() : 0
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (k: CheckedContinuation<T, Error>) in
+                queue.async {
+                    do { k.resume(returning: try body(core, id)) } catch let e as NSError {
+                        k.resume(throwing: CoreError(e))
+                    }
+                }
+            }
+        } onCancel: {
+            if id != 0 { core.cancel(id) }
+        }
+    }
+
+    /// Converts gomobile's `(result, NSErrorPointer)` shape into `throws`.
+    private static func call(_ body: (NSErrorPointer) -> String) throws -> String {
+        var err: NSError?
+        let out = body(&err)
+        if let err { throw err }
+        return out
+    }
+
+    /// Every Core result is decoded with key order and exact numbers kept.
+    private static func decode<T: Decodable>(_ type: T.Type, _ json: String) throws -> T {
+        try OrderedJSONDecoder.decode(type, from: json)
+    }
+
+    // MARK: Plugins
+
+    /// Installs a comic source script. `origin` and `indexURL` record where
+    /// it came from; `sha256` is checked when given.
+    public func installComicSource(_ body: String, origin: String, indexURL: String = "", sha256: String = "") async throws -> PluginRecord {
+        let out = try await run { core, id in
+            try Self.call { core.install(id, typ: "comic", body: body, origin: origin, indexURL: indexURL, sha256: sha256, error: $0) }
+        }
+        return try Self.decode(PluginRecord.self, out)
+    }
+
+    /// Replaces an installed plugin; the old version stays on failure.
+    public func replace(key: String, type: String, body: String, origin: String, indexURL: String = "", sha256: String = "") async throws -> PluginRecord {
+        let out = try await run { core, id in
+            try Self.call { core.replace(id, key: key, typ: type, body: body, origin: origin, indexURL: indexURL, sha256: sha256, error: $0) }
+        }
+        return try Self.decode(PluginRecord.self, out)
+    }
+
+    /// Re-activates persisted records. Returns key → error for failures.
+    public func restore(recordsJSON: String) async throws -> [String: String] {
+        let out = try await run(cancellable: false) { core, _ in try Self.call { core.restore(recordsJSON, error: $0) } }
+        return try Self.decode([String: String].self, out)
+    }
+
+    public func remove(key: String) async throws {
+        try await run(cancellable: false) { core, _ in try core.remove(key) }
+    }
+
+    public func setEnabled(key: String, _ on: Bool) async throws {
+        try await run(cancellable: false) { core, _ in try core.setEnabled(key, on: on) }
+    }
+
+    /// Installed plugins without script bodies.
+    public func plugins() async throws -> [PluginRecord] {
+        let out = try await run(cancellable: false) { core, _ in try Self.call { core.plugins($0) } }
+        return try Self.decode([PluginRecord].self, out)
+    }
+
+    /// Installed plugins with bodies, as JSON, for persistence.
+    public func recordsJSON() async throws -> String {
+        try await run(cancellable: false) { core, _ in try Self.call { core.records($0) } }
+    }
+
+    /// Parses an index.json and compares it with the installed sources.
+    public func compareComicIndex(_ data: String, indexURL: String) async throws -> ComicIndex {
+        let out = try await run(cancellable: false) { core, _ in try Self.call { core.compareComicIndex(data, indexURL: indexURL, error: $0) } }
+        return try Self.decode(ComicIndex.self, out)
+    }
+
+    // MARK: Comic sources
+
+    /// Calls `ComicSource.<path>(args...)` and returns the raw JSON result.
+    public func callComic(key: String, path: String, args: [JSONValue] = []) async throws -> String {
+        let argsJSON = JSONValue.array(args).jsonText
+        return try await run { core, id in
+            try Self.call { core.callComic(id, key: key, path: path, argsJSON: argsJSON, error: $0) }
+        }
+    }
+
+    public func hasComic(key: String, path: String) async -> Bool {
+        (try? await run(cancellable: false) { core, _ in core.hasComic(key, path: path) }) ?? false
+    }
+
+    /// The source's search filters. search.load takes one value per group,
+    /// so a search needs these defaults even when no filter is shown.
+    public func searchOptions(key: String) async throws -> [SearchOptionGroup] {
+        let out = try await run(cancellable: false) { core, _ in try Self.call { core.searchOptions(key, error: $0) } }
+        return try Self.decode([SearchOptionGroup].self, out)
+    }
+
+    /// The settings a source declares; empty when it declares none. Values are
+    /// kept as JSON, because a source may declare numbers or booleans.
+    public func settings(key: String) async throws -> [SourceSetting] {
+        let out = try await run(cancellable: false) { core, _ in try Self.call { core.settings(key, error: $0) } }
+        return try Self.decode([SourceSetting].self, out)
+    }
+
+    /// `search.load(keyword, options, page)`; options holds one value per
+    /// group of `searchOptions`.
+    public func search(key: String, keyword: String, page: Int, options: [String]) async throws -> ComicPage {
+        let out = try await callComic(key: key, path: "search.load",
+                                      args: [.string(keyword), .array(options.map(JSONValue.string)), .number(String(page))])
+        return try Self.decode(ComicPage.self, out)
+    }
+
+    /// The browses a source offers (its `explore` list); empty when it has
+    /// none.
+    public func explorePages(key: String) async throws -> [ExplorePage] {
+        let out = try await run(cancellable: false) { core, _ in try Self.call { core.explorePages(key, error: $0) } }
+        return try Self.decode([ExplorePage].self, out)
+    }
+
+    /// Loads one browse. `page` is the page number for
+    /// "multiPageComicList" browses and the index for "mixed" ones; the
+    /// other kinds ignore it.
+    public func explore(key: String, index: Int, page: Int = 1) async throws -> ExploreResult {
+        let pages = (try? await explorePages(key: key)) ?? []
+        let type = pages.indices.contains(index) ? pages[index].type : ""
+        let out = try await callComic(key: key, path: "explore[\(index)].load",
+                                      args: [.number(String(max(1, page)))])
+        return try Self.decodeExplore(type: type, out)
+    }
+
+    /// The shapes differ by browse type, so the decoding does too.
+    private static func decodeExplore(type: String, _ json: String) throws -> ExploreResult {
+        switch type {
+        case "multiPageComicList":
+            let page = try Self.decode(ComicPage.self, json)
+            return ExploreResult(sections: [ExploreSection(title: "", comics: page.comics)], maxPage: page.maxPage ?? 0)
+        case "mixed":
+            // {data: [Comic[] | {title, comics}], maxPage}
+            guard case .object(let o) = try JSONValue.parse(json) else { return ExploreResult(sections: [], maxPage: 0) }
+            var sections: [ExploreSection] = []
+            if case .array(let items)? = o["data"] {
+                sections = try exploreSections(items)
+            }
+            var maxPage = 0
+            if let n = o["maxPage"]?.stringValue, let v = Int(n) { maxPage = v }
+            return ExploreResult(sections: sections, maxPage: maxPage)
+        case "multiPartPage":
+            let parts = try JSONValue.parse(json).array ?? []
+            return ExploreResult(sections: try exploreSections(parts), maxPage: 0)
+        default:
+            // singlePageWithMultiPart: {partTitle: [comic, ...]}, in order.
+            guard case .object(let o) = try JSONValue.parse(json) else { return ExploreResult(sections: [], maxPage: 0) }
+            var sections: [ExploreSection] = []
+            for (title, value) in o.entries {
+                guard case .array(let items) = value else { continue }
+                let comics = items.compactMap { try? Comic(json: $0) }
+                if !comics.isEmpty { sections.append(ExploreSection(title: title, comics: comics)) }
+            }
+            return ExploreResult(sections: sections, maxPage: 0)
+        }
+    }
+
+    private static func exploreSections(_ items: [JSONValue]) throws -> [ExploreSection] {
+        var out: [ExploreSection] = []
+        for item in items {
+            switch item {
+            case .array(let comics):
+                let list = comics.compactMap { try? Comic(json: $0) }
+                if !list.isEmpty { out.append(ExploreSection(title: "", comics: list)) }
+            case .object(let o):
+                guard case .array(let comics)? = o["comics"] else { continue }
+                let list = comics.compactMap { try? Comic(json: $0) }
+                if !list.isEmpty { out.append(ExploreSection(title: o["title"]?.stringValue ?? "", comics: list)) }
+            default:
+                continue
+            }
+        }
+        return out
+    }
+
+    /// `comic.loadInfo(id)`. Decoded with key order kept, because chapter
+    /// order is reading order.
+    public func details(key: String, comicID: String) async throws -> ComicDetails {
+        let out = try await callComic(key: key, path: "comic.loadInfo", args: [.string(comicID)])
+        return try Self.decode(ComicDetails.self, out)
+    }
+
+    /// `comic.loadEp(comicId, epId)`.
+    public func chapterImages(key: String, comicID: String, chapterID: String?) async throws -> [String] {
+        let out = try await callComic(key: key, path: "comic.loadEp",
+                                      args: [.string(comicID), chapterID.map(JSONValue.string) ?? .null])
+        return try Self.decode(ChapterImages.self, out).images
+    }
+
+    /// `comic.onImageLoad(url, comicId, epId)`: request options for one
+    /// image (url, method, headers, data). nil when the source has none.
+    public func imageRequest(key: String, url: String, comicID: String, chapterID: String?) async throws -> ImageRequest {
+        guard await hasComic(key: key, path: "comic.onImageLoad") else { return ImageRequest(url: url) }
+        let out = try await callComic(key: key, path: "comic.onImageLoad",
+                                      args: [.string(url), .string(comicID), chapterID.map(JSONValue.string) ?? .null])
+        return try ImageRequest(json: out, fallbackURL: url)
+    }
+
+    /// `comic.onThumbnailLoad(url)` for covers.
+    public func thumbnailRequest(key: String, url: String) async throws -> ImageRequest {
+        guard await hasComic(key: key, path: "comic.onThumbnailLoad") else { return ImageRequest(url: url) }
+        let out = try await callComic(key: key, path: "comic.onThumbnailLoad", args: [.string(url)])
+        return try ImageRequest(json: out, fallbackURL: url)
+    }
+}
+
+/// Configuration passed to `MobileNew`.
+public struct CoreConfig: Codable, Sendable {
+    public var appVersion: String
+    public var locale: String
+    public var platform: String
+    public var defaultUserAgent: String
+    public var memoryLimitBytes: Int64
+
+    public init(appVersion: String, locale: String, platform: String = "ios", defaultUserAgent: String, memoryLimitBytes: Int64 = 0) {
+        self.appVersion = appVersion; self.locale = locale; self.platform = platform
+        self.defaultUserAgent = defaultUserAgent; self.memoryLimitBytes = memoryLimitBytes
+    }
+}
+
+/// How to fetch one image, from a source's onImageLoad/onThumbnailLoad.
+public struct ImageRequest: Sendable, Hashable {
+    public var url: String
+    public var method: String = "GET"
+    public var headers: [String: String] = [:]
+    public var body: String?
+
+    public init(url: String) { self.url = url }
+
+    init(json: String, fallbackURL: String) throws {
+        url = fallbackURL
+        let v = try JSONValue.parse(json)
+        guard case .object(let o) = v else { return }
+        if let u = o["url"]?.stringValue, !u.isEmpty { url = u }
+        if let m = o["method"]?.stringValue, !m.isEmpty { method = m.uppercased() }
+        if case .object(let h)? = o["headers"] {
+            for (k, v) in h.entries { if let s = v.stringValue { headers[k] = s } }
+        }
+        if let d = o["data"]?.stringValue { body = d }
+    }
+}
