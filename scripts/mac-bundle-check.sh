@@ -78,6 +78,9 @@ rm -rf "$work"
 mkdir -p "$work"
 tgz_abs=$(cd "$(dirname "$tgz")" && pwd)/$(basename "$tgz")
 (cd "$work" && tar -xzf "$tgz_abs")
+# tar can restore directories without a write bit, which makes later steps fail
+# with a confusing file count.
+chmod -R u+rwX "$work"
 count=$(find "$work" -name '*.swift' | wc -l | tr -d ' ')
 [ "$count" = "$want_swift_files" ] || fail "$count .swift files, want $want_swift_files"
 pass "unpacked $count .swift files"
@@ -100,10 +103,14 @@ else
 fi
 
 # 2. The Kit emits an iOS module: this is the shape the App compiles against.
+#    -F must point at the xcframework's slice directory, not at the
+#    xcframework itself: a module built for iOS is not found in Vendor/ alone.
 sdk=$(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null) || fail "no iphoneos SDK"
+slice=$work/Vendor/VeneraCatCore.xcframework/ios-arm64
+[ -d "$slice" ] || fail "no ios-arm64 slice under $work/Vendor"
 log=$work/kit-ios.log
 if (cd "$work" && swiftc -emit-module -parse-as-library -swift-version 6 \
-	-sdk "$sdk" -target "$ios_target" \
+	-sdk "$sdk" -target "$ios_target" -F "$slice" \
 	-module-name NekularityKit -emit-module-path "$work/Vendor/NekularityKit.swiftmodule" \
 	$(find Sources/NekularityKit -name '*.swift' | sort) >"$log" 2>&1); then
 	pass "swiftc -emit-module (Kit, iOS)"
@@ -116,7 +123,7 @@ fi
 # 3. The App type checks against that module, also in Swift 6 mode.
 log=$work/app-typecheck.log
 if swiftc -typecheck -swift-version 6 -sdk "$sdk" -target "$ios_target" \
-	-I "$work/Vendor" -F "$work/Vendor" App/*.swift >"$log" 2>&1; then
+	-I "$work/Vendor" -F "$slice" App/*.swift >"$log" 2>&1; then
 	errors=$(grep -c ' error: ' "$log" 2>/dev/null || true)
 	warnings=$(grep -c ' warning: ' "$log" 2>/dev/null || true)
 	pass "swiftc -typecheck (App, iOS): ${errors:-0} errors, ${warnings:-0} warnings"
