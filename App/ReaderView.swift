@@ -15,6 +15,9 @@ struct ReaderView: View {
     @State private var keptNote: String?
     @AppStorage("readerLayout") private var layout: ReaderLayout = .vertical
     @AppStorage("readerRightToLeft") private var rightToLeft = false
+    /// Whether reaching the end of a chapter opens the next one. Off by
+    /// default: a reader that jumps on its own is a surprise.
+    @AppStorage("readerAutoNext") private var autoNext = false
     /// Which page a paged reader shows, by its number in the chapter.
     @State private var pagedNumber = 1
     /// The page to return to once the chapter's images arrive.
@@ -62,6 +65,7 @@ struct ReaderView: View {
                             Text("右→左").tag(true)
                         }
                     }
+                    Toggle("自动接续", isOn: $autoNext)
                 } label: {
                     Label("排版", systemImage: "rectangle.split.3x1")
                 }
@@ -90,7 +94,17 @@ struct ReaderView: View {
                                         value: [i: page.frame(in: .named("reader")).minY])
                                 })
                         }
-                        if !images.isEmpty { chapterFooter }
+                        if !images.isEmpty {
+                            chapterFooter
+                            // Reaching this marker means the chapter's end has
+                            // been scrolled to; the next chapter is the only
+                            // thing left to show.
+                            if autoNext {
+                                Color.clear
+                                    .frame(height: 1)
+                                    .onAppear(perform: nextChapterIfPossible)
+                            }
+                        }
                     }
                 }
                 .onChange(of: route.index) { proxy.scrollTo("top") }
@@ -158,6 +172,13 @@ struct ReaderView: View {
             }
         }
         .padding(24)
+    }
+
+    /// Opens the next chapter once the reader has scrolled to the end of this
+    /// one. A chapter with a single page is not a scroll, so it stays put.
+    private func nextChapterIfPossible() {
+        guard autoNext, images.count > 1, lastPage > 1, route.index + 1 < route.chapters.count else { return }
+        route.index += 1
     }
 
     /// Writes a page number to the shelf, for the paged reader.
