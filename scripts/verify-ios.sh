@@ -107,8 +107,9 @@ if [ -z "${modules:-}" ] || [ ! -d "$modules" ]; then
 fi
 
 # A type check needs every source at once, so they are handed to swiftc in
-# one call.
-if swiftc -typecheck -sdk "$sdk" -target arm64-apple-ios26.0 \
+# one call. -swift-version 6 matches what Package.swift and project.yml build
+# with: Swift 5 mode would accept code the real build rejects.
+if swiftc -typecheck -swift-version 6 -sdk "$sdk" -target arm64-apple-ios26.0 \
 	-I "$modules" -F "$modules" App/*.swift >"$out/app-typecheck.log" 2>&1; then
 	pass "swiftc -typecheck App/*.swift (iOS)" "$out/app-typecheck.log"
 else
