@@ -120,6 +120,7 @@ swift test --filter Magpie            7 tests / 2 suites 全部执行
 | `MagpieChat` | 一轮对话的读取器:Core 只会在被问时给出事件(gomobile 不能反向推),这里把它包成 `AsyncThrowingStream`,界面 `for try await` 即可;离开界面或停止时取消**Core 里的请求**,而不是让它在后台继续朝供应商跑。事件含文本、思考、done(带 token 用量原文)、error |
 | `MagpieChatView` | 对话界面:模型名、输入、边到边显示回复、可停止。刻意只是一个「读回复」的界面:**没有工具调用,也没有多轮 agent 循环**,写成那样会暗示这些能力已经存在 |
 | `MagpieProvidersView` | 「AI 供应商」标签页:列出已装包、版本、是否登录,可登录/重登/退出/卸载,并从文件夹安装。与漫画源完全分开:不同的包、不同的账号、不同的 Cookie |
+| 压缩包安装(待接) | Core 已经实现 `magpieplugin.ReadArchive` 与 `mobile.Magpie.ReadPackageArchive`:zip 与 npm tar.gz、剥一层顶层目录、拒绝符号链接与 `../`、上限一致。客户端这一层还没接上,因为要用上它得先重建 `Vendor` 里的框架(新增了方法);在接上之前,安装界面只接受**已解开的文件夹** —— 这一点写在这里,免得有人以为下载的 zip 现在就能装 |
 | `MagpiePackageReader` | 从用户选的**文件夹**读包:文件按包内相对路径取,符号链接直接拒绝(包是普通文件),单文件 8 MiB、总量 32 MiB、最多 1024 个文件——与 Core 的上限一致,但在这里就先判,免得把一个视频也一起拷进来。没有 `package.json` 直接说「不是插件」;有清单却指不到任何入口(`exports["./server"]`/`main`/`index.*`)也不算插件,和 Magpie 自己的拒绝规则一致 |
 | `MagpiePackageStore` | 已安装的包:每个 provider 一份,文件按 **原文 base64** 存在同一个 JSON 里,列表里显示包自己的 `name`/`version`。重复安装会替换旧副本而不是叠加;没有 `package.json` 的东西直接拒收——那种包在加载时才会失败,理由也更含糊。索引文件先写临时文件再替换,写到一半崩掉不该让整张列表连同所有包一起打不开。解压不在这里:它只接受已经解开、且会被 Core 再验一遍的文件表 |
 | `MagpieSignInView` | SwiftUI 登录页:列出插件声明的登录方式、显示验证码(可复制)、打开授权页、等待、取消。登录只用该设备上这家供应商自己的授权,不经过漫画源、不共用漫画源的 Cookie |
