@@ -131,7 +131,12 @@ struct MagpieProvidersView: View {
         }
         // A package arrives either as an extracted folder or as the zip / npm
         // tarball it was downloaded as; both end in the same install.
-        .fileImporter(isPresented: $picking, allowedContentTypes: [.folder, .zip, .gzip]) { result in
+        //
+        // `.data` is in the list because a `.tar.gz` from a registry does not
+        // always report the type this picker would need to match: a file greyed
+        // out is a dead end, while Core answers "这不是压缩包" for bytes it cannot
+        // unpack, which is a sentence the user can act on.
+        .fileImporter(isPresented: $picking, allowedContentTypes: [.folder, .zip, .gzip, .data]) { result in
             switch result {
             case .success(let url):
                 perform {
