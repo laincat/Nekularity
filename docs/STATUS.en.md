@@ -23,7 +23,7 @@ Updated 2026-10-30.
 
 ## Not verified
 
-- **Compilation**: `scripts/verify-ios.sh` runs the checks in order on macOS (docs, `check-swift`, `swift test`, the app build). Without XcodeGen it falls back to building the Kit for iOS and type checking the screens with `swiftc -typecheck`, which still catches mistakes in the screens. The code has not actually been run on macOS yet, but every change goes through `scripts/check-swift.sh` (a tree-sitter parse: it catches syntax errors, not type errors). It calls Core the same way as the Core repository's `apple/CoreSmoke`, which passes on CI; `BrowseView` is new and uncompiled too.
+- **Compilation**: `scripts/verify-ios.sh` runs the checks in order on macOS (docs, `check-swift`, `swift test`, the app build). Without XcodeGen it falls back to building the Kit for iOS and type checking the screens with `swiftc -typecheck`, which still catches mistakes in the screens. The code has not actually been run on macOS yet, but every change goes through `scripts/check-swift.sh` (a tree-sitter parse: it catches syntax errors, not type errors). It calls Core the same way as the Core repository's `apple/CoreSmoke`, which passes on CI; `BrowseView` is new and uncompiled too. When the sources travel to a Mac as base64 segments, `scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK WORKDIR [clean]` does the whole check in one command: segment md5s, join, decode, archive md5, unpack, `.swift` count, xcframework copy, `swift build`; a trailing `clean` removes the unpacked tree, the joined file and the archive after reporting, leaving the machine as found.
 - The unit tests in `swift test` (JSON, cookies, storage) have not run either.
 - Running on a device, with real comic sources.
 

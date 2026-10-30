@@ -23,7 +23,7 @@
 
 ## 未验证
 
-- **编译**:`scripts/verify-ios.sh` 在 macOS 上串起检查(文档、`check-swift`、`swift test`、App 构建);没有 XcodeGen 时退化为「先给 iOS 编 Kit,再用 `swiftc -typecheck` 检查 App 源码」,仍然能抓到界面层的类型错误。代码还没有在 macOS 上实际跑过,但每次改动都过 `scripts/check-swift.sh`(tree-sitter 解析,能抓语法错误,不抓类型错误)。调用 Core 的写法和 Core 仓库在 CI 上通过的 `apple/CoreSmoke` 一致;`BrowseView` 新增后同样未编译。
+- **编译**:`scripts/verify-ios.sh` 在 macOS 上串起检查(文档、`check-swift`、`swift test`、App 构建);没有 XcodeGen 时退化为「先给 iOS 编 Kit,再用 `swiftc -typecheck` 检查 App 源码」,仍然能抓到界面层的类型错误。代码还没有在 macOS 上实际跑过,但每次改动都过 `scripts/check-swift.sh`(tree-sitter 解析,能抓语法错误,不抓类型错误)。调用 Core 的写法和 Core 仓库在 CI 上通过的 `apple/CoreSmoke` 一致;`BrowseView` 新增后同样未编译。源码包被切成 base64 分段送到 macOS 时,用 `scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK WORKDIR [clean]` 一步走完「逐段 md5 → 拼接 → 解码 → 归档 md5 → 解包 → 核 `.swift` 个数 → 放 xcframework → `swift build`」;末尾传 `clean` 会在报告后删掉解包目录、拼接件与归档,机器保持原样。
 - `swift test` 中的单元测试(JSON、Cookie、存储)也还没运行。
 - 真机运行、真实漫画源。
 
