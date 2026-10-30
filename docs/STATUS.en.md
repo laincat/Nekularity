@@ -48,7 +48,7 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 
 ## Next
 
-1. Close out the App-level check: this round fixes the optional unwrap in `ReaderView` (a single-chapter comic has no `chapterID`), then reruns `swiftc -typecheck -swift-version 6`; four checks green finishes the compile stage.
+1. The compile stage is settled: Kit and App passed all four checks on macOS in Swift 6 mode in two consecutive rounds, including the multi-source search and kept-page chapter jump. Later changes keep going through the same loop, so no package piles up unseen by a compiler.
 2. Launch the app once a simulator runtime is available, and run the main path with a real source (install, search, details, read, shelf).
 3. Backup import is wired and was checked against the real `.venera` field shapes; the next step is running it once on a simulator and checking the counts.
 4. Two items wait on product decisions: video sources and playback; mapping an old global cookie jar onto per-source partitions.
