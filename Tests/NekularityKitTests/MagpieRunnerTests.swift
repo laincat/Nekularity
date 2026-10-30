@@ -175,6 +175,18 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
     }
 }
 
+@Suite struct MagpieRunnerLifecycleTests {
+    /// A runner is closed when its package is removed and again when it is
+    /// deallocated; Core should hear about it once.
+    @Test func closingTwiceClosesOnce() {
+        let core = StubMagpieCore()
+        let runner = MagpieRunner(core: core, store: MemoryMagpieAuthStore())
+        runner.close()
+        runner.close()
+        #expect(core.closes == 1)
+    }
+}
+
 @Suite struct MagpieSignInTests {
     private func runner(_ core: StubMagpieCore, store: MagpieAuthStore) -> MagpieRunner {
         MagpieRunner(core: core, store: store)

@@ -31,16 +31,27 @@ public final class MagpieRunner: @unchecked Sendable {
     private let core: Core
     private let store: MagpieAuthStore
     private let lock = NSLock()
+    private var closed = false
 
     public init(core: Core, store: MagpieAuthStore) {
         self.core = core
         self.store = store
     }
 
-    deinit { core.close() }
+    deinit { close() }
 
     /// Ends the package's runtime. The runner must not be used afterwards.
-    public func close() { core.close() }
+    ///
+    /// Idempotent on this side rather than relying on Core: a runner is closed
+    /// when a package is removed and again when it is deallocated.
+    public func close() {
+        let already = lock.withLock { () -> Bool in
+            let was = closed
+            closed = true
+            return was
+        }
+        if !already { core.close() }
+    }
 
     /// Installs a package and hands it the account's stored sign-in.
     ///
