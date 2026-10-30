@@ -22,6 +22,8 @@
   (`magpie.call(export, argJSON:, error: $0)`);返回 `BOOL` 的方法导成
   **`throws` 且返回 `Void`** —— 那个 BOOL 被 `throws` 吃掉了,既没有 `error:` 形参
   也没有 `Bool` 可判(`try magpie.loadPackage(json)`,要中文提示就包一层 `do/catch`)。
+  另外 **Clang importer 会按介词拆选择器**:`cancelSignIn:error:` 变成
+  `cancelSign(in:)`,别照头文件名字直写。
   写反了只有 Mac 上的编译器会发现。
 
 ## 检查

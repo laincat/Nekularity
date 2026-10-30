@@ -729,6 +729,8 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
             func usageJSON(provider: String) throws -> String { "" }
             func usageSummaryJSON(provider: String) throws -> String { "" }
             func modelsJSON() throws -> String { throw MagpieError("供应商不提供模型列表") }
+            func checkinJSON(provider: String) throws -> String { "" }
+            func setPluginOptions(optionsJSON: String) throws {}
             func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String { "{}" }
             func chatNext(handle: Int64) throws -> String { "" }
             func chatCancel(handle: Int64) {}

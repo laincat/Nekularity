@@ -22,7 +22,8 @@ For people and AI assistants working on the code. Read before changing it.
   `NSError**` parameter (`magpie.call(export, argJSON:, error: $0)`); one returning `BOOL`
   is imported as **`throws` returning `Void`** — the success flag becomes the throw, so
   there is no `error:` parameter and no `Bool` to test (`try magpie.loadPackage(json)`, with
-  a `do/catch` when a localised message is wanted). Writing the wrong one is only found by a compiler
+  a `do/catch` when a localised message is wanted). The importer also **splits a selector at
+  its preposition**, so `cancelSignIn:error:` is `cancelSign(in:)` — do not copy the header name. Writing the wrong one is only found by a compiler
   on a Mac.
 
 ## Checks

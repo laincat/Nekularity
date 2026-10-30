@@ -81,7 +81,9 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
 
     public func cancelSignIn(id: Int64) throws {
         do {
-            try magpie.cancelSignIn(id)
+            // The importer splits the selector at its preposition:
+            // `cancelSignIn:error:` becomes `cancelSign(in:)`.
+            try magpie.cancelSign(in: id)
         } catch {
             throw MagpieError("Core 找不到这次登录: \(error.localizedDescription)")
         }
