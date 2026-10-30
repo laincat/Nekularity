@@ -18,6 +18,10 @@
 - 根目录只放工具链或惯例要求必须在根目录的文件。
 - 所有 `.md` 都提供中英双语:`X.md` 为中文,`X.en.md` 为英文,顶部互相链接。修改其中一份时同步修改另一份。`scripts/check-docs.sh` 会检查配对和根目录。
 - `Vendor/` 存放编译出的 Core,不提交。
+- **gomobile 的两种导入形状不要混**:返回 `NSString*` 的方法保留 `NSError**` 形参
+  (`magpie.call(export, argJSON:, error: $0)`);返回 `BOOL` 的方法导成
+  `throws -> Bool`,**没有** `error:` 形参(`guard try magpie.loadPackage(json)`)。
+  写反了只有 Mac 上的编译器会发现。
 
 ## 检查
 
