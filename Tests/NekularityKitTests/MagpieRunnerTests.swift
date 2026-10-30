@@ -558,7 +558,7 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
     @Test func anArchiveInstallsLikeAFolder() throws {
         let core = StubMagpieCore()
         let (accounts, packages, _, _) = try accounts(core)
-        let json = #"{"package.json":"eyJuYW1lIjoiQC9kZW1vIiwidmVyc2lvbiI6IjAuMC4xIiwibWFpbiI6Ii4vaW5kZXgubWpzIn0=","index.mjs":"ZXhwb3J0IGFzeW5jIGZ1bmN0aW9uIFBsdWdpbigpIHt9"}"#
+        let json = #"{"package.json":"eyJuYW1lIjoiQGRlbW8iLCJ2ZXJzaW9uIjoiMC4wLjEiLCJtYWluIjoiLi9pbmRleC5tanMifQ==","index.mjs":"ZXhwb3J0IGFzeW5jIGZ1bmN0aW9uIFBsdWdpbigpIHt9"}"#
         core.archiveTable = json
         let archive = FileManager.default.temporaryDirectory
             .appendingPathComponent("demo-\(UUID().uuidString).zip")
@@ -960,6 +960,7 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
             func usageJSON(provider: String) throws -> String { "" }
             func usageSummaryJSON(provider: String) throws -> String { "" }
             func modelsJSON() throws -> String { throw MagpieError("供应商不提供模型列表") }
+            func readPackageArchive(_ data: Data) throws -> String { "{}" }
             func checkinJSON(provider: String) throws -> String { "" }
             func setPluginOptions(optionsJSON: String) throws {}
             func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String { "{}" }

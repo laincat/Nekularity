@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
+import re
 import sys
 
 try:
@@ -86,6 +87,60 @@ def missing_core_imports(root: pathlib.Path, files: list[pathlib.Path]) -> list[
     return problems
 
 
+def protocol_methods(source: bytes, name: bytes) -> list[bytes]:
+    """Method names a protocol declares, by looking for its declaration."""
+    at = source.find(b"protocol " + name)
+    if at < 0:
+        return []
+    body = source[at:]
+    end = body.find(b"\n}")
+    body = body[: end if end > 0 else len(body)]
+    names: list[bytes] = []
+    for line in body.split(b"\n"):
+        line = line.strip()
+        if line.startswith(b"func "):
+            names.append(line[5:].split(b"(")[0].split(b"<")[0].strip())
+    return names
+
+
+def test_stubs_missing_methods(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
+    """Test doubles that conform to `MagpieRunner.Core` and miss a method.
+
+    A test-only stub is the one place where a protocol gaining a method stays
+    silent here and fails on the Mac, and it costs a whole validation round:
+    `swift build` passes and only `swift test` fails. Only declarations are
+    checked, not the many places that merely hold a `MagpieRunner.Core`.
+    """
+    runner = root / "Sources/NekularityKit/Magpie/MagpieRunner.swift"
+    if not runner.exists():
+        return []
+    required = protocol_methods(runner.read_bytes(), b"Core")
+    if not required:
+        return []
+    declaration = re.compile(
+        r"(?:class|struct|actor)\s+(\w+)[^\n{]*:\s*MagpieRunner\.Core"
+    )
+    problems: list[tuple[str, str]] = []
+    for path in files:
+        # Only tests: a real type is spread over extensions, so a window would
+        # misread it, and the Mac's type check covers those anyway.
+        if "Tests" not in path.relative_to(root).parts:
+            continue
+        source = path.read_bytes().decode("utf-8", "replace")
+        for match in declaration.finditer(source):
+            # A stub is a short thing; look at its own body only.
+            window = source[match.start() : match.start() + 4000]
+            missing = [n.decode() for n in required if "func " + n.decode() not in window]
+            if missing:
+                problems.append(
+                    (
+                        str(path.relative_to(root)),
+                        f"{match.group(1)} lacks " + ", ".join(missing),
+                    )
+                )
+    return problems
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quiet", action="store_true", help="only print the summary")
@@ -119,6 +174,10 @@ def main() -> int:
     for rel, name in missing_core_imports(root, files):
         failed += 1
         print(f"{rel}: names {name} but does not import VeneraCatCore")
+
+    for rel, detail in test_stubs_missing_methods(root, files):
+        failed += 1
+        print(f"{rel}: a MagpieRunner.Core stub lacks {detail}")
 
     if failed:
         print(f"check-swift: {failed} of {len(files)} files do not parse")
