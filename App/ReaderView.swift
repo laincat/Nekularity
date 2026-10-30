@@ -13,35 +13,19 @@ struct ReaderView: View {
     @State private var lastPage = 0
     /// Result of the last "收藏本页", shown briefly in the toolbar.
     @State private var keptNote: String?
+    @AppStorage("readerLayout") private var layout: ReaderLayout = .vertical
+    @AppStorage("readerRightToLeft") private var rightToLeft = false
+    /// Which page a paged reader shows, by its number in the chapter.
+    @State private var pagedNumber = 1
 
     init(route: ReaderRoute) { _route = State(initialValue: route) }
 
     var body: some View {
         GeometryReader { geo in
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        Color.clear.frame(height: 0).id("top")
-                        ForEach(Array(images.enumerated()), id: \.offset) { i, url in
-                            ReaderPage(key: .init(source: route.source, url: url, comicID: route.comicID,
-                                                  chapterID: route.chapterID, isThumbnail: false),
-                                       width: geo.size.width, number: i + 1)
-                                .background(GeometryReader { page in
-                                    Color.clear.preference(
-                                        key: PageOffsetKey.self,
-                                        value: [i: page.frame(in: .named("reader")).minY])
-                                })
-                        }
-                        if !images.isEmpty { chapterFooter }
-                    }
-                }
-                .onChange(of: route.index) { proxy.scrollTo("top") }
-                .coordinateSpace(name: "reader")
-                .onPreferenceChange(PageOffsetKey.self) { offsets in
-                    // The callback may run off the main actor; the shelf is not
-                    // safe to touch there.
-                    Task { @MainActor in recordProgress(offsets) }
-                }
+            if layout == .paged {
+                paged(geo)
+            } else {
+                vertical(geo)
             }
         }
         .overlay {
@@ -65,10 +49,82 @@ struct ReaderView: View {
                 }
                 .disabled(images.isEmpty)
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Picker("排版", selection: $layout) {
+                        ForEach(ReaderLayout.allCases) { Text($0.title).tag($0) }
+                    }
+                    if layout == .paged {
+                        Picker("方向", selection: $rightToLeft) {
+                            Text("左→右").tag(false)
+                            Text("右→左").tag(true)
+                        }
+                    }
+                } label: {
+                    Label("排版", systemImage: "rectangle.split.3x1")
+                }
+            }
         }
         .statusBarHidden(chromeHidden)
         .onTapGesture { withAnimation { chromeHidden.toggle() } }
         .task(id: route.index) { await load() }
+    }
+
+    /// One page under the last: the long strip the app started with.
+    @ViewBuilder
+    private func vertical(_ geo: GeometryProxy) -> some View {
+        ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        Color.clear.frame(height: 0).id("top")
+                        ForEach(Array(images.enumerated()), id: \.offset) { i, url in
+                            ReaderPage(key: .init(source: route.source, url: url, comicID: route.comicID,
+                                                  chapterID: route.chapterID, isThumbnail: false),
+                                       width: geo.size.width, number: i + 1)
+                                .background(GeometryReader { page in
+                                    Color.clear.preference(
+                                        key: PageOffsetKey.self,
+                                        value: [i: page.frame(in: .named("reader")).minY])
+                                })
+                        }
+                        if !images.isEmpty { chapterFooter }
+                    }
+                }
+                .onChange(of: route.index) { proxy.scrollTo("top") }
+                .coordinateSpace(name: "reader")
+                .onPreferenceChange(PageOffsetKey.self) { offsets in
+                    // The callback may run off the main actor; the shelf is not
+                    // safe to touch there.
+                    Task { @MainActor in recordProgress(offsets) }
+                }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+    }
+
+    /// One page at a time, swipe to turn. Right-to-left reverses the order so
+    /// a swipe from the right edge goes forward, as printed manga reads.
+    @ViewBuilder
+    private func paged(_ geo: GeometryProxy) -> some View {
+        let order = rightToLeft ? Array(images.indices.reversed()) : Array(images.indices)
+        TabView(selection: $pagedNumber) {
+            ForEach(order, id: \.self) { i in
+                VStack(spacing: 0) {
+                    ReaderPage(key: .init(source: route.source, url: images[i], comicID: route.comicID,
+                                          chapterID: route.chapterID, isThumbnail: false),
+                               width: geo.size.width, number: i + 1)
+                        .frame(maxHeight: .infinity, alignment: .center)
+                    chapterFooter
+                }
+                .tag(i + 1)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .onChange(of: pagedNumber) { old, new in
+            guard new != old else { return }
+            recordPage(new)
+        }
+        .onChange(of: route.index) { pagedNumber = 1 }
+        .onChange(of: images.count) { if !images.isEmpty { recordPage(pagedNumber) } }
     }
 
     private var chapterFooter: some View {
@@ -85,6 +141,22 @@ struct ReaderView: View {
             }
         }
         .padding(24)
+    }
+
+    /// Writes a page number to the shelf, for the paged reader.
+    private func recordPage(_ number: Int) {
+        guard !images.isEmpty else { return }
+        lastPage = min(max(1, number), images.count)
+        let percent = min(100, max(0, Int((Double(lastPage) / Double(images.count) * 100).rounded())))
+        let comic = ShelfComic(source: route.source, id: route.comicID,
+                               title: route.comicTitle.isEmpty ? route.title : route.comicTitle,
+                               author: route.author, cover: route.cover)
+        if !shelf.updateProgress(source: route.source, id: route.comicID,
+                                 chapter: route.title, chapterIndex: route.index,
+                                 page: lastPage, percent: percent) {
+            shelf.record(ShelfHistory(comic: comic, chapter: route.title,
+                                     chapterIndex: route.index, page: lastPage, percent: percent))
+        }
     }
 
     /// The page at the top of the screen is the page the shelf remembers.
@@ -146,6 +218,17 @@ struct ReaderView: View {
             if (error as? CoreError)?.isCancelled != true { self.error = error.localizedDescription }
         }
     }
+}
+
+/// How the reader lays a chapter out.
+enum ReaderLayout: String, CaseIterable, Identifiable {
+    /// One page under the last, scrolled vertically.
+    case vertical
+    /// One page per screen, swiped sideways.
+    case paged
+
+    var id: String { rawValue }
+    var title: String { self == .vertical ? "竖向滚动" : "单页翻页" }
 }
 
 /// How far each page sits from the top of the reader.
