@@ -36,6 +36,8 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
 
     var savedToReturn = ""
     var authToReturn = ""
+    /// What `authorize` answers, when a test needs something other than the
+    /// device-flow default.
     var authorizeToReturn = #"{"id":7,"url":"https://github.com/login/device","userCode":"ABCD-1234","instructions":"Enter code: ABCD-1234","expiresIn":900}"#
     var polls: [String] = [#"{"type":"success","refresh":"gho_new"}"#]
     var polledIDs: [Int64] = []
@@ -256,6 +258,26 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
             return
         }
         #expect(reason == "user cancelled")
+    }
+
+    /// An API key has no callback to wait for. Core answers an immediate key
+    /// inside `authorize`, and the client must store it without polling — the
+    /// alternative is a screen that spins on a callback that will never exist.
+    @Test func anAPIKeyIsStoredWithoutPolling() async throws {
+        let core = StubMagpieCore()
+        core.authorizeToReturn = #"{"id":0,"url":"","userCode":"","instructions":"","expiresIn":0,"immediate":{"type":"success","key":"sk-immediate"}}"#
+        let store = MemoryMagpieAuthStore()
+        let signIn = MagpieSignIn(core: core, store: store, provider: "p", pollInterval: .milliseconds(1))
+        let start = try signIn.start()
+        #expect(start.immediateAuthJSON != nil)
+        let outcome = await signIn.waitForResult()
+        guard case .success(let authJSON) = outcome else {
+            Issue.record("outcome = \(outcome)")
+            return
+        }
+        #expect(authJSON.contains("sk-immediate"))
+        #expect(try store.loadAuthJSON(provider: "p")?.contains("sk-immediate") == true)
+        #expect(core.polls == 0)
     }
 
     /// A package that only ever says "nothing yet" must not hold the screen

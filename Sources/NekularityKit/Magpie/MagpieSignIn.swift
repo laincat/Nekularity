@@ -15,6 +15,10 @@ public struct MagpieSignInStart: Sendable, Hashable {
     /// The package's own sentence, often naming the code.
     public var instructions: String
     public var expiresIn: Int
+    /// An API key is settled the moment it is given: there is no callback to
+    /// wait for, so the stored sign-in is already here. Nil means the normal
+    /// case — wait for the package to finish the flow.
+    public var immediateAuthJSON: String?
 }
 
 public enum MagpieSignInOutcome: Sendable {
@@ -115,6 +119,16 @@ public final class MagpieSignIn: @unchecked Sendable {
         guard let decoded = try Self.decode(MagpieSignInStartDTO.self, from: json) else {
             throw MagpieError("这一登录方式没有返回任何内容")
         }
+        // A key-based method answers with the sign-in itself. Storing it here
+        // means the caller never polls for a callback that does not exist.
+        var immediate: String?
+        if let object = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
+           let result = object["immediate"],
+           let immediateText = try? JSONSerialization.data(withJSONObject: result, options: [.sortedKeys]) {
+            immediate = try MagpieAuthShape.stored(from: String(decoding: immediateText, as: UTF8.self),
+                                                  inputs: inputs)
+            if let immediate { try store.saveAuthJSON(provider: provider, json: immediate) }
+        }
         let start = MagpieSignInStart(
             id: decoded.id,
             url: decoded.url.flatMap(URL.init(string:)),
@@ -122,7 +136,8 @@ public final class MagpieSignIn: @unchecked Sendable {
             // non-optional so a view never has to unwrap a missing field.
             userCode: decoded.userCode ?? "",
             instructions: decoded.instructions ?? "",
-            expiresIn: decoded.expiresIn ?? 0
+            expiresIn: decoded.expiresIn ?? 0,
+            immediateAuthJSON: immediate
         )
         lock.withLock { started = start }
         return start
@@ -136,6 +151,7 @@ public final class MagpieSignIn: @unchecked Sendable {
             if ContinuousClock.now > deadline { return .failed(reason: "登录超时,请重新开始") }
             if lock.withLock({ cancelled }) { return .cancelled }
             guard let start = lock.withLock({ started }) else { return .failed(reason: "登录尚未开始") }
+            if let immediate = start.immediateAuthJSON { return .success(authJSON: immediate) }
             do {
                 let answer = try core.poll(id: start.id)
                 if let stored = try MagpieAuthShape.stored(from: answer, inputs: inputs) {
