@@ -39,6 +39,18 @@ public struct MagpieAuthSpec: Codable, Sendable, Hashable {
 
         /// A method that collects its fields in the app rather than on a page.
         public var collectsInput: Bool { !prompts.isEmpty }
+
+        /// Decoding tolerates a Core that does not send `prompts` yet: a
+        /// synthesized initialiser would reject the whole method, and with it
+        /// every sign-in, because one optional field was absent.
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            index = try c.decode(Int.self, forKey: .index)
+            label = try c.decodeIfPresent(String.self, forKey: .label) ?? ""
+            kind = try c.decodeIfPresent(String.self, forKey: .kind) ?? ""
+            hint = try c.decodeIfPresent(String.self, forKey: .hint) ?? ""
+            prompts = try c.decodeIfPresent([Prompt].self, forKey: .prompts) ?? []
+        }
     }
 
     public struct Option: Codable, Sendable, Hashable {

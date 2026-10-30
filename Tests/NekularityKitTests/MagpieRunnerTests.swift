@@ -260,6 +260,18 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(reason == "user cancelled")
     }
 
+    /// A Core from before `prompts` existed sends methods without it. Rejecting
+    /// the whole method for a missing optional field would break every sign-in,
+    /// not just the key ones.
+    @Test func aMethodWithoutPromptsStillDecodes() throws {
+        let json = #"{"provider":"p","methods":[{"index":0,"label":"Sign in","kind":"device","hint":"code"}],"options":[],"hasUsage":true,"hasLoader":true}"#
+        let spec = try JSONDecoder().decode(MagpieAuthSpec.self, from: Data(json.utf8))
+        let method = try #require(spec.methods.first)
+        #expect(method.prompts.isEmpty)
+        #expect(!method.collectsInput)
+        #expect(method.label == "Sign in")
+    }
+
     /// What the user types in the key form has to reach the package: the answers
     /// travel through the sign-in session, and a mistyped field would otherwise
     /// look like a rejected key.
