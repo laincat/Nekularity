@@ -929,6 +929,24 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(after.specJSON?.contains("p") == true)
     }
 
+    /// A package that loads but declares no auth is not a broken provider; it is
+    /// not a provider at all, and the message says which.
+    @Test func aPackageWithoutAuthSaysSo() throws {
+        let core = StubMagpieCore()
+        core.authToReturn = "null"
+        let (accounts, packages, _, _) = try accounts(core)
+        let files: [String: Data] = [
+            "package.json": Data(#"{"name":"@demo/middleware","version":"1.0.0","main":"./index.mjs"}"#.utf8),
+            "index.mjs": Data("export async function Middleware() {}".utf8),
+        ]
+        let error = #expect(throws: MagpieError.self) {
+            _ = try accounts.install(provider: "m", files: files)
+        }
+        #expect(error?.message.contains("不是供应商插件") == true)
+        // Nothing half-installed: a rejected package leaves no row behind.
+        #expect(try packages.list().isEmpty)
+    }
+
     @Test func aRefusedListThrows() throws {
         final class RefusingCore: MagpieRunner.Core, @unchecked Sendable {
             func loadPackage(filesJSON: String) throws {}

@@ -134,9 +134,16 @@ public final class MagpieAccounts: @unchecked Sendable {
         let spec = try runner.auth(provider: provider)
         // The package has to be the one it claims to be: storing it under
         // another id would send its sign-in to the wrong account.
-        guard let declared = spec?.provider, declared == provider else {
+        // Two different failures, told apart: a package that loads but declares
+        // no auth is a middleware or a tool, not a provider; a package that
+        // declares someone else's id would send its sign-in to the wrong account.
+        guard let spec else {
             runner.close()
-            throw MagpieError("这个插件声明的是 \(spec?.provider ?? "（没有声明）"),不是 \(provider)")
+            throw MagpieError("这个包能加载,但没有声明 auth,不是供应商插件(中间件或工具包属于这种情况)")
+        }
+        guard let declared = spec.provider, declared == provider else {
+            runner.close()
+            throw MagpieError("这个插件声明的是 \(spec.provider ?? "（没有声明 provider）"),不是 \(provider)")
         }
         // Remembering what the plugin declared keeps the list from starting a
         // runtime per provider on every refresh. It goes in with the files, in
