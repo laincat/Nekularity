@@ -90,7 +90,12 @@ public final class KeychainMagpieAuthStore: MagpieAuthStore, @unchecked Sendable
         let data = Data(json.utf8)
         let attributes: [String: Any] = [
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            // ThisDeviceOnly: a vendor refresh token restored onto another
+            // device from a backup is a working credential in someone else's
+            // hands, so it must not travel. AfterFirstUnlock (not
+            // WhenUnlocked) keeps a background sign-in refresh working after a
+            // reboot before the user unlocks.
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
         let update = SecItemUpdate(query(provider) as CFDictionary, attributes as CFDictionary)
         if update == errSecSuccess { return }
