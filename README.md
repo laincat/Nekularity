@@ -6,7 +6,11 @@ iOS/iPadOS 漫画客户端(视频为后续阶段),界面使用 SwiftUI,许可证
 
 ## 状态
 
-第一阶段只做一条主线:**添加漫画源 → 搜索 / 浏览 → 查看详情 → 阅读 → 记进书架**。代码已在 macOS 上按 Swift 6 模式通过 Kit 构建、iOS 模块产出与 App 类型检查(四项 0 error 0 warning),但还没在真机或模拟器里跑过;每次改动仍先过 `scripts/check-swift.sh`(解析全部 Swift 文件,抓语法错误)。详见 [docs/STATUS.md](docs/STATUS.md)。
+主线是:**添加漫画源 → 搜索 / 浏览 → 查看详情 → 阅读 → 记进书架**。另有一个独立的「AI 供应商」页,运行 Magpie 供应商插件包:装包(文件夹或 `.zip`/`.tar.gz`)、登录、用量、模型列表、对话、打卡、插件自己的开关。两者互不相干 —— 不同的包、不同的账号、不同的 Cookie,AI 凭据只进 Keychain。
+
+在 macOS 27 / Xcode 27 / Swift 6.4 上的一次真实验证:`swift build`、`swift test`(**119 tests / 27 suites**)、Kit 与 App 的 Swift 6 类型检查、iOS 模块产出全过,0 error 0 warning;Core 接口检查 18/18;`swift test --filter Magpie` 61 tests。**没有**跑过 `xcodebuild` 归档与签名,也没有 iOS 模拟器运行时。详见 [docs/STATUS.md](docs/STATUS.md),那里也写明了这次验证覆盖不到的部分。每次改动仍先过 `scripts/check-swift.sh`(解析全部 Swift 文件,抓语法错误)。
+
+**能装哪些 AI 供应商包,先说清楚**:社区仓库 36 个包里,目前真正能跑的是原始 Copilot 与 `cloudflare-workers-ai`;其余多需要 Node 内建模块或被拒绝并说明原因。
 
 ## 目录
 
@@ -35,7 +39,7 @@ open Nekularity.xcodeproj
 
 `scripts/check-swift.sh` 只解析语法,任何机器都能跑:`python3 scripts/check-swift.py`(不需要 Xcode,能抓未闭合的字符串、括号这类错误)。
 
-把源码送到一台 Mac 上验证时,源码被切成 base64 分段,一段一段核对比整包重传可靠得多:
+客户端仓库不公开,所以要在另一台 Mac 上验证时,Swift 源码仍需搬过去;Core 不必 —— 它公开在 GitHub 上,直接 `git clone` 后跑 `scripts/mac-verify.sh` 即可。搬 Swift 源码时,分段传输并逐段核对 md5 比整包重传可靠(下面这套工具仍保留,用于没有网络的机器):
 
 ```sh
 scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK TGZ_MD5 TGZ_BYTES SWIFT_FILES [WORKDIR] [clean]

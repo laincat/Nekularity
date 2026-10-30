@@ -6,7 +6,11 @@ A comic client for iOS/iPadOS with a SwiftUI interface (video comes later), lice
 
 ## Status
 
-The first phase builds one path: **add a comic source → search or browse → open a comic → read it → keep it on the shelf**. The code compiles on macOS in Swift 6 mode — the Kit builds, the iOS module is produced and the App type checks, all with 0 errors and 0 warnings — but it has not run on a device or simulator yet. Every change still goes through `scripts/check-swift.sh`, which parses all Swift files for syntax errors; see [docs/STATUS.en.md](docs/STATUS.en.md).
+The main path is **add a comic source → search or browse → open a comic → read it → keep it on the shelf**. There is also a separate "AI providers" tab that runs Magpie provider plugin packages: installing (a folder or a `.zip`/`.tar.gz`), sign-in, usage, model lists, chat, check-in and the plugin's own switches. The two are unrelated — different packages, accounts and cookies, and AI credentials go to the Keychain only.
+
+One real verification on macOS 27 / Xcode 27 / Swift 6.4: `swift build`, `swift test` (**119 tests / 27 suites**), Kit and App Swift 6 type checks and the iOS module all pass with 0 errors and 0 warnings; the Core surface check is 18/18; `swift test --filter Magpie` runs 61 tests. What was **not** run: an `xcodebuild` archive and signing, and there is no iOS Simulator runtime. See [docs/STATUS.en.md](docs/STATUS.en.md), which also records what that verification does not cover. Every change still goes through `scripts/check-swift.sh`, which parses all Swift files.
+
+**Which AI provider packages install, up front:** of the community repository's 36 packages, the ones that actually run today are the original Copilot and `cloudflare-workers-ai`; most of the rest need Node built-ins and are refused with the reason named.
 
 ## Layout
 
@@ -35,7 +39,7 @@ open Nekularity.xcodeproj
 
 `scripts/check-swift.sh` only parses, so any machine can run it: `python3 scripts/check-swift.py` (no Xcode needed; it catches unclosed strings and brackets).
 
-When the sources travel to a Mac as base64 segments, checking one segment at a time is far more reliable than resending the whole archive:
+The client repository is not public, so Swift sources still have to travel to a second Mac; Core does not — it is public on GitHub, and `git clone` plus `scripts/mac-verify.sh` rebuilds it there. For the Swift sources, base64 segments with a checksum per segment remain more reliable than resending the archive (these tools stay for machines without network):
 
 ```sh
 scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK TGZ_MD5 TGZ_BYTES SWIFT_FILES [WORKDIR] [clean]
