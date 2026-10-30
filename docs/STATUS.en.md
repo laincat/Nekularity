@@ -98,7 +98,10 @@ Mac mini (macOS 27.0.1 / Xcode 27.1 / Swift 6.4) and every one exited 0: `swift 
 `-emit-module` clean; `check-core-surface` 18/18; `swift test --filter Magpie` **71 tests in 16 suites**;
 and `check-tree` printed `swift=56 tests=129 suites=27 shape=8457d8e43ce3d36849577f4cdcc07a92079b4015`,
 the same shape this repository prints. **Still unverified**: an `xcodebuild` archive and signing, an iOS
-Simulator runtime (absent on that machine), a real device and a real vendor account. The paragraph
+Simulator runtime (absent on that machine), a real device and a real vendor account.
+Also, the Core-commit footer added in `0d0dcff` and its test (57 Swift files, 130 tests) have
+passed only the parser and `check-tree` — no Swift **type check** has seen them yet; the next
+whole-tree run will cover them. The paragraph
 describes the tree on the Mac; whether the two trees match file for file is settled by md5, not by shape — and
 that was done: thirteen Magpie sources plus the test file were compared one by one, ending with
 `MagpieAccounts.swift` `3ec891ff…`, `MagpiePackageStore.swift` `c0530a35…` and `MagpieRunnerTests.swift`
