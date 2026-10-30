@@ -43,6 +43,8 @@ scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK [WORKDIR] [clean]
 
 逐段对 md5、拼接、解码、核对归档 md5 与字节数、解包、数 `.swift`、把 xcframework 放进去、跑 `swift build`,每一步一行 `PASS`/`FAIL`。最后多传一个 `clean`,它会在报告之后删掉解包目录、拼接件和归档,机器保持原样。校验用 `md5` 而不是 `shasum`:受限机器上 `md5` 不需要额外授权。
 
+分段包由 `scripts/make-bundle.sh OUTDIR [CHUNK]` 生成:`Package.swift`、`Sources/`、`App/`、`Tests/` 里所有 `.swift` 按路径排序、mtime 与属主归零后打成一个 47 KB 左右的归档,再切成 `CHUNK`(默认 1650)字符的 base64 段,并打印归档 md5 与每段 md5/末尾字符。同样的文件树每次生成的归档逐字节相同,所以校验值可以写进对话里核对。
+
 ## 许可证
 
 GPL-3.0-or-later,见 [LICENSE](LICENSE)。

@@ -31,6 +31,20 @@ open Nekularity.xcodeproj
 
 `scripts/core-version` names the Core branch, tag or commit to use. A local Core checkout also works: `scripts/fetch-core.sh ../VeneraCat-Core`.
 
+## On a machine without Xcode
+
+`scripts/check-swift.sh` only parses, so any machine can run it: `python3 scripts/check-swift.py` (no Xcode needed; it catches unclosed strings and brackets).
+
+When the sources travel to a Mac as base64 segments, checking one segment at a time is far more reliable than resending the whole archive:
+
+```sh
+scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK [WORKDIR] [clean]
+```
+
+It checks every segment's md5, joins and decodes, checks the archive's md5 and byte count, unpacks, counts `.swift` files, drops the xcframework in and runs `swift build`, printing one `PASS`/`FAIL` line per step. A trailing `clean` removes the unpacked tree, the joined file and the archive after reporting, leaving the machine as found. It uses `md5` rather than `shasum` because `md5` needs no extra permission on a locked-down machine.
+
+`scripts/make-bundle.sh OUTDIR [CHUNK]` produces the segmented bundle: every `.swift` under `Package.swift`, `Sources/`, `App/` and `Tests/` is added in sorted path order with mtime and ownership zeroed, packed into a ~47 KB archive, then split into base64 segments of `CHUNK` characters (default 1650), printing the archive md5 plus each segment's md5 and tail. The same tree always yields byte-identical output, so the checksums can be compared out of band.
+
 ## Licence
 
 GPL-3.0-or-later; see [LICENSE](LICENSE).
