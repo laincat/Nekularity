@@ -36,6 +36,14 @@ if [ ! -d Vendor/VeneraCatCore.xcframework ]; then
 	exit 2
 fi
 
+# 0. The framework in Vendor/ must expose what this client calls: a stale one
+#    fails later, inside a Swift compile, with an error that reads like a typo.
+if sh scripts/check-core-surface.sh >"$out/core-surface.log" 2>&1; then
+	pass "sh scripts/check-core-surface.sh" "$out/core-surface.log"
+else
+	fail "sh scripts/check-core-surface.sh" "$out/core-surface.log"
+fi
+
 # 1. Documentation pairs and root cleanliness.
 if sh scripts/check-docs.sh >"$out/docs.log" 2>&1; then
 	pass "sh scripts/check-docs.sh" "$out/docs.log"

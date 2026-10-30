@@ -91,6 +91,15 @@ rm -rf "$work/Vendor/VeneraCatCore.xcframework"
 cp -R "$xcf" "$work/Vendor/"
 pass "Vendor/VeneraCatCore.xcframework <= $xcf"
 
+# 0. The framework must expose what this client calls; a stale one fails later,
+#    inside a Swift compile, as if a method name were wrong.
+log=$work/core-surface.log
+if (cd "$work" && sh scripts/check-core-surface.sh >"$log" 2>&1); then
+	pass "sh scripts/check-core-surface.sh" "$log"
+else
+	fail "sh scripts/check-core-surface.sh" "$log"
+fi
+
 # 1. The Kit builds for macOS in Swift 6 mode, which also builds the tests'
 #    dependencies and so type checks everything Sources/ declares.
 log=$work/kit-build.log
