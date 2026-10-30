@@ -13,6 +13,11 @@ public final class MagpieRunner: @unchecked Sendable {
         func setAuth(provider: String, authJSON: String) throws
         func call(_ export: String, argJSON: String) throws -> String
         func savedAuthJSON() throws -> String
+        func authJSON() throws -> String
+        func authorize(methodIndex: Int, inputsJSON: String) throws -> String
+        func poll(id: Int64) throws -> String
+        func cancelSignIn(id: Int64) throws
+        func usageJSON(provider: String) throws -> String
         func close()
     }
 
@@ -55,6 +60,30 @@ public final class MagpieRunner: @unchecked Sendable {
             try store.saveAuthJSON(provider: provider, json: saved)
         }
         return answer
+    }
+
+    // MARK: Sign-in
+
+    /// What the package's plugin offers.
+    public func auth(provider: String) throws -> MagpieAuthSpec? {
+        let json = try core.authJSON()
+        if json.isEmpty || json == "null" { return nil }
+        return try OrderedJSONDecoder.decode(MagpieAuthSpec.self, from: json)
+    }
+
+    /// A sign-in for this package's account, driven by one object the UI can
+    /// hold and cancel.
+    public func makeSignIn(
+        provider: String,
+        inputs: [String: String] = [:],
+        pollInterval: Duration = .milliseconds(500)
+    ) -> MagpieSignIn {
+        MagpieSignIn(core: core, store: store, provider: provider, inputs: inputs, pollInterval: pollInterval)
+    }
+
+    /// Runs the package's usage hook, as the package answered it.
+    public func usage(provider: String) throws -> String {
+        try core.usageJSON(provider: provider)
     }
 
     /// Forgets an account: the package is closed and its sign-in deleted.

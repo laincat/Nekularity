@@ -32,6 +32,26 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
         try magpie.savedAuth()
     }
 
+    public func authJSON() throws -> String {
+        try magpie.auth()
+    }
+
+    public func authorize(methodIndex: Int, inputsJSON: String) throws -> String {
+        try magpie.authorize(methodIndex, inputsJSON: inputsJSON)
+    }
+
+    public func poll(id: Int64) throws -> String {
+        try magpie.poll(id)
+    }
+
+    public func cancelSignIn(id: Int64) throws {
+        _ = try magpie.cancelSignIn(id)
+    }
+
+    public func usageJSON(provider: String) throws -> String {
+        try magpie.usage(provider)
+    }
+
     public func close() {
         magpie.close()
     }
