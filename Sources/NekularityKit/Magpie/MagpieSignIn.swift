@@ -110,9 +110,11 @@ public final class MagpieSignIn: @unchecked Sendable {
         let start = MagpieSignInStart(
             id: decoded.id,
             url: decoded.url.flatMap(URL.init(string:)),
-            userCode: decoded.userCode,
-            instructions: decoded.instructions,
-            expiresIn: decoded.expiresIn
+            // The package may send any of these or none; the struct keeps them
+            // non-optional so a view never has to unwrap a missing field.
+            userCode: decoded.userCode ?? "",
+            instructions: decoded.instructions ?? "",
+            expiresIn: decoded.expiresIn ?? 0
         )
         lock.withLock { started = start }
         return start

@@ -58,7 +58,10 @@ public final class MagpieAccounts: @unchecked Sendable {
         try packages.list().map { package in
             let runner = try? runner(for: package.provider)
             let spec = specCache(provider: package.provider) {
-                try? runner?.auth(provider: package.provider)
+                // Optional chaining plus `try?` would give a doubly optional
+                // value, which is not what the cache stores.
+                guard let runner else { return nil }
+                return try? runner.auth(provider: package.provider)
             }
             // `try?` around a throwing load, then compare with nil: written this
             // way because `?? nil != nil` binds the comparison first and does not

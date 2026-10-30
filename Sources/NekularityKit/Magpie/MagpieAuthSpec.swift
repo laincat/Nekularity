@@ -22,6 +22,15 @@ public struct MagpieAuthSpec: Codable, Sendable, Hashable {
         public var description: String
         public var confirm: String
         public var `default`: Bool
+
+        public init(key: String, label: String, description: String = "", confirm: String = "",
+                    default value: Bool = false) {
+            self.key = key
+            self.label = label
+            self.description = description
+            self.confirm = confirm
+            self.default = value
+        }
     }
 
     public var provider: String
