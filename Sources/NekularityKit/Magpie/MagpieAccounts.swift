@@ -122,7 +122,6 @@ public final class MagpieAccounts: @unchecked Sendable {
         try install(provider: provider, files: try MagpiePackageReader.files(from: folder))
     }
 
-    @discardableResult
     /// Installs bytes the caller already unpacked. Also the seam the tests use:
     /// a folder and an archive both end up here.
     @discardableResult
