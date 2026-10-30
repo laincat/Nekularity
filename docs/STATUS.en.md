@@ -89,12 +89,13 @@ Static counts agree with the run: `@Test` 119, `@Suite` 27, `.swift` 56 (28 Kit,
 and `Package.swift`).
 
 **Code added after that run is still waiting for the same treatment:** installing from an
-archive, the key sign-in form, decoding `prompts` and handling `immediate` bring the count to
-`@Test` 125. They pass the syntax check and `check-tree`, but no Swift type check has seen them —
-a distinction worth writing down, so the 119 result is not read as a statement about the current
-tree. Both trees print the same `check-tree.sh` digest,
-`shape=ae577459e8509e1f03d83970c56a80ea1adafd4b` — which is firmer than matching totals,
-because it shows the same tests live in the same files.
+archive, the key sign-in form, decoding `prompts`, handling `immediate`, and recording a plugin's
+declaration at install time bring the count to `@Test` 128 / `@Suite` 27,
+`shape=07e588191cf89313893a468ec9c23871db559f71`. They pass the syntax check and
+`check-tree`, but no Swift type check has seen them — a distinction worth writing down, so the
+119 result is not read as a statement about the current tree. The verified tree's digest is
+`shape=ae577459e8509e1f03d83970c56a80ea1adafd4b`, a different tree, so that number cannot
+vouch for this one.
 
 The round before this one was compile-green and test-red: the same tree had zero compile
 errors while `swift test` found four assertion failures — a `null` modalities array that would
