@@ -138,6 +138,9 @@ struct SearchView: View {
 struct ComicRoute: Hashable {
     let source: String
     let comic: Comic
+    /// Set when the route comes from a kept page, so the detail screen can
+    /// offer the chapter that page belongs to.
+    var chapterID: String? = nil
 }
 
 /// Search results, either one source paged or every source's first page.

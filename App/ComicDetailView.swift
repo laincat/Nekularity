@@ -68,6 +68,19 @@ struct ComicDetailView: View {
                                                        chapters: [], index: 0))
                 }
             } else {
+                // A kept page remembers its chapter; offer that chapter first.
+                if let wanted = route.chapterID,
+                   let index = d.chapters.firstIndex(where: { $0.id == wanted }) {
+                    Section {
+                        NavigationLink(value: ReaderRoute(source: route.source, comicID: route.comic.id,
+                                                          comicTitle: d.title.isEmpty ? route.comic.title : d.title,
+                                                          author: route.comic.subtitle,
+                                                          cover: route.comic.cover,
+                                                          chapters: d.chapters, index: index)) {
+                            Label("打开收藏页所在的那一话 · \(d.chapters[index].title)", systemImage: "bookmark")
+                        }
+                    }
+                }
                 if let resume = shelf.entry(source: route.source, id: route.comic.id) {
                     Section {
                         NavigationLink(value: ReaderRoute(source: route.source, comicID: route.comic.id,

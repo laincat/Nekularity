@@ -256,7 +256,9 @@ private extension KeptPage {
     /// A kept page opens the comic it came from; the reader starts from the
     /// shelf's own position, so no chapter is invented here.
     var route: ComicRoute {
-        ComicRoute(source: source, comic: Comic(id: comicID, title: comicTitle))
+        ComicRoute(source: source,
+                   comic: Comic(id: comicID, title: comicTitle),
+                   chapterID: chapterID.isEmpty ? nil : chapterID)
     }
 }
 
