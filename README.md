@@ -41,6 +41,10 @@ open Nekularity.xcodeproj
 
 App 本身不随附供应商包。要试,可以自己压一个:Core 仓库的 `magpieplugin/testdata/openai-compatible/` 与 `anthropic-compatible/` 是两个**能跑**的模板(只用 `fetch`,没有 Node 依赖),把它们压成 zip 后在「AI 供应商」里安装即可;契约与自测方法见 Core 的 [docs/PROVIDER-TEMPLATE.md](https://github.com/laincat/VeneraCat-Core/blob/main/docs/PROVIDER-TEMPLATE.md)。
 
+## 仓库
+
+本仓库是**私有**的:`https://github.com/laincat/Nekularity`。Core 与它不同,是公开的 —— 所以验证机器可以 clone Core,却需要凭据才能拿到这里的源码。
+
 ## 在没有 Xcode 的机器上
 
 `scripts/check-swift.sh` 只解析语法,任何机器都能跑:`python3 scripts/check-swift.py`(不需要 Xcode,能抓未闭合的字符串、括号这类错误)。

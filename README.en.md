@@ -41,6 +41,11 @@ open Nekularity.xcodeproj
 
 The app ships no provider package. To try one, make your own: Core's `magpieplugin/testdata/openai-compatible/` and `anthropic-compatible/` are two packages that **run** (fetch only, no Node), and zipping either one is enough to install it from the AI providers screen. The contract and how to check your own are in Core's [docs/PROVIDER-TEMPLATE.en.md](https://github.com/laincat/VeneraCat-Core/blob/main/docs/PROVIDER-TEMPLATE.en.md).
 
+## The repository
+
+This repository is **private**: `https://github.com/laincat/Nekularity`. Core is not — it is public — so a
+verification machine can clone Core but needs credentials for these sources.
+
 ## On a machine without Xcode
 
 `scripts/check-swift.sh` only parses, so any machine can run it: `python3 scripts/check-swift.py` (no Xcode needed; it catches unclosed strings and brackets).
