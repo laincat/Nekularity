@@ -48,6 +48,20 @@ struct ShelfView: View {
                                     shelf.remove(comic, from: folder.name)
                                 }
                             }
+                            .contextMenu {
+                                // A comic is in one folder; moving is how it leaves
+                                // the current one.
+                                let others = shelf.folderNames.filter { $0 != folder.name }
+                                if others.isEmpty {
+                                    Text("只有一个收藏夹")
+                                } else {
+                                    Menu("移动到") {
+                                        ForEach(others, id: \.self) { name in
+                                            Button(name) { shelf.move(comic, to: name) }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     } header: {
                         HStack {

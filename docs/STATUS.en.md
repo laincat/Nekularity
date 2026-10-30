@@ -44,8 +44,7 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 
 ## Next
 
-1. Publish the repository or build on a Mac, fix compile errors, run `swift test`.
-2. Run the main path with a real comic source.
-3. The shelf (reading history and favourites) is not built yet; the desktop client's `internal/shelf` and its `.venera` history/favourite import show the way.
-4. Compile `BrowseView` and the search-option call on a Mac and fix what it reports.
-4. Phase two: favourites and history, `.venera` backup import, video sources.
+1. Finish the App-level check on a Mac — the last run reported one error (fixed), and the fixed tree has not been through a compiler yet.
+2. Launch the app once a simulator runtime is available, and run the main path with a real source.
+3. Wire `.venera` backup import (`ShelfStore` and `SearchHistoryStore` both have `merge`; what is missing is the layer that splits a backup between them).
+4. Phase two: video sources and playback.
