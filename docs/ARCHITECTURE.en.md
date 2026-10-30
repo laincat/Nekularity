@@ -49,7 +49,8 @@ NekularityKit/Magpie/
 ├─ MagpieAccounts            one runner and one cached declaration per provider
 ├─ MagpieRunner              install, sign-in, usage, models, chat, check-in, options
 ├─ MagpieAuthStore(Keychain) credentials stored as the exact text given, not re-encoded
-├─ MagpiePackageStore        one package per provider, replaced on reinstall, atomic index
+├─ MagpiePackageStore        one package per provider, replaced on reinstall, atomic index;
+│                            a package arrives as an extracted folder or a zip/tar.gz
 ├─ MagpieSignIn              device-code/callback polling, cancel, timeout
 ├─ MagpieChat                events as AsyncThrowingStream; stopping cancels the request
 └─ MagpieOptionStore         the switches a package declares, keyed provider|option
@@ -61,6 +62,9 @@ Rules:
 - **Credentials stay on the client.** Core receives strings from `client.auth.get/set`; it
   persists nothing itself and never carries a value across provider ids. The client writes
   to the Keychain per provider.
+- **Extraction belongs to Core.** `ReadArchive` unpacks zip and tar.gz, strips one enclosing
+  directory, refuses symlinks and traversal, and applies the same limits a folder install gets;
+  the client only stores the table Core produced instead of growing a second extractor.
 - **A package's requests go through its own loader/fetch.** Core does not reimplement a
   vendor's refresh or sign-in, or every new provider would mean changing Core.
 - **Chat is pulled, not pushed.** gomobile cannot call back from Go into Swift, so `chatNext`

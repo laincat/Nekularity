@@ -48,6 +48,7 @@ NekularityKit/Magpie/
 ├─ MagpieRunner              安装、登录、用量、模型、对话、打卡、选项
 ├─ MagpieAuthStore(Keychain) 凭据原文存 Keychain,不重排键顺序、不改数字
 ├─ MagpiePackageStore        一个 provider 一个包,重装替换,索引原子写
+│                           装包来源两种:已解开的文件夹,或下载来的 zip / tar.gz
 ├─ MagpieSignIn              设备码/回调轮询、取消、超时
 ├─ MagpieChat                事件流(AsyncThrowingStream)、停止即取消请求、超时
 └─ MagpieOptionStore         插件声明的开关,键为 provider|option
@@ -57,6 +58,7 @@ App/                         「AI 供应商」页、登录页、用量页、选
 规则:
 
 - **凭据只在客户端**:Core 通过 `client.auth.get/set` 拿到的是客户端给的字符串,它自己既不持久化也不跨 provider 复用;写入落 Keychain,按 provider 分键。
+- **解压归 Core**:`ReadArchive` 解开 zip 与 tar.gz,剥掉一层顶层目录,拒绝符号链接与目录穿越,限额与文件夹安装一致;客户端只把 Core 给的文件表存下来,不另写一份解压。
 - **包的请求走包自己的 loader/fetch**:Core 不复制供应商的刷新、鉴权逻辑,否则每加一个供应商就要改一次 Core。
 - **对话是拉取而不是推送**:gomobile 无法从 Go 回调 Swift,所以 `chatNext` 轮询;关闭 runner 会取消其中所有对话,避免往没人读的 channel 里写。
 - **未报告 ≠ 零**:用量的 share 缺失是 `null`,界面不画 0% 进度条;供应商拒绝(404/403)是错误,不是空列表。
