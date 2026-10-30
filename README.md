@@ -2,11 +2,11 @@
 
 [English](README.en.md) | 简体中文
 
-iOS/iPadOS 漫画与视频客户端,界面使用 SwiftUI,许可证为 GPL-3.0-or-later。业务逻辑来自 [VeneraCat Core](https://github.com/laincat/VeneraCat-Core),兼容 Venera 的漫画源脚本和订阅索引。
+iOS/iPadOS 漫画客户端(视频为后续阶段),界面使用 SwiftUI,许可证为 GPL-3.0-or-later。业务逻辑来自 [VeneraCat Core](https://github.com/laincat/VeneraCat-Core),兼容 Venera 的漫画源脚本和订阅索引。
 
 ## 状态
 
-第一阶段只做一条主线:**添加漫画源 → 搜索 / 浏览 → 查看详情 → 阅读 → 记进书架**。代码还没有在 macOS 上编译过,但每次改动都过 `scripts/check-swift.sh`(解析全部 Swift 文件,抓语法错误)。详见 [docs/STATUS.md](docs/STATUS.md)。
+第一阶段只做一条主线:**添加漫画源 → 搜索 / 浏览 → 查看详情 → 阅读 → 记进书架**。代码已在 macOS 上按 Swift 6 模式通过 Kit 构建、iOS 模块产出与 App 类型检查(四项 0 error 0 warning),但还没在真机或模拟器里跑过;每次改动仍先过 `scripts/check-swift.sh`(解析全部 Swift 文件,抓语法错误)。详见 [docs/STATUS.md](docs/STATUS.md)。
 
 ## 目录
 

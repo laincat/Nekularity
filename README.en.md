@@ -2,11 +2,11 @@
 
 English | [简体中文](README.md)
 
-A comic and video client for iOS/iPadOS with a SwiftUI interface, licensed GPL-3.0-or-later. Its logic comes from [VeneraCat Core](https://github.com/laincat/VeneraCat-Core), which is compatible with Venera comic-source scripts and their indexes.
+A comic client for iOS/iPadOS with a SwiftUI interface (video comes later), licensed GPL-3.0-or-later. Its logic comes from [VeneraCat Core](https://github.com/laincat/VeneraCat-Core), which is compatible with Venera comic-source scripts and their indexes.
 
 ## Status
 
-The first phase builds one path: **add a comic source → search or browse → open a comic → read it → keep it on the shelf**. The code has not been compiled on macOS yet, but every change goes through `scripts/check-swift.sh`, which parses all Swift files for syntax errors; see [docs/STATUS.en.md](docs/STATUS.en.md).
+The first phase builds one path: **add a comic source → search or browse → open a comic → read it → keep it on the shelf**. The code compiles on macOS in Swift 6 mode — the Kit builds, the iOS module is produced and the App type checks, all with 0 errors and 0 warnings — but it has not run on a device or simulator yet. Every change still goes through `scripts/check-swift.sh`, which parses all Swift files for syntax errors; see [docs/STATUS.en.md](docs/STATUS.en.md).
 
 ## Layout
 
