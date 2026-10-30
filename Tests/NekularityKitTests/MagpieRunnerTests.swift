@@ -329,7 +329,9 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         }
         #expect(authJSON.contains("sk-immediate"))
         #expect(try store.loadAuthJSON(provider: "p")?.contains("sk-immediate") == true)
-        #expect(core.polls.isEmpty)
+        // `polledIDs` says a poll happened at all; `polls` is only the queue of
+        // canned answers and would look untouched if it started empty.
+        #expect(core.polledIDs.isEmpty)
     }
 
     /// A package that only ever says "nothing yet" must not hold the screen
