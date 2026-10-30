@@ -4,6 +4,7 @@ import NekularityKit
 struct ComicDetailView: View {
     let route: ComicRoute
     @Environment(SourceLibrary.self) private var library
+    @Environment(ShelfStore.self) private var shelf
     @State private var details: ComicDetails?
     @State private var error: String?
 
@@ -67,6 +68,18 @@ struct ComicDetailView: View {
                                                        chapters: [], index: 0))
                 }
             } else {
+                if let resume = shelf.entry(source: route.source, id: route.comic.id) {
+                    Section {
+                        NavigationLink(value: ReaderRoute(source: route.source, comicID: route.comic.id,
+                                                          comicTitle: d.title.isEmpty ? route.comic.title : d.title,
+                                                          author: route.comic.subtitle,
+                                                          cover: route.comic.cover,
+                                                          chapters: d.chapters,
+                                                          index: min(max(0, resume.chapterIndex), d.chapters.count - 1))) {
+                            Label("继续阅读 · \(resumePosition(resume))", systemImage: "book.pages")
+                        }
+                    }
+                }
                 ForEach(groups(d.chapters), id: \.name) { group in
                     Section(group.name ?? "章节") {
                         ForEach(group.items, id: \.offset) { i, chapter in
@@ -81,6 +94,15 @@ struct ComicDetailView: View {
                 }
             }
         }
+    }
+
+    /// What the shelf remembers about where reading stopped, in one line.
+    private func resumePosition(_ entry: ShelfHistory) -> String {
+        var parts: [String] = []
+        if let page = entry.page, page > 0 { parts.append("第 \(page) 页") }
+        if let percent = entry.percent, percent > 0 { parts.append("\(percent)%") }
+        if parts.isEmpty, let chapter = entry.chapter, !chapter.isEmpty { parts.append(chapter) }
+        return parts.isEmpty ? "上次的位置" : parts.joined(separator: " · ")
     }
 
     /// Chapters by group, keeping the global index each reader route uses.

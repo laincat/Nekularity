@@ -122,6 +122,11 @@ public final class ShelfStore {
         Array(history.prefix(max(0, limit)))
     }
 
+    /// The reading position for one comic, if the shelf knows it.
+    public func entry(source: String, id: String) -> ShelfHistory? {
+        history.first { $0.source == source && $0.id == id }
+    }
+
     /// The folder holding a comic, if any.
     public func folderHolding(source: String, id: String) -> String? {
         for folder in folders where folder.items.contains(where: { $0.source == source && $0.id == id }) {

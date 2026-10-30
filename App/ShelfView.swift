@@ -124,6 +124,9 @@ private struct HistoryRow: View {
         } else {
             parts.append("第 \(entry.chapterIndex + 1) 话")
         }
+        if let page = entry.page, page > 0 {
+            parts.append("第 \(page) 页")
+        }
         if let percent = entry.percent, percent > 0 {
             parts.append("\(percent)%")
         }
