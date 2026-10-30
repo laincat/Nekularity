@@ -53,5 +53,20 @@
 3. 备份导入已接上,并用真实 `.venera` 的字段形状核过;下一步是在模拟器里跑一遍并核对条数。
 4. 需要产品决策、暂不动的两项:视频源与播放;把旧版全局 Cookie 映射到按源分区。
 5. 需要系统级授权的两项:安装 iOS 模拟器运行时;在 Mac 上装 XcodeGen 以产出 `.xcodeproj`。
-6. AI 能力排在主线之后:iOS 端要做的是 **Magpie 插件系统**——直接运行 Magpie 的供应商原包,账号与运行环境独立于漫画源。Core 侧已有 `magpieplugin` 的包入口/模块定位与 `host/sse` 解码器,但 hook 宿主、认证与流式请求都还没有;先按原插件逐个验证,不把「能导入 JS」当作「兼容供应商」。桌面端不做 AI 接入。
+6. AI 能力排在主线之后:iOS 端要做的是 **Magpie 插件系统**——直接运行 Magpie 的供应商原包,账号与运行环境独立于漫画源。桌面端不做 AI 接入。
+
+## Magpie 供应商插件(Nekularity 侧)
+
+Core 侧已跑通:包快照与模块定位、`fetch`/`Headers`/`URL`/`ReadableStream` 运行时、设备码登录、刷新写回、用量与模型列表、流式分块、三种协议的流事件归一,以及「已输出就不再重试」。这些都有 Go 测试,包括用原始 Copilot 包跑假服务。
+
+本仓库这一步只做客户端这一层,且**还没在 Mac 上编译过**:
+
+| 部分 | 内容 |
+|---|---|
+| `MagpieAuthStore` | 登录信息按 provider 分开存,存的是**原文 JSON 字符串**而不是解析后的字典:包自己写、自己读,重新编码会打乱键序,也会让 `9007199254740993` 变成浮点。`MemoryMagpieAuthStore` 供测试,`KeychainMagpieAuthStore` 用 `kSecClassGenericPassword` 按 provider 建条目,可访问性取 `AfterFirstUnlock`——锁屏时也可能要刷新,读不到就等于包悄悄失效 |
+| `MagpieRunner` | 装包(路径→字节,转 base64 交 Core)、把已存的登录信息交进去、跑导出函数、**把包刷新后写回的值再存一次**(否则下次启动就掉登录)、登出时关实例并删条目。装包只接受已经解开的文件表:解压归 Core,这一层不信任何没被 Core 校验过的路径 |
+
+`MagpieRunner.Core` 是一个协议,而不是直接写死生成的 `MobileMagpie`:这样编排逻辑用 `StubMagpieCore` 就能测,不必等 xcframework。7 个新用例覆盖 base64 往返、无登录时不发送、刷新写回、空写回不覆盖、登出、装包失败,以及原文数字不被改写。
+
+还差:接上真正的 `MobileMagpie`(等 Mac 上生成绑定后再写,不猜签名)、包安装界面(选 zip)、设备码登录界面与取消、模型选择与流式显示。
 7. 需要拍板的一项:iOS 的 ATS。不少漫画源的图片地址是 `http://`,而 ATS 默认拒绝明文请求。桌面端由 Go 的 `net/http` 直接放行,移动端要么开 `NSAllowsArbitraryLoads`(放宽全部明文),要么只对必要的域名例外——这属于安全取舍,未擅自决定。

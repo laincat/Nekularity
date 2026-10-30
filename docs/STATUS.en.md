@@ -55,7 +55,30 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 5. Two items need system-level approval: installing an iOS simulator runtime, and installing XcodeGen on the Mac to produce an `.xcodeproj`.
 6. AI comes after the reading path: on iOS the plan is the **Magpie plugin system** — running
    Magpie's original provider packages, with accounts and runtime separate from comic sources.
-   Core has `magpieplugin` package entry/module resolution and the `host/sse` decoder, but no hook
-   host, authentication or streaming yet; each original plugin is verified before it is called
-   compatible. Desktop does no AI work.
+   Desktop does no AI work.
+
+## Magpie provider plugins (the Nekularity side)
+
+Core already does the hard part: package snapshot and module resolution, a `fetch` /
+`Headers` / `URL` / `ReadableStream` runtime, device-code sign-in, refresh write-back,
+usage and model lists, streamed chunks, one event model over three wire dialects, and
+"never retry once output started". All of that is covered by Go tests, including the
+original Copilot package against a fake service.
+
+This repository has only the client layer so far, and **it has not been compiled on a Mac
+yet**:
+
+| Part | What it does |
+|---|---|
+| `MagpieAuthStore` | Keeps each provider's sign-in separately, as the **original JSON text**, not a parsed dictionary: the package writes and reads it back itself, and re-encoding reorders keys and turns `9007199254740993` into a float. `MemoryMagpieAuthStore` is for tests; `KeychainMagpieAuthStore` uses `kSecClassGenericPassword` per provider with `AfterFirstUnlock` — a refresh may run while the phone is locked, and a sign-in that cannot be read then is a package that quietly stops working |
+| `MagpieRunner` | Installs a package (path to bytes, base64 to Core), hands over the stored sign-in, runs an export, **stores whatever the package saved afterwards** (otherwise a refresh is lost and the next launch is signed out), and on sign-out closes the instance and deletes the entry. Installation takes an already unpacked file table: unpacking belongs to Core, and this layer trusts no path Core did not validate |
+
+`MagpieRunner.Core` is a protocol rather than the generated `MobileMagpie` directly, so the
+orchestration is testable against `StubMagpieCore` without an xcframework. Seven new cases
+cover the base64 round trip, no sign-in sent when none is stored, refresh write-back, an empty
+write-back not overwriting, sign-out, a failed install, and exact number text surviving.
+
+Still missing: the real `MobileMagpie` adapter (written once the bindings are generated on the
+Mac — signatures are not guessed), the package installation screen (zip), the device-code
+sign-in screen with cancellation, and model selection with streaming display.
 7. One item needs a decision: App Transport Security. Many comic sources serve images over `http://`, and ATS refuses cleartext by default. The desktop client gets away with it because Go's `net/http` does not apply ATS; the app either allows arbitrary loads (cleartext everywhere) or carves out exceptions per host — a security trade-off, so it is not decided here.
