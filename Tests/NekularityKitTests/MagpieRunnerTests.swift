@@ -250,6 +250,22 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(reason == "user cancelled")
     }
 
+    /// A package that only ever says "nothing yet" must not hold the screen
+    /// forever: the device code expires, and so does this wait.
+    @Test func aPackageThatNeverAnswersTimesOut() async throws {
+        let core = StubMagpieCore()
+        core.polls = []
+        let signIn = MagpieSignIn(core: core, store: MemoryMagpieAuthStore(), provider: "p",
+                                  pollInterval: .milliseconds(1), timeout: .milliseconds(30))
+        _ = try signIn.start()
+        let outcome = await signIn.waitForResult()
+        guard case .failed(let reason) = outcome else {
+            Issue.record("outcome = \(outcome)")
+            return
+        }
+        #expect(reason.contains("超时"))
+    }
+
     /// Cancelling stops both the wait and the package's own callback.
     @Test func cancelStopsTheWaitAndThePackage() async throws {
         let core = StubMagpieCore()

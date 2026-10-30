@@ -84,6 +84,9 @@ public final class MagpieSignIn: @unchecked Sendable {
     private let provider: String
     private let inputs: [String: String]
     private let pollInterval: Duration
+    /// A package that keeps answering "nothing yet" must not keep the screen
+    /// waiting for ever; the device code itself expires, and so does this.
+    private let timeout: Duration
 
     private let lock = NSLock()
     private var started: MagpieSignInStart?
@@ -94,13 +97,15 @@ public final class MagpieSignIn: @unchecked Sendable {
         store: MagpieAuthStore,
         provider: String,
         inputs: [String: String] = [:],
-        pollInterval: Duration = .milliseconds(500)
+        pollInterval: Duration = .milliseconds(500),
+        timeout: Duration = .seconds(600)
     ) {
         self.core = core
         self.store = store
         self.provider = provider
         self.inputs = inputs
         self.pollInterval = pollInterval
+        self.timeout = timeout
     }
 
     /// Starts the method and reports what to show the user.
@@ -126,7 +131,9 @@ public final class MagpieSignIn: @unchecked Sendable {
     /// Waits for the package's callback. Cancellation reaches the package, so a
     /// callback still polling the vendor stops instead of running on.
     public func waitForResult() async -> MagpieSignInOutcome {
+        let deadline = ContinuousClock.now.advanced(by: timeout)
         while true {
+            if ContinuousClock.now > deadline { return .failed(reason: "登录超时,请重新开始") }
             if lock.withLock({ cancelled }) { return .cancelled }
             guard let start = lock.withLock({ started }) else { return .failed(reason: "登录尚未开始") }
             do {
