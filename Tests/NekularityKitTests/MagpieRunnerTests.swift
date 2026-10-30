@@ -309,3 +309,64 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(try reopened.list().map(\.provider) == ["p"])
     }
 }
+
+@Suite struct MagpiePackageReaderTests {
+    private func folder(_ files: [String: String]) throws -> URL {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-read-\(UUID().uuidString)")
+        for (path, text) in files {
+            let url = dir.appendingPathComponent(path)
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                     withIntermediateDirectories: true)
+            try Data(text.utf8).write(to: url)
+        }
+        return dir
+    }
+
+    @Test func readsEveryFileWithPackageRelativePaths() throws {
+        let dir = try folder([
+            "package.json": #"{"name":"p","version":"1.0.0","main":"./index.mjs"}"#,
+            "index.mjs": "export default async () => ({})",
+            "lib/endpoints.mjs": "export const url = 1",
+        ])
+        let files = try MagpiePackageReader.files(from: dir)
+        #expect(Set(files.keys) == ["package.json", "index.mjs", "lib/endpoints.mjs"])
+        #expect(MagpiePackageReader.looksLikePackage(files: files))
+        #expect(String(decoding: files["lib/endpoints.mjs"] ?? Data(), as: UTF8.self)
+            .contains("export const url"))
+    }
+
+    /// A folder of random documents is not a plugin; saying so here is clearer
+    /// than a load failure later.
+    @Test func aFolderWithoutAManifestIsRejected() throws {
+        let dir = try folder(["notes.txt": "hello"])
+        #expect(throws: MagpiePackageReader.Rejection.self) {
+            _ = try MagpiePackageReader.files(from: dir)
+        }
+    }
+
+    /// A manifest with nothing to load is not a plugin either: Magpie itself
+    /// refuses a package that names no entry.
+    @Test func aManifestWithNoEntryIsNotAPackage() throws {
+        let files = ["package.json": Data(#"{"name":"x","bin":{"x":"cli.js"}}"#.utf8)]
+        #expect(!MagpiePackageReader.looksLikePackage(files: files))
+    }
+
+    @Test func aPackageNamingAFileInMainCounts() throws {
+        let files = ["package.json": Data(#"{"name":"x","main":"./dist/index.cjs"}"#.utf8)]
+        #expect(MagpiePackageReader.looksLikePackage(files: files))
+    }
+
+    /// The per-file limit is checked before the bytes are read, so a stray video
+    /// in the folder is refused rather than swallowed.
+    @Test func aHugeFileIsRefused() throws {
+        let dir = try folder(["package.json": "{}", "big.bin": ""])
+        let big = dir.appendingPathComponent("big.bin")
+        let handle = try FileHandle(forWritingTo: big)
+        try handle.truncate(atOffset: UInt64(MagpiePackageReader.maxFileBytes + 1))
+        try handle.close()
+        #expect(throws: MagpiePackageReader.Rejection.self) {
+            _ = try MagpiePackageReader.files(from: dir)
+        }
+    }
+}
