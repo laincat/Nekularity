@@ -118,4 +118,28 @@ import Testing
         // The file is still there, untouched by opening it.
         #expect(try Data(contentsOf: dir.appending(path: "shelf.json")) == Data("{".utf8))
     }
+
+    @Test func entryFindsOneComicPosition() {
+        let store = ShelfStore(directory: directory())
+        store.record(ShelfHistory(comic: comic("1"), chapter: "第 2 话", chapterIndex: 1, page: 7, percent: 33, time: 10))
+        store.record(ShelfHistory(comic: comic("2"), chapter: "第 1 话", chapterIndex: 0, time: 20))
+        #expect(store.entry(source: "copy_manga", id: "1")?.page == 7)
+        #expect(store.entry(source: "copy_manga", id: "2")?.chapterIndex == 0)
+        #expect(store.entry(source: "copy_manga", id: "3") == nil)
+        // Another source with the same id is another comic.
+        #expect(store.entry(source: "manga_dex", id: "1") == nil)
+    }
+
+    @Test func progressKeepsTheEntryPlace() {
+        let store = ShelfStore(directory: directory())
+        store.record(ShelfHistory(comic: comic("1"), chapter: "第 1 话", chapterIndex: 0, time: 10))
+        store.record(ShelfHistory(comic: comic("2"), chapter: "第 1 话", chapterIndex: 0, time: 20))
+        #expect(store.updateProgress(source: "copy_manga", id: "1", page: 4, percent: 12))
+        #expect(store.recentHistory().first?.id == "2")
+        #expect(store.entry(source: "copy_manga", id: "1")?.page == 4)
+        #expect(store.entry(source: "copy_manga", id: "1")?.percent == 12)
+        // An unknown comic is not added by a scroll.
+        #expect(!store.updateProgress(source: "copy_manga", id: "9", page: 2, percent: 5))
+        #expect(store.entry(source: "copy_manga", id: "9") == nil)
+    }
 }
