@@ -21,7 +21,7 @@ struct ShelfView: View {
                 }
                 if !shelf.recentHistory().isEmpty {
                     Section("继续阅读") {
-                        ForEach(shelf.recentHistory()) { entry in
+                        ForEach(shelf.recentHistory(), id: \.key) { entry in
                             NavigationLink(value: ComicRoute(source: entry.source,
                                                              comic: entry.comic.asComic)) {
                                 HistoryRow(entry: entry)
@@ -39,7 +39,7 @@ struct ShelfView: View {
                         if folder.items.isEmpty {
                             Text("（空）").font(.footnote).foregroundStyle(.secondary)
                         }
-                        ForEach(folder.items) { comic in
+                        ForEach(folder.items, id: \.key) { comic in
                             NavigationLink(value: ComicRoute(source: comic.source, comic: comic.asComic)) {
                                 ComicRow(comic: comic)
                             }

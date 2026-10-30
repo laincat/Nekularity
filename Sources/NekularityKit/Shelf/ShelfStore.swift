@@ -39,6 +39,10 @@ public struct ShelfHistory: Codable, Hashable, Sendable {
     /// When the chapter was last opened, in seconds.
     public var time: Int
 
+    /// The comic's identity, source included: two sources may hand out the
+    /// same comic id for different comics.
+    public var key: String { source + "/" + id }
+
     public init(
         comic: ShelfComic,
         chapter: String? = nil,
