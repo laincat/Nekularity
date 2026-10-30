@@ -73,7 +73,9 @@ Core 侧已跑通:包快照与模块定位、`fetch`/`Headers`/`URL`/`ReadableSt
 | App `-typecheck -swift-version 6` | PASS |
 | `swift test --filter Magpie` | **PASS — 61 tests / 16 suites** |
 
-静态计数与运行数一致:`@Test` 119、`@Suite` 27、`.swift` 56(28 Kit + 14 App + 11 Tests + `Package.swift`)。两棵树的 `check-tree.sh` 摘要相同:`shape=ae577459e8509e1f03d83970c56a80ea1adafd4b` —— 这比“总数对得上”硬,因为它证明**同一批用例在同样的文件里**。
+静态计数与运行数一致:`@Test` 119、`@Suite` 27、`.swift` 56(28 Kit + 14 App + 11 Tests + `Package.swift`)。
+
+**在那之后新加的代码还在等一次同类验证**:从压缩包安装、密钥登录表单、`prompts` 解码与 `immediate` 处理,现在已经到 `@Test` 125。它们过了语法检查与 `check-tree`,但没经过 Swift 类型检查 —— 这个区别写在这里,免得读者把 119 那次的结果当成对当前 HEAD 的结论。两棵树的 `check-tree.sh` 摘要相同:`shape=ae577459e8509e1f03d83970c56a80ea1adafd4b` —— 这比“总数对得上”硬,因为它证明**同一批用例在同样的文件里**。
 
 这一轮之前是「编译绿、测试红」:同一棵树编译零错误,`swift test` 却抓出 4 个断言失败——`modalities: null` 解不出来、安装没校验插件声明的 provider(会把登录写进别的账号)、登录循环里「空/null」一处当作等待一处当作失败(根因是 `JSONSerialization` 默认不接受顶层 `null`)。修完又补了登录与对话两个超时:能被无限等待的地方,测试和用户都会撞上。
 
