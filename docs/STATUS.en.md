@@ -186,3 +186,11 @@ as an event stream and the view renders incrementally, but the first batch of ev
 carries all of it. Real incremental output needs a streaming callback on the host protocol,
 which is a change to Core's API, so it is not decided here.
 7. One item needs a decision: App Transport Security. Many comic sources serve images over `http://`, and ATS refuses cleartext by default. The desktop client gets away with it because Go's `net/http` does not apply ATS; the app either allows arbitrary loads (cleartext everywhere) or carves out exceptions per host — a security trade-off, so it is not decided here.
+
+## Waiting on a decision
+
+Five questions are product or security calls rather than engineering: the ATS policy, migrating
+cookies from the global jar into per-source partitions, the video playback architecture, whether
+reference provider packages ship with Core, and one end-to-end run with a real account. Each is on
+Core's [docs/OPEN-QUESTIONS.en.md](https://github.com/laincat/VeneraCat-Core/blob/main/docs/OPEN-QUESTIONS.en.md) with the current
+state, the options and what staying open costs — not copied here, so the two cannot drift apart.

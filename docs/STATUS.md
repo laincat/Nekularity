@@ -140,3 +140,7 @@ swift test --filter Magpie            7 tests / 2 suites 全部执行
 
 已接上真正的 `MobileMagpie`,`MagpieAccounts` 负责「每个 provider 一个 runner + 一份声明缓存」。**一处诚实的边界**:宿主协议目前没有流式方法,gomobile 又是拉取式的,所以 iOS 上回复会**整段到达** —— `MagpieChat` 是按事件流写的,界面也是增量渲染的,但第一批事件通常已经包含全部内容。要做到真正的增量输出,需要给宿主协议加一个流式回调(属于 Core 的 API 变更),这件事没有擅自定。
 7. 需要拍板的一项:iOS 的 ATS。不少漫画源的图片地址是 `http://`,而 ATS 默认拒绝明文请求。桌面端由 Go 的 `net/http` 直接放行,移动端要么开 `NSAllowsArbitraryLoads`(放宽全部明文),要么只对必要的域名例外——这属于安全取舍,未擅自决定。
+
+## 待你决定的事
+
+有五件事不是工程问题,而是产品/安全取向:ATS 策略、Cookie 全局到分区的迁移、视频播放架构、是否随 Core 发布参考供应商包、以及一次真实账号的端到端验证。逐条写了现状、可选项与「不定时的后果」,在 Core 的 [docs/OPEN-QUESTIONS.md](https://github.com/laincat/VeneraCat-Core/blob/main/docs/OPEN-QUESTIONS.md) —— 客户端仓库不复制那份内容,免得两处各自过期。
