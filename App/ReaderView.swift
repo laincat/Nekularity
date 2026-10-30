@@ -164,11 +164,11 @@ struct ReaderView: View {
 
     private var chapterFooter: some View {
         HStack {
-            if route.index > 0 {
+            if ReaderNavigation.canGoPrevious(index: route.index) {
                 Button { route.index -= 1 } label: { Label("上一章", systemImage: "chevron.left") }
             }
             Spacer()
-            if route.index + 1 < route.chapters.count {
+            if ReaderNavigation.canGoNext(index: route.index, chapterCount: route.chapters.count) {
                 Button { route.index += 1 } label: { Label("下一章", systemImage: "chevron.right").labelStyle(TrailingIcon()) }
                     .buttonStyle(.borderedProminent)
             } else {
@@ -181,8 +181,11 @@ struct ReaderView: View {
     /// Opens the next chapter once the reader has scrolled to the end of this
     /// one. A chapter with a single page is not a scroll, so it stays put.
     private func nextChapterIfPossible() {
-        guard autoNext, images.count > 1, lastPage > 1, route.index + 1 < route.chapters.count else { return }
-        route.index += 1
+        if let next = ReaderNavigation.autoNextIndex(autoNext: autoNext, pageCount: images.count,
+                                                     lastPage: lastPage, index: route.index,
+                                                     chapterCount: route.chapters.count) {
+            route.index = next
+        }
     }
 
     /// Writes a page number to the shelf, for the paged reader.
