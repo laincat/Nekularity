@@ -113,9 +113,11 @@ struct ReaderView: View {
     private func keepPage() {
         let number = max(1, lastPage)
         guard images.indices.contains(number - 1) else { return }
+        // A single-chapter comic has no chapter id; the shelf stores "" for
+        // it, the same way an empty chapter name is stored.
         let page = KeptPage(source: route.source, comicID: route.comicID,
                             comicTitle: route.comicTitle.isEmpty ? route.title : route.comicTitle,
-                            chapterID: route.chapterID, chapterIndex: route.index,
+                            chapterID: route.chapterID ?? "", chapterIndex: route.index,
                             chapterName: route.title, page: number, url: images[number - 1])
         let added = shelf.keepPage(page)
         keptNote = added ? "已收藏" : "已经收藏过"
