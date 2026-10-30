@@ -59,7 +59,9 @@
 
 Core 侧已跑通:包快照与模块定位、`fetch`/`Headers`/`URL`/`ReadableStream` 运行时、设备码登录、刷新写回、用量与模型列表、流式分块、三种协议的流事件归一,以及「已输出就不再重试」。这些都有 Go 测试,包括用原始 Copilot 包跑假服务。
 
-本仓库这一步只做客户端这一层。2026-10-30 已在 macOS 27 / Xcode 27 / Swift 6.4 上真实编译并跑通全部五项检查:
+本仓库这一步只做客户端这一层。**2026-10-31 的最新一次验证**:编译层四项全绿、0 error 0 warning,`swift test` 跑起 `112 tests / 24 suites` 并抓出 4 个断言失败(全部已修:`modalities: null` 的解码、安装时校验插件声明的 provider、登录循环里「空/null 该继续等」)。随后又补了两条超时(登录与对话),用例数应为 114。下面这一段是 2026-10-30 的首轮结果:
+
+2026-10-30 已在 macOS 27 / Xcode 27 / Swift 6.4 上真实编译并跑通全部五项检查:
 
 ```
 ① Kit swift build                     PASS  0 error 0 warning
