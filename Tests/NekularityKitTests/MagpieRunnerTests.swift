@@ -329,7 +329,7 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         }
         #expect(authJSON.contains("sk-immediate"))
         #expect(try store.loadAuthJSON(provider: "p")?.contains("sk-immediate") == true)
-        #expect(core.polls == 0)
+        #expect(core.polls.isEmpty)
     }
 
     /// A package that only ever says "nothing yet" must not hold the screen
@@ -658,6 +658,76 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
             _ = try accounts.runner(for: "absent")
         }
     }
+
+    /// A vendor that refuses the list must surface as an error, not as "no
+    /// models": the two mean different things to a user picking one.
+    /// Listing providers must not start a JavaScript runtime per package: the
+    /// declaration is recorded at install time, so a fresh list over the same
+    /// store works even when no factory is available at all.
+    @Test func theListNeedsNoRuntimeOnceInstalled() throws {
+        let core = StubMagpieCore()
+        let (accounts, packages, auth, _) = try accounts(core)
+        _ = try accounts.install(provider: "p", files: [
+            "package.json": Data(#"{"name":"@demo/x","version":"1.2.3","main":"./index.mjs"}"#.utf8),
+            "index.mjs": Data("export async function Plugin() {}".utf8),
+        ])
+        // A second view of the same store, with a factory that fails if asked.
+        // Both factories refuse: a list that works proves neither was called.
+        let cold = MagpieAccounts(
+            packages: packages,
+            auth: auth,
+            makeRunner: { _, _ in throw MagpieError("a list must not start a runtime") },
+            makeCore: { throw MagpieError("a list must not start a runtime") }
+        )
+        // Stored with the files, not written again afterwards.
+        #expect(try packages.list().first?.specJSON != nil)
+        let rows = try cold.rows()
+        #expect(rows.count == 1)
+        #expect(rows.first?.provider == "p")
+        #expect(rows.first?.name == "@demo/x")
+        #expect(rows.first?.hasSignIn == true)
+    }
+
+    /// A package installed before the declaration was recorded pays for one
+    /// evaluation, then stops: the answer is written back, so the next list is
+    /// free again.
+    @Test func anOldPackageIsEvaluatedOnceAndThenRecorded() throws {
+        let core = StubMagpieCore()
+        let (accounts, packages, _, _) = try accounts(core)
+        _ = try accounts.install(provider: "p", files: [
+            "package.json": Data(#"{"name":"@demo/old","version":"0.0.1","main":"./index.mjs"}"#.utf8),
+            "index.mjs": Data("export async function Plugin() {}".utf8),
+        ])
+        // Pretend it was installed before specJSON existed.
+        var stored = try #require(try packages.list().first)
+        stored.specJSON = nil
+        try packages.replace(stored)
+
+        _ = try accounts.rows()
+        let after = try #require(try packages.list().first)
+        #expect(after.specJSON != nil)
+        #expect(after.specJSON?.contains("p") == true)
+    }
+
+    /// A package that loads but declares no auth is not a broken provider; it is
+    /// not a provider at all, and the message says which.
+    @Test func aPackageWithoutAuthSaysSo() throws {
+        let core = StubMagpieCore()
+        let (accounts, packages, _, _) = try accounts(core)
+        // After the helper: it seeds a device-flow answer, and a package with no
+        // auth is a different case.
+        core.authToReturn = "null"
+        let files: [String: Data] = [
+            "package.json": Data(#"{"name":"@demo/middleware","version":"1.0.0","main":"./index.mjs"}"#.utf8),
+            "index.mjs": Data("export async function Middleware() {}".utf8),
+        ]
+        let error = #expect(throws: MagpieError.self) {
+            _ = try accounts.install(provider: "m", files: files)
+        }
+        #expect(error?.message.contains("不是供应商插件") == true)
+        // Nothing half-installed: a rejected package leaves no row behind.
+        #expect(try packages.list().isEmpty)
+    }
 }
 
 @Suite struct MagpieInstallByNameTests {
@@ -881,74 +951,6 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         let core = StubMagpieCore()
         core.modelsToReturn = "null"
         #expect(try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).models().isEmpty)
-    }
-
-    /// A vendor that refuses the list must surface as an error, not as "no
-    /// models": the two mean different things to a user picking one.
-    /// Listing providers must not start a JavaScript runtime per package: the
-    /// declaration is recorded at install time, so a fresh list over the same
-    /// store works even when no factory is available at all.
-    @Test func theListNeedsNoRuntimeOnceInstalled() throws {
-        let core = StubMagpieCore()
-        let (accounts, packages, auth, _) = try accounts(core)
-        _ = try accounts.install(provider: "p", files: [
-            "package.json": Data(#"{"name":"@demo/x","version":"1.2.3","main":"./index.mjs"}"#.utf8),
-            "index.mjs": Data("export async function Plugin() {}".utf8),
-        ])
-        // A second view of the same store, with a factory that fails if asked.
-        // Both factories refuse: a list that works proves neither was called.
-        let cold = MagpieAccounts(
-            packages: packages,
-            auth: auth,
-            makeRunner: { _, _ in throw MagpieError("a list must not start a runtime") },
-            makeCore: { throw MagpieError("a list must not start a runtime") }
-        )
-        // Stored with the files, not written again afterwards.
-        #expect(try packages.list().first?.specJSON != nil)
-        let rows = try cold.rows()
-        #expect(rows.count == 1)
-        #expect(rows.first?.provider == "p")
-        #expect(rows.first?.name == "@demo/x")
-        #expect(rows.first?.hasSignIn == true)
-    }
-
-    /// A package installed before the declaration was recorded pays for one
-    /// evaluation, then stops: the answer is written back, so the next list is
-    /// free again.
-    @Test func anOldPackageIsEvaluatedOnceAndThenRecorded() throws {
-        let core = StubMagpieCore()
-        let (accounts, packages, _, _) = try accounts(core)
-        _ = try accounts.install(provider: "p", files: [
-            "package.json": Data(#"{"name":"@demo/old","version":"0.0.1","main":"./index.mjs"}"#.utf8),
-            "index.mjs": Data("export async function Plugin() {}".utf8),
-        ])
-        // Pretend it was installed before specJSON existed.
-        var stored = try #require(try packages.list().first)
-        stored.specJSON = nil
-        try packages.replace(stored)
-
-        _ = try accounts.rows()
-        let after = try #require(try packages.list().first)
-        #expect(after.specJSON != nil)
-        #expect(after.specJSON?.contains("p") == true)
-    }
-
-    /// A package that loads but declares no auth is not a broken provider; it is
-    /// not a provider at all, and the message says which.
-    @Test func aPackageWithoutAuthSaysSo() throws {
-        let core = StubMagpieCore()
-        core.authToReturn = "null"
-        let (accounts, packages, _, _) = try accounts(core)
-        let files: [String: Data] = [
-            "package.json": Data(#"{"name":"@demo/middleware","version":"1.0.0","main":"./index.mjs"}"#.utf8),
-            "index.mjs": Data("export async function Middleware() {}".utf8),
-        ]
-        let error = #expect(throws: MagpieError.self) {
-            _ = try accounts.install(provider: "m", files: files)
-        }
-        #expect(error?.message.contains("不是供应商插件") == true)
-        // Nothing half-installed: a rejected package leaves no row behind.
-        #expect(try packages.list().isEmpty)
     }
 
     @Test func aRefusedListThrows() throws {

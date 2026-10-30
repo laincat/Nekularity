@@ -123,7 +123,10 @@ public final class MagpieAccounts: @unchecked Sendable {
     }
 
     @discardableResult
-    private func install(provider: String, files: [String: Data]) throws -> MagpieProviderRow {
+    /// Installs bytes the caller already unpacked. Also the seam the tests use:
+    /// a folder and an archive both end up here.
+    @discardableResult
+    public func install(provider: String, files: [String: Data]) throws -> MagpieProviderRow {
         guard MagpiePackageReader.looksLikePackage(files: files) else {
             throw MagpiePackageReader.Rejection("包里没有可加载的入口(需要 exports[./server]、main 或 index 文件)")
         }
@@ -132,8 +135,6 @@ public final class MagpieAccounts: @unchecked Sendable {
         // half-installed row behind.
         let runner = try makeRunner(provider, files)
         let spec = try runner.auth(provider: provider)
-        // The package has to be the one it claims to be: storing it under
-        // another id would send its sign-in to the wrong account.
         // Two different failures, told apart: a package that loads but declares
         // no auth is a middleware or a tool, not a provider; a package that
         // declares someone else's id would send its sign-in to the wrong account.
@@ -141,9 +142,12 @@ public final class MagpieAccounts: @unchecked Sendable {
             runner.close()
             throw MagpieError("这个包能加载,但没有声明 auth,不是供应商插件(中间件或工具包属于这种情况)")
         }
-        guard let declared = spec.provider, declared == provider else {
+        // `provider` is a plain String: a package that leaves the field out
+        // reaches here as an empty one, which is still a package to refuse.
+        guard !spec.provider.isEmpty, spec.provider == provider else {
             runner.close()
-            throw MagpieError("这个插件声明的是 \(spec.provider ?? "（没有声明 provider）"),不是 \(provider)")
+            let declared = spec.provider.isEmpty ? "（没有声明 provider）" : spec.provider
+            throw MagpieError("这个插件声明的是 \(declared),不是 \(provider)")
         }
         // Remembering what the plugin declared keeps the list from starting a
         // runtime per provider on every refresh. It goes in with the files, in
@@ -193,10 +197,11 @@ public final class MagpieAccounts: @unchecked Sendable {
         // folder's name first and re-keyed once the plugin names itself.
         let runner = try makeRunner(provisional, files)
         let spec = try runner.auth(provider: provisional)
-        guard let provider = spec?.provider, !provider.isEmpty else {
+        guard let spec, !spec.provider.isEmpty else {
             runner.close()
             throw MagpieError("这个插件没有声明 auth.provider,无法作为供应商使用")
         }
+        let provider = spec.provider
         let package = try packages.install(provider: provider, files: files,
                                            specJSON: declarationJSON(spec))
         let previous = lock.withLock { () -> MagpieRunner? in
