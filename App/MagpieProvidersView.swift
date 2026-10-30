@@ -18,6 +18,7 @@ struct MagpieProvidersView: View {
     @State private var noticeTitle = "操作失败"
     @State private var signingIn: MagpieProviderRow?
     @State private var showingUsage: MagpieProviderRow?
+    @State private var showingOptions: MagpieProviderRow?
 
     var body: some View {
         NavigationStack {
@@ -65,6 +66,10 @@ struct MagpieProvidersView: View {
                                     }
                                     .buttonStyle(.borderless)
                                 }
+                                if row.optionCount > 0 {
+                                    Button("开关") { showingOptions = row }
+                                        .buttonStyle(.borderless)
+                                }
                                 if row.signedIn {
                                     Button("签到") { checkin(row) }
                                         .buttonStyle(.borderless)
@@ -108,6 +113,13 @@ struct MagpieProvidersView: View {
                 provider: row.provider,
                 providerName: row.name.isEmpty ? row.provider : row.name,
                 onSignedIn: { reload() }
+            )
+        }
+        .sheet(item: $showingOptions) { row in
+            MagpieOptionsView(
+                accounts: accounts,
+                provider: row.provider,
+                providerName: row.name.isEmpty ? row.provider : row.name
             )
         }
         .sheet(item: $showingUsage) { row in

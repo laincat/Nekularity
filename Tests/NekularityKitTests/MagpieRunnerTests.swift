@@ -787,3 +787,48 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(core.optionsSeen.contains(#""demo|vision":false"#))
     }
 }
+
+@Suite struct MagpieOptionStoreTests {
+    private func store() throws -> MagpieOptionStore {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-options-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return MagpieOptionStore(directory: dir)
+    }
+
+    @Test func valuesArePerProvider() throws {
+        let store = try store()
+        try store.set(provider: "a", key: "freeOnly", value: true)
+        #expect(try store.values(provider: "a") == ["freeOnly": true])
+        #expect(try store.values(provider: "b").isEmpty)
+        #expect(try store.optionsJSON(provider: "a") == ["a|freeOnly": true])
+    }
+
+    /// A switch nobody touched keeps the plugin's own default: a package written
+    /// as `option(...) ?? default` should see the default, not a false we made up.
+    @Test func untouchedSwitchesKeepThePluginsDefault() throws {
+        let store = try store()
+        let declared = [
+            MagpieAuthSpec.Option(key: "freeOnly", label: "只用免费模型", description: "", confirm: "", default: true),
+            MagpieAuthSpec.Option(key: "vision", label: "", description: "", confirm: "", default: false),
+        ]
+        var resolved = try store.resolve(declared, provider: "p")
+        #expect(resolved.map(\.value) == [true, false])
+        // An empty label falls back to the key so the row is still readable.
+        #expect(resolved[1].label == "vision")
+
+        try store.set(provider: "p", key: "freeOnly", value: false)
+        resolved = try store.resolve(declared, provider: "p")
+        #expect(resolved[0].value == false)
+    }
+
+    @Test func theFileSurvivesANewInstance() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-options-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let first = MagpieOptionStore(directory: dir)
+        try first.set(provider: "p", key: "k", value: true)
+        let second = MagpieOptionStore(directory: dir)
+        #expect(try second.values(provider: "p") == ["k": true])
+    }
+}

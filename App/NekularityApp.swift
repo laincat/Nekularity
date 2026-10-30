@@ -87,9 +87,11 @@ final class AppModel {
             let library = SourceLibrary(core: core)
             await library.restore()
             let keychain = KeychainMagpieAuthStore()
+            let magpieDir = support.appending(path: "Magpie", directoryHint: .isDirectory)
             let magpie = MagpieAccounts(
-                packages: MagpiePackageStore(directory: support.appending(path: "Magpie", directoryHint: .isDirectory)),
+                packages: MagpiePackageStore(directory: magpieDir),
                 auth: keychain,
+                options: MagpieOptionStore(directory: magpieDir),
                 makeRunner: { _, files in
                     let runner = try CoreMagpie(host: host)
                     var encoded: [String: String] = [:]

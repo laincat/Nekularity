@@ -10,6 +10,8 @@ public struct MagpieProviderRow: Identifiable, Sendable, Hashable {
     /// Whether this device holds a sign-in for it.
     public var signedIn: Bool
     public var methods: [String]
+    /// How many switches the plugin declares; zero means no options screen.
+    public var optionCount: Int
 
     public var id: String { provider }
 }
@@ -28,12 +30,20 @@ public final class MagpieAccounts: @unchecked Sendable {
     private let packages: MagpiePackageStore
     private let auth: MagpieAuthStore
     private let makeRunner: RunnerFactory
+    /// The user's choices for the plugins' own switches, when the app keeps them.
+    public let options: MagpieOptionStore?
     private let lock = NSLock()
     private var runners: [String: MagpieRunner] = [:]
 
-    public init(packages: MagpiePackageStore, auth: MagpieAuthStore, makeRunner: @escaping RunnerFactory) {
+    public init(
+        packages: MagpiePackageStore,
+        auth: MagpieAuthStore,
+        options: MagpieOptionStore? = nil,
+        makeRunner: @escaping RunnerFactory
+    ) {
         self.packages = packages
         self.auth = auth
+        self.options = options
         self.makeRunner = makeRunner
     }
 
@@ -51,7 +61,8 @@ public final class MagpieAccounts: @unchecked Sendable {
                 version: package.version,
                 hasSignIn: (spec?.methods.isEmpty == false),
                 signedIn: signedIn,
-                methods: spec?.methods.map(\.label) ?? []
+                methods: spec?.methods.map(\.label) ?? [],
+                optionCount: spec?.options.count ?? 0
             )
         }
     }
@@ -82,7 +93,8 @@ public final class MagpieAccounts: @unchecked Sendable {
             version: package.version,
             hasSignIn: (spec?.methods.isEmpty == false),
             signedIn: (try auth.loadAuthJSON(provider: provider)) != nil,
-            methods: spec?.methods.map(\.label) ?? []
+            methods: spec?.methods.map(\.label) ?? [],
+            optionCount: spec?.options.count ?? 0
         )
     }
 
@@ -118,7 +130,8 @@ public final class MagpieAccounts: @unchecked Sendable {
             version: package.version,
             hasSignIn: (spec?.methods.isEmpty == false),
             signedIn: (try auth.loadAuthJSON(provider: provider)) != nil,
-            methods: spec?.methods.map(\.label) ?? []
+            methods: spec?.methods.map(\.label) ?? [],
+            optionCount: spec?.options.count ?? 0
         )
     }
 
