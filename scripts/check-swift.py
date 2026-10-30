@@ -46,6 +46,27 @@ SKIP_DIRS = {".build", "Vendor", "build", ".git", "DerivedData"}
 CORE_TYPES = ("MobileCore", "MobileHostProtocol", "MobileMagpie", "MobileVersion")
 CORE_IMPORT = b"import VeneraCatCore"
 
+# The same mistake one layer up: an App file that names a kit type and forgets
+# `import NekularityKit`. Picking distinctive names keeps this from flagging a
+# word that happens to appear in a comment about something else.
+KIT_TYPES = (
+    "MagpieAccounts",
+    "MagpiePackageStore",
+    "MagpieSignIn",
+    "MagpieOptionStore",
+    "CoreVersion",
+    "ShelfStore",
+    "SourceStore",
+    "SearchHistoryStore",
+    "BackupImporter",
+    "ImageLoader",
+    "SourceLibrary",
+    "ReaderNavigation",
+    "CoreClient",
+    "CoreHost",
+)
+KIT_IMPORT = b"import NekularityKit"
+
 
 def swift_files(root: pathlib.Path) -> list[pathlib.Path]:
     return sorted(
@@ -81,6 +102,27 @@ def missing_core_imports(root: pathlib.Path, files: list[pathlib.Path]) -> list[
         if CORE_IMPORT in source:
             continue
         for name in CORE_TYPES:
+            if name.encode() in source:
+                problems.append((str(path.relative_to(root)), name))
+                break
+    return problems
+
+
+def missing_kit_imports(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
+    """App files that name a kit type without importing the kit.
+
+    Only App/ is checked: the kit imports itself, and the tests use
+    `@testable import NekularityKit`, which contains the same bytes.
+    """
+    problems: list[tuple[str, str]] = []
+    app = root / "App"
+    for path in files:
+        if app not in path.parents:
+            continue
+        source = path.read_bytes()
+        if KIT_IMPORT in source:
+            continue
+        for name in KIT_TYPES:
             if name.encode() in source:
                 problems.append((str(path.relative_to(root)), name))
                 break
@@ -207,6 +249,10 @@ def main() -> int:
         failed += 1
         print(f"{rel}: names {name} but does not import VeneraCatCore")
 
+    for rel, name in missing_kit_imports(root, files):
+        failed += 1
+        print(f"{rel}: names {name} but does not import NekularityKit")
+
     for rel, detail in test_stubs_missing_methods(root, files):
         failed += 1
         print(f"{rel}: a MagpieRunner.Core stub lacks {detail}")
@@ -216,7 +262,7 @@ def main() -> int:
         print(f"{rel}: {detail} is declared twice")
 
     if failed:
-        print(f"check-swift: {failed} of {len(files)} files do not parse")
+        print(f"check-swift: {failed} problem(s) across {len(files)} files")
         return 1
     if not args.quiet:
         print(f"check-swift: {len(files)} files parse")

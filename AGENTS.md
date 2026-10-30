@@ -47,4 +47,4 @@ swift test                 # macOS,需先运行 scripts/fetch-core.sh
 - `private` 的成员被测试调用(测试用的是 `@testable import`,能看见 internal,看不见 private)
 - 测试被放进另一个 suite,而它用到的助手是那个 suite 里定义的
 
-已经能自动查的两种:`Tests/` 里 conform `MagpieRunner.Core` 的替身缺方法、以及文件用了生成的 `Mobile*` 类型却没 `import VeneraCatCore`(`check-swift.py`)。
+已经能自动查的三种:`Tests/` 里 conform `MagpieRunner.Core` 的替身缺方法、文件用了生成的 `Mobile*` 类型却没 `import VeneraCatCore`、以及 `App/` 里用了 kit 的类型却没 `import NekularityKit`(`check-swift.py`;后两条都是「在 Mac 上才会炸」的编译错误,在 Windows 上就能先拦住)。
