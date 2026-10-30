@@ -33,7 +33,7 @@ struct MagpieProvidersView: View {
                     Text("还没有安装任何供应商插件。")
                         .foregroundStyle(.secondary)
                 } footer: {
-                    Text("供应商插件是一个文件夹(含 package.json)。登录与用量都只在这台设备上使用这家供应商自己的授权。")
+                    Text("供应商插件可以选已解开的文件夹,也可以选下载来的 .zip 或 .tar.gz。登录与用量都只在这台设备上使用这家供应商自己的授权。")
                 }
             } else {
                 Section("已安装") {
@@ -100,7 +100,7 @@ struct MagpieProvidersView: View {
                 Button {
                     picking = true
                 } label: {
-                    Label("从文件夹安装插件…", systemImage: "folder.badge.plus")
+                    Label("安装插件包(文件夹或压缩包)…", systemImage: "folder.badge.plus")
                 }
                 .disabled(busy)
             }
