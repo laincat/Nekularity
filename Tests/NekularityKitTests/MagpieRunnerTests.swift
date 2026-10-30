@@ -260,6 +260,19 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(reason == "user cancelled")
     }
 
+    /// A key-based method declares the fields to ask for. Without them the screen
+    /// has nowhere to type the key, and a working package looks broken.
+    @Test func aKeyMethodDeclaresWhatToAskFor() throws {
+        let json = #"{"provider":"cf","methods":[{"index":0,"label":"API Token","kind":"api","hint":"","prompts":[{"key":"token","type":"password","message":"API Token","placeholder":"paste it"},{"key":"accountId","type":"text","message":"Account ID","placeholder":"32 hex"}]}],"options":[],"hasUsage":false,"hasLoader":true}"#
+        let spec = try JSONDecoder().decode(MagpieAuthSpec.self, from: Data(json.utf8))
+        let method = try #require(spec.methods.first)
+        #expect(method.collectsInput)
+        #expect(method.kind == "api")
+        #expect(method.prompts.count == 2)
+        #expect(method.prompts[0].isSecret)
+        #expect(!method.prompts[1].isSecret)
+    }
+
     /// A key can carry metadata the package's loader needs. Cloudflare's package
     /// builds its base URL from `auth.metadata.accountId`; storing only the key
     /// leaves that URL with its placeholder still in it, and chat fails later.

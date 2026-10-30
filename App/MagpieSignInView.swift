@@ -18,7 +18,11 @@ struct MagpieSignInView: View {
     @State private var start: MagpieSignInStart?
     @State private var pending = false
     @State private var message: String?
+
     @State private var copied = false
+    /// The method whose fields the user is filling in, when it asks for any.
+    @State private var collecting: MagpieAuthSpec.Method?
+    @State private var answers: [String: String] = [:]
 
     var body: some View {
         NavigationStack {
@@ -27,7 +31,14 @@ struct MagpieSignInView: View {
                     Section {
                         ForEach(spec.methods, id: \.index) { method in
                             Button {
-                                begin(method)
+                                // A method with fields collects them here; one
+                                // with a page starts straight away.
+                                if method.collectsInput && method.kind != "device" {
+                                    collecting = method
+                                    answers = Dictionary(uniqueKeysWithValues: method.prompts.map { ($0.key, "") })
+                                } else {
+                                    begin(method, inputs: [:])
+                                }
                             } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
@@ -55,6 +66,33 @@ struct MagpieSignInView: View {
                     Section {
                         Text("这个插件没有提供登录方式。")
                             .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let method = collecting {
+                    Section {
+                        ForEach(method.prompts, id: \.key) { prompt in
+                            VStack(alignment: .leading, spacing: 4) {
+                                if !prompt.message.isEmpty {
+                                    Text(prompt.message).font(.footnote)
+                                }
+                                if prompt.isSecret {
+                                    SecureField(prompt.placeholder, text: binding(for: prompt.key))
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                } else {
+                                    TextField(prompt.placeholder, text: binding(for: prompt.key))
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                }
+                            }
+                        }
+                        Button("登录") { begin(method, inputs: answers) }
+                            .disabled(pending)
+                    } header: {
+                        Text(method.label)
+                    } footer: {
+                        Text("这些内容只存在这台设备的 Keychain 里,不会经过漫画源。")
                     }
                 }
 
@@ -125,7 +163,11 @@ struct MagpieSignInView: View {
         }
     }
 
-    private func begin(_ method: MagpieAuthSpec.Method) {
+    private func binding(for key: String) -> Binding<String> {
+        Binding(get: { answers[key] ?? "" }, set: { answers[key] = $0 })
+    }
+
+    private func begin(_ method: MagpieAuthSpec.Method, inputs: [String: String]) {
         pending = true
         message = nil
         session?.cancel()
@@ -133,9 +175,19 @@ struct MagpieSignInView: View {
         start = nil
         Task {
             do {
-                let newSession = try accounts.makeSignIn(provider: provider)
+                collecting = nil
+                let newSession = try accounts.makeSignIn(provider: provider, inputs: inputs)
                 session = newSession
-                start = try newSession.start(methodIndex: method.index)
+                let started = try newSession.start(methodIndex: method.index)
+                start = started
+                // A key-based method has already finished: there is no page to
+                // open and no callback to wait for, so asking the user to press
+                // "I'm done" would be a step that does nothing.
+                if started.immediateAuthJSON != nil {
+                    pending = false
+                    wait()
+                    return
+                }
             } catch {
                 message = error.localizedDescription
                 session?.cancel()
