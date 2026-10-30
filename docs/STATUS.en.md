@@ -2,7 +2,7 @@
 
 English | [简体中文](STATUS.md)
 
-Updated 2026-10-30.
+Updated 2026-10-31.
 
 ## Host signatures cross-checked
 
@@ -65,12 +65,30 @@ usage and model lists, streamed chunks, one event model over three wire dialects
 "never retry once output started". All of that is covered by Go tests, including the
 original Copilot package against a fake service.
 
-This repository has only the client layer so far. **The latest run, 2026-10-31:** the four
-compile checks pass with 0 errors and 0 warnings, and `swift test` started and ran
-`112 tests / 24 suites`, finding four assertion failures — all since fixed (decoding a `null`
-modalities array, verifying the declared provider at install time, and a sign-in loop that
-treated "empty/null" as failure). Two timeouts were added afterwards (sign-in and reply), so
-expect 114 cases. The section below is the first round, from 2026-10-30, which was compiled on
+This repository has only the client layer so far. **The 2026-10-31 run passes in full**, on
+macOS 27 / Xcode 27 / Swift 6.4:
+
+| Check | Result |
+|---|---|
+| `swift build` | PASS, 0 errors, 0 warnings |
+| `swift test` | **PASS — 114 tests / 24 suites** |
+| Kit `-typecheck -swift-version 6` (arm64-macos26.0) | PASS, 0 errors, 0 warnings |
+| iOS `-emit-module -parse-as-library -swift-version 6` (iPhoneOS 27.1) | PASS |
+| App `-typecheck -swift-version 6` | PASS |
+| `swift test --filter Magpie` | **PASS — 56 tests / 13 suites** |
+
+Static counts agree with the run: `@Test` 114, `@Suite` 24, `.swift` 54 (53 sources plus
+`Package.swift`).
+
+The round before this one was compile-green and test-red: the same tree had zero compile
+errors while `swift test` found four assertion failures — a `null` modalities array that would
+not decode, an install path that did not check the provider a plugin declares (which would
+file its sign-in against another account), and a sign-in loop that treated "empty/null" as
+waiting in one branch and as failure in another (the root cause being that `JSONSerialization`
+rejects a bare top-level `null` by default). Two timeouts followed, for sign-in and for a
+reply: anywhere the code can wait for ever, both a test and a user will hit it.
+
+The section below is the first round, from 2026-10-30, which was compiled on
 macOS 27 / Xcode 27 / Swift 6.4 and passed all five checks:
 
 ```

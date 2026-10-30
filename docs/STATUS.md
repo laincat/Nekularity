@@ -2,7 +2,7 @@
 
 [English](STATUS.en.md) | 简体中文
 
-更新:2026-10-30。
+更新:2026-10-31。
 
 ## 宿主接口形状已核对
 
@@ -59,7 +59,22 @@
 
 Core 侧已跑通:包快照与模块定位、`fetch`/`Headers`/`URL`/`ReadableStream` 运行时、设备码登录、刷新写回、用量与模型列表、流式分块、三种协议的流事件归一,以及「已输出就不再重试」。这些都有 Go 测试,包括用原始 Copilot 包跑假服务。
 
-本仓库这一步只做客户端这一层。**2026-10-31 的最新一次验证**:编译层四项全绿、0 error 0 warning,`swift test` 跑起 `112 tests / 24 suites` 并抓出 4 个断言失败(全部已修:`modalities: null` 的解码、安装时校验插件声明的 provider、登录循环里「空/null 该继续等」)。随后又补了两条超时(登录与对话),用例数应为 114。下面这一段是 2026-10-30 的首轮结果:
+本仓库这一步只做客户端这一层。**2026-10-31 的验证已全部通过**,在 macOS 27 / Xcode 27 / Swift 6.4 上:
+
+| 检查 | 结果 |
+|---|---|
+| `swift build` | PASS,0 error 0 warning |
+| `swift test` | **PASS — 114 tests / 24 suites** |
+| Kit `-typecheck -swift-version 6`(arm64-macos26.0) | PASS,0 error 0 warning |
+| iOS `-emit-module -parse-as-library -swift-version 6`(iPhoneOS 27.1) | PASS |
+| App `-typecheck -swift-version 6` | PASS |
+| `swift test --filter Magpie` | **PASS — 56 tests / 13 suites** |
+
+静态计数与运行数一致:`@Test` 114、`@Suite` 24、`.swift` 54(53 源文件 + `Package.swift`)。
+
+这一轮之前是「编译绿、测试红」:同一棵树编译零错误,`swift test` 却抓出 4 个断言失败——`modalities: null` 解不出来、安装没校验插件声明的 provider(会把登录写进别的账号)、登录循环里「空/null」一处当作等待一处当作失败(根因是 `JSONSerialization` 默认不接受顶层 `null`)。修完又补了登录与对话两个超时:能被无限等待的地方,测试和用户都会撞上。
+
+下面这一段是 2026-10-30 的首轮结果,保留下来是为了说明这份文档里的数字是怎么长起来的:
 
 2026-10-30 已在 macOS 27 / Xcode 27 / Swift 6.4 上真实编译并跑通全部五项检查:
 
