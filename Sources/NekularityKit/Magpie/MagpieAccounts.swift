@@ -202,6 +202,13 @@ public final class MagpieAccounts: @unchecked Sendable {
     /// does not depend on a package, and closing it keeps one install from
     /// leaving a JavaScript runtime behind.
     private func archiveFiles(from archive: URL) throws -> [String: Data] {
+        // An archive is read whole, so a mis-picked video would be loaded into
+        // memory before Core ever sees it. Twice the extracted limit is already
+        // far more than a provider package needs.
+        let size = try archive.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        guard size <= 2 * MagpiePackageReader.maxTotalBytes else {
+            throw MagpiePackageReader.Rejection("这个文件有 \(size / 1024 / 1024) MiB,不像是插件包")
+        }
         let data = try Data(contentsOf: archive)
         let core = try archiveReader()
         defer { core.close() }
