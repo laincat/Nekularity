@@ -134,7 +134,10 @@ orchestration is testable against `StubMagpieCore` without an xcframework. Seven
 cover the base64 round trip, no sign-in sent when none is stored, refresh write-back, an empty
 write-back not overwriting, sign-out, a failed install, and exact number text surviving.
 
-Still missing: the real `MobileMagpie` adapter (written once the bindings are generated on the
-Mac — signatures are not guessed), the package installation screen (zip), the device-code
-sign-in screen with cancellation, and model selection with streaming display.
+The real `MobileMagpie` adapter is in place, and `MagpieAccounts` keeps one runner plus one
+cached declaration per provider. **One honest boundary:** the host protocol has no streaming
+method and gomobile is pull-based, so on iOS a reply arrives **whole** — `MagpieChat` is written
+as an event stream and the view renders incrementally, but the first batch of events usually
+carries all of it. Real incremental output needs a streaming callback on the host protocol,
+which is a change to Core's API, so it is not decided here.
 7. One item needs a decision: App Transport Security. Many comic sources serve images over `http://`, and ATS refuses cleartext by default. The desktop client gets away with it because Go's `net/http` does not apply ATS; the app either allows arbitrary loads (cleartext everywhere) or carves out exceptions per host — a security trade-off, so it is not decided here.
