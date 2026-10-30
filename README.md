@@ -38,7 +38,7 @@ open Nekularity.xcodeproj
 把源码送到一台 Mac 上验证时,源码被切成 base64 分段,一段一段核对比整包重传可靠得多:
 
 ```sh
-scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK [WORKDIR] [clean]
+scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK TGZ_MD5 TGZ_BYTES SWIFT_FILES [WORKDIR] [clean]
 ```
 
 逐段对 md5、拼接、解码、核对归档 md5 与字节数、解包、数 `.swift`、把 xcframework 放进去、跑 `swift build`,每一步一行 `PASS`/`FAIL`。最后多传一个 `clean`,它会在报告之后删掉解包目录、拼接件和归档,机器保持原样。校验用 `md5` 而不是 `shasum`:受限机器上 `md5` 不需要额外授权。

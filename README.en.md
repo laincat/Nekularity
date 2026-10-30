@@ -38,7 +38,7 @@ open Nekularity.xcodeproj
 When the sources travel to a Mac as base64 segments, checking one segment at a time is far more reliable than resending the whole archive:
 
 ```sh
-scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK [WORKDIR] [clean]
+scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK TGZ_MD5 TGZ_BYTES SWIFT_FILES [WORKDIR] [clean]
 ```
 
 It checks every segment's md5, joins and decodes, checks the archive's md5 and byte count, unpacks, counts `.swift` files, drops the xcframework in and runs `swift build`, printing one `PASS`/`FAIL` line per step. A trailing `clean` removes the unpacked tree, the joined file and the archive after reporting, leaving the machine as found. It uses `md5` rather than `shasum` because `md5` needs no extra permission on a locked-down machine.
