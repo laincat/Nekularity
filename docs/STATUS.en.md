@@ -98,6 +98,12 @@ waiting in one branch and as failure in another (the root cause being that `JSON
 rejects a bare top-level `null` by default). Two timeouts followed, for sign-in and for a
 reply: anywhere the code can wait for ever, both a test and a user will hit it.
 
+**The verification environment can be rebuilt on demand** (confirmed 2026-10-31): that macOS
+machine can `git clone` the public Core repository (`github.com/laincat/VeneraCat-Core`) directly,
+has Go 1.27.3, and builds `gomobile` from the tool dependencies in `go.mod` with `go build`, so
+nothing global has to be installed. Re-verifying is now a clone plus `scripts/mac-verify.sh`
+rather than depending on someone still having a copy.
+
 The edges of that verification, stated rather than glossed over:
 
 - Check ⑤ runs `swiftc -typecheck -swift-version 6` over `App/*.swift` against the module
