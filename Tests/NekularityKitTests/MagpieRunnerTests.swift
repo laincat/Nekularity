@@ -832,3 +832,34 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(try second.values(provider: "p") == ["k": true])
     }
 }
+
+@Suite struct MagpieSpecCacheTests {
+    /// Listing providers must not start a JavaScript runtime per package on
+    /// every refresh; the declared spec is asked for once.
+    @Test func theListLoadsAPackagesSpecOnce() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-cache-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let packages = MagpiePackageStore(directory: dir)
+        try packages.install(provider: "p", files: [
+            "package.json": Data(#"{"name":"p","version":"1.0.0","main":"./index.mjs"}"#.utf8),
+            "index.mjs": Data("export async function Plugin() { return {} }".utf8),
+        ])
+        let auth = MemoryMagpieAuthStore()
+        let core = StubMagpieCore()
+        core.authToReturn = #"{"provider":"p","methods":[{"index":0,"label":"Sign in","kind":"device","hint":""}],"options":[],"hasUsage":true,"hasLoader":true}"#
+        final class Counter: @unchecked Sendable { var made = 0 }
+        let counter = Counter()
+        let accounts = MagpieAccounts(packages: packages, auth: auth) { _, _ in
+            counter.made += 1
+            return MagpieRunner(core: core, store: auth)
+        }
+
+        _ = try accounts.rows()
+        _ = try accounts.rows()
+        _ = try accounts.rows()
+
+        #expect(counter.made == 1)
+        #expect(try accounts.rows().first?.methods == ["Sign in"])
+    }
+}

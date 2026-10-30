@@ -34,6 +34,10 @@ public final class MagpieAccounts: @unchecked Sendable {
     public let options: MagpieOptionStore?
     private let lock = NSLock()
     private var runners: [String: MagpieRunner] = [:]
+    /// What each package's plugin declared, kept so a list refresh does not
+    /// evaluate every package again: each evaluation starts a JavaScript
+    /// runtime, and a list with ten providers would pay for ten.
+    private var specs: [String: MagpieAuthSpec] = [:]
 
     public init(
         packages: MagpiePackageStore,
@@ -53,7 +57,9 @@ public final class MagpieAccounts: @unchecked Sendable {
     public func rows() throws -> [MagpieProviderRow] {
         try packages.list().map { package in
             let runner = try? runner(for: package.provider)
-            let spec = try? runner?.auth(provider: package.provider)
+            let spec = specCache(provider: package.provider) {
+                try? runner?.auth(provider: package.provider)
+            }
             let signedIn = (try? auth.loadAuthJSON(provider: package.provider)) ?? nil != nil
             return MagpieProviderRow(
                 provider: package.provider,
@@ -84,6 +90,7 @@ public final class MagpieAccounts: @unchecked Sendable {
         let previous = lock.withLock { () -> MagpieRunner? in
             let old = runners[provider]
             runners[provider] = runner
+            if let spec { specs[provider] = spec }
             return old
         }
         previous?.close()
@@ -121,6 +128,7 @@ public final class MagpieAccounts: @unchecked Sendable {
         let previous = lock.withLock { () -> MagpieRunner? in
             let old = runners[provider]
             runners[provider] = runner
+            if let spec { specs[provider] = spec }
             return old
         }
         previous?.close()
@@ -136,7 +144,10 @@ public final class MagpieAccounts: @unchecked Sendable {
     }
 
     public func remove(provider: String) throws {
-        let runner = lock.withLock { runners.removeValue(forKey: provider) }
+        let runner = lock.withLock { () -> MagpieRunner? in
+            specs[provider] = nil
+            return runners.removeValue(forKey: provider)
+        }
         runner?.close()
         try auth.remove(provider: provider)
         try packages.remove(provider: provider)
@@ -166,5 +177,14 @@ public final class MagpieAccounts: @unchecked Sendable {
 
     public func usageJSON(provider: String) throws -> String {
         try runner(for: provider).usage(provider: provider)
+    }
+
+    /// The declared spec, loaded once per provider: evaluating a package starts
+    /// its JavaScript runtime, and a list refresh should not pay for that again.
+    private func specCache(provider: String, load: () -> MagpieAuthSpec?) -> MagpieAuthSpec? {
+        if let known = lock.withLock({ specs[provider] }) { return known }
+        let spec = load()
+        if let spec { lock.withLock { specs[provider] = spec } }
+        return spec
     }
 }
