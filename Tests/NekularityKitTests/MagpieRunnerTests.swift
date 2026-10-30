@@ -906,6 +906,27 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(rows.first?.hasSignIn == true)
     }
 
+    /// A package installed before the declaration was recorded pays for one
+    /// evaluation, then stops: the answer is written back, so the next list is
+    /// free again.
+    @Test func anOldPackageIsEvaluatedOnceAndThenRecorded() throws {
+        let core = StubMagpieCore()
+        let (accounts, packages, _, _) = try accounts(core)
+        _ = try accounts.install(provider: "p", files: [
+            "package.json": Data(#"{"name":"@demo/old","version":"0.0.1","main":"./index.mjs"}"#.utf8),
+            "index.mjs": Data("export async function Plugin() {}".utf8),
+        ])
+        // Pretend it was installed before specJSON existed.
+        var stored = try #require(try packages.list().first)
+        stored.specJSON = nil
+        try packages.replace(stored)
+
+        _ = try accounts.rows()
+        let after = try #require(try packages.list().first)
+        #expect(after.specJSON != nil)
+        #expect(after.specJSON?.contains("p") == true)
+    }
+
     @Test func aRefusedListThrows() throws {
         final class RefusingCore: MagpieRunner.Core, @unchecked Sendable {
             func loadPackage(filesJSON: String) throws {}
