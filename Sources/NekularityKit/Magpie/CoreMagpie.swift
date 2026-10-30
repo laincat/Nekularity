@@ -35,6 +35,12 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
     /// `NSError**` parameter, while one returning `BOOL` is imported as
     /// `throws` alone — the success flag becomes the throw, so there is no
     /// `error:` argument and no `Bool` to test.
+    /// gomobile imports `readPackageArchive:error:` as a throwing call that
+    /// returns the file table, so it goes through the same error plumbing.
+    public func readPackageArchive(_ data: Data) throws -> String {
+        try Self.call { magpie.readPackageArchive(data, error: $0) }
+    }
+
     public func loadPackage(filesJSON: String) throws {
         do {
             try magpie.loadPackage(filesJSON)

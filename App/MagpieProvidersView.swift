@@ -129,13 +129,21 @@ struct MagpieProvidersView: View {
                 providerName: row.name.isEmpty ? row.provider : row.name
             )
         }
-        .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { result in
+        // A package arrives either as an extracted folder or as the zip / npm
+        // tarball it was downloaded as; both end in the same install.
+        .fileImporter(isPresented: $picking, allowedContentTypes: [.folder, .zip, .gzip]) { result in
             switch result {
             case .success(let url):
                 perform {
                     let accessed = url.startAccessingSecurityScopedResource()
                     defer { if accessed { url.stopAccessingSecurityScopedResource() } }
-                    _ = try accounts.install(folder: url)
+                    var isDirectory: ObjCBool = false
+                    let exists = FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+                    if exists && isDirectory.boolValue {
+                        _ = try accounts.install(folder: url)
+                    } else {
+                        _ = try accounts.install(archive: url)
+                    }
                 }
             case .failure(let failure):
                 error = failure.localizedDescription

@@ -26,10 +26,13 @@ public final class MagpieAccounts: @unchecked Sendable {
     /// Builds a runner for a package's files. Core's own factory in the app; a
     /// stub in tests.
     public typealias RunnerFactory = @Sendable (String, [String: Data]) throws -> MagpieRunner
+    /// A Core that is not bound to a package, used to expand archives.
+    public typealias CoreFactory = @Sendable () throws -> any MagpieRunner.Core
 
     private let packages: MagpiePackageStore
     private let auth: MagpieAuthStore
     private let makeRunner: RunnerFactory
+    private let makeCore: CoreFactory?
     /// The user's choices for the plugins' own switches, when the app keeps them.
     public let options: MagpieOptionStore?
     private let lock = NSLock()
@@ -43,12 +46,14 @@ public final class MagpieAccounts: @unchecked Sendable {
         packages: MagpiePackageStore,
         auth: MagpieAuthStore,
         options: MagpieOptionStore? = nil,
-        makeRunner: @escaping RunnerFactory
+        makeRunner: @escaping RunnerFactory,
+        makeCore: CoreFactory? = nil
     ) {
         self.packages = packages
         self.auth = auth
         self.options = options
         self.makeRunner = makeRunner
+        self.makeCore = makeCore
     }
 
     /// What to show. A package whose sign-in cannot be read is listed as not
@@ -80,11 +85,22 @@ public final class MagpieAccounts: @unchecked Sendable {
         }
     }
 
-    /// Installs a package from a folder and loads it once, so a broken package
-    /// fails now rather than on the first sign-in.
+    /// Installs a package from an archive the user downloaded (zip or tar.gz).
+    @discardableResult
+    public func install(provider: String, archive: URL) throws -> MagpieProviderRow {
+        let files = try archiveFiles(from: archive)
+        return try install(provider: provider, files: files)
+    }
+
+    /// Installs from a folder and loads it once, so a broken package fails now
+    /// rather than on the first sign-in.
     @discardableResult
     public func install(provider: String, folder: URL) throws -> MagpieProviderRow {
-        let files = try MagpiePackageReader.files(from: folder)
+        try install(provider: provider, files: try MagpiePackageReader.files(from: folder))
+    }
+
+    @discardableResult
+    private func install(provider: String, files: [String: Data]) throws -> MagpieProviderRow {
         guard MagpiePackageReader.looksLikePackage(files: files) else {
             throw MagpiePackageReader.Rejection("包里没有可加载的入口(需要 exports[./server]、main 或 index 文件)")
         }
@@ -118,19 +134,29 @@ public final class MagpieAccounts: @unchecked Sendable {
         )
     }
 
+    /// Installs an archive without being told which provider it serves.
+    @discardableResult
+    public func install(archive: URL) throws -> MagpieProviderRow {
+        let files = try archiveFiles(from: archive)
+        return try install(files: files, provisional: archive.deletingPathExtension().lastPathComponent)
+    }
+
     /// Installs from a folder without being told which provider it serves: the
     /// package's own plugin says so, and that id is what the account is stored
     /// under. Asking the user to type it would only invite a typo that looks
     /// like a broken package.
     @discardableResult
     public func install(folder: URL) throws -> MagpieProviderRow {
-        let files = try MagpiePackageReader.files(from: folder)
+        try install(files: try MagpiePackageReader.files(from: folder), provisional: folder.lastPathComponent)
+    }
+
+    @discardableResult
+    private func install(files: [String: Data], provisional: String) throws -> MagpieProviderRow {
         guard MagpiePackageReader.looksLikePackage(files: files) else {
             throw MagpiePackageReader.Rejection("包里没有可加载的入口(需要 exports[./server]、main 或 index 文件)")
         }
         // The id is only known after the package runs, so it is loaded under the
         // folder's name first and re-keyed once the plugin names itself.
-        let provisional = folder.lastPathComponent
         let runner = try makeRunner(provisional, files)
         let spec = try runner.auth(provider: provisional)
         guard let provider = spec?.provider, !provider.isEmpty else {
@@ -170,6 +196,27 @@ public final class MagpieAccounts: @unchecked Sendable {
         let runner = lock.withLock { runners[provider] }
         try runner?.signOut(provider: provider)
         try auth.remove(provider: provider)
+    }
+
+    /// Expands an archive with a Core that is thrown away afterwards: extraction
+    /// does not depend on a package, and closing it keeps one install from
+    /// leaving a JavaScript runtime behind.
+    private func archiveFiles(from archive: URL) throws -> [String: Data] {
+        let data = try Data(contentsOf: archive)
+        let core = try archiveReader()
+        defer { core.close() }
+        return try MagpiePackageReader.files(fromArchive: data, core: core)
+    }
+
+    /// A Core whose only job is to expand an archive. Extraction does not depend
+    /// on a loaded package, so this cannot disturb the runners already serving
+    /// accounts; when the app did not supply one, installing from an archive says
+    /// so instead of failing somewhere deeper.
+    private func archiveReader() throws -> any MagpieRunner.Core {
+        guard let makeCore else {
+            throw MagpieError("这个构建不支持从压缩包安装,请解开后选文件夹")
+        }
+        return try makeCore()
     }
 
     /// The runner for a package, created and cached on first use.

@@ -9,6 +9,9 @@ public final class MagpieRunner: @unchecked Sendable {
     /// The Core-side runner. A protocol rather than the generated type so the
     /// orchestration below can be tested without an xcframework.
     public protocol Core: AnyObject, Sendable {
+        /// Expands a package archive into the file table `loadPackage` takes.
+        /// Core owns extraction so the client does not reimplement the rules.
+        func readPackageArchive(_ data: Data) throws -> String
         func loadPackage(filesJSON: String) throws
         func setAuth(provider: String, authJSON: String) throws
         func call(_ export: String, argJSON: String) throws -> String

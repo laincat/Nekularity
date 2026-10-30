@@ -24,7 +24,7 @@ fi
 # declare. Keep this list in step with Sources/NekularityKit/Magpie/CoreMagpie.swift.
 # The Objective-C selectors, which is what the header declares; Swift's imported
 # names differ (cancelSignIn: becomes cancelSign(in:)).
-selectors='auth: authorize: call: cancelSignIn: chatCancel: chatNext: chatStart: checkin: close loadPackage: models: poll: savedAuth: setAuth: setPluginOptions: usage: usageSummary:'
+selectors='auth: authorize: call: cancelSignIn: chatCancel: chatNext: chatStart: checkin: close loadPackage: models: poll: readPackageArchive: savedAuth: setAuth: setPluginOptions: usage: usageSummary:'
 
 missing=''
 for one in $selectors; do
@@ -46,4 +46,4 @@ if [ -n "$missing" ]; then
 	exit 1
 fi
 
-printf 'check-core-surface: %s exposes all 17 Magpie methods\n' "$(basename "$framework")"
+printf 'check-core-surface: %s exposes all 18 Magpie methods\n' "$(basename "$framework")"

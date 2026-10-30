@@ -99,7 +99,10 @@ final class AppModel {
                     let data = try JSONSerialization.data(withJSONObject: encoded, options: [.sortedKeys])
                     try runner.loadPackage(filesJSON: String(decoding: data, as: UTF8.self))
                     return MagpieRunner(core: runner, store: keychain)
-                })
+                },
+                // Archive install needs a Core that is not bound to a package;
+                // MagpieAccounts closes it after expanding.
+                makeCore: { try CoreMagpie(host: host) })
             state = .ready(Environment(
                 library: library,
                 images: ImageLoader(core: core),

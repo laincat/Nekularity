@@ -1,12 +1,16 @@
 import Foundation
 
-/// Reads a package from a folder the user picked.
+/// Reads a package from a folder the user picked, or from the zip / tar.gz a
+/// package is usually downloaded as.
 ///
-/// A package is a directory, not an archive: that is what an install from Files
-/// gives without a decompressor, and what Core's limits are written against.
-/// The limits are checked here as well as in Core, because a folder can be far
-/// larger than a provider package and the client should say so before copying
-/// gigabytes.
+/// Extraction belongs to Core: `readPackageArchive` applies the same path and
+/// size rules a folder install gets, and answers the file table this reader
+/// produces. Doing it here would mean a second implementation of "what is a
+/// package", and the two would drift.
+///
+/// A folder is read here and its limits checked here as well as in Core, because
+/// a folder can be far larger than a provider package and the client should say
+/// so before copying gigabytes.
 public enum MagpiePackageReader {
     public static let maxFiles = 1024
     public static let maxFileBytes = 8 << 20
@@ -15,6 +19,35 @@ public enum MagpiePackageReader {
     public struct Rejection: Error, CustomStringConvertible, Sendable {
         public let description: String
         public init(_ description: String) { self.description = description }
+    }
+
+    /// Unpacks an archive through Core and returns the same table a folder
+    /// produces: path to bytes, base64 having been decoded on the way.
+    public static func files(fromArchive data: Data, core: MagpieRunner.Core) throws -> [String: Data] {
+        let answer = try core.readPackageArchive(data)
+        guard let decoded = try? JSONSerialization.jsonObject(with: Data(answer.utf8), options: [.fragmentsAllowed]),
+              let encoded = decoded as? [String: String] else {
+            throw Rejection("这个压缩包不是一个插件包")
+        }
+        var files: [String: Data] = [:]
+        var total = 0
+        for (name, base64) in encoded {
+            guard let body = Data(base64Encoded: base64) else {
+                throw Rejection("包里的 \(name) 不是有效的文件内容")
+            }
+            total += body.count
+            if body.count > maxFileBytes {
+                throw Rejection("包里的 \(name) 超过 8 MiB")
+            }
+            if total > maxTotalBytes {
+                throw Rejection("这个包超过 32 MiB")
+            }
+            files[name] = body
+        }
+        if files.count > maxFiles {
+            throw Rejection("这个包里的文件超过 1024 个")
+        }
+        return files
     }
 
     /// Reads every regular file under `directory`, keyed by package-relative

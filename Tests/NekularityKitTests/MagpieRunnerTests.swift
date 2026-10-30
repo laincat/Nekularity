@@ -10,6 +10,14 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
     var closes = 0
     var loadError: Error?
     var callError: Error?
+    /// What `readPackageArchive` answers, and how often it was asked.
+    var archiveTable: String?
+    var archiveRequests: [Int] = []
+
+    func readPackageArchive(_ data: Data) throws -> String {
+        archiveRequests.append(data.count)
+        return archiveTable ?? "{}"
+    }
 
     func loadPackage(filesJSON: String) throws {
         if let loadError { throw loadError }
@@ -446,9 +454,9 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         let packages = MagpiePackageStore(directory: dir)
         let auth = MemoryMagpieAuthStore()
         core.authToReturn = #"{"provider":"p","methods":[{"index":0,"label":"Sign in","kind":"device","hint":""}],"options":[],"hasUsage":true,"hasLoader":true}"#
-        let accounts = MagpieAccounts(packages: packages, auth: auth) { _, _ in
+        let accounts = MagpieAccounts(packages: packages, auth: auth, makeRunner: { _, _ in
             MagpieRunner(core: core, store: auth)
-        }
+        }, makeCore: { core })
         return (accounts, packages, auth, dir)
     }
 
@@ -468,6 +476,45 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(row.hasSignIn)
         #expect(row.methods == ["Sign in"])
         #expect(try packages.files(provider: "p") != nil)
+    }
+
+    /// An archive install has to end up as the same file table a folder install
+    /// produces, because it is the same install from then on: Core expands, the
+    /// client stores what Core produced.
+    @Test func anArchiveInstallsLikeAFolder() throws {
+        let core = StubMagpieCore()
+        let (accounts, packages, _, _) = try accounts(core)
+        let json = #"{"package.json":"eyJuYW1lIjoiQC9kZW1vIiwidmVyc2lvbiI6IjAuMC4xIiwibWFpbiI6Ii4vaW5kZXgubWpzIn0=","index.mjs":"ZXhwb3J0IGFzeW5jIGZ1bmN0aW9uIFBsdWdpbigpIHt9"}"#
+        core.archiveTable = json
+        let archive = FileManager.default.temporaryDirectory
+            .appendingPathComponent("demo-\(UUID().uuidString).zip")
+        try Data("PK-not-really-a-zip".utf8).write(to: archive)
+        let row = try accounts.install(provider: "p", archive: archive)
+        #expect(core.archiveRequests == [Data("PK-not-really-a-zip".utf8).count])
+        #expect(row.provider == "p")
+        #expect(row.name == "@demo")
+        #expect(row.version == "0.0.1")
+        #expect(try packages.files(provider: "p") != nil)
+    }
+
+    /// Without a Core to expand with, the install says what to do instead of
+    /// failing somewhere deeper.
+    @Test func anArchiveNeedsACoreToExpandWith() throws {
+        let core = StubMagpieCore()
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-nocore-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let packages = MagpiePackageStore(directory: dir)
+        let auth = MemoryMagpieAuthStore()
+        let accounts = MagpieAccounts(packages: packages, auth: auth) { _, _ in
+            MagpieRunner(core: core, store: auth)
+        }
+        let archive = dir.appendingPathComponent("demo.zip")
+        try Data("PK".utf8).write(to: archive)
+        #expect(throws: (any Error).self) {
+            _ = try accounts.install(provider: "p", archive: archive)
+        }
+        #expect(try packages.files(provider: "p") == nil)
     }
 
     /// A package Core refuses must not leave a row behind: an installed-looking
