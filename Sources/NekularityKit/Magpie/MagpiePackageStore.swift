@@ -19,6 +19,12 @@ public struct MagpiePackage: Codable, Hashable, Sendable, Identifiable {
     /// coding strategy, and `DateDecodingStrategy.custom`'s closure capturing a
     /// formatter is exactly the kind of non-Sendable capture Swift 6 rejects.
     public var installedAt: String
+    /// What the plugin declared when it was installed. Keeping it means the
+    /// provider list costs no JavaScript runtime: evaluating a package to read
+    /// its methods, for a list of ten, would start ten runtimes on the main
+    /// path. Absent for packages installed before this was recorded, which fall
+    /// back to evaluating once.
+    public var specJSON: String?
 
     public var id: String { provider }
 
@@ -85,6 +91,22 @@ public final class MagpiePackageStore: @unchecked Sendable {
         packages.sort { $0.provider < $1.provider }
         try write(packages)
         return package
+    }
+
+    /// Replaces one stored package, keeping the list sorted. Used after an
+    /// install records what the plugin declared.
+    public func replace(_ package: MagpiePackage) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        var packages = try read()
+        guard let index = packages.firstIndex(where: { $0.provider == package.provider }) else {
+            packages.append(package)
+            packages.sort { $0.provider < $1.provider }
+            try write(packages)
+            return
+        }
+        packages[index] = package
+        try write(packages)
     }
 
     public func remove(provider: String) throws {

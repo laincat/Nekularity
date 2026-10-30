@@ -885,6 +885,27 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
 
     /// A vendor that refuses the list must surface as an error, not as "no
     /// models": the two mean different things to a user picking one.
+    /// Listing providers must not start a JavaScript runtime per package: the
+    /// declaration is recorded at install time, so a fresh list over the same
+    /// store works even when no factory is available at all.
+    @Test func theListNeedsNoRuntimeOnceInstalled() throws {
+        let core = StubMagpieCore()
+        let (accounts, packages, auth, _) = try accounts(core)
+        _ = try accounts.install(provider: "p", files: [
+            "package.json": Data(#"{"name":"@demo/x","version":"1.2.3","main":"./index.mjs"}"#.utf8),
+            "index.mjs": Data("export async function Plugin() {}".utf8),
+        ])
+        // A second view of the same store, with a factory that fails if asked.
+        let cold = MagpieAccounts(packages: packages, auth: auth) { _, _ in
+            throw MagpieError("listing providers must not need a runtime")
+        }
+        let rows = try cold.rows()
+        #expect(rows.count == 1)
+        #expect(rows.first?.provider == "p")
+        #expect(rows.first?.name == "@demo/x")
+        #expect(rows.first?.hasSignIn == true)
+    }
+
     @Test func aRefusedListThrows() throws {
         final class RefusingCore: MagpieRunner.Core, @unchecked Sendable {
             func loadPackage(filesJSON: String) throws {}

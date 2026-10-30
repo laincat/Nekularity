@@ -61,28 +61,44 @@ public final class MagpieAccounts: @unchecked Sendable {
     /// would look like the install failed.
     public func rows() throws -> [MagpieProviderRow] {
         try packages.list().map { package in
-            let runner = try? runner(for: package.provider)
+            // A stored declaration is enough for the row; only packages installed
+            // before it was recorded need their runtime started again.
+            if let json = package.specJSON,
+               let spec = try? JSONDecoder().decode(MagpieAuthSpec.self, from: Data(json.utf8)) {
+                return row(for: package, spec: spec)
+            }
             let spec = specCache(provider: package.provider) {
-                // Optional chaining plus `try?` would give a doubly optional
-                // value, which is not what the cache stores.
-                guard let runner else { return nil }
+                guard let runner = try? runner(for: package.provider) else { return nil }
                 return try? runner.auth(provider: package.provider)
             }
-            // `try?` around a throwing load, then compare with nil: written this
-            // way because `?? nil != nil` binds the comparison first and does not
-            // mean what it looks like.
-            let stored = try? auth.loadAuthJSON(provider: package.provider)
-            let signedIn = (stored ?? nil) != nil
-            return MagpieProviderRow(
-                provider: package.provider,
-                name: package.name,
-                version: package.version,
-                hasSignIn: (spec?.methods.isEmpty == false),
-                signedIn: signedIn,
-                methods: spec?.methods.map(\.label) ?? [],
-                optionCount: spec?.options.count ?? 0
-            )
+            // A package installed before the declaration was recorded pays for
+            // one evaluation, then stops paying.
+            if let spec, let encoded = try? JSONEncoder().encode(spec) {
+                var updated = package
+                updated.specJSON = String(decoding: encoded, as: UTF8.self)
+                try? packages.replace(updated)
+            }
+            return row(for: package, spec: spec)
         }
+    }
+
+    /// One row, from a package and whatever its plugin declared. Kept in one
+    /// place so a stored declaration and a freshly evaluated one cannot produce
+    /// different lists.
+    private func row(for package: MagpiePackage, spec: MagpieAuthSpec?) -> MagpieProviderRow {
+        // `try?` around a throwing load, then compare with nil: written this way
+        // because `?? nil != nil` binds the comparison first and does not mean
+        // what it looks like.
+        let stored = try? auth.loadAuthJSON(provider: package.provider)
+        return MagpieProviderRow(
+            provider: package.provider,
+            name: package.name,
+            version: package.version,
+            hasSignIn: (spec?.methods.isEmpty == false),
+            signedIn: (stored ?? nil) != nil,
+            methods: spec?.methods.map(\.label) ?? [],
+            optionCount: spec?.options.count ?? 0
+        )
     }
 
     /// Installs a package from an archive the user downloaded (zip or tar.gz).
@@ -115,7 +131,13 @@ public final class MagpieAccounts: @unchecked Sendable {
             runner.close()
             throw MagpieError("这个插件声明的是 \(spec?.provider ?? "（没有声明）"),不是 \(provider)")
         }
-        let package = try packages.install(provider: provider, files: files)
+        var package = try packages.install(provider: provider, files: files)
+        // Remembering what the plugin declared keeps the list from starting a
+        // runtime per provider on every refresh.
+        if let spec, let encoded = try? JSONEncoder().encode(spec) {
+            package.specJSON = String(decoding: encoded, as: UTF8.self)
+            try? packages.replace(package)
+        }
         let previous = lock.withLock { () -> MagpieRunner? in
             let old = runners[provider]
             runners[provider] = runner
