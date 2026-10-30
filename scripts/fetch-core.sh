@@ -26,6 +26,25 @@ else
 	fi
 fi
 
+# A pin that no longer exists (Core is rebuilt as one amended commit, so old hashes
+# disappear) would otherwise check out something else and build it without a word.
+head=$(git -C "$core" rev-parse HEAD)
+case "$head" in
+"$pin"*) ;;
+*)
+	printf 'fetch-core: HEAD %s does not match the pin %s
+' "$head" "$pin" >&2
+	printf 'fetch-core: update scripts/core-version, or pass the right checkout
+' >&2
+	if [ $# -ge 1 ]; then
+		printf 'fetch-core: (continuing: a local checkout is taken as given)
+' >&2
+	else
+		exit 1
+	fi
+	;;
+esac
+
 echo "Core: $(git -C "$core" rev-parse --short HEAD) (pinned $pin)"
 (cd "$core" && sh scripts/mac-verify.sh)
 mkdir -p "$root/Vendor"
