@@ -72,4 +72,12 @@ import Testing
             _ = try magpie.call("Plugin", argJSON: "{}")
         }
     }
+
+    /// The footer names a Core; the check script guarantees it is the one that
+    /// gets built, and this keeps the short form useful rather than empty.
+    @Test func theCoreVersionIsShortButIdentifiable() {
+        #expect(CoreVersion.pinned.count >= 12)
+        #expect(CoreVersion.short.count == 12)
+        #expect(CoreVersion.pinned.hasPrefix(CoreVersion.short))
+    }
 }

@@ -63,6 +63,13 @@ else
 	say "SKIP  surface check: no Vendor/VeneraCatCore.xcframework and no go"
 fi
 
+# 0b. The Core the app reports must be the Core it is built against.
+if sh scripts/check-core-pin.sh >"$out/core-pin.log" 2>&1; then
+	pass "sh scripts/check-core-pin.sh" "$out/core-pin.log"
+else
+	fail "sh scripts/check-core-pin.sh" "$out/core-pin.log"
+fi
+
 # 1. Documentation pairs and root cleanliness.
 if sh scripts/check-docs.sh >"$out/docs.log" 2>&1; then
 	pass "sh scripts/check-docs.sh" "$out/docs.log"

@@ -103,6 +103,13 @@ struct MagpieProvidersView: View {
                     Label("安装插件包(文件夹或压缩包)…", systemImage: "folder.badge.plus")
                 }
                 .disabled(busy)
+            } footer: {
+                // A bug report should be able to name the Core it ran. The value is
+                // checked against scripts/core-version by check-core-pin.sh, so it
+                // cannot quietly describe a different build.
+                Text(buildLine)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
         .navigationTitle("AI 供应商")
@@ -193,6 +200,13 @@ struct MagpieProvidersView: View {
                 self.error = error.localizedDescription
             }
         }
+    }
+
+    /// What a bug report needs: the Core this build expects and the app's own
+    /// version, on one line.
+    private var buildLine: String {
+        let app = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        return "Core \(CoreVersion.short) · App \(app)"
     }
 
     private func perform(_ work: @escaping () throws -> Void) {
