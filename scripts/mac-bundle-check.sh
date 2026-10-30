@@ -5,8 +5,9 @@
 #       SWIFT_FILES [WORKDIR] [clean]
 #
 # PARTS_DIR holds the base64 segments the bundle was sent as, one file per
-# segment; they are joined in the order `sort` gives, so name them 01.b64,
-# 02.b64, ... XCFRAMEWORK is a VeneraCatCore.xcframework built from VeneraCat
+# segment; they are joined in the order `sort` gives, so either 01.b64, 02.b64,
+# ... or the seg01.txt names scripts/make-payload.sh writes will do.
+# XCFRAMEWORK is a VeneraCatCore.xcframework built from VeneraCat
 # Core. WORKDIR defaults to /tmp/nekularity-validation. Pass `clean` as the
 # last argument to remove everything this script made once it has reported.
 #
@@ -52,8 +53,12 @@ md5_of() {
 }
 
 parts_abs=$(cd "$parts" && pwd)
-segments=$(cd "$parts_abs" && ls *.b64 | sort)
-[ -n "$segments" ] || fail "no .b64 segments in $parts_abs"
+# Segments are named 01.b64 by older scripts and seg01.txt by
+# scripts/make-payload.sh; both sort into the right order.
+# Only the segment files: make-payload.sh also leaves the joined p.b64 beside
+# them, and joining that as well would decode a file twice.
+segments=$(cd "$parts_abs" && ls [0-9][0-9].b64 seg[0-9][0-9].txt 2>/dev/null | sort)
+[ -n "$segments" ] || fail "no NN.b64 or segNN.txt segments in $parts_abs"
 
 mkdir -p "$(dirname "$work")"
 joined=$work.b64
