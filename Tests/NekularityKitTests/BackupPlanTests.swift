@@ -16,9 +16,22 @@ import Testing
           {"sourceKey": "copy_manga", "id": "abc", "name": "标题", "author": "作者"}
         ]}
       ],
-      "imageFavorites": [{"sourceKey": "copy_manga", "id": "abc", "url": "https://x/p8.jpg", "page": 8}],
+      "imageFavorites": [
+        {"sourceKey": "copy_manga", "id": "abc", "title": "标题", "author": "作者",
+         "time": 1750000000000, "maxPage": 209,
+         "episodes": [
+           {"eid": "ch-1", "ep": 3, "maxPage": 209, "epName": "第03话",
+            "imageFavorites": [
+              {"page": 7, "imageKey": "https://x/p7.jpg", "eid": "ch-1", "ep": 3},
+              {"page": 8, "imageKey": "https://x/p8.jpg", "eid": "ch-1", "ep": 3}
+            ]}
+         ],
+         "other": {}}
+      ],
       "searchHistory": ["海贼王", "one piece"],
-      "sources": [{"key": "copy_manga", "script": "// js", "data": {"n": 12345678901234567890}}]
+      "sources": [{"key": "copy_manga", "script": "// js", "data": {"n": 12345678901234567890}}],
+      "pending": {"history": [{"sourceKey": "", "id": "gone", "title": "缺源",
+                               "time": 2, "ep": 0, "page": 0}]}
     }
     """
 
@@ -43,6 +56,15 @@ import Testing
         #expect(plan.sources?.first?.script == "// js")
         // A big integer in source data is kept as written, not floated.
         #expect(plan.sources?.first?.data?["n"]?.stringValue == "12345678901234567890")
+
+        // Kept pictures nest their pages one level down; the count is what the
+        // import report shows, so it has to come from the real shape.
+        let picture = try #require(plan.imageFavorites?.first)
+        #expect(picture.title == "标题")
+        #expect(picture.episodes?.array?.count == 1)
+        #expect(picture.keptPages == 2)
+
+        #expect(plan.pending?.rowCount == 1)
     }
 
     @Test func missingCollectionsAreEmptyNotFailures() throws {
@@ -51,5 +73,6 @@ import Testing
         #expect(plan.folders == nil)
         #expect(plan.searchHistory == nil)
         #expect(plan.sources == nil)
+        #expect(plan.pending == nil)
     }
 }

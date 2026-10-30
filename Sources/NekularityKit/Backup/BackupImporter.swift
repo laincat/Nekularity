@@ -16,8 +16,12 @@ public struct BackupImporter {
         public var favouritesAdded = 0
         public var foldersCreated = 0
         public var searchesAdded = 0
-        /// Kept pages Core read but this client cannot store yet.
+        /// Kept pictures Core read; this client has no picture shelf yet, so
+        /// they are reported and dropped.
         public var picturesSkipped = 0
+        public var pagesSkipped = 0
+        /// Rows that need a source the backup did not carry a script for.
+        public var pendingRows = 0
     }
 
     public init() {}
@@ -69,7 +73,10 @@ public struct BackupImporter {
         }
 
         out.searchesAdded = searches.merge(plan.searchHistory ?? [])
-        out.picturesSkipped = plan.imageFavorites?.count ?? 0
+        let pictures = plan.imageFavorites ?? []
+        out.picturesSkipped = pictures.count
+        out.pagesSkipped = pictures.reduce(0) { $0 + $1.keptPages }
+        out.pendingRows = plan.pending?.rowCount ?? 0
         return out
     }
 }

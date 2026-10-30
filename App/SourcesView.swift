@@ -99,7 +99,14 @@ struct SourcesView: View {
                 "搜索 \(result.searchesAdded) 条",
             ]
             if result.picturesSkipped > 0 {
-                parts.append("图片收藏 \(result.picturesSkipped) 条(本客户端暂不支持)")
+                var line = "图片收藏 \(result.picturesSkipped) 部"
+                if result.pagesSkipped > 0 {
+                    line += "、\(result.pagesSkipped) 页"
+                }
+                parts.append(line + "(本客户端暂不支持)")
+            }
+            if result.pendingRows > 0 {
+                parts.append("\(result.pendingRows) 条待装源后再导")
             }
             if !result.sourcesFailed.isEmpty {
                 parts.append("源失败 " + result.sourcesFailed.joined(separator: "、"))
