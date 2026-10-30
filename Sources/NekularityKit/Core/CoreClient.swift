@@ -126,6 +126,37 @@ public final class CoreClient: @unchecked Sendable {
         return try Self.decode(ComicIndex.self, out)
     }
 
+    // MARK: Backups
+
+    /// Reads a `.venera` file and returns what it holds. Core unwinds the
+    /// archive and its sqlite tables; `knownKeys` helps resolve type hashes.
+    public func readBackup(path: String, tempDir: String, knownKeys: [String]) async throws -> BackupPlan {
+        let keys = try Self.encodeKnownKeys(knownKeys)
+        let out = try await run(cancellable: false) { core, _ in
+            try Self.call { core.readBackup(path, tempDir: tempDir, knownKeysJSON: keys, error: $0) }
+        }
+        return try Self.decode(BackupPlan.self, out)
+    }
+
+    /// Builds the plan a restore would write. Every part is selected here:
+    /// settings and cookies are deliberately left out, because a backup's
+    /// device settings should not overwrite this device's.
+    public func planBackup(path: String, tempDir: String, knownKeys: [String]) async throws -> BackupPlan {
+        let keys = try Self.encodeKnownKeys(knownKeys)
+        let selection = """
+        {"history":true,"favorites":true,"imageFavorites":true,"settings":false,        "searchHistory":true,"sources":true,"sourceData":true,"cookies":false}
+        """
+        let out = try await run(cancellable: false) { core, _ in
+            try Self.call { core.planBackup(path, tempDir: tempDir, knownKeysJSON: keys, selectionJSON: selection, error: $0) }
+        }
+        return try Self.decode(BackupPlan.self, out)
+    }
+
+    private static func encodeKnownKeys(_ keys: [String]) throws -> String {
+        let data = try JSONEncoder().encode(keys)
+        return String(decoding: data, as: UTF8.self)
+    }
+
     // MARK: Comic sources
 
     /// Calls `ComicSource.<path>(args...)` and returns the raw JSON result.

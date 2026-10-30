@@ -34,6 +34,7 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 | Source settings | `CoreClient.settings(key:)` reads Core's `settings` declaration; a source's detail screen opens a settings screen that draws each by type (picker, toggle, text field) and stores the value as `JSONValue` in that source's store, so numbers and booleans survive; an input's `validator` runs as a regular expression, and a callback is shown as an in-source action |
 | Shelf | `ShelfStore` keeps reading history (one row per comic with its chapter, page and percentage) and favourite folders; opening a chapter records it, and the shelf screen can continue, forget, move between folders and create/rename/delete folders; `shelf.json` has the same shape as the desktop client's |
 | Search history | `SearchHistoryStore` keeps the last 30 keywords, newest first, with case-insensitive repeats collapsed, and can merge a backup's `searchHistory`; `searches.json` matches the desktop client |
+| Backup import | goes through Core's `planBackup` (Core unwinds the archive, reads the sqlite tables and resolves type hashes); `BackupImporter` installs the listed sources, merges history and favourite folders, and merges search history. Device settings and cookies are not applied over this device, and kept pages are reported but not stored, because this client has no picture shelf yet. |
 | Browsing | `CoreClient.explorePages` and `explore` cover the four browse kinds (single page with parts, multi-page list, mixed, multi-part page); `BrowseView` switches between browses with chips, pins section headers, pages, and refreshes by pulling |
 
 ## Not verified
@@ -46,5 +47,5 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 
 1. Finish the App-level check on a Mac — the last run reported one error (fixed), and the fixed tree has not been through a compiler yet.
 2. Launch the app once a simulator runtime is available, and run the main path with a real source.
-3. Wire `.venera` backup import (`ShelfStore` and `SearchHistoryStore` both have `merge`; what is missing is the layer that splits a backup between them).
+3. Backup import is wired; the next step is running it once on a simulator with a real `.venera` and checking the counts.
 4. Phase two: video sources and playback.

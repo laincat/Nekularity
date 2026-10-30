@@ -1,11 +1,17 @@
-import SwiftUI
 import NekularityKit
+import SwiftUI
+import UniformTypeIdentifiers
 
 /// Installed sources, install from URL or index, and source details.
 struct SourcesView: View {
     @Environment(SourceLibrary.self) private var library
+    @Environment(ShelfStore.self) private var shelf
+    @Environment(SearchHistoryStore.self) private var searches
     @State private var showAdd = false
-    @State private var error: String?
+    @State private var pickingBackup = false
+    /// One notice at a time: a view shows one alert, so failures and the
+    /// import summary share it.
+    @State private var notice: Notice?
 
     var body: some View {
         NavigationStack {
@@ -28,7 +34,9 @@ struct SourcesView: View {
                         let keys = offsets.map { library.comicSources[$0].key }
                         Task {
                             for k in keys {
-                                do { try await library.remove(k) } catch { self.error = error.localizedDescription }
+                                do { try await library.remove(k) } catch {
+                                    notice = Notice(title: "删除失败", text: error.localizedDescription)
+                                }
                             }
                         }
                     }
@@ -44,14 +52,70 @@ struct SourcesView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Button { showAdd = true } label: { Label("添加", systemImage: "plus") }
                 }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button { pickingBackup = true } label: { Label("导入备份", systemImage: "square.and.arrow.down") }
+                }
             }
             .sheet(isPresented: $showAdd) { AddSourceView() }
-            .alert("操作失败", isPresented: .constant(error != nil), presenting: error) { _ in
-                Button("好") { error = nil }
-            } message: { Text($0) }
+            .fileImporter(isPresented: $pickingBackup, allowedContentTypes: [.data]) { result in
+                switch result {
+                case .success(let url): Task { await importBackup(url) }
+                case .failure(let failure):
+                    notice = Notice(title: "导入失败", text: failure.localizedDescription)
+                }
+            }
+            .alert(notice?.title ?? "", isPresented: Binding(
+                get: { notice != nil },
+                set: { if !$0 { notice = nil } }
+            ), presenting: notice) { _ in
+                Button("好") { notice = nil }
+            } message: { Text($0.text) }
             .refreshable { await library.refresh() }
         }
     }
+
+    /// Reads a `.venera` file through Core and lands what it holds here.
+    /// The file has to be copied out of its security scope first: Core opens
+    /// a path, and a document picker URL is only readable inside the scope.
+    private func importBackup(_ url: URL) async {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        let tmp = FileManager.default.temporaryDirectory
+            .appending(path: "nekularity-\(UUID().uuidString).venera")
+        do {
+            try? FileManager.default.removeItem(at: tmp)
+            try FileManager.default.copyItem(at: url, to: tmp)
+            defer { try? FileManager.default.removeItem(at: tmp) }
+
+            let plan = try await library.core.planBackup(
+                path: tmp.path,
+                tempDir: tmp.deletingLastPathComponent().path,
+                knownKeys: library.sources.map(\.key))
+            let result = await BackupImporter().apply(plan, library: library, shelf: shelf, searches: searches)
+            var parts = [
+                "源 \(result.sourcesInstalled) 个",
+                "历史 \(result.historyAdded) 条",
+                "收藏 \(result.favouritesAdded) 部",
+                "搜索 \(result.searchesAdded) 条",
+            ]
+            if result.picturesSkipped > 0 {
+                parts.append("图片收藏 \(result.picturesSkipped) 条(本客户端暂不支持)")
+            }
+            if !result.sourcesFailed.isEmpty {
+                parts.append("源失败 " + result.sourcesFailed.joined(separator: "、"))
+            }
+            notice = Notice(title: "导入结果", text: parts.joined(separator: ","))
+        } catch {
+            notice = Notice(title: "导入失败", text: error.localizedDescription)
+        }
+    }
+}
+
+/// A message shown in the single alert this screen owns.
+private struct Notice: Identifiable {
+    let id = UUID()
+    let title: String
+    let text: String
 }
 
 private struct SourceRow: View {

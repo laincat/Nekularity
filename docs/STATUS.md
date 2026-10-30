@@ -34,6 +34,7 @@
 | 源设置 | `CoreClient.settings(key:)` 读 Core 的 `settings` 声明;源详情页进入设置页,按类型渲染下拉/开关/输入框,值以 `JSONValue` 原样写入该源 store 的 settings 段(数字、布尔不被转成字符串);input 的 `validator` 用正则校验;callback 显示为「源内操作」 |
 | 书架 | `ShelfStore`:阅读历史(每部漫画一条,含章节、页码、百分比)与收藏夹;打开章节即记录,书架页可继续阅读、移除、换夹、新建/重命名/删除收藏夹;文件 `shelf.json` 与桌面端同形 |
 | 搜索历史 | `SearchHistoryStore`:最近 30 条,忽略大小写去重、最新在前,可合并备份里的 `searchHistory`;文件 `searches.json` 与桌面端同形 |
+| 备份导入 | 走 Core 的 `planBackup`(它自己解压、读 sqlite、认 type hash),客户端只负责落库:`BackupImporter` 按计划装源、合并历史与收藏夹、合并搜索历史;设备类设置与 cookies 不覆盖本机;图片收藏本客户端还没有对应存储,只在结果里报数量 |
 | 分类浏览 | `CoreClient.explorePages` 与 `explore` 支持四种 browse 类型(单页多分区、多页列表、混合、多分区页);`BrowseView` 用标签切换分类、分区标题吸顶、分页、下拉刷新 |
 
 ## 未验证
@@ -46,5 +47,5 @@
 
 1. 在 Mac 上跑完 App 层复验 —— 上一轮只报了 1 条 error(已修),修完的版本还没被编译器看过。
 2. 有模拟器运行时后真正启动一次 App,用真实源跑通主线。
-3. 接 `.venera` 备份导入(ShelfStore 与 SearchHistoryStore 都已有 `merge`,还缺把备份拆成这两者的那一层)。
+3. 备份导入已接上;下一步是在模拟器里用真实 `.venera` 跑一遍并核对条数。
 4. 第二阶段:视频源与播放。
