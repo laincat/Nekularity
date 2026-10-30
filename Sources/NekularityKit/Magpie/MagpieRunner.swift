@@ -18,6 +18,9 @@ public final class MagpieRunner: @unchecked Sendable {
         func poll(id: Int64) throws -> String
         func cancelSignIn(id: Int64) throws
         func usageJSON(provider: String) throws -> String
+        func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String
+        func chatNext(handle: Int64) throws -> String
+        func chatCancel(handle: Int64)
         func close()
     }
 
@@ -72,6 +75,11 @@ public final class MagpieRunner: @unchecked Sendable {
         let json = try core.authJSON()
         if json.isEmpty || json == "null" { return nil }
         return try OrderedJSONDecoder.decode(MagpieAuthSpec.self, from: json)
+    }
+
+    /// A conversation through this package.
+    public func makeChat(pollInterval: Duration = .milliseconds(40)) -> MagpieChat {
+        MagpieChat(core: core, pollInterval: pollInterval)
     }
 
     /// A sign-in for this package's account, driven by one object the UI can

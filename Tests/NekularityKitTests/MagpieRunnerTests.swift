@@ -46,6 +46,25 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
     }
     func cancelSignIn(id: Int64) throws { cancelledIDs.append(id) }
     func usageJSON(provider: String) throws -> String { usageToReturn }
+
+    var chatStarts: [(String, String)] = []
+    var chatEvents: [String] = []
+    var cancelledChats: [Int64] = []
+    var chatStartError: Error?
+
+    func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String {
+        if let chatStartError { throw chatStartError }
+        chatStarts.append((model, messagesJSON))
+        return #"{"id":11}"#
+    }
+
+    func chatNext(handle: Int64) throws -> String {
+        chatEvents.isEmpty ? "" : chatEvents.removeFirst()
+    }
+
+    func chatCancel(handle: Int64) {
+        cancelledChats.append(handle)
+    }
     func close() { closes += 1 }
 
     var authorizedInputs = ""
@@ -531,5 +550,76 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
             _ = try accounts.install(folder: dir)
         }
         #expect(core.closes >= 1)
+    }
+}
+
+@Suite struct MagpieChatTests {
+    private func chat(_ core: StubMagpieCore) -> MagpieChat {
+        MagpieChat(core: core, pollInterval: .milliseconds(1))
+    }
+
+    @Test func eventsArriveInOrderAndEnd() async throws {
+        let core = StubMagpieCore()
+        core.chatEvents = [
+            #"{"kind":"text","text":"Hel"}"#,
+            #"{"kind":"text","text":"lo"}"#,
+            #"{"kind":"done","finish":"stop","usage":{"input":3,"output":2}}"#,
+            #"{"kind":"end"}"#,
+        ]
+        var text = ""
+        var kinds: [MagpieChatEvent.Kind] = []
+        for try await event in chat(core).send(model: "m", messages: [MagpieMessage(role: "user", content: "hi")]) {
+            kinds.append(event.kind)
+            if event.kind == .text { text += event.text }
+        }
+        #expect(text == "Hello")
+        #expect(kinds == [.text, .text, .done])
+        #expect(core.chatStarts.first?.0 == "m")
+        #expect(core.chatStarts.first?.1.contains(#""content":"hi""#) == true)
+        #expect(core.cancelledChats == [11])
+    }
+
+    /// Leaving the screen stops the request: the handle is cancelled rather than
+    /// left running against the vendor.
+    @Test func stoppingEarlyCancelsTheRequest() async throws {
+        let core = StubMagpieCore()
+        core.chatEvents = [#"{"kind":"text","text":"a"}"#, #"{"kind":"text","text":"b"}"#]
+        for try await event in chat(core).send(model: "m", messages: []) {
+            if event.kind == .text { break }
+        }
+        // The task notices cancellation after the next await; give it one.
+        try await Task.sleep(for: .milliseconds(20))
+        #expect(core.cancelledChats == [11])
+    }
+
+    @Test func aVendorErrorIsReported() async throws {
+        let core = StubMagpieCore()
+        core.chatEvents = [#"{"kind":"error","text":"quota exhausted"}"#, #"{"kind":"end"}"#]
+        var message: String?
+        for try await event in chat(core).send(model: "m", messages: []) {
+            if event.kind == .error { message = event.text }
+        }
+        #expect(message == "quota exhausted")
+    }
+
+    @Test func aFailedStartThrows() async throws {
+        let core = StubMagpieCore()
+        core.chatStartError = MagpieError("没有登录")
+        var threw = false
+        do {
+            for try await _ in chat(core).send(model: "m", messages: []) {}
+        } catch {
+            threw = true
+        }
+        #expect(threw)
+    }
+
+    @Test func eventsParseIntoTheModel() {
+        let event = MagpieChat.event(from: #"{"kind":"text","text":"x","finish":""}"#)
+        #expect(event.kind == .text)
+        #expect(event.text == "x")
+        #expect(MagpieChat.handle(from: #"{"id":42}"#) == 42)
+        #expect(MagpieChat.handle(from: "{}") == nil)
+        #expect(MagpieChat.event(from: "not json").kind == .error)
     }
 }

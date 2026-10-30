@@ -17,6 +17,12 @@ struct MagpieProvidersView: View {
     @State private var signingIn: MagpieProviderRow?
 
     var body: some View {
+        NavigationStack {
+            list
+        }
+    }
+
+    private var list: some View {
         List {
             if rows.isEmpty {
                 Section {
@@ -45,6 +51,14 @@ struct MagpieProvidersView: View {
                                 if row.hasSignIn {
                                     Button(row.signedIn ? "重新登录" : "登录") {
                                         signingIn = row
+                                    }
+                                    .buttonStyle(.borderless)
+                                }
+                                if row.signedIn {
+                                    NavigationLink("对话") {
+                                        MagpieChatView(accounts: accounts,
+                                                       provider: row.provider,
+                                                       providerName: row.name.isEmpty ? row.provider : row.name)
                                     }
                                     .buttonStyle(.borderless)
                                 }

@@ -52,6 +52,18 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
         try magpie.usage(provider)
     }
 
+    public func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String {
+        try magpie.chatStart(model, messagesJSON: messagesJSON, system: system, maxTokens: maxTokens)
+    }
+
+    public func chatNext(handle: Int64) throws -> String {
+        try magpie.chatNext(handle)
+    }
+
+    public func chatCancel(handle: Int64) {
+        magpie.chatCancel(handle)
+    }
+
     public func close() {
         magpie.close()
     }
