@@ -14,6 +14,8 @@ struct MagpieProvidersView: View {
     @State private var picking = false
     @State private var busy = false
     @State private var error: String?
+    /// A check-in result is not a failure; the alert's title says which it is.
+    @State private var noticeTitle = "操作失败"
     @State private var signingIn: MagpieProviderRow?
     @State private var showingUsage: MagpieProviderRow?
 
@@ -62,6 +64,10 @@ struct MagpieProvidersView: View {
                                                        providerName: row.name.isEmpty ? row.provider : row.name)
                                     }
                                     .buttonStyle(.borderless)
+                                }
+                                if row.signedIn {
+                                    Button("签到") { checkin(row) }
+                                        .buttonStyle(.borderless)
                                 }
                                 if row.signedIn {
                                     Button("用量") { showingUsage = row }
@@ -123,12 +129,32 @@ struct MagpieProvidersView: View {
                 error = failure.localizedDescription
             }
         }
-        .alert("操作失败", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+        .alert(noticeTitle, isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("好") { error = nil }
         } message: {
             Text(error ?? "")
         }
         .task { reload() }
+    }
+
+    /// A check-in runs on the package's own request, so it is off the main
+    /// thread and reported in one place.
+    private func checkin(_ row: MagpieProviderRow) {
+        busy = true
+        let name = row.name.isEmpty ? row.provider : row.name
+        Task {
+            defer { busy = false }
+            do {
+                let result = try await Task.detached { [accounts, provider = row.provider] in
+                    try accounts.runner(for: provider).checkin(provider: provider)
+                }.value
+                noticeTitle = "签到结果"
+                error = "「\(name)」\(result.summary)"
+            } catch {
+                noticeTitle = "操作失败"
+                self.error = error.localizedDescription
+            }
+        }
     }
 
     private func reload() {

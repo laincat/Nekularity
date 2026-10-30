@@ -50,6 +50,8 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
     var usageSummaryToReturn = ""
     func modelsJSON() throws -> String { modelsToReturn }
     var modelsToReturn = "[]"
+    func checkinJSON(provider: String) throws -> String { checkinToReturn }
+    var checkinToReturn = #"{"outcome":"claimed","credit":"10 积分","streak":3,"message":"","until":""}"#
 
     var chatStarts: [(String, String)] = []
     var chatEvents: [String] = []
@@ -733,5 +735,41 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(throws: MagpieError.self) {
             _ = try MagpieRunner(core: RefusingCore(), store: MemoryMagpieAuthStore()).models()
         }
+    }
+}
+
+@Suite struct MagpieCheckinTests {
+    @Test func aClaimSaysWhatItGave() throws {
+        let core = StubMagpieCore()
+        let result = try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).checkin(provider: "p")
+        #expect(result.outcome == .claimed)
+        #expect(result.succeeded)
+        #expect(result.summary == "已签到,获得 10 积分")
+    }
+
+    /// A captcha is not a success and not a failure to retry: the user has to
+    /// finish it where the vendor expects.
+    @Test func aCaptchaSendsTheUserElsewhere() throws {
+        let core = StubMagpieCore()
+        core.checkinToReturn = #"{"outcome":"captcha","credit":"","streak":0,"message":"","until":""}"#
+        let result = try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).checkin(provider: "p")
+        #expect(!result.succeeded)
+        #expect(result.summary.contains("它自己的 App"))
+    }
+
+    @Test func anAlreadyDoneDayIsNotAFailure() throws {
+        let core = StubMagpieCore()
+        core.checkinToReturn = #"{"outcome":"done","credit":"","streak":0,"message":"","until":""}"#
+        let result = try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).checkin(provider: "p")
+        #expect(result.succeeded)
+        #expect(result.summary == "今天已经签过了")
+    }
+
+    @Test func aFailedCheckinShowsTheVendorsReason() throws {
+        let core = StubMagpieCore()
+        core.checkinToReturn = #"{"outcome":"failed","credit":"","streak":0,"message":"服务不可用","until":""}"#
+        let result = try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).checkin(provider: "p")
+        #expect(!result.succeeded)
+        #expect(result.summary == "服务不可用")
     }
 }

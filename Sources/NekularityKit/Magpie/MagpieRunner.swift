@@ -20,6 +20,7 @@ public final class MagpieRunner: @unchecked Sendable {
         func usageJSON(provider: String) throws -> String
         func usageSummaryJSON(provider: String) throws -> String
         func modelsJSON() throws -> String
+        func checkinJSON(provider: String) throws -> String
         func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String
         func chatNext(handle: Int64) throws -> String
         func chatCancel(handle: Int64)
@@ -85,6 +86,12 @@ public final class MagpieRunner: @unchecked Sendable {
         let json = try core.modelsJSON()
         guard !json.isEmpty, json != "null" else { return [] }
         return try JSONDecoder().decode([MagpieModel].self, from: Data(json.utf8))
+    }
+
+    /// Presses the account's check-in, when its plugin offers one.
+    public func checkin(provider: String) throws -> MagpieCheckin {
+        let json = try core.checkinJSON(provider: provider)
+        return try JSONDecoder().decode(MagpieCheckin.self, from: Data(json.utf8))
     }
 
     /// A conversation through this package.
