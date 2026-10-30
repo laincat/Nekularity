@@ -65,8 +65,20 @@ usage and model lists, streamed chunks, one event model over three wire dialects
 "never retry once output started". All of that is covered by Go tests, including the
 original Copilot package against a fake service.
 
-This repository has only the client layer so far, and **it has not been compiled on a Mac
-yet**:
+This repository has only the client layer so far. On 2026-10-30 it was actually compiled on
+macOS 27 / Xcode 27 / Swift 6.4 and passed all five checks:
+
+```
+① Kit swift build                     PASS  0 error 0 warning
+② Kit swift test                      PASS  65 tests / 13 suites (was 58 / 11; +7 and +2)
+③ Kit -typecheck -swift-version 6     PASS  0 error 0 warning
+④ iOS Kit -emit-module                PASS
+⑤ App -typecheck -swift-version 6     PASS
+swift test --filter Magpie            7 tests / 2 suites, all executed
+```
+
+The first real compile of this layer produced no error and no warning. The file counts matched
+too: Sources 16→18, Tests 9→10, total 36→38.
 
 | Part | What it does |
 |---|---|
