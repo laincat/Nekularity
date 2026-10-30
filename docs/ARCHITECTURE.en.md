@@ -31,6 +31,7 @@ Rules:
 - gomobile methods block, so `CoreClient` always runs them in the background and exposes them to the interface as `async`; Core is never called on the main thread.
 - `URLSessionTransport` sends the requests and keeps a separate cookie store for each `partition` Core gives, so sources never share login state.
 - When Core asks for human verification, `WebViewVerifier` opens the page in a `WKWebView`, waits until the challenge markers are gone and `cf_clearance` is set, and returns the WebView's User-Agent to Core.
+- `.venera` backups are not parsed here. Core's `mobile.Core.ReadBackup(path, tempDir, knownKeysJSON)` and `PlanBackup(path, tempDir, knownKeysJSON, selectionJSON)` already unwind the archive, its sqlite tables and the type hashes, returning JSON with `history`, `folders`, `imageFavorites`, `searchHistory`, `sources` and `settingKeys`; the client only has to land that JSON in `ShelfStore` and `SearchHistoryStore` (both already have `merge`) and install the listed `sources` through the normal path. Both clients then share one parser instead of each growing its own zip/sqlite logic.
 
 ## Dependencies
 
