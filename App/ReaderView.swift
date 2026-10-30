@@ -17,6 +17,8 @@ struct ReaderView: View {
     @AppStorage("readerRightToLeft") private var rightToLeft = false
     /// Which page a paged reader shows, by its number in the chapter.
     @State private var pagedNumber = 1
+    /// The page to return to once the chapter's images arrive.
+    @State private var restorePage: Int?
 
     init(route: ReaderRoute) { _route = State(initialValue: route) }
 
@@ -81,6 +83,7 @@ struct ReaderView: View {
                             ReaderPage(key: .init(source: route.source, url: url, comicID: route.comicID,
                                                   chapterID: route.chapterID, isThumbnail: false),
                                        width: geo.size.width, number: i + 1)
+                                .id(i)
                                 .background(GeometryReader { page in
                                     Color.clear.preference(
                                         key: PageOffsetKey.self,
@@ -91,6 +94,13 @@ struct ReaderView: View {
                     }
                 }
                 .onChange(of: route.index) { proxy.scrollTo("top") }
+                // Coming back to a chapter the shelf knows resumes where it
+                // stopped, once, so the reader does not lose the place.
+                .onChange(of: images.count) {
+                    guard let page = restorePage, images.indices.contains(page - 1) else { return }
+                    proxy.scrollTo(page - 1, anchor: .top)
+                    restorePage = nil
+                }
                 .coordinateSpace(name: "reader")
                 .onPreferenceChange(PageOffsetKey.self) { offsets in
                     // The callback may run off the main actor; the shelf is not
@@ -124,7 +134,14 @@ struct ReaderView: View {
             recordPage(new)
         }
         .onChange(of: route.index) { pagedNumber = 1 }
-        .onChange(of: images.count) { if !images.isEmpty { recordPage(pagedNumber) } }
+        .onChange(of: images.count) {
+            guard !images.isEmpty else { return }
+            if let page = restorePage, images.indices.contains(page - 1) {
+                pagedNumber = page
+                restorePage = nil
+            }
+            recordPage(pagedNumber)
+        }
     }
 
     private var chapterFooter: some View {
@@ -206,7 +223,17 @@ struct ReaderView: View {
         lastPage = 0
         defer { loading = false }
         do {
+            // Reopening the chapter the shelf remembers returns to its page.
+            // The page is decided before the images land, so the first update
+            // that sees them can scroll straight there.
+            var wanted: Int?
+            if let entry = shelf.entry(source: route.source, id: route.comicID),
+               entry.chapterIndex == route.index,
+               let page = entry.page, page > 1 {
+                wanted = page
+            }
             images = try await library.core.chapterImages(key: route.source, comicID: route.comicID, chapterID: route.chapterID)
+            restorePage = wanted
             if images.isEmpty { error = "这一章没有图片" }
             // Opening a chapter is what the shelf remembers.
             shelf.record(ShelfHistory(
