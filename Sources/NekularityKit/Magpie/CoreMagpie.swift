@@ -29,22 +29,21 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
         return out
     }
 
-    /// A method that answers `BOOL` and reports failure through `NSError**`.
-    private static func check(_ body: (NSErrorPointer) -> Bool, orMessage message: String) throws {
-        var error: NSError?
-        let ok = body(&error)
-        if let error { throw error }
-        guard ok else { throw MagpieError(message) }
-    }
-
     // MARK: Package
 
+    /// gomobile splits the two shapes: a method returning `NSString*` keeps its
+    /// `NSError**` parameter, while one returning `BOOL` is imported as
+    /// `throws -> Bool` with no `error:` argument at all.
     public func loadPackage(filesJSON: String) throws {
-        try Self.check({ magpie.loadPackage(filesJSON, error: $0) }, orMessage: "Core 拒绝了这个插件包")
+        guard try magpie.loadPackage(filesJSON) else {
+            throw MagpieError("Core 拒绝了这个插件包")
+        }
     }
 
     public func setAuth(provider: String, authJSON: String) throws {
-        try Self.check({ magpie.setAuth(provider, authJSON: authJSON, error: $0) }, orMessage: "Core 拒绝了这个登录信息")
+        guard try magpie.setAuth(provider, authJSON: authJSON) else {
+            throw MagpieError("Core 拒绝了这个登录信息")
+        }
     }
 
     public func call(_ export: String, argJSON: String) throws -> String {
@@ -56,8 +55,9 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
     }
 
     public func close() {
-        // A close that fails has nothing left to report it to.
-        try? magpie.close()
+        // gomobile imports `- (void)close` without an error at all: nothing is
+        // left to report a failure to.
+        magpie.close()
     }
 
     // MARK: Sign-in
@@ -75,7 +75,9 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
     }
 
     public func cancelSignIn(id: Int64) throws {
-        try Self.check({ magpie.cancelSignIn(id, error: $0) }, orMessage: "Core 找不到这次登录")
+        guard try magpie.cancelSignIn(id) else {
+            throw MagpieError("Core 找不到这次登录")
+        }
     }
 
     // MARK: Usage and models
@@ -97,7 +99,9 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
     }
 
     public func setPluginOptions(optionsJSON: String) throws {
-        try Self.check({ magpie.setPluginOptions(optionsJSON, error: $0) }, orMessage: "Core 拒绝了这个开关设置")
+        guard try magpie.setPluginOptions(optionsJSON) else {
+            throw MagpieError("Core 拒绝了这个开关设置")
+        }
     }
 
     // MARK: Chat
