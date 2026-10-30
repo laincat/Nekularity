@@ -49,7 +49,11 @@ struct SearchView: View {
         } else if model.comics.isEmpty {
             if model.loading { ProgressView() }
             else if model.searched { ContentUnavailableView.search(text: model.keyword) }
-            else { ContentUnavailableView("输入关键词开始搜索", systemImage: "magnifyingglass") }
+            else if searches.queries.isEmpty {
+                ContentUnavailableView("输入关键词开始搜索", systemImage: "magnifyingglass")
+            } else {
+                recent
+            }
         } else {
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 110, maximum: 180), spacing: 12)], spacing: 16) {
@@ -65,6 +69,36 @@ struct SearchView: View {
                 if model.loading { ProgressView().padding() }
                 if let error = model.error { Text(error).font(.footnote).foregroundStyle(.secondary).padding() }
             }
+        }
+    }
+
+    /// What was searched before, newest first; tapping one searches it again.
+    private var recent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("最近搜索").font(.headline)
+                    Spacer()
+                    Button("清空") { searches.clear() }
+                        .font(.footnote)
+                }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 96, maximum: 220), spacing: 8, alignment: .leading)],
+                          alignment: .leading, spacing: 8) {
+                    ForEach(searches.queries, id: \.self) { word in
+                        Button {
+                            query = word
+                            start()
+                        } label: {
+                            Text(word).lineLimit(1).font(.callout)
+                        }
+                        .buttonStyle(.bordered)
+                        .contextMenu {
+                            Button("删除这条", role: .destructive) { searches.remove(word) }
+                        }
+                    }
+                }
+            }
+            .padding()
         }
     }
 
