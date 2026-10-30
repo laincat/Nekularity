@@ -38,3 +38,13 @@ swift test                 # macOS,需先运行 scripts/fetch-core.sh
 `check-swift.sh` 只解析,不做类型检查:名字、协议和平台 API 仍要 `swift build`
 或 CI。它用的 tree-sitter 语法比 Swift 6 落后一点,`scripts/check-swift.py` 里
 列出了要先抹掉的记号。
+
+## 改一处、通读一遍
+
+改一个字段的可选性、一个方法的访问级别、或者把一段代码搬进另一个 suite 时,**把同一函数、同一类型里所有用到它的地方一次看完**。这几类错误语法上完全合法,`check-swift` 抓不到,只能在 macOS 上炸:
+
+- 已经是非可选的局部值,又写 `if let` 或 `?.`
+- `private` 的成员被测试调用(测试用的是 `@testable import`,能看见 internal,看不见 private)
+- 测试被放进另一个 suite,而它用到的助手是那个 suite 里定义的
+
+已经能自动查的两种:`Tests/` 里 conform `MagpieRunner.Core` 的替身缺方法、以及文件用了生成的 `Mobile*` 类型却没 `import VeneraCatCore`(`check-swift.py`)。

@@ -38,3 +38,18 @@ swift test                 # macOS, after scripts/fetch-core.sh
 `check-swift.sh` only parses. Names, protocols and platform APIs still need
 `swift build` or CI. Its tree-sitter grammar trails Swift 6 slightly; the
 tokens blanked before parsing are listed in `scripts/check-swift.py`.
+
+## Change one thing, then read the whole function
+
+When you change a field's optionality, a method's access level, or move code into
+another suite, read every use of it in the same function and type in one pass. These
+mistakes are legal syntax, `check-swift` cannot see them, and they only fail on macOS:
+
+- `if let` or `?.` on a local that is already non-optional
+- a `private` member called from a test (tests use `@testable import`, which sees
+  internal but not private)
+- a test placed in a suite other than the one holding the helper it calls
+
+Two of these are checked automatically now: a `Tests/` double conforming to
+`MagpieRunner.Core` missing a method, and a file that names a generated `Mobile*` type
+without `import VeneraCatCore` (both in `check-swift.py`).
