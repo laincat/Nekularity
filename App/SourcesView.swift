@@ -98,12 +98,15 @@ struct SourcesView: View {
                 "收藏 \(result.favouritesAdded) 部",
                 "搜索 \(result.searchesAdded) 条",
             ]
-            if result.picturesSkipped > 0 {
-                var line = "图片收藏 \(result.picturesSkipped) 部"
+            if result.pagesAdded > 0 {
+                parts.append("图片 \(result.pagesAdded) 张")
+            }
+            if result.picturesSkipped > 0 || result.pagesSkipped > 0 {
+                var line = "图片收藏丢弃 \(result.picturesSkipped) 部"
                 if result.pagesSkipped > 0 {
                     line += "、\(result.pagesSkipped) 页"
                 }
-                parts.append(line + "(本客户端暂不支持)")
+                parts.append(line)
             }
             if result.pendingRows > 0 {
                 parts.append("\(result.pendingRows) 条待装源后再导")

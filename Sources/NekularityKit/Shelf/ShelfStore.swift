@@ -81,6 +81,58 @@ public struct ShelfFolder: Codable, Hashable, Identifiable, Sendable {
     public var id: String { name }
 }
 
+/// A page kept from a chapter, as the desktop client stores it: a reference
+/// to the source's image, never a downloaded copy.
+public struct KeptPage: Codable, Hashable, Identifiable, Sendable {
+    public var source: String
+    public var comicID: String
+    public var comicTitle: String
+    public var chapterID: String
+    public var chapterIndex: Int
+    public var chapterName: String?
+    /// 1-based, as the reader counts.
+    public var page: Int
+    public var url: String
+    public var time: Int
+
+    /// One page per source, comic and address.
+    public var id: String { source + "/" + comicID + "/" + url }
+
+    private enum CodingKeys: String, CodingKey {
+        case source
+        case comicID = "comicId"
+        case comicTitle
+        case chapterID = "chapterId"
+        case chapterIndex
+        case chapterName
+        case page
+        case url
+        case time
+    }
+
+    public init(
+        source: String,
+        comicID: String,
+        comicTitle: String,
+        chapterID: String,
+        chapterIndex: Int,
+        chapterName: String? = nil,
+        page: Int,
+        url: String,
+        time: Int = Int(Date().timeIntervalSince1970)
+    ) {
+        self.source = source
+        self.comicID = comicID
+        self.comicTitle = comicTitle
+        self.chapterID = chapterID
+        self.chapterIndex = chapterIndex
+        self.chapterName = chapterName
+        self.page = page
+        self.url = url
+        self.time = time
+    }
+}
+
 /// Reading history and favourites, kept in one JSON file per profile.
 ///
 /// The shapes match the desktop client's `shelf.json`, so a profile can be
@@ -98,6 +150,8 @@ public final class ShelfStore {
 
     public private(set) var history: [ShelfHistory] = []
     public private(set) var folders: [ShelfFolder] = []
+    /// Pages kept from a chapter, newest first.
+    public private(set) var pictures: [KeptPage] = []
     public private(set) var lastError: String?
 
     private let url: URL
@@ -152,8 +206,18 @@ public final class ShelfStore {
         return names
     }
 
-    public var counts: (history: Int, favourites: Int) {
-        (history.count, folders.reduce(0) { $0 + $1.items.count })
+    public var counts: (history: Int, favourites: Int, pictures: Int) {
+        (history.count, folders.reduce(0) { $0 + $1.items.count }, pictures.count)
+    }
+
+    /// The kept pages, newest first.
+    public func keptPages(limit: Int = 60) -> [KeptPage] {
+        Array(pictures.prefix(max(0, limit)))
+    }
+
+    /// Whether this page is already kept, so the reader can show it.
+    public func isKept(source: String, comicID: String, url: String) -> Bool {
+        pictures.contains { $0.source == source && $0.comicID == comicID && $0.url == url }
     }
 
     // MARK: Writing
@@ -266,11 +330,47 @@ public final class ShelfStore {
         save()
     }
 
+    // MARK: Kept pages
+
+    /// Keeps one page, moving it to the front. Returns false when it was
+    /// already there under the same address.
+    @discardableResult
+    public func keepPage(_ page: KeptPage) -> Bool {
+        guard !page.source.isEmpty, !page.comicID.isEmpty, !page.url.isEmpty else {
+            lastError = "a kept page needs a source, a comic and an address"
+            return false
+        }
+        let moved = pictures.contains { $0.id == page.id }
+        pictures.removeAll { $0.id == page.id }
+        pictures.insert(page, at: 0)
+        save()
+        return !moved
+    }
+
+    public func forgetPage(_ page: KeptPage) {
+        pictures.removeAll { $0.id == page.id }
+        save()
+    }
+
+    /// Merges a page from an import without pushing an older copy over a
+    /// newer one.
+    @discardableResult
+    public func merge(_ page: KeptPage) -> Bool {
+        if let existing = pictures.first(where: { $0.id == page.id }), existing.time >= page.time {
+            return false
+        }
+        _ = keepPage(page)
+        return true
+    }
+
     // MARK: Storage
 
     private struct File: Codable {
         var history: [ShelfHistory]
         var folders: [ShelfFolder]
+        /// Omitted when empty, so an older desktop build reads this file as
+        /// before.
+        var pictures: [KeptPage]?
     }
 
     private func load() {
@@ -279,6 +379,7 @@ public final class ShelfStore {
             let file = try decoder.decode(File.self, from: data)
             history = file.history
             folders = file.folders
+            pictures = file.pictures ?? []
         } catch {
             // A broken file is reported, not silently replaced: the reader
             // can still see the error and the file stays for repair.
@@ -289,7 +390,8 @@ public final class ShelfStore {
     private func save() {
         guard !inMemory else { return }
         do {
-            let file = File(history: history, folders: folders)
+            let file = File(history: history, folders: folders,
+                            pictures: pictures.isEmpty ? nil : pictures)
             let data = try encoder.encode(file)
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(), withIntermediateDirectories: true)

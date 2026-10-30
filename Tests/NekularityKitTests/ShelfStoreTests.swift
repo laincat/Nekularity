@@ -142,4 +142,66 @@ import Testing
         #expect(!store.updateProgress(source: "copy_manga", id: "9", page: 2, percent: 5))
         #expect(store.entry(source: "copy_manga", id: "9") == nil)
     }
+
+    func page(_ url: String, page: Int = 3, time: Int = 10) -> KeptPage {
+        KeptPage(source: "copy_manga", comicID: "1", comicTitle: "标题",
+                 chapterID: "ch-1", chapterIndex: 2, chapterName: "第03话",
+                 page: page, url: url, time: time)
+    }
+
+    @Test func keptPagesAreOnePerAddressNewestFirst() {
+        let store = ShelfStore(directory: directory())
+        #expect(store.keepPage(page("https://x/a.jpg", time: 10)))
+        #expect(store.keepPage(page("https://x/b.jpg", time: 20)))
+        // Keeping the same address again moves it, it does not duplicate it.
+        #expect(!store.keepPage(page("https://x/a.jpg", time: 30)))
+
+        let kept = store.keptPages()
+        #expect(kept.count == 2)
+        #expect(kept.first?.url == "https://x/a.jpg")
+        #expect(store.isKept(source: "copy_manga", comicID: "1", url: "https://x/b.jpg"))
+        #expect(!store.isKept(source: "copy_manga", comicID: "2", url: "https://x/b.jpg"))
+    }
+
+    @Test func keptPageNeedsIdentity() {
+        let store = ShelfStore(directory: directory())
+        #expect(!store.keepPage(KeptPage(source: "", comicID: "1", comicTitle: "x",
+                                         chapterID: "c", chapterIndex: 0, page: 1, url: "u")))
+        #expect(store.keptPages().isEmpty)
+        #expect(store.lastError != nil)
+    }
+
+    @Test func keptPagesUseTheDesktopKeyNames() throws {
+        let dir = directory()
+        let store = ShelfStore(directory: dir)
+        store.keepPage(page("https://x/a.jpg"))
+        let text = try String(contentsOf: dir.appending(path: "shelf.json"), encoding: .utf8)
+        #expect(text.contains("\"comicId\""))
+        #expect(text.contains("\"chapterId\""))
+        #expect(text.contains("\"pictures\""))
+
+        // The desktop client reads the same keys back.
+        let reopened = ShelfStore(directory: dir)
+        #expect(reopened.keptPages().first?.comicID == "1")
+        #expect(reopened.keptPages().first?.chapterName == "第03话")
+        #expect(reopened.keptPages().first?.page == 3)
+        #expect(reopened.keptPages().first?.time == 10)
+    }
+
+    @Test func anEmptyShelfOmitsPictures() throws {
+        let dir = directory()
+        let store = ShelfStore(directory: dir)
+        store.record(ShelfHistory(comic: comic("1"), time: 10))
+        let text = try String(contentsOf: dir.appending(path: "shelf.json"), encoding: .utf8)
+        #expect(!text.contains("pictures"))
+    }
+
+    @Test func importDoesNotPushAnOlderKeptPage() {
+        let store = ShelfStore(directory: directory())
+        store.keepPage(page("https://x/a.jpg", time: 50))
+        #expect(!store.merge(page("https://x/a.jpg", time: 10)))
+        #expect(store.keptPages().first?.time == 50)
+        #expect(store.merge(page("https://x/b.jpg", time: 60)))
+        #expect(store.keptPages().count == 2)
+    }
 }

@@ -16,8 +16,9 @@ public struct BackupImporter {
         public var favouritesAdded = 0
         public var foldersCreated = 0
         public var searchesAdded = 0
-        /// Kept pictures Core read; this client has no picture shelf yet, so
-        /// they are reported and dropped.
+        /// Kept pages restored onto the shelf, and kept pictures this client
+        /// could not place (no source, or no page inside).
+        public var pagesAdded = 0
         public var picturesSkipped = 0
         public var pagesSkipped = 0
         /// Rows that need a source the backup did not carry a script for.
@@ -73,9 +74,31 @@ public struct BackupImporter {
         }
 
         out.searchesAdded = searches.merge(plan.searchHistory ?? [])
+        // Kept pages are references to the source's images, which this client
+        // can store now, so a restore keeps them instead of counting them.
+        for picture in plan.imageFavorites ?? [] {
+            guard let key = picture.sourceKey, !key.isEmpty, !picture.id.isEmpty else { continue }
+            var kept = 0
+            for episode in picture.episodes?.array ?? [] {
+                let chapterID = episode["eid"]?.stringValue ?? ""
+                let chapterIndex = Int(episode["ep"]?.stringValue ?? "") ?? 0
+                let chapterName = episode["epName"]?.stringValue
+                for mark in episode["imageFavorites"]?.array ?? [] {
+                    guard let url = mark["imageKey"]?.stringValue, !url.isEmpty,
+                          let page = Int(mark["page"]?.stringValue ?? "") else { continue }
+                    let entry = KeptPage(source: key, comicID: picture.id, comicTitle: picture.title,
+                                         chapterID: chapterID, chapterIndex: chapterIndex,
+                                         chapterName: chapterName, page: page, url: url,
+                                         time: Int((picture.time ?? 0) / 1000))
+                    if shelf.merge(entry) { kept += 1 }
+                }
+            }
+            out.pagesAdded += kept
+            if kept == 0 { out.picturesSkipped += 1 }
+        }
         let pictures = plan.imageFavorites ?? []
-        out.picturesSkipped = pictures.count
-        out.pagesSkipped = pictures.reduce(0) { $0 + $1.keptPages }
+        out.pagesSkipped = pictures.reduce(0) { $0 + $1.keptPages } - out.pagesAdded
+        if out.pagesSkipped < 0 { out.pagesSkipped = 0 }
         out.pendingRows = plan.pending?.rowCount ?? 0
         return out
     }

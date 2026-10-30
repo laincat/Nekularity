@@ -11,6 +11,8 @@ struct ReaderView: View {
     @State private var loading = true
     @State private var chromeHidden = false
     @State private var lastPage = 0
+    /// Result of the last "收藏本页", shown briefly in the toolbar.
+    @State private var keptNote: String?
 
     init(route: ReaderRoute) { _route = State(initialValue: route) }
 
@@ -54,6 +56,16 @@ struct ReaderView: View {
         .navigationTitle(route.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(chromeHidden ? .hidden : .visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    keepPage()
+                } label: {
+                    Label(keptNote ?? "收藏本页", systemImage: "bookmark")
+                }
+                .disabled(images.isEmpty)
+            }
+        }
         .statusBarHidden(chromeHidden)
         .onTapGesture { withAnimation { chromeHidden.toggle() } }
         .task(id: route.index) { await load() }
@@ -94,6 +106,22 @@ struct ReaderView: View {
                                  page: page, percent: percent) {
             shelf.record(ShelfHistory(comic: comic, chapter: route.title,
                                      chapterIndex: route.index, page: page, percent: percent))
+        }
+    }
+
+    /// Keeps the page at the top of the screen, the one the reader is on.
+    private func keepPage() {
+        let number = max(1, lastPage)
+        guard images.indices.contains(number - 1) else { return }
+        let page = KeptPage(source: route.source, comicID: route.comicID,
+                            comicTitle: route.comicTitle.isEmpty ? route.title : route.comicTitle,
+                            chapterID: route.chapterID, chapterIndex: route.index,
+                            chapterName: route.title, page: number, url: images[number - 1])
+        let added = shelf.keepPage(page)
+        keptNote = added ? "已收藏" : "已经收藏过"
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            keptNote = nil
         }
     }
 

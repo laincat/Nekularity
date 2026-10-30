@@ -12,7 +12,7 @@ struct ShelfView: View {
     var body: some View {
         NavigationStack {
             List {
-                if shelf.recentHistory().isEmpty && shelf.folders.isEmpty {
+                if shelf.recentHistory().isEmpty && shelf.folders.isEmpty && shelf.pictures.isEmpty {
                     ContentUnavailableView {
                         Label("书架还是空的", systemImage: "books.vertical")
                     } description: {
@@ -79,6 +79,17 @@ struct ShelfView: View {
                                 Image(systemName: "ellipsis.circle")
                             }
                         }
+                    }
+                }
+                if !shelf.keptPages().isEmpty {
+                    Section {
+                        ForEach(shelf.keptPages(), id: \.id) { page in
+                            KeptPageRow(page: page) {
+                                shelf.forgetPage(page)
+                            }
+                        }
+                    } header: {
+                        Text("图片收藏 · \(shelf.pictures.count) 张")
                     }
                 }
                 Section {
@@ -170,6 +181,39 @@ private struct ComicRow: View {
                 }
             }
         }
+    }
+}
+
+private struct KeptPageRow: View {
+    let page: KeptPage
+    let forget: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SourceImage(key: ImageLoader.Key(source: page.source, url: page.url,
+                                             comicID: page.comicID, chapterID: page.chapterID,
+                                             isThumbnail: true), maxPixel: 180)
+                .frame(width: 44, height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(page.comicTitle).lineLimit(1)
+                Text(detail).font(.footnote).foregroundStyle(.secondary).lineLimit(1)
+            }
+        }
+        .swipeActions {
+            Button("取消收藏", role: .destructive, action: forget)
+        }
+    }
+
+    private var detail: String {
+        var parts: [String] = []
+        if let name = page.chapterName, !name.isEmpty {
+            parts.append(name)
+        } else {
+            parts.append("第 \(page.chapterIndex + 1) 话")
+        }
+        parts.append("第 \(page.page) 页")
+        return parts.joined(separator: " · ")
     }
 }
 
