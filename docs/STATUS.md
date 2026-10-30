@@ -63,14 +63,15 @@ Core 侧已跑通:包快照与模块定位、`fetch`/`Headers`/`URL`/`ReadableSt
 
 | 检查 | 结果 |
 |---|---|
+| `scripts/check-core-surface.sh` | PASS —— 17/17 个 `MobileMagpie` 方法 |
 | `swift build` | PASS,0 error 0 warning |
-| `swift test` | **PASS — 114 tests / 24 suites** |
+| `swift test` | **PASS — 119 tests / 27 suites** |
 | Kit `-typecheck -swift-version 6`(arm64-macos26.0) | PASS,0 error 0 warning |
 | iOS `-emit-module -parse-as-library -swift-version 6`(iPhoneOS 27.1) | PASS |
 | App `-typecheck -swift-version 6` | PASS |
-| `swift test --filter Magpie` | **PASS — 56 tests / 13 suites** |
+| `swift test --filter Magpie` | **PASS — 61 tests / 16 suites** |
 
-静态计数与运行数一致:`@Test` 114、`@Suite` 24、`.swift` 54(53 源文件 + `Package.swift`)。
+静态计数与运行数一致:`@Test` 119、`@Suite` 27、`.swift` 56(28 Kit + 14 App + 11 Tests + `Package.swift`)。两棵树的 `check-tree.sh` 摘要相同:`shape=ae577459e8509e1f03d83970c56a80ea1adafd4b` —— 这比“总数对得上”硬,因为它证明**同一批用例在同样的文件里**。
 
 这一轮之前是「编译绿、测试红」:同一棵树编译零错误,`swift test` 却抓出 4 个断言失败——`modalities: null` 解不出来、安装没校验插件声明的 provider(会把登录写进别的账号)、登录循环里「空/null」一处当作等待一处当作失败(根因是 `JSONSerialization` 默认不接受顶层 `null`)。修完又补了登录与对话两个超时:能被无限等待的地方,测试和用户都会撞上。
 

@@ -70,15 +70,18 @@ macOS 27 / Xcode 27 / Swift 6.4:
 
 | Check | Result |
 |---|---|
+| `scripts/check-core-surface.sh` | PASS — all 17 `MobileMagpie` methods |
 | `swift build` | PASS, 0 errors, 0 warnings |
-| `swift test` | **PASS — 114 tests / 24 suites** |
+| `swift test` | **PASS — 119 tests / 27 suites** |
 | Kit `-typecheck -swift-version 6` (arm64-macos26.0) | PASS, 0 errors, 0 warnings |
 | iOS `-emit-module -parse-as-library -swift-version 6` (iPhoneOS 27.1) | PASS |
 | App `-typecheck -swift-version 6` | PASS |
-| `swift test --filter Magpie` | **PASS — 56 tests / 13 suites** |
+| `swift test --filter Magpie` | **PASS — 61 tests / 16 suites** |
 
-Static counts agree with the run: `@Test` 114, `@Suite` 24, `.swift` 54 (53 sources plus
-`Package.swift`).
+Static counts agree with the run: `@Test` 119, `@Suite` 27, `.swift` 56 (28 Kit, 14 App, 11 Tests
+and `Package.swift`). Both trees print the same `check-tree.sh` digest,
+`shape=ae577459e8509e1f03d83970c56a80ea1adafd4b` — which is firmer than matching totals,
+because it shows the same tests live in the same files.
 
 The round before this one was compile-green and test-red: the same tree had zero compile
 errors while `swift test` found four assertion failures — a `null` modalities array that would
