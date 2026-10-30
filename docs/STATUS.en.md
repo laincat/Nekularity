@@ -91,14 +91,14 @@ macOS 27 / Xcode 27 / Swift 6.4:
 Static counts agree with the run: `@Test` 119, `@Suite` 27, `.swift` 56 (28 Kit, 14 App, 11 Tests
 and `Package.swift`).
 
-**Code added after that run is still waiting for the same treatment:** installing from an
-archive, the key sign-in form, decoding `prompts`, handling `immediate`, recording a plugin's
-declaration at install time, and telling a non-provider package apart from a mismatched one.
-These pass the syntax check and `check-tree`, but no Swift type check has seen them — a
-distinction worth writing down, so the 119 result is not read as a statement about the current
-tree. **The current test count is deliberately not written here**: it changes with every commit
-and would be stale by the next one. Run `sh scripts/check-tree.sh` and compare the `shape` it
-prints with the verified tree's `ae5774...`; if they differ, 119 cannot vouch for it.
+**Code added after that run has now been verified too**: on 2026-10-31 the same five checks ran on the
+Mac mini (macOS 27.0.1 / Xcode 27.1 / Swift 6.4) and every one exited 0: `swift build` with 0 errors and
+0 warnings, `swift test` **129 tests in 27 suites passed**, Kit and App `-typecheck` clean, iOS
+`-emit-module` clean; `check-core-surface` 18/18; `swift test --filter Magpie` **71 tests in 16 suites**;
+and `check-tree` printed `swift=56 tests=129 suites=27 shape=8457d8e43ce3d36849577f4cdcc07a92079b4015`,
+the same shape this repository prints. **Still unverified**: an `xcodebuild` archive and signing, an iOS
+Simulator runtime (absent on that machine), a real device and a real vendor account. The paragraph
+describes the tree on the Mac; whether the two trees match file for file is settled by md5, not by shape.
 
 The round before this one was compile-green and test-red: the same tree had zero compile
 errors while `swift test` found four assertion failures — a `null` modalities array that would
