@@ -22,64 +22,12 @@ struct ShelfView: View {
                 if !shelf.recentHistory().isEmpty {
                     Section("继续阅读") {
                         ForEach(shelf.recentHistory(), id: \.key) { entry in
-                            NavigationLink(value: ComicRoute(source: entry.source,
-                                                             comic: entry.comic.asComic)) {
-                                HistoryRow(entry: entry)
-                            }
-                            .swipeActions {
-                                Button("移除", role: .destructive) {
-                                    shelf.forgetHistory(source: entry.source, id: entry.id)
-                                }
-                            }
+                            historyRow(entry)
                         }
                     }
                 }
                 ForEach(shelf.folders) { folder in
-                    Section {
-                        if folder.items.isEmpty {
-                            Text("（空）").font(.footnote).foregroundStyle(.secondary)
-                        }
-                        ForEach(folder.items, id: \.key) { comic in
-                            NavigationLink(value: ComicRoute(source: comic.source, comic: comic.asComic)) {
-                                ComicRow(comic: comic)
-                            }
-                            .swipeActions {
-                                Button("取消收藏", role: .destructive) {
-                                    shelf.remove(comic, from: folder.name)
-                                }
-                            }
-                            .contextMenu {
-                                // A comic is in one folder; moving is how it leaves
-                                // the current one.
-                                let others = shelf.folderNames.filter { $0 != folder.name }
-                                if others.isEmpty {
-                                    Text("只有一个收藏夹")
-                                } else {
-                                    Menu("移动到") {
-                                        ForEach(others, id: \.self) { name in
-                                            Button(name) { shelf.move(comic, to: name) }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } header: {
-                        HStack {
-                            Text("\(folder.name) · \(folder.items.count) 部")
-                            Spacer()
-                            Menu {
-                                Button("重命名") {
-                                    renameTo = folder.name
-                                    renaming = folder
-                                }
-                                Button("删除收藏夹", role: .destructive) {
-                                    shelf.deleteFolder(folder.name)
-                                }
-                            } label: {
-                                Image(systemName: "ellipsis.circle")
-                            }
-                        }
-                    }
+                    folderSection(folder)
                 }
                 if !shelf.keptPages().isEmpty {
                     Section {
@@ -124,6 +72,80 @@ struct ShelfView: View {
                 if let error = shelf.lastError {
                     Text(error).font(.footnote).foregroundStyle(.secondary)
                 }
+            }
+        }
+    }
+    @ViewBuilder
+    private func historyRow(_ entry: ShelfHistory) -> some View {
+        NavigationLink(value: entry.comic.route) {
+            HistoryRow(entry: entry)
+        }
+        .swipeActions {
+            Button("移除", role: .destructive) {
+                shelf.forgetHistory(source: entry.source, id: entry.id)
+            }
+        }
+    }
+
+    /// One folder. Kept apart from `body`: the whole list as one expression
+    /// made the type checker give up in reasonable time.
+    @ViewBuilder
+    private func folderSection(_ folder: ShelfFolder) -> some View {
+        Section {
+            if folder.items.isEmpty {
+                Text("（空）").font(.footnote).foregroundStyle(.secondary)
+            }
+            ForEach(folder.items, id: \.key) { comic in
+                comicRow(comic, in: folder)
+            }
+        } header: {
+            folderHeader(folder)
+        }
+    }
+
+    @ViewBuilder
+    private func comicRow(_ comic: ShelfComic, in folder: ShelfFolder) -> some View {
+        NavigationLink(value: comic.route) {
+            ComicRow(comic: comic)
+        }
+        .swipeActions {
+            Button("取消收藏", role: .destructive) {
+                shelf.remove(comic, from: folder.name)
+            }
+        }
+        .contextMenu {
+            moveMenu(comic, in: folder)
+        }
+    }
+
+    @ViewBuilder
+    private func moveMenu(_ comic: ShelfComic, in folder: ShelfFolder) -> some View {
+        let others = shelf.folderNames().filter { $0 != folder.name }
+        if others.isEmpty {
+            Text("只有一个收藏夹")
+        } else {
+            Menu("移动到") {
+                ForEach(others, id: \.self) { name in
+                    Button(name) { shelf.move(comic, to: name) }
+                }
+            }
+        }
+    }
+
+    private func folderHeader(_ folder: ShelfFolder) -> some View {
+        HStack {
+            Text("\(folder.name) · \(folder.items.count) 部")
+            Spacer()
+            Menu {
+                Button("重命名") {
+                    renameTo = folder.name
+                    renaming = folder
+                }
+                Button("删除收藏夹", role: .destructive) {
+                    shelf.deleteFolder(folder.name)
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
             }
         }
     }
@@ -233,5 +255,9 @@ private extension ShelfComic {
     /// The shelf keeps the fields it needs; the screens take the full comic.
     var asComic: Comic {
         Comic(id: id, title: title, subtitle: author, cover: cover)
+    }
+
+    var route: ComicRoute {
+        ComicRoute(source: source, comic: asComic)
     }
 }
