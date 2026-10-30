@@ -18,6 +18,7 @@ public final class MagpieRunner: @unchecked Sendable {
         func poll(id: Int64) throws -> String
         func cancelSignIn(id: Int64) throws
         func usageJSON(provider: String) throws -> String
+        func usageSummaryJSON(provider: String) throws -> String
         func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String
         func chatNext(handle: Int64) throws -> String
         func chatCancel(handle: Int64)
@@ -95,6 +96,14 @@ public final class MagpieRunner: @unchecked Sendable {
     /// Runs the package's usage hook, as the package answered it.
     public func usage(provider: String) throws -> String {
         try core.usageJSON(provider: provider)
+    }
+
+    /// The account's usage in the shape every provider shares, or nil when the
+    /// package reports none.
+    public func usageReport(provider: String) throws -> MagpieUsage? {
+        let json = try core.usageSummaryJSON(provider: provider)
+        guard !json.isEmpty, json != "null" else { return nil }
+        return try JSONDecoder().decode(MagpieUsage.self, from: Data(json.utf8))
     }
 
     /// Forgets an account: the package is closed and its sign-in deleted.

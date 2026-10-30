@@ -52,6 +52,10 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
         try magpie.usage(provider)
     }
 
+    public func usageSummaryJSON(provider: String) throws -> String {
+        try magpie.usageSummary(provider)
+    }
+
     public func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String {
         try magpie.chatStart(model, messagesJSON: messagesJSON, system: system, maxTokens: maxTokens)
     }

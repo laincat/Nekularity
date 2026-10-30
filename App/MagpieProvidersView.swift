@@ -15,6 +15,7 @@ struct MagpieProvidersView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var signingIn: MagpieProviderRow?
+    @State private var showingUsage: MagpieProviderRow?
 
     var body: some View {
         NavigationStack {
@@ -63,6 +64,10 @@ struct MagpieProvidersView: View {
                                     .buttonStyle(.borderless)
                                 }
                                 if row.signedIn {
+                                    Button("用量") { showingUsage = row }
+                                        .buttonStyle(.borderless)
+                                }
+                                if row.signedIn {
                                     Button("退出登录", role: .destructive) {
                                         perform { try accounts.signOut(provider: row.provider) }
                                     }
@@ -97,6 +102,13 @@ struct MagpieProvidersView: View {
                 provider: row.provider,
                 providerName: row.name.isEmpty ? row.provider : row.name,
                 onSignedIn: { reload() }
+            )
+        }
+        .sheet(item: $showingUsage) { row in
+            MagpieUsageView(
+                accounts: accounts,
+                provider: row.provider,
+                providerName: row.name.isEmpty ? row.provider : row.name
             )
         }
         .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { result in

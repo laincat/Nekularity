@@ -46,6 +46,8 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
     }
     func cancelSignIn(id: Int64) throws { cancelledIDs.append(id) }
     func usageJSON(provider: String) throws -> String { usageToReturn }
+    func usageSummaryJSON(provider: String) throws -> String { usageSummaryToReturn }
+    var usageSummaryToReturn = ""
 
     var chatStarts: [(String, String)] = []
     var chatEvents: [String] = []
@@ -621,5 +623,64 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(MagpieChat.handle(from: #"{"id":42}"#) == 42)
         #expect(MagpieChat.handle(from: "{}") == nil)
         #expect(MagpieChat.event(from: "not json").kind == .error)
+    }
+}
+
+@Suite struct MagpieUsageTests {
+    private let summary = """
+    {"plan":"individual","until":"","renew":"","balance":"","error":"","user":"","signIn":"kept",
+     "resets":null,
+     "windows":[{"name":"Premium requests","used":50,"resetsAt":"2026-01-01T00:00:00Z","resetSecs":0,
+                 "display":"","amount":150,"limit":300,"unit":"requests","span":0,"model":"",
+                 "models":[],"notModels":[],"aside":false,"runsOutAt":"","runsOut":0,"balance":null},
+                {"name":"Unknown","used":null,"resetsAt":"","resetSecs":0,"display":"No allowance reported",
+                 "amount":0,"limit":0,"unit":"","span":0,"model":"","models":[],"notModels":[],
+                 "aside":true,"runsOutAt":"","runsOut":0,"balance":null}]}
+    """
+
+    @Test func theReportIsDecodedAndExplained() throws {
+        let core = StubMagpieCore()
+        core.usageSummaryToReturn = summary
+        let usage = try #require(try MagpieRunner(core: core, store: MemoryMagpieAuthStore())
+            .usageReport(provider: "p"))
+        #expect(usage.plan == "individual")
+        #expect(usage.signIn == "kept")
+        #expect(usage.windows.count == 2)
+        #expect(usage.windows[0].summary == "150 / 300 requests")
+        // No share was given, so the vendor's own words stand rather than "0%".
+        #expect(usage.windows[1].used == nil)
+        #expect(usage.windows[1].summary == "No allowance reported")
+        #expect(usage.windows[1].aside)
+    }
+
+    @Test func anEmptyAnswerIsNoReport() throws {
+        let core = StubMagpieCore()
+        core.usageSummaryToReturn = ""
+        #expect(try MagpieRunner(core: core, store: MemoryMagpieAuthStore())
+            .usageReport(provider: "p") == nil)
+        core.usageSummaryToReturn = "null"
+        #expect(try MagpieRunner(core: core, store: MemoryMagpieAuthStore())
+            .usageReport(provider: "p") == nil)
+    }
+
+    @Test func aPercentageIsShownWithoutADecimal() throws {
+        var window = MagpieUsage.Window(name: "Weekly", used: 37, resetsAt: "", resetSecs: 0,
+                                        display: "", amount: 0, limit: 0, unit: "", span: 0,
+                                        model: "", models: [], notModels: [], aside: false,
+                                        runsOutAt: "", runsOut: 0, balance: nil)
+        #expect(window.summary == "37%")
+        window.used = 137.5
+        #expect(window.summary == "137.5%")
+        window.used = nil
+        #expect(window.summary == "没有报告用量")
+    }
+
+    /// A wallet has a figure and no share; the figure is what to show.
+    @Test func aWalletShowsItsBalance() {
+        let window = MagpieUsage.Window(name: "积分", used: nil, resetsAt: "", resetSecs: 0,
+                                        display: "", amount: 0, limit: 0, unit: "积分", span: 0,
+                                        model: "", models: [], notModels: [], aside: false,
+                                        runsOutAt: "", runsOut: 0, balance: 6291)
+        #expect(window.summary == "6291 积分")
     }
 }
