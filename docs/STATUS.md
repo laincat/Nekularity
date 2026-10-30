@@ -43,14 +43,15 @@
 ## 未验证
 
 - **编译**:`scripts/verify-ios.sh` 在 macOS 上串起检查(文档、`check-swift`、`swift test`、App 构建);没有 XcodeGen 时退化为「先给 iOS 编 Kit,再用 `swiftc -typecheck` 检查 App 源码」,仍然能抓到界面层的类型错误。代码还没在真机/模拟器里跑过,但已经在 macOS 上编译过:Kit 的 `swift build`(Swift 6 模式)与 iOS 的 `swiftc -emit-module` 都通过,App 的 `swiftc -typecheck` 先报了一处 `ShelfView` 类型检查超时(它顺带掩盖了 `folderNames` 当成属性用的真错),拆成多个 `@ViewBuilder` 后又暴露 `ReaderView` 里 `chapterID` 可选值未解包;两处都已修,并在 macOS 上按 Swift 6 模式复验通过:Kit `swift build` 0 error 0 warning、Kit `-typecheck` 0/0、iOS `-emit-module` 通过、App `-typecheck` 0 error 0 warning。每次改动仍都过 `scripts/check-swift.sh`(tree-sitter 解析,能抓语法错误,不抓类型错误)。调用 Core 的写法和 Core 仓库在 CI 上通过的 `apple/CoreSmoke` 一致;`BrowseView` 也随同一批 typecheck 一起过了类型检查。源码包被切成 base64 分段送到 macOS 时,用 `scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK TGZ_MD5 TGZ_BYTES SWIFT_FILES [WORKDIR] [clean]` 一步走完「拼接分段 → 解码 → 核归档大小与 md5 → 解包 → 核 `.swift` 个数 → 放 xcframework → macOS 上 `swift build` → `swift test` 跑 Kit 单元测试 → iOS 上 `swiftc -emit-module` 编 Kit → 用该模块 `swiftc -typecheck` 检查 App」,三步都用 `-swift-version 6`,和 `Package.swift`、`project.yml` 一致(用 Swift 5 模式检查会放过真构建会拒绝的代码);末尾传 `clean` 会在报告后删掉解包目录、拼接件与归档,机器保持原样。
-- `swift test` 已经在 macOS 上跑通:**49 个测试 / 10 个套件全绿**。它比类型检查更有用——第一轮它根本编不过:`BackupImporter.keptPages(from:)` 挂在 `@MainActor` 类型上,非隔离测试调不了;改成 `nonisolated`(它只读计划、返回值)后测试能编过,又立刻暴露 `SearchHistoryStore.merge` 把导入项反序插到本地查询之前(应为正序 `append`)。两处都已修,这也是「五项」里必须有 `swift test` 的原因。
+- `swift test` 已经在 macOS 上跑通:**58 个测试 / 11 个套件全绿**。它比类型检查更有用——第一轮它根本编不过:`BackupImporter.keptPages(from:)` 挂在 `@MainActor` 类型上,非隔离测试调不了;改成 `nonisolated`(它只读计划、返回值)后测试能编过,又立刻暴露 `SearchHistoryStore.merge` 把导入项反序插到本地查询之前(应为正序 `append`)。两处都已修,这也是「五项」里必须有 `swift test` 的原因。之后补的 `ReaderNavigationTests` 与书架两个破坏性操作(删历史、删收藏页)又把这层网织密:移动规则从视图搬进 Kit,才有了「本该不动却跳了」的可测断言。
 - 真机运行、真实漫画源。
 
 ## 下一步
 
-1. 编译与测试阶段已收尾:Kit 与 App 在 macOS 上按 Swift 6 模式通过 `swift build`、`swift test`(49 个)、`-typecheck`、iOS `-emit-module`、App `-typecheck` 五项(含多源搜索与收藏页跳章那一版);此后每一批改动仍按同一流程复验,编译器没看过的新包不会累积。
+1. 编译与测试阶段已收尾:Kit 与 App 在 macOS 上按 Swift 6 模式通过 `swift build`、`swift test`(58 个)、`-typecheck`、iOS `-emit-module`、App `-typecheck` 五项(含多源搜索与收藏页跳章那一版);此后每一批改动仍按同一流程复验,编译器没看过的新包不会累积。
 2. 有模拟器运行时后真正启动一次 App,用真实源跑通主线(装源→搜索→详情→阅读→书架)。
 3. 备份导入已接上,并用真实 `.venera` 的字段形状核过;下一步是在模拟器里跑一遍并核对条数。
 4. 需要产品决策、暂不动的两项:视频源与播放;把旧版全局 Cookie 映射到按源分区。
 5. 需要系统级授权的两项:安装 iOS 模拟器运行时;在 Mac 上装 XcodeGen 以产出 `.xcodeproj`。
-6. 需要拍板的一项:iOS 的 ATS。不少漫画源的图片地址是 `http://`,而 ATS 默认拒绝明文请求。桌面端由 Go 的 `net/http` 直接放行,移动端要么开 `NSAllowsArbitraryLoads`(放宽全部明文),要么只对必要的域名例外——这属于安全取舍,未擅自决定。
+6. AI 能力排在主线之后:iOS 端要做的是 **Magpie 插件系统**——直接运行 Magpie 的供应商原包,账号与运行环境独立于漫画源。Core 侧已有 `magpieplugin` 的包入口/模块定位与 `host/sse` 解码器,但 hook 宿主、认证与流式请求都还没有;先按原插件逐个验证,不把「能导入 JS」当作「兼容供应商」。桌面端不做 AI 接入。
+7. 需要拍板的一项:iOS 的 ATS。不少漫画源的图片地址是 `http://`,而 ATS 默认拒绝明文请求。桌面端由 Go 的 `net/http` 直接放行,移动端要么开 `NSAllowsArbitraryLoads`(放宽全部明文),要么只对必要的域名例外——这属于安全取舍,未擅自决定。
