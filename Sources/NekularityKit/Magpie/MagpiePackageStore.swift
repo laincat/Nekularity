@@ -79,10 +79,11 @@ public final class MagpiePackageStore: @unchecked Sendable {
     }
 
     /// Stores a package under its provider id, replacing any earlier copy.
-    @discardableResult
+    ///
     /// `specJSON`, when given, is stored with the package in the same write:
     /// writing it afterwards would rewrite the whole file table, which for a
     /// package of a few megabytes is a second copy of everything.
+    @discardableResult
     public func install(provider: String, files: [String: Data],
                         specJSON: String? = nil) throws -> MagpiePackage {
         guard files["package.json"] != nil else {
