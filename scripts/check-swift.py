@@ -4,7 +4,10 @@
 The client is written on Windows and compiled on macOS, so this catches the
 kind of mistake that would otherwise wait for a Mac: a missing brace, an
 unclosed string, a stray keyword. It does not type-check: names, protocols
-and platform APIs still need `swift build` on a Mac or in CI.
+and platform APIs still need `swift build` on a Mac or in CI. One whole class is
+caught anyway: a file that names a generated `Mobile*` Core type must import
+`VeneraCatCore`, and forgetting that reads as a syntax-valid file until a Mac
+compiles it.
 
     scripts/check-swift.sh            # reports, exits 1 when a file fails
     scripts/check-swift.sh --quiet    # only the summary
@@ -36,6 +39,12 @@ UNKNOWN_TOKENS = [b"nonisolated(unsafe)"]
 
 SKIP_DIRS = {".build", "Vendor", "build", ".git", "DerivedData"}
 
+# Types gomobile generates live in their own module. A file that names one and
+# forgets the import parses fine here and fails on the Mac, which is exactly the
+# mistake this check can catch for free.
+CORE_TYPES = ("MobileCore", "MobileHostProtocol", "MobileMagpie", "MobileVersion")
+CORE_IMPORT = b"import VeneraCatCore"
+
 
 def swift_files(root: pathlib.Path) -> list[pathlib.Path]:
     return sorted(
@@ -61,6 +70,20 @@ def errors_in(parser, source: bytes) -> list[tuple[int, str]]:
             continue
         stack.extend(node.children)
     return sorted(found)
+
+
+def missing_core_imports(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
+    """Files that name a generated Core type without importing its module."""
+    problems: list[tuple[str, str]] = []
+    for path in files:
+        source = path.read_bytes()
+        if CORE_IMPORT in source:
+            continue
+        for name in CORE_TYPES:
+            if name.encode() in source:
+                problems.append((str(path.relative_to(root)), name))
+                break
+    return problems
 
 
 def main() -> int:
@@ -92,6 +115,10 @@ def main() -> int:
             print(f"{rel}:{line}: {detail}")
         if len(problems) > 10:
             print(f"{rel}: … {len(problems) - 10} more")
+
+    for rel, name in missing_core_imports(root, files):
+        failed += 1
+        print(f"{rel}: names {name} but does not import VeneraCatCore")
 
     if failed:
         print(f"check-swift: {failed} of {len(files)} files do not parse")

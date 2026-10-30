@@ -1,4 +1,5 @@
 import Foundation
+import VeneraCatCore
 
 /// The real bridge: `MagpieRunner.Core` over the generated `MobileMagpie`.
 ///
@@ -16,71 +17,103 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
         self.magpie = magpie
     }
 
+    // MARK: Plumbing
+
+    /// gomobile keeps the `NSError**` parameter instead of importing it as
+    /// `throws`, the same shape `CoreClient.call` handles, so every call that
+    /// can fail goes through here.
+    private static func call(_ body: (NSErrorPointer) -> String) throws -> String {
+        var error: NSError?
+        let out = body(&error)
+        if let error { throw error }
+        return out
+    }
+
+    /// A method that answers `BOOL` and reports failure through `NSError**`.
+    private static func check(_ body: (NSErrorPointer) -> Bool, orMessage message: String) throws {
+        var error: NSError?
+        let ok = body(&error)
+        if let error { throw error }
+        guard ok else { throw MagpieError(message) }
+    }
+
+    // MARK: Package
+
     public func loadPackage(filesJSON: String) throws {
-        _ = try magpie.loadPackage(filesJSON)
+        try Self.check({ magpie.loadPackage(filesJSON, error: $0) }, orMessage: "Core 拒绝了这个插件包")
     }
 
     public func setAuth(provider: String, authJSON: String) throws {
-        _ = try magpie.setAuth(provider, authJSON: authJSON)
+        try Self.check({ magpie.setAuth(provider, authJSON: authJSON, error: $0) }, orMessage: "Core 拒绝了这个登录信息")
     }
 
     public func call(_ export: String, argJSON: String) throws -> String {
-        try magpie.call(export, argJSON: argJSON)
+        try Self.call { magpie.call(export, argJSON: argJSON, error: $0) }
     }
 
     public func savedAuthJSON() throws -> String {
-        try magpie.savedAuth()
+        try Self.call { magpie.savedAuth($0) }
     }
 
+    public func close() {
+        // A close that fails has nothing left to report it to.
+        try? magpie.close()
+    }
+
+    // MARK: Sign-in
+
     public func authJSON() throws -> String {
-        try magpie.auth()
+        try Self.call { magpie.auth($0) }
     }
 
     public func authorize(methodIndex: Int, inputsJSON: String) throws -> String {
-        try magpie.authorize(methodIndex, inputsJSON: inputsJSON)
+        try Self.call { magpie.authorize(methodIndex, inputsJSON: inputsJSON, error: $0) }
     }
 
     public func poll(id: Int64) throws -> String {
-        try magpie.poll(id)
+        try Self.call { magpie.poll(id, error: $0) }
     }
 
     public func cancelSignIn(id: Int64) throws {
-        _ = try magpie.cancelSignIn(id)
+        try Self.check({ magpie.cancelSignIn(id, error: $0) }, orMessage: "Core 找不到这次登录")
     }
 
+    // MARK: Usage and models
+
     public func usageJSON(provider: String) throws -> String {
-        try magpie.usage(provider)
+        try Self.call { magpie.usage(provider, error: $0) }
     }
 
     public func usageSummaryJSON(provider: String) throws -> String {
-        try magpie.usageSummary(provider)
+        try Self.call { magpie.usageSummary(provider, error: $0) }
     }
 
     public func modelsJSON() throws -> String {
-        try magpie.models()
+        try Self.call { magpie.models($0) }
     }
 
     public func checkinJSON(provider: String) throws -> String {
-        try magpie.checkin(provider)
+        try Self.call { magpie.checkin(provider, error: $0) }
     }
 
     public func setPluginOptions(optionsJSON: String) throws {
-        try magpie.setPluginOptions(optionsJSON)
+        try Self.check({ magpie.setPluginOptions(optionsJSON, error: $0) }, orMessage: "Core 拒绝了这个开关设置")
     }
 
+    // MARK: Chat
+
     public func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String {
-        try magpie.chatStart(model, messagesJSON: messagesJSON, system: system, maxTokens: maxTokens)
+        try Self.call {
+            magpie.chatStart(model, messagesJSON: messagesJSON, system: system,
+                             maxTokens: maxTokens, error: $0)
+        }
     }
 
     public func chatNext(handle: Int64) throws -> String {
-        try magpie.chatNext(handle)
+        try Self.call { magpie.chatNext(handle, error: $0) }
     }
 
     public func chatCancel(handle: Int64) {
         magpie.chatCancel(handle)
-    }
-
-    public func close() {
-        magpie.close()
     }
 }
