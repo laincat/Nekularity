@@ -33,16 +33,21 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
 
     /// gomobile splits the two shapes: a method returning `NSString*` keeps its
     /// `NSError**` parameter, while one returning `BOOL` is imported as
-    /// `throws -> Bool` with no `error:` argument at all.
+    /// `throws` alone — the success flag becomes the throw, so there is no
+    /// `error:` argument and no `Bool` to test.
     public func loadPackage(filesJSON: String) throws {
-        guard try magpie.loadPackage(filesJSON) else {
-            throw MagpieError("Core 拒绝了这个插件包")
+        do {
+            try magpie.loadPackage(filesJSON)
+        } catch {
+            throw MagpieError("Core 拒绝了这个插件包: \(error.localizedDescription)")
         }
     }
 
     public func setAuth(provider: String, authJSON: String) throws {
-        guard try magpie.setAuth(provider, authJSON: authJSON) else {
-            throw MagpieError("Core 拒绝了这个登录信息")
+        do {
+            try magpie.setAuth(provider, authJSON: authJSON)
+        } catch {
+            throw MagpieError("Core 拒绝了这个登录信息: \(error.localizedDescription)")
         }
     }
 
@@ -75,8 +80,10 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
     }
 
     public func cancelSignIn(id: Int64) throws {
-        guard try magpie.cancelSignIn(id) else {
-            throw MagpieError("Core 找不到这次登录")
+        do {
+            try magpie.cancelSignIn(id)
+        } catch {
+            throw MagpieError("Core 找不到这次登录: \(error.localizedDescription)")
         }
     }
 
@@ -99,8 +106,10 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
     }
 
     public func setPluginOptions(optionsJSON: String) throws {
-        guard try magpie.setPluginOptions(optionsJSON) else {
-            throw MagpieError("Core 拒绝了这个开关设置")
+        do {
+            try magpie.setPluginOptions(optionsJSON)
+        } catch {
+            throw MagpieError("Core 拒绝了这个开关设置: \(error.localizedDescription)")
         }
     }
 

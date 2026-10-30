@@ -20,7 +20,8 @@
 - `Vendor/` 存放编译出的 Core,不提交。
 - **gomobile 的两种导入形状不要混**:返回 `NSString*` 的方法保留 `NSError**` 形参
   (`magpie.call(export, argJSON:, error: $0)`);返回 `BOOL` 的方法导成
-  `throws -> Bool`,**没有** `error:` 形参(`guard try magpie.loadPackage(json)`)。
+  **`throws` 且返回 `Void`** —— 那个 BOOL 被 `throws` 吃掉了,既没有 `error:` 形参
+  也没有 `Bool` 可判(`try magpie.loadPackage(json)`,要中文提示就包一层 `do/catch`)。
   写反了只有 Mac 上的编译器会发现。
 
 ## 检查

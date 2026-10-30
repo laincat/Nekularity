@@ -20,8 +20,9 @@ For people and AI assistants working on the code. Read before changing it.
 - `Vendor/` holds the built Core and is not committed.
 - **Do not mix gomobile's two import shapes.** A method returning `NSString*` keeps its
   `NSError**` parameter (`magpie.call(export, argJSON:, error: $0)`); one returning `BOOL`
-  is imported as `throws -> Bool` with **no** `error:` parameter
-  (`guard try magpie.loadPackage(json)`). Writing the wrong one is only found by a compiler
+  is imported as **`throws` returning `Void`** — the success flag becomes the throw, so
+  there is no `error:` parameter and no `Bool` to test (`try magpie.loadPackage(json)`, with
+  a `do/catch` when a localised message is wanted). Writing the wrong one is only found by a compiler
   on a Mac.
 
 ## Checks
