@@ -37,6 +37,10 @@ open Nekularity.xcodeproj
 
 `scripts/core-version` names the Core branch, tag or commit to use. A local Core checkout also works: `scripts/fetch-core.sh ../VeneraCat-Core`.
 
+## Installing a provider package
+
+The app ships no provider package. To try one, make your own: Core's `magpieplugin/testdata/openai-compatible/` and `anthropic-compatible/` are two packages that **run** (fetch only, no Node), and zipping either one is enough to install it from the AI providers screen. The contract and how to check your own are in Core's [docs/PROVIDER-TEMPLATE.en.md](https://github.com/laincat/VeneraCat-Core/blob/main/docs/PROVIDER-TEMPLATE.en.md).
+
 ## On a machine without Xcode
 
 `scripts/check-swift.sh` only parses, so any machine can run it: `python3 scripts/check-swift.py` (no Xcode needed; it catches unclosed strings and brackets).

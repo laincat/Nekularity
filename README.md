@@ -37,6 +37,10 @@ open Nekularity.xcodeproj
 
 `scripts/core-version` 写明要使用的 Core 分支、标签或提交。也可以传入本地 Core 目录:`scripts/fetch-core.sh ../VeneraCat-Core`。
 
+## 装一个供应商包
+
+App 本身不随附供应商包。要试,可以自己压一个:Core 仓库的 `magpieplugin/testdata/openai-compatible/` 与 `anthropic-compatible/` 是两个**能跑**的模板(只用 `fetch`,没有 Node 依赖),把它们压成 zip 后在「AI 供应商」里安装即可;契约与自测方法见 Core 的 [docs/PROVIDER-TEMPLATE.md](https://github.com/laincat/VeneraCat-Core/blob/main/docs/PROVIDER-TEMPLATE.md)。
+
 ## 在没有 Xcode 的机器上
 
 `scripts/check-swift.sh` 只解析语法,任何机器都能跑:`python3 scripts/check-swift.py`(不需要 Xcode,能抓未闭合的字符串、括号这类错误)。
