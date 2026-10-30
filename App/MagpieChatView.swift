@@ -30,12 +30,12 @@ struct MagpieChatView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
-                        ForEach(Array(messages.enumerated()), id: \.offset) { _, message in
+                        ForEach(Array(messages.enumerated()), id: \.offset) { item in
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(message.role == "user" ? "你" : providerName)
+                                Text(item.element.role == "user" ? "你" : providerName)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                Text(message.text).textSelection(.enabled)
+                                Text(item.element.text).textSelection(.enabled)
                             }
                         }
                         if !reasoning.isEmpty {

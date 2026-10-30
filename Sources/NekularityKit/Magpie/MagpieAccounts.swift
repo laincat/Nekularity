@@ -60,7 +60,11 @@ public final class MagpieAccounts: @unchecked Sendable {
             let spec = specCache(provider: package.provider) {
                 try? runner?.auth(provider: package.provider)
             }
-            let signedIn = (try? auth.loadAuthJSON(provider: package.provider)) ?? nil != nil
+            // `try?` around a throwing load, then compare with nil: written this
+            // way because `?? nil != nil` binds the comparison first and does not
+            // mean what it looks like.
+            let stored = try? auth.loadAuthJSON(provider: package.provider)
+            let signedIn = (stored ?? nil) != nil
             return MagpieProviderRow(
                 provider: package.provider,
                 name: package.name,

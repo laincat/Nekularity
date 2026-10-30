@@ -48,7 +48,7 @@ public final class MagpieOptionStore: @unchecked Sendable {
     }
 
     public func resolve(_ declared: [MagpieAuthSpec.Option], provider: String) throws -> [Resolved] {
-        var chosen = try read()
+        let chosen = try read()
         return declared.map { option in
             let key = provider + "|" + option.key
             return Resolved(
