@@ -8,6 +8,10 @@
 # SINCE is any revision git can diff against; the files that differ from it
 # are shipped under their own paths, so extracting over the old tree updates
 # them in place.
+#
+# DELTA_SKIP_TESTS=1 leaves Tests/ out. The test file is the largest one in the
+# tree, and a few added tests usually travel better as text in the conversation
+# than as another twenty segments.
 set -eu
 
 if [ $# -lt 2 ]; then
@@ -28,7 +32,12 @@ trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/files"
 
 n=0
-for f in $(git diff --name-only "$since" -- . | grep -E '\.swift$|^Package\.swift$'); do
+files=$(git diff --name-only "$since" -- . | grep -E '\.swift$|^Package\.swift$' || true)
+if [ "${DELTA_SKIP_TESTS:-0}" = 1 ]; then
+	files=$(printf '%s
+' "$files" | grep -v '^Tests/' || true)
+fi
+for f in $files; do
 	mkdir -p "$work/files/$(dirname "$f")"
 	cp "$f" "$work/files/$f"
 	n=$((n + 1))
