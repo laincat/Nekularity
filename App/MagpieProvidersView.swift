@@ -169,8 +169,17 @@ struct MagpieProvidersView: View {
         }
     }
 
+    /// Reading the list compiles a package the first time, so it stays off the
+    /// main thread: a list that locks the window while a JavaScript runtime
+    /// starts looks like a hang.
     private func reload() {
-        do { rows = try accounts.rows() } catch { self.error = error.localizedDescription }
+        Task {
+            do {
+                rows = try await Task.detached { [accounts] in try accounts.rows() }.value
+            } catch {
+                self.error = error.localizedDescription
+            }
+        }
     }
 
     private func perform(_ work: @escaping () throws -> Void) {

@@ -109,12 +109,16 @@ struct MagpieSignInView: View {
         }
     }
 
+    /// Reading the spec starts the package's runtime the first time, so it is
+    /// off the main thread like the provider list is.
     private func load() {
         pending = true
         Task {
             defer { pending = false }
             do {
-                spec = try accounts.runner(for: provider).auth(provider: provider)
+                spec = try await Task.detached { [accounts, provider] in
+                    try accounts.runner(for: provider).auth(provider: provider)
+                }.value
             } catch {
                 message = error.localizedDescription
             }
