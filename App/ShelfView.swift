@@ -32,8 +32,13 @@ struct ShelfView: View {
                 if !shelf.keptPages().isEmpty {
                     Section {
                         ForEach(shelf.keptPages(), id: \.id) { page in
-                            KeptPageRow(page: page) {
-                                shelf.forgetPage(page)
+                            NavigationLink(value: page.route) {
+                                KeptPageRow(page: page)
+                            }
+                            .swipeActions {
+                                Button("取消收藏", role: .destructive) {
+                                    shelf.forgetPage(page)
+                                }
                             }
                         }
                     } header: {
@@ -208,7 +213,6 @@ private struct ComicRow: View {
 
 private struct KeptPageRow: View {
     let page: KeptPage
-    let forget: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -221,9 +225,6 @@ private struct KeptPageRow: View {
                 Text(page.comicTitle).lineLimit(1)
                 Text(detail).font(.footnote).foregroundStyle(.secondary).lineLimit(1)
             }
-        }
-        .swipeActions {
-            Button("取消收藏", role: .destructive, action: forget)
         }
     }
 
@@ -248,6 +249,14 @@ private struct Cover: View {
         SourceImage(key: ImageLoader.Key(source: source, url: url ?? "", comicID: id, isThumbnail: true), maxPixel: 180)
             .frame(width: 44, height: 60)
             .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+}
+
+private extension KeptPage {
+    /// A kept page opens the comic it came from; the reader starts from the
+    /// shelf's own position, so no chapter is invented here.
+    var route: ComicRoute {
+        ComicRoute(source: source, comic: Comic(id: comicID, title: comicTitle))
     }
 }
 
