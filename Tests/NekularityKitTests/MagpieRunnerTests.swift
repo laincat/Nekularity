@@ -260,6 +260,20 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(reason == "user cancelled")
     }
 
+    /// A key can carry metadata the package's loader needs. Cloudflare's package
+    /// builds its base URL from `auth.metadata.accountId`; storing only the key
+    /// leaves that URL with its placeholder still in it, and chat fails later.
+    @Test func anAPIKeyKeepsItsMetadata() throws {
+        let stored = try MagpieAuthShape.stored(
+            from: #"{"type":"success","key":"cf-key","metadata":{"accountId":"acc-42"}}"#,
+            inputs: [:]
+        )
+        let text = try #require(stored)
+        #expect(text.contains("cf-key"))
+        #expect(text.contains("acc-42"))
+        #expect(text.contains("metadata"))
+    }
+
     /// An API key has no callback to wait for. Core answers an immediate key
     /// inside `authorize`, and the client must store it without polling — the
     /// alternative is a screen that spins on a callback that will never exist.

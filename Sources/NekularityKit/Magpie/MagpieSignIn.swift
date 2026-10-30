@@ -55,7 +55,14 @@ public enum MagpieAuthShape {
             return try text(auth)
         }
         if let key = object["key"] as? String, !key.isEmpty {
-            return try text(["type": "api", "key": key])
+            // A key can come with metadata the loader needs: Cloudflare's package
+            // builds its base URL from `auth.metadata.accountId`, and dropping it
+            // leaves a URL with the placeholder still in it.
+            var auth: [String: Any] = ["type": "api", "key": key]
+            if let metadata = object["metadata"] as? [String: Any], !metadata.isEmpty {
+                auth["metadata"] = metadata
+            }
+            return try text(auth)
         }
         // A method that collected a key itself: the user typed it, so it is
         // kept without the package handing it back.
@@ -75,7 +82,7 @@ public enum MagpieAuthShape {
         return "登录未完成"
     }
 
-    private static func text(_ object: [String: String]) throws -> String {
+    private static func text(_ object: [String: Any]) throws -> String {
         let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
         return String(decoding: data, as: UTF8.self)
     }
