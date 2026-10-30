@@ -50,6 +50,8 @@ mistakes are legal syntax, `check-swift` cannot see them, and they only fail on 
   internal but not private)
 - a test placed in a suite other than the one holding the helper it calls
 
-Two of these are checked automatically now: a `Tests/` double conforming to
-`MagpieRunner.Core` missing a method, and a file that names a generated `Mobile*` type
-without `import VeneraCatCore` (both in `check-swift.py`).
+Three of these are checked automatically now: a `Tests/` double conforming to
+`MagpieRunner.Core` missing a method, a file that names a generated `Mobile*` type
+without `import VeneraCatCore`, and an `App/` file that names a kit type without
+`import NekularityKit` (all in `check-swift.py`; the last two would only fail on the
+Mac, which is why catching them on Windows is worth the rule).
