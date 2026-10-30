@@ -221,4 +221,33 @@ import Testing
         #expect(store.merge(page("https://x/b.jpg", time: 60)))
         #expect(store.keptPages().count == 2)
     }
+
+    /// Taking one comic off the history leaves the others, and the change
+    /// survives reopening: the desktop has the same rule, tested the same way.
+    @Test func forgettingOneHistoryEntryKeepsTheOthers() {
+        let dir = directory()
+        let store = ShelfStore(directory: dir)
+        store.record(ShelfHistory(comic: comic("1"), chapter: "第 1 话", chapterIndex: 0, time: 10))
+        store.record(ShelfHistory(comic: comic("2"), chapter: "第 1 话", chapterIndex: 0, time: 20))
+
+        store.forgetHistory(source: "copy_manga", id: "1")
+
+        #expect(store.history.count == 1)
+        #expect(store.history.first?.id == "2")
+        #expect(ShelfStore(directory: dir).history.count == 1)
+    }
+
+    /// A forgotten kept page is gone from the file too, not only from memory.
+    @Test func forgettingAPagePersists() {
+        let dir = directory()
+        let store = ShelfStore(directory: dir)
+        let kept = page("https://x/a.jpg", time: 10)
+        store.merge(kept)
+        #expect(store.keptPages().count == 1)
+
+        store.forgetPage(kept)
+
+        #expect(store.keptPages().isEmpty)
+        #expect(ShelfStore(directory: dir).keptPages().isEmpty)
+    }
 }
