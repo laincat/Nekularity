@@ -59,6 +59,13 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 
 ## Magpie provider plugins (the Nekularity side)
 
+**What installs, stated first.** Of the community repository's 36 packages, only two provider
+plugins actually run on this system today: the original `@magpie-community/opencode-copilot-auth`
+0.1.0 and `cloudflare-workers-ai` 0.0.4. Most of the rest need `node:fs`/`node:crypto`/
+`child_process`, or ship a TypeScript entry, and are refused at load with the reason named —
+not a blank screen, and not "installed but useless". So "Magpie compatible" here means the
+package format and runtime contract are compatible, not that every community package installs.
+
 Core already does the hard part: package snapshot and module resolution, a `fetch` /
 `Headers` / `URL` / `ReadableStream` runtime, device-code sign-in, refresh write-back,
 usage and model lists, streamed chunks, one event model over three wire dialects, and
