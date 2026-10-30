@@ -65,7 +65,11 @@ struct ReaderView: View {
                             Text("右→左").tag(true)
                         }
                     }
-                    Toggle("自动接续", isOn: $autoNext)
+                    // Paged reading has no "before the end" to observe: the
+                    // pages are a TabView, which builds its neighbours ahead.
+                    if layout == .vertical {
+                        Toggle("自动接续", isOn: $autoNext)
+                    }
                 } label: {
                     Label("排版", systemImage: "rectangle.split.3x1")
                 }
