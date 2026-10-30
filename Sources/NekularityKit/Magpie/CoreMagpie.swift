@@ -64,6 +64,10 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
         try magpie.checkin(provider)
     }
 
+    public func setPluginOptions(optionsJSON: String) throws {
+        try magpie.setPluginOptions(optionsJSON)
+    }
+
     public func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String {
         try magpie.chatStart(model, messagesJSON: messagesJSON, system: system, maxTokens: maxTokens)
     }

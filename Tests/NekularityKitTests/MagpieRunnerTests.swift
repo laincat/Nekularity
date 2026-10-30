@@ -51,6 +51,8 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
     func modelsJSON() throws -> String { modelsToReturn }
     var modelsToReturn = "[]"
     func checkinJSON(provider: String) throws -> String { checkinToReturn }
+    func setPluginOptions(optionsJSON: String) throws { optionsSeen = optionsJSON }
+    var optionsSeen = ""
     var checkinToReturn = #"{"outcome":"claimed","credit":"10 积分","streak":3,"message":"","until":""}"#
 
     var chatStarts: [(String, String)] = []
@@ -771,5 +773,17 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         let result = try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).checkin(provider: "p")
         #expect(!result.succeeded)
         #expect(result.summary == "服务不可用")
+    }
+}
+
+@Suite struct MagpieOptionTests {
+    /// The keys carry the provider, because Core keeps one table for every
+    /// plugin and a switch must not leak to another provider's account.
+    @Test func optionsAreSentWithTheProviderInTheKey() throws {
+        let core = StubMagpieCore()
+        try MagpieRunner(core: core, store: MemoryMagpieAuthStore())
+            .setOptions(["demo|freeOnly": true, "demo|vision": false])
+        #expect(core.optionsSeen.contains(#""demo|freeOnly":true"#))
+        #expect(core.optionsSeen.contains(#""demo|vision":false"#))
     }
 }

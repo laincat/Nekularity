@@ -21,6 +21,7 @@ public final class MagpieRunner: @unchecked Sendable {
         func usageSummaryJSON(provider: String) throws -> String
         func modelsJSON() throws -> String
         func checkinJSON(provider: String) throws -> String
+        func setPluginOptions(optionsJSON: String) throws
         func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String
         func chatNext(handle: Int64) throws -> String
         func chatCancel(handle: Int64)
@@ -86,6 +87,14 @@ public final class MagpieRunner: @unchecked Sendable {
         let json = try core.modelsJSON()
         guard !json.isEmpty, json != "null" else { return [] }
         return try JSONDecoder().decode([MagpieModel].self, from: Data(json.utf8))
+    }
+
+    /// Hands the plugin its own switches. Keys are "provider|option", exactly as
+    /// Core reads them, so a package's `input.magpie.option` answers the user's
+    /// choice.
+    public func setOptions(_ options: [String: Bool]) throws {
+        let data = try JSONSerialization.data(withJSONObject: options, options: [.sortedKeys])
+        try core.setPluginOptions(optionsJSON: String(decoding: data, as: UTF8.self))
     }
 
     /// Presses the account's check-in, when its plugin offers one.
