@@ -157,19 +157,12 @@ public final class MagpieAccounts: @unchecked Sendable {
         let previous = lock.withLock { () -> MagpieRunner? in
             let old = runners[provider]
             runners[provider] = runner
-            if let spec { specs[provider] = spec }
+            // `spec` is not optional here; only this branch reaches the cache.
+            specs[provider] = spec
             return old
         }
         previous?.close()
-        return MagpieProviderRow(
-            provider: provider,
-            name: package.name,
-            version: package.version,
-            hasSignIn: (spec?.methods.isEmpty == false),
-            signedIn: (try auth.loadAuthJSON(provider: provider)) != nil,
-            methods: spec?.methods.map(\.label) ?? [],
-            optionCount: spec?.options.count ?? 0
-        )
+        return row(for: package, spec: spec)
     }
 
     /// Installs an archive without being told which provider it serves.
@@ -207,7 +200,7 @@ public final class MagpieAccounts: @unchecked Sendable {
         let previous = lock.withLock { () -> MagpieRunner? in
             let old = runners[provider]
             runners[provider] = runner
-            if let spec { specs[provider] = spec }
+            specs[provider] = spec
             return old
         }
         previous?.close()
