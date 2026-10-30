@@ -896,9 +896,13 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
             "index.mjs": Data("export async function Plugin() {}".utf8),
         ])
         // A second view of the same store, with a factory that fails if asked.
-        let cold = MagpieAccounts(packages: packages, auth: auth) { _, _ in
-            throw MagpieError("listing providers must not need a runtime")
-        }
+        // Both factories refuse: a list that works proves neither was called.
+        let cold = MagpieAccounts(
+            packages: packages,
+            auth: auth,
+            makeRunner: { _, _ in throw MagpieError("a list must not start a runtime") },
+            makeCore: { throw MagpieError("a list must not start a runtime") }
+        )
         // Stored with the files, not written again afterwards.
         #expect(try packages.list().first?.specJSON != nil)
         let rows = try cold.rows()
