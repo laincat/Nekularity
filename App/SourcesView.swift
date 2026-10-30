@@ -101,8 +101,11 @@ struct SourcesView: View {
             if result.pagesAdded > 0 {
                 parts.append("图片 \(result.pagesAdded) 张")
             }
+            if result.pagesAlreadyKept > 0 {
+                parts.append("图片已在书架 \(result.pagesAlreadyKept) 页")
+            }
             if result.picturesSkipped > 0 || result.pagesSkipped > 0 {
-                var line = "图片收藏丢弃 \(result.picturesSkipped) 部"
+                var line = "图片收藏跳过 \(result.picturesSkipped) 部"
                 if result.pagesSkipped > 0 {
                     line += "、\(result.pagesSkipped) 页"
                 }

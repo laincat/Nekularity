@@ -19,6 +19,10 @@ public struct BackupImporter {
         /// Kept pages restored onto the shelf, and kept pictures this client
         /// could not place (no source, or no page inside).
         public var pagesAdded = 0
+        /// Pages already on the shelf, with a local copy at least as new.
+        public var pagesAlreadyKept = 0
+        /// Kept pictures this restore could not place, and pages it could not
+        /// read at all.
         public var picturesSkipped = 0
         public var pagesSkipped = 0
         /// Rows that need a source the backup did not carry a script for.
@@ -77,28 +81,39 @@ public struct BackupImporter {
         // Kept pages are references to the source's images, which this client
         // can store now, so a restore keeps them instead of counting them.
         for picture in plan.imageFavorites ?? [] {
-            guard let key = picture.sourceKey, !key.isEmpty, !picture.id.isEmpty else { continue }
-            var kept = 0
+            // A picture whose source Core could not resolve is not lost, it
+            // stays in the backup; it just cannot land here yet.
+            guard let key = picture.sourceKey, !key.isEmpty, !picture.id.isEmpty else {
+                out.picturesSkipped += 1
+                out.pagesSkipped += picture.keptPages
+                continue
+            }
+            var seen = 0
             for episode in picture.episodes?.array ?? [] {
                 let chapterID = episode["eid"]?.stringValue ?? ""
                 let chapterIndex = Int(episode["ep"]?.stringValue ?? "") ?? 0
                 let chapterName = episode["epName"]?.stringValue
                 for mark in episode["imageFavorites"]?.array ?? [] {
+                    seen += 1
                     guard let url = mark["imageKey"]?.stringValue, !url.isEmpty,
-                          let page = Int(mark["page"]?.stringValue ?? "") else { continue }
+                          let page = Int(mark["page"]?.stringValue ?? "") else {
+                        out.pagesSkipped += 1
+                        continue
+                    }
                     let entry = KeptPage(source: key, comicID: picture.id, comicTitle: picture.title,
                                          chapterID: chapterID, chapterIndex: chapterIndex,
                                          chapterName: chapterName, page: page, url: url,
                                          time: Int((picture.time ?? 0) / 1000))
-                    if shelf.merge(entry) { kept += 1 }
+                    if shelf.merge(entry) {
+                        out.pagesAdded += 1
+                    } else {
+                        // Already on the shelf, and the local copy is newer.
+                        out.pagesAlreadyKept += 1
+                    }
                 }
             }
-            out.pagesAdded += kept
-            if kept == 0 { out.picturesSkipped += 1 }
+            if seen == 0 { out.picturesSkipped += 1 }
         }
-        let pictures = plan.imageFavorites ?? []
-        out.pagesSkipped = pictures.reduce(0) { $0 + $1.keptPages } - out.pagesAdded
-        if out.pagesSkipped < 0 { out.pagesSkipped = 0 }
         out.pendingRows = plan.pending?.rowCount ?? 0
         return out
     }
