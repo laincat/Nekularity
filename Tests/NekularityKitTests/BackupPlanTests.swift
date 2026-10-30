@@ -76,3 +76,54 @@ import Testing
         #expect(plan.pending == nil)
     }
 }
+
+/// The kept pages a backup carries, mapped onto the shelf's own type.
+@Suite struct BackupPictureMappingTests {
+    /// The real shape Core passes through from the official app.
+    let json = """
+    {
+      "imageFavorites": [
+        {"sourceKey": "copy_manga", "id": "abc", "title": "标题", "author": "作者",
+         "time": 1750000000000, "maxPage": 209,
+         "episodes": [
+           {"eid": "ch-1", "ep": 3, "maxPage": 209, "epName": "第03话",
+            "imageFavorites": [
+              {"page": 7, "imageKey": "https://x/p7.jpg", "eid": "ch-1", "ep": 3},
+              {"page": 8, "imageKey": "https://x/p8.jpg", "eid": "ch-1", "ep": 3}
+            ]},
+           {"eid": "ch-2", "ep": 4, "imageFavorites": [
+              {"page": 1, "imageKey": "https://x/q1.jpg", "eid": "ch-2", "ep": 4}
+           ]}
+         ], "other": {}},
+        {"id": "gone", "title": "缺源", "episodes": [{"eid": "c", "ep": 0,
+          "imageFavorites": [{"page": 1, "imageKey": "https://x/z.jpg"}]}]}
+      ]
+    }
+    """
+
+    @Test func mapsEveryKeptPageAndCountsTheOnesItCannot() throws {
+        let plan = try OrderedJSONDecoder.decode(BackupPlan.self, from: json)
+        let mapped = BackupImporter.keptPages(from: plan)
+
+        #expect(mapped.pages.count == 3)
+        let first = try #require(mapped.pages.first)
+        #expect(first.source == "copy_manga")
+        #expect(first.comicID == "abc")
+        #expect(first.comicTitle == "标题")
+        #expect(first.chapterID == "ch-1")
+        #expect(first.chapterIndex == 3)
+        #expect(first.chapterName == "第03话")
+        #expect(first.page == 7)
+        #expect(first.url == "https://x/p7.jpg")
+        // Milliseconds on disk, seconds in the shelf file.
+        #expect(first.time == 1_750_000_000)
+
+        // The second episode has no name; the shelf stores what it has.
+        #expect(mapped.pages.last?.chapterName == nil)
+        #expect(mapped.pages.last?.chapterIndex == 4)
+
+        // A picture with no source cannot land here, and says so by count.
+        #expect(mapped.picturesSkipped == 1)
+        #expect(mapped.pagesSkipped == 1)
+    }
+}

@@ -80,12 +80,36 @@ public struct BackupImporter {
         out.searchesAdded = searches.merge(plan.searchHistory ?? [])
         // Kept pages are references to the source's images, which this client
         // can store now, so a restore keeps them instead of counting them.
+        let mapped = BackupImporter.keptPages(from: plan)
+        out.picturesSkipped = mapped.picturesSkipped
+        out.pagesSkipped = mapped.pagesSkipped
+        for entry in mapped.pages {
+            if shelf.merge(entry) {
+                out.pagesAdded += 1
+            } else {
+                // Already on the shelf, with a local copy at least as new.
+                out.pagesAlreadyKept += 1
+            }
+        }
+        out.pendingRows = plan.pending?.rowCount ?? 0
+        return out
+    }
+
+    /// The kept pages a backup carries, in the official shape:
+    /// `episodes[].imageFavorites[].{page,imageKey,eid,ep}`.
+    ///
+    /// Split out from `apply` so the mapping itself can be tested: it is the
+    /// part where a wrong key would silently restore nothing.
+    public static func keptPages(from plan: BackupPlan) -> (pages: [KeptPage], picturesSkipped: Int, pagesSkipped: Int) {
+        var pages: [KeptPage] = []
+        var picturesSkipped = 0
+        var pagesSkipped = 0
         for picture in plan.imageFavorites ?? [] {
-            // A picture whose source Core could not resolve is not lost, it
-            // stays in the backup; it just cannot land here yet.
+            // A picture whose source Core could not resolve is not lost; it
+            // stays in the backup and can be restored once the source exists.
             guard let key = picture.sourceKey, !key.isEmpty, !picture.id.isEmpty else {
-                out.picturesSkipped += 1
-                out.pagesSkipped += picture.keptPages
+                picturesSkipped += 1
+                pagesSkipped += picture.keptPages
                 continue
             }
             var seen = 0
@@ -97,24 +121,17 @@ public struct BackupImporter {
                     seen += 1
                     guard let url = mark["imageKey"]?.stringValue, !url.isEmpty,
                           let page = Int(mark["page"]?.stringValue ?? "") else {
-                        out.pagesSkipped += 1
+                        pagesSkipped += 1
                         continue
                     }
-                    let entry = KeptPage(source: key, comicID: picture.id, comicTitle: picture.title,
-                                         chapterID: chapterID, chapterIndex: chapterIndex,
-                                         chapterName: chapterName, page: page, url: url,
-                                         time: Int((picture.time ?? 0) / 1000))
-                    if shelf.merge(entry) {
-                        out.pagesAdded += 1
-                    } else {
-                        // Already on the shelf, and the local copy is newer.
-                        out.pagesAlreadyKept += 1
-                    }
+                    pages.append(KeptPage(source: key, comicID: picture.id, comicTitle: picture.title,
+                                          chapterID: chapterID, chapterIndex: chapterIndex,
+                                          chapterName: chapterName, page: page, url: url,
+                                          time: Int((picture.time ?? 0) / 1000)))
                 }
             }
-            if seen == 0 { out.picturesSkipped += 1 }
+            if seen == 0 { picturesSkipped += 1 }
         }
-        out.pendingRows = plan.pending?.rowCount ?? 0
-        return out
+        return (pages, picturesSkipped, pagesSkipped)
     }
 }
