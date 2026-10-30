@@ -1,5 +1,6 @@
-import SwiftUI
 import NekularityKit
+import Observation
+import SwiftUI
 
 /// Browse a source's own sections (its `explore` list) without searching.
 ///

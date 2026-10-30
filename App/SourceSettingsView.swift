@@ -1,5 +1,6 @@
-import SwiftUI
 import NekularityKit
+import Observation
+import SwiftUI
 
 /// The settings a comic source declares, drawn by type and stored as JSON in
 /// that source's store — the same values Core hands back through `getSetting`.

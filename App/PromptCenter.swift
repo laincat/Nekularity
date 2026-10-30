@@ -1,6 +1,7 @@
+import NekularityKit
+import Observation
 import SwiftUI
 import WebKit
-import NekularityKit
 
 /// Answers source UI requests (dialogs, choices, text, verification) with
 /// SwiftUI sheets and alerts. One request is shown at a time; later ones

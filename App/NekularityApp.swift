@@ -1,5 +1,6 @@
-import SwiftUI
 import NekularityKit
+import Observation
+import SwiftUI
 
 @main
 struct NekularityApp: App {
