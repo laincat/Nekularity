@@ -48,6 +48,8 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
     func usageJSON(provider: String) throws -> String { usageToReturn }
     func usageSummaryJSON(provider: String) throws -> String { usageSummaryToReturn }
     var usageSummaryToReturn = ""
+    func modelsJSON() throws -> String { modelsToReturn }
+    var modelsToReturn = "[]"
 
     var chatStarts: [(String, String)] = []
     var chatEvents: [String] = []
@@ -682,5 +684,54 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
                                         model: "", models: [], notModels: [], aside: false,
                                         runsOutAt: "", runsOut: 0, balance: 6291)
         #expect(window.summary == "6291 积分")
+    }
+}
+
+@Suite struct MagpieModelTests {
+    @Test func theListIsDecodedWithItsLimits() throws {
+        let core = StubMagpieCore()
+        core.modelsToReturn = """
+        [{"id":"gpt-4o","name":"GPT-4o","context":128000,"output":16384,"modalities":["text","image"],"vendor":"openai"},
+         {"id":"o3","name":"o3","context":0,"output":0,"modalities":null,"vendor":""}]
+        """
+        let models = try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).models()
+        #expect(models.count == 2)
+        #expect(models[0].id == "gpt-4o")
+        #expect(models[0].context == 128000)
+        #expect(models[0].detail == "128K 上下文")
+        // No size was given, so nothing is claimed about it.
+        #expect(models[1].context == 0)
+        #expect(models[1].detail == "")
+    }
+
+    @Test func anEmptyAnswerIsAnEmptyList() throws {
+        let core = StubMagpieCore()
+        core.modelsToReturn = "null"
+        #expect(try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).models().isEmpty)
+    }
+
+    /// A vendor that refuses the list must surface as an error, not as "no
+    /// models": the two mean different things to a user picking one.
+    @Test func aRefusedListThrows() throws {
+        final class RefusingCore: MagpieRunner.Core, @unchecked Sendable {
+            func loadPackage(filesJSON: String) throws {}
+            func setAuth(provider: String, authJSON: String) throws {}
+            func call(_ export: String, argJSON: String) throws -> String { "{}" }
+            func savedAuthJSON() throws -> String { "" }
+            func authJSON() throws -> String { "" }
+            func authorize(methodIndex: Int, inputsJSON: String) throws -> String { "{}" }
+            func poll(id: Int64) throws -> String { "{}" }
+            func cancelSignIn(id: Int64) throws {}
+            func usageJSON(provider: String) throws -> String { "" }
+            func usageSummaryJSON(provider: String) throws -> String { "" }
+            func modelsJSON() throws -> String { throw MagpieError("供应商不提供模型列表") }
+            func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String { "{}" }
+            func chatNext(handle: Int64) throws -> String { "" }
+            func chatCancel(handle: Int64) {}
+            func close() {}
+        }
+        #expect(throws: MagpieError.self) {
+            _ = try MagpieRunner(core: RefusingCore(), store: MemoryMagpieAuthStore()).models()
+        }
     }
 }

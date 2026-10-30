@@ -14,6 +14,8 @@ struct MagpieChatView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var model = ""
+    @State private var models: [MagpieModel] = []
+    @State private var modelNote: String?
     @State private var prompt = ""
     @State private var messages: [(role: String, text: String)] = []
     @State private var reply = ""
@@ -57,12 +59,27 @@ struct MagpieChatView: View {
 
                 Divider()
                 VStack(spacing: 8) {
-                    HStack {
-                        TextField("模型名(插件里声明的)", text: $model)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .font(.footnote)
-                            .textFieldStyle(.roundedBorder)
+                    if models.isEmpty {
+                        // A vendor that does not list its models still works: the
+                        // user types the name, and the note says why.
+                        HStack {
+                            TextField("模型名", text: $model)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .font(.footnote)
+                                .textFieldStyle(.roundedBorder)
+                            if let modelNote {
+                                Text(modelNote).font(.caption2).foregroundStyle(.secondary)
+                            }
+                        }
+                    } else {
+                        Picker("模型", selection: $model) {
+                            ForEach(models) { entry in
+                                Text(entry.detail.isEmpty ? entry.name : "\(entry.name) · \(entry.detail)")
+                                    .tag(entry.id)
+                            }
+                        }
+                        .pickerStyle(.menu)
                     }
                     HStack(alignment: .bottom) {
                         TextField("说点什么", text: $prompt, axis: .vertical)
@@ -89,7 +106,23 @@ struct MagpieChatView: View {
                     Button("关闭") { stop(); dismiss() }
                 }
             }
+            .task { await loadModels() }
             .onDisappear { stop() }
+        }
+    }
+
+    private func loadModels() async {
+        do {
+            let list = try await Task.detached { [accounts, provider] in
+                try accounts.runner(for: provider).models()
+            }.value
+            models = list
+            if model.isEmpty, let first = list.first { model = first.id }
+            modelNote = list.isEmpty ? "这家不提供列表" : nil
+        } catch {
+            models = []
+            modelNote = "读不到模型列表"
+            self.error = error.localizedDescription
         }
     }
 

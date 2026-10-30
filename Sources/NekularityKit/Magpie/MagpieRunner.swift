@@ -19,6 +19,7 @@ public final class MagpieRunner: @unchecked Sendable {
         func cancelSignIn(id: Int64) throws
         func usageJSON(provider: String) throws -> String
         func usageSummaryJSON(provider: String) throws -> String
+        func modelsJSON() throws -> String
         func chatStart(model: String, messagesJSON: String, system: String, maxTokens: Int) throws -> String
         func chatNext(handle: Int64) throws -> String
         func chatCancel(handle: Int64)
@@ -76,6 +77,14 @@ public final class MagpieRunner: @unchecked Sendable {
         let json = try core.authJSON()
         if json.isEmpty || json == "null" { return nil }
         return try OrderedJSONDecoder.decode(MagpieAuthSpec.self, from: json)
+    }
+
+    /// The models the vendor serves. A vendor that does not list them throws
+    /// Core's reason rather than answering an empty list.
+    public func models() throws -> [MagpieModel] {
+        let json = try core.modelsJSON()
+        guard !json.isEmpty, json != "null" else { return [] }
+        return try JSONDecoder().decode([MagpieModel].self, from: Data(json.utf8))
     }
 
     /// A conversation through this package.
