@@ -4,6 +4,10 @@ English | [简体中文](STATUS.md)
 
 Updated 2026-10-30.
 
+## Host signatures cross-checked
+
+All 21 `CoreHost` methods were compared against the Swift host implementation in Core's `apple/CoreSmoke`, which CI really compiles and runs: methods returning an object import as `(params…, error: NSErrorPointer) -> String`, while `void`/`Bool` methods import as `throws`. So `http(_:error:) -> String`, `saveData(_:dataKey:valueJSON:) throws`, `writeClipboard(_:) throws` and `readClipboard(_:) -> String` are the shapes Nekularity already uses. Matching signatures is not compiling, though — the real type check still waits for `swift build` on the Mac.
+
 ## Written (not compiled)
 
 | Part | Contents |
