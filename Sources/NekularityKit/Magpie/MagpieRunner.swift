@@ -32,6 +32,9 @@ public final class MagpieRunner: @unchecked Sendable {
 
     deinit { core.close() }
 
+    /// Ends the package's runtime. The runner must not be used afterwards.
+    public func close() { core.close() }
+
     /// Installs a package and hands it the account's stored sign-in.
     ///
     /// `files` are the package's own files, path to bytes. The caller has

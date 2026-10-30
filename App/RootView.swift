@@ -2,12 +2,15 @@ import SwiftUI
 import NekularityKit
 
 struct RootView: View {
+    let magpie: MagpieAccounts
+
     var body: some View {
         TabView {
             Tab("搜索", systemImage: "magnifyingglass") { SearchView() }
             Tab("浏览", systemImage: "square.grid.2x2") { BrowseView() }
             Tab("书架", systemImage: "books.vertical") { ShelfView() }
             Tab("漫画源", systemImage: "puzzlepiece.extension") { SourcesView() }
+            Tab("AI 供应商", systemImage: "sparkles") { MagpieProvidersView(accounts: magpie) }
         }
     }
 }

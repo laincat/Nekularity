@@ -1,3 +1,4 @@
+import Foundation
 import NekularityKit
 import Observation
 import SwiftUI
@@ -21,7 +22,7 @@ struct NekularityApp: App {
                         Button("重试") { Task { await app.start() } }
                     }
                 case .ready(let env):
-                    RootView()
+                    RootView(magpie: env.magpie)
                         .environment(env.library)
                         .environment(env.prompts)
                         .environment(env.shelf)
@@ -52,6 +53,9 @@ final class AppModel {
         let shelf: ShelfStore
         /// Keywords the reader searched for.
         let searches: SearchHistoryStore
+        /// Installed AI provider packages and their accounts, separate from
+        /// comic sources in every way.
+        let magpie: MagpieAccounts
     }
 
     var state: State = .starting
@@ -82,12 +86,25 @@ final class AppModel {
             host.ui = prompts
             let library = SourceLibrary(core: core)
             await library.restore()
+            let keychain = KeychainMagpieAuthStore()
+            let magpie = MagpieAccounts(
+                packages: MagpiePackageStore(directory: support.appending(path: "Magpie", directoryHint: .isDirectory)),
+                auth: keychain,
+                makeRunner: { _, files in
+                    let runner = try CoreMagpie(host: host)
+                    var encoded: [String: String] = [:]
+                    for (path, body) in files { encoded[path] = body.base64EncodedString() }
+                    let data = try JSONSerialization.data(withJSONObject: encoded, options: [.sortedKeys])
+                    try runner.loadPackage(filesJSON: String(decoding: data, as: UTF8.self))
+                    return MagpieRunner(core: runner, store: keychain)
+                })
             state = .ready(Environment(
                 library: library,
                 images: ImageLoader(core: core),
                 prompts: prompts,
                 shelf: ShelfStore(directory: support),
-                searches: SearchHistoryStore(directory: support)))
+                searches: SearchHistoryStore(directory: support),
+                magpie: magpie))
         } catch {
             started = false
             state = .failed(error.localizedDescription)

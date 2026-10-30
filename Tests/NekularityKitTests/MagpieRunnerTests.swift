@@ -370,3 +370,166 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         }
     }
 }
+
+@Suite struct MagpieAccountsTests {
+    private func tempFolder(_ files: [String: String]) throws -> URL {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-accounts-\(UUID().uuidString)")
+        for (path, text) in files {
+            let url = dir.appendingPathComponent(path)
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                     withIntermediateDirectories: true)
+            try Data(text.utf8).write(to: url)
+        }
+        return dir
+    }
+
+    private func accounts(_ core: StubMagpieCore) throws -> (MagpieAccounts, MagpiePackageStore, MemoryMagpieAuthStore, URL) {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-store-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let packages = MagpiePackageStore(directory: dir)
+        let auth = MemoryMagpieAuthStore()
+        core.authToReturn = #"{"provider":"p","methods":[{"index":0,"label":"Sign in","kind":"device","hint":""}],"options":[],"hasUsage":true,"hasLoader":true}"#
+        let accounts = MagpieAccounts(packages: packages, auth: auth) { _, _ in
+            MagpieRunner(core: core, store: auth)
+        }
+        return (accounts, packages, auth, dir)
+    }
+
+    @Test func installingLoadsThePackageBeforeStoringIt() throws {
+        let core = StubMagpieCore()
+        let (accounts, packages, _, _) = try accounts(core)
+        let folder = try tempFolder([
+            "package.json": #"{"name":"@magpie-community/copilot","version":"0.2.1","main":"./index.mjs"}"#,
+            "index.mjs": "export async function CopilotAuthPlugin() { return {} }",
+        ])
+        let row = try accounts.install(provider: "github-copilot", folder: folder)
+        #expect(row.name == "@magpie-community/copilot")
+        #expect(row.version == "0.2.1")
+        #expect(row.hasSignIn)
+        #expect(row.methods == ["Sign in"])
+        #expect(try packages.files(provider: "github-copilot") != nil)
+    }
+
+    /// A package Core refuses must not leave a row behind: an installed-looking
+    /// entry that never works is worse than a clear failure now.
+    @Test func aPackageCoreRefusesIsNotStored() throws {
+        let core = StubMagpieCore()
+        core.authToReturn = ""
+        let (accounts, packages, _, _) = try accounts(core)
+        let folder = try tempFolder([
+            "package.json": #"{"name":"x","version":"1.0.0","main":"./index.mjs"}"#,
+            "index.mjs": "export const nothing = 1",
+        ])
+        #expect(throws: (any Error).self) {
+            _ = try accounts.install(provider: "x", folder: folder)
+        }
+        #expect(try packages.files(provider: "x") == nil)
+    }
+
+    @Test func rowsSayWhoIsSignedIn() throws {
+        let core = StubMagpieCore()
+        let (accounts, _, auth, _) = try accounts(core)
+        let folder = try tempFolder([
+            "package.json": #"{"name":"p","version":"1.0.0","main":"./index.mjs"}"#,
+            "index.mjs": "export async function Plugin() { return {} }",
+        ])
+        _ = try accounts.install(provider: "p", folder: folder)
+        #expect(try accounts.rows().first?.signedIn == false)
+        try auth.saveAuthJSON(provider: "p", json: #"{"type":"api","key":"k"}"#)
+        #expect(try accounts.rows().first?.signedIn == true)
+    }
+
+    /// Removing forgets the package, its sign-in, and the runner holding its
+    /// runtime.
+    @Test func removingClosesTheRunnerAndForgetsTheSignIn() throws {
+        let core = StubMagpieCore()
+        let (accounts, packages, auth, _) = try accounts(core)
+        let folder = try tempFolder([
+            "package.json": #"{"name":"p","version":"1.0.0","main":"./index.mjs"}"#,
+            "index.mjs": "export async function Plugin() { return {} }",
+        ])
+        _ = try accounts.install(provider: "p", folder: folder)
+        try auth.saveAuthJSON(provider: "p", json: #"{"type":"api","key":"k"}"#)
+        try accounts.remove(provider: "p")
+        #expect(try packages.files(provider: "p") == nil)
+        #expect(try auth.loadAuthJSON(provider: "p") == nil)
+        #expect(core.closes >= 1)
+    }
+
+    @Test func theRunnerIsCachedPerProvider() throws {
+        let core = StubMagpieCore()
+        let (accounts, _, _, _) = try accounts(core)
+        let folder = try tempFolder([
+            "package.json": #"{"name":"p","version":"1.0.0","main":"./index.mjs"}"#,
+            "index.mjs": "export async function Plugin() { return {} }",
+        ])
+        _ = try accounts.install(provider: "p", folder: folder)
+        let first = try accounts.runner(for: "p")
+        let second = try accounts.runner(for: "p")
+        #expect(ObjectIdentifier(first) == ObjectIdentifier(second))
+    }
+
+    @Test func aProviderThatIsNotInstalledIsRefused() throws {
+        let core = StubMagpieCore()
+        let (accounts, _, _, _) = try accounts(core)
+        #expect(throws: MagpieError.self) {
+            _ = try accounts.runner(for: "absent")
+        }
+    }
+}
+
+@Suite struct MagpieInstallByNameTests {
+    @Test func thePackageNamesItsOwnProvider() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-named-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try Data(#"{"name":"whatever-folder","version":"1.0.0","main":"./index.mjs"}"#.utf8)
+            .write(to: dir.appendingPathComponent("package.json"))
+        try Data("export async function Plugin() { return {} }".utf8)
+            .write(to: dir.appendingPathComponent("index.mjs"))
+
+        let storeDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-named-store-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: storeDir, withIntermediateDirectories: true)
+        let packages = MagpiePackageStore(directory: storeDir)
+        let auth = MemoryMagpieAuthStore()
+        let core = StubMagpieCore()
+        core.authToReturn = #"{"provider":"github-copilot","methods":[{"index":0,"label":"Sign in","kind":"device","hint":""}],"options":[],"hasUsage":true,"hasLoader":true}"#
+        let accounts = MagpieAccounts(packages: packages, auth: auth) { _, _ in
+            MagpieRunner(core: core, store: auth)
+        }
+
+        let row = try accounts.install(folder: dir)
+        #expect(row.provider == "github-copilot")
+        #expect(try packages.files(provider: "github-copilot") != nil)
+        #expect(try accounts.rows().map(\.provider) == ["github-copilot"])
+    }
+
+    /// A plugin that never says which provider it serves cannot be an account:
+    /// refusing now is clearer than a row no sign-in can ever fill.
+    @Test func aPluginWithoutAProviderIsRefused() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-unnamed-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try Data(#"{"name":"x","version":"1.0.0","main":"./index.mjs"}"#.utf8)
+            .write(to: dir.appendingPathComponent("package.json"))
+        try Data("export async function Plugin() { return {} }".utf8)
+            .write(to: dir.appendingPathComponent("index.mjs"))
+
+        let storeDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("magpie-unnamed-store-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: storeDir, withIntermediateDirectories: true)
+        let core = StubMagpieCore()
+        core.authToReturn = #"{"provider":"","methods":[],"options":[],"hasUsage":false,"hasLoader":false}"#
+        let accounts = MagpieAccounts(packages: MagpiePackageStore(directory: storeDir),
+                                      auth: MemoryMagpieAuthStore()) { _, _ in
+            MagpieRunner(core: core, store: MemoryMagpieAuthStore())
+        }
+        #expect(throws: MagpieError.self) {
+            _ = try accounts.install(folder: dir)
+        }
+        #expect(core.closes >= 1)
+    }
+}

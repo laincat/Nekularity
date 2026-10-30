@@ -7,7 +7,7 @@ import NekularityKit
 /// The package's callback does the polling; this screen only shows where to go
 /// and lets the user give up, which also tells the package to stop.
 struct MagpieSignInView: View {
-    let runner: MagpieRunner
+    let accounts: MagpieAccounts
     let provider: String
     let providerName: String
     let onSignedIn: () -> Void
@@ -114,7 +114,7 @@ struct MagpieSignInView: View {
         Task {
             defer { pending = false }
             do {
-                spec = try runner.auth(provider: provider)
+                spec = try accounts.runner(for: provider).auth(provider: provider)
             } catch {
                 message = error.localizedDescription
             }
@@ -122,16 +122,19 @@ struct MagpieSignInView: View {
     }
 
     private func begin(_ method: MagpieAuthSpec.Method) {
-        let newSession = runner.makeSignIn(provider: provider)
-        session = newSession
         pending = true
         message = nil
+        session?.cancel()
+        session = nil
+        start = nil
         Task {
             do {
+                let newSession = try accounts.makeSignIn(provider: provider)
+                session = newSession
                 start = try newSession.start(methodIndex: method.index)
             } catch {
                 message = error.localizedDescription
-                newSession.cancel()
+                session?.cancel()
             }
             pending = false
         }
