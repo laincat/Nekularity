@@ -226,12 +226,10 @@ struct ReaderView: View {
             // Reopening the chapter the shelf remembers returns to its page.
             // The page is decided before the images land, so the first update
             // that sees them can scroll straight there.
-            var wanted: Int?
-            if let entry = shelf.entry(source: route.source, id: route.comicID),
-               entry.chapterIndex == route.index,
-               let page = entry.page, page > 1 {
-                wanted = page
-            }
+            // The page count is not known yet; the first update that sees the
+            // images checks the page against them.
+            let wanted = shelf.resumePage(source: route.source, id: route.comicID,
+                                          chapterIndex: route.index, pageCount: Int.max)
             images = try await library.core.chapterImages(key: route.source, comicID: route.comicID, chapterID: route.chapterID)
             restorePage = wanted
             if images.isEmpty { error = "这一章没有图片" }

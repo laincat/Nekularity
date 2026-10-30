@@ -215,6 +215,18 @@ public final class ShelfStore {
         Array(pictures.prefix(max(0, limit)))
     }
 
+    /// The page to reopen at, given the chapter being opened and how many
+    /// pages it has. Nil means "start at the top": a different chapter, or a
+    /// page the shelf never got as far as.
+    public func resumePage(source: String, id: String, chapterIndex: Int, pageCount: Int) -> Int? {
+        guard pageCount > 0,
+              let entry = entry(source: source, id: id),
+              entry.chapterIndex == chapterIndex,
+              let page = entry.page, page > 1, page <= pageCount
+        else { return nil }
+        return page
+    }
+
     /// Whether this page is already kept, so the reader can show it.
     public func isKept(source: String, comicID: String, url: String) -> Bool {
         pictures.contains { $0.source == source && $0.comicID == comicID && $0.url == url }

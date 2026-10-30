@@ -143,6 +143,23 @@ import Testing
         #expect(store.entry(source: "copy_manga", id: "9") == nil)
     }
 
+    @Test func resumePageOnlyForTheSameChapter() {
+        let store = ShelfStore(directory: directory())
+        store.record(ShelfHistory(comic: comic("1"), chapter: "第 3 话", chapterIndex: 2, page: 7, time: 10))
+
+        #expect(store.resumePage(source: "copy_manga", id: "1", chapterIndex: 2, pageCount: 20) == 7)
+        // Another chapter starts at the top.
+        #expect(store.resumePage(source: "copy_manga", id: "1", chapterIndex: 1, pageCount: 20) == nil)
+        // A page past the end is not a position this chapter has.
+        #expect(store.resumePage(source: "copy_manga", id: "1", chapterIndex: 2, pageCount: 5) == nil)
+        // Page one is the top already.
+        store.record(ShelfHistory(comic: comic("2"), chapter: "第 1 话", chapterIndex: 0, page: 1, time: 20))
+        #expect(store.resumePage(source: "copy_manga", id: "2", chapterIndex: 0, pageCount: 10) == nil)
+        // Unknown comics and empty chapters have nowhere to go.
+        #expect(store.resumePage(source: "copy_manga", id: "9", chapterIndex: 0, pageCount: 10) == nil)
+        #expect(store.resumePage(source: "copy_manga", id: "1", chapterIndex: 2, pageCount: 0) == nil)
+    }
+
     func page(_ url: String, page: Int = 3, time: Int = 10) -> KeptPage {
         KeptPage(source: "copy_manga", comicID: "1", comicTitle: "标题",
                  chapterID: "ch-1", chapterIndex: 2, chapterName: "第03话",
