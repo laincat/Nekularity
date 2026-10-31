@@ -106,9 +106,23 @@ Simulator runtime (absent on that machine), a real device and a real vendor acco
 
 **Two known-harmless build messages** (for later comparison, not regressions): `xcodebuild` always prints `warning: Metadata extraction skipped, no AppIntents.framework dependency found`, and one line beginning with `error:` is actually the CoreSimulator version notice (`iOSSimulator: CoreSimulator is out of date … Simulator device support disabled`) — not a compile error, since `** BUILD SUCCEEDED **` is still printed. `swift test` reports 0 warnings. A `warning:` outside these two is a new problem and should be pinned down.
 
-**Latest whole-tree run (2026-11-01, same Mac mini, including the search generations and the pin move)**: 70 Swift files, **196 tests in 35 suites**, `shape=e18d20cb0465bbbaa651d9634b1d0a8a31dde9db`. `sh scripts/fetch-core.sh` built Core `6e07429` from GitHub (`gofmt` / `go vet` / `go test` all pass, 22 packages), then bound the framework and checked every file's SHA256 (23 files, 0 mismatches); `check-core-surface.sh` reports **19 Magpie methods + 3 standard AI methods**, and the new framework shows `streamOpen:` / `streamNext:` / `streamClose:` and `MobileNewMagpieWithStream`; `check-core-pin` **ok (6e0742996007)**; `PATH=/tmp/xcg/xcodegen/bin:$PATH sh scripts/verify-ios.sh` **EXIT=0**; `swift test` **196 tests / 35 suites, 0 warnings**; `xcodebuild generic/platform=iOS` **BUILD SUCCEEDED, 0 errors** (one pre-existing AppIntents notice; the product is newer than the framework, so it used the new one); `check-partitions` / `check-docs` / `verify-ats` all pass. **Negative check**: putting `469edfcb48ec…` back into `scripts/core-version` makes `check-core-pin.sh` exit 1 and name the mismatch; putting it back to `6e07429` makes it exit 0.
+**Latest whole-tree run (2026-11-01, same Mac mini, including the search generations and the pin move)** — *note: these are that machine's tree numbers; this repository reports 182/34 for the same state, and the entry below explains why*: 70 Swift files, **196 tests in 35 suites**, `shape=e18d20cb0465bbbaa651d9634b1d0a8a31dde9db`. `sh scripts/fetch-core.sh` built Core `6e07429` from GitHub (`gofmt` / `go vet` / `go test` all pass, 22 packages), then bound the framework and checked every file's SHA256 (23 files, 0 mismatches); `check-core-surface.sh` reports **19 Magpie methods + 3 standard AI methods**, and the new framework shows `streamOpen:` / `streamNext:` / `streamClose:` and `MobileNewMagpieWithStream`; `check-core-pin` **ok (6e0742996007)**; `PATH=/tmp/xcg/xcodegen/bin:$PATH sh scripts/verify-ios.sh` **EXIT=0**; `swift test` **196 tests / 35 suites, 0 warnings**; `xcodebuild generic/platform=iOS` **BUILD SUCCEEDED, 0 errors** (one pre-existing AppIntents notice; the product is newer than the framework, so it used the new one); `check-partitions` / `check-docs` / `verify-ats` all pass. **Negative check**: putting `469edfcb48ec…` back into `scripts/core-version` makes `check-core-pin.sh` exit 1 and name the mismatch; putting it back to `6e07429` makes it exit 0.
 
 This run also produced the **first evidence of a simulator runtime**: two iOS 27.2 runtimes, 12 devices available (including a booted `iPhone 18 Pro`), and `xcodebuild -showsdks` listing iOS SDK 27.2.
+
+### Open: the local tree and the verified tree do not match (found 2026-11-01)
+
+The same `scripts/check-tree.sh` reports different numbers on the two machines:
+
+| State | The verifying Mac's tree | This repository |
+|---|---|---|
+| Standard API plus search generations, before the chunked transport | `swift=70  tests=196  suites=35` `shape=e18d20cb…` | `swift=69  tests=182  suites=34` `shape=4c01f2bb…` (commit `0ae0579`) |
+
+**Same suite count, ten more tests**, so it is not a whole missing test file but ten extra `@Test` in a file both sides have.
+
+My reading, still to be confirmed: the earlier round of iOS network and lifecycle fixes (URLSession delegate keep-alive, the pre-cancel race, the cross-origin `X-Api-Key` leak, shared-task cancellation in ImageLoader, persisting refreshed credentials, the Magpie signOut runner cache, `MagpieUsage` null tolerance, the sign-in timeout) **landed only in the verification machine's isolated directory and never came back to the repository** — the iOS repository is private, that machine cannot fetch it, and the transfers at the time were piecemeal gists.
+
+**The per-file `@Test` list has been requested.** Once it arrives I will diff it line by line, bring whatever source and tests are missing back into the repository, and send one complete package; until then no more piecemeal patches go on top. **So the 196/35 and 192/34 figures above are the numbers of that machine's tree, not of this repository** — the difference itself is what this entry records.
 
 ### Running on a simulator for the first time (2026-11-01)
 

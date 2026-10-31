@@ -86,9 +86,23 @@ Core 侧已跑通:包快照与模块定位、`fetch`/`Headers`/`URL`/`ReadableSt
 
 **已知且无害的两条构建提示**(后续对比用,不算回归):`xcodebuild` 每次会打印 `warning: Metadata extraction skipped, no AppIntents.framework dependency found`,并另有一条以 `error:` 开头的 CoreSimulator 版本提示(`iOSSimulator: CoreSimulator is out of date … Simulator device support disabled`) —— 后者不是编译错误,`** BUILD SUCCEEDED **` 仍在。`swift test` 侧是 0 warning。出现这两条之外的 `warning:` 时才算新问题,需要单独定位。
 
-**最新一轮整树验证(2026-11-01,同一台 Mac mini,含搜索代次号与换 pin)**:70 个 Swift 文件、**196 条用例 / 35 个 suite**、`shape=e18d20cb0465bbbaa651d9634b1d0a8a31dde9db`。`sh scripts/fetch-core.sh` 从 GitHub 现编 Core 到 `6e07429`(`gofmt`/`go vet`/`go test` 全过,22 个包),随后 bind 出框架并逐文件核对 SHA256(23 个文件,0 mismatch);`check-core-surface.sh` **19 个 Magpie 方法 + 3 个标准 AI 方法**,并在新框架里确认了 `streamOpen:`/`streamNext:`/`streamClose:` 与 `MobileNewMagpieWithStream`;`check-core-pin` **ok (6e0742996007)**;`PATH=/tmp/xcg/xcodegen/bin:$PATH sh scripts/verify-ios.sh` **EXIT=0**;`swift test` **196 tests / 35 suites,0 warning**;`xcodebuild generic/platform=iOS` **BUILD SUCCEEDED,0 error**(1 条既有 AppIntents 提示;产物时间晚于框架,用的是新框架);`check-partitions`/`check-docs`/`verify-ats` 全过。**反向验证**:把 `scripts/core-version` 改回 `469edfcb48ec…`,`check-core-pin.sh` 以 rc=1 并指出两侧不一致,改回后 rc=0。
+**最新一轮整树验证(2026-11-01,同一台 Mac mini,含搜索代次号与换 pin)** —— *注意:这些是那台机器上树的数字;本仓库同一状态是 182/34,两边为何不同见下面「未决:本地树与验证树对不上」*:70 个 Swift 文件、**196 条用例 / 35 个 suite**、`shape=e18d20cb0465bbbaa651d9634b1d0a8a31dde9db`。`sh scripts/fetch-core.sh` 从 GitHub 现编 Core 到 `6e07429`(`gofmt`/`go vet`/`go test` 全过,22 个包),随后 bind 出框架并逐文件核对 SHA256(23 个文件,0 mismatch);`check-core-surface.sh` **19 个 Magpie 方法 + 3 个标准 AI 方法**,并在新框架里确认了 `streamOpen:`/`streamNext:`/`streamClose:` 与 `MobileNewMagpieWithStream`;`check-core-pin` **ok (6e0742996007)**;`PATH=/tmp/xcg/xcodegen/bin:$PATH sh scripts/verify-ios.sh` **EXIT=0**;`swift test` **196 tests / 35 suites,0 warning**;`xcodebuild generic/platform=iOS` **BUILD SUCCEEDED,0 error**(1 条既有 AppIntents 提示;产物时间晚于框架,用的是新框架);`check-partitions`/`check-docs`/`verify-ats` 全过。**反向验证**:把 `scripts/core-version` 改回 `469edfcb48ec…`,`check-core-pin.sh` 以 rc=1 并指出两侧不一致,改回后 rc=0。
 
 这一轮还第一次拿到了**模拟器运行时的证据**:runtimes 两个 iOS 27.2,`devices available` 12 台(含已 Booted 的 `iPhone 18 Pro`),`xcodebuild -showsdks` 的 iOS SDK 为 27.2。
+
+### 未决:本地树与验证树对不上(2026-11-01 发现)
+
+同一份 `scripts/check-tree.sh`,两边报的数字不一样:
+
+| 状态 | 验证 Mac 上的树 | 本仓库 |
+|---|---|---|
+| 标准接口 + 搜索代次号,未加分段传输之前 | `swift=70  tests=196  suites=35` `shape=e18d20cb…` | `swift=69  tests=182  suites=34` `shape=4c01f2bb…`(commit `0ae0579`) |
+
+**suite 数相同、test 数差 10**,所以差的不是整个测试文件,而是某个已有文件里多了 10 条 `@Test`。
+
+我的判断(待验证):早前那轮 iOS 网络/生命周期修复(URLSession delegate 保活、预取消竞态、跨 origin `X-Api-Key` 泄露、ImageLoader 共享任务取消、刷新凭据持久化、Magpie signOut runner 缓存、`MagpieUsage` null 兼容、登录超时取消)**只落在验证机的隔离目录里,没回到仓库** —— iOS 仓库是私有的,那台机器拉不到,而当时的传输是零碎 gist。
+
+**已经把逐文件 `@Test` 清单要过去了。**拿到后逐行 diff,把缺的源码与测试一次性补回仓库,再发一个完整包;在那之前不再往树上叠零碎补丁。**因此上面几段里 Mac 报的 196/35、192/34 是那台机器上树的数字,不是本仓库的数字** —— 两者不一致本身就是这条记录要说明的事。
 
 ### 模拟器上第一次真的跑起来(2026-11-01)
 
