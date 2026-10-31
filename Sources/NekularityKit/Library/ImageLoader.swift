@@ -238,8 +238,10 @@ public actor ImageLoader {
     /// risking the process.
     static func pixelPassFits(_ width: Int, _ height: Int) -> Bool {
         guard width > 0, height > 0 else { return false }
+        // 24,000,000 pixels, not 24 Mi: the boundary the tests and the docs talk
+        // about is 3000×8000, which is exactly this number.
         // Compared in division form so a huge width cannot overflow the product.
-        return width <= (24 << 20) / height
+        return width <= 24_000_000 / height
     }
 
     /// Decodes and downsamples without decoding the full-size bitmap first.
