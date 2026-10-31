@@ -56,7 +56,9 @@ public final class CoreHost: NSObject, MobileHostProtocol, @unchecked Sendable {
 
     private let lock = NSLock()
     private weak var _ui: SourceUI?
-    private var core: MobileCore?
+    // Core retains its Host across the Go/ObjC bridge. Keep this callback
+    // reference weak so CoreClient deinit can close and release the engine.
+    private weak var core: MobileCore?
 
     /// The UI that answers source requests. Without one, dialogs are
     /// treated as closed.

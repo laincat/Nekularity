@@ -147,7 +147,7 @@ public final class MagpieRunner: @unchecked Sendable {
 
     /// Forgets an account: the package is closed and its sign-in deleted.
     public func signOut(provider: String) throws {
-        core.close()
+        close()
         try store.remove(provider: provider)
     }
 

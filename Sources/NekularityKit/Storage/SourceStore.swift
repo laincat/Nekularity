@@ -105,9 +105,23 @@ public final class SourceStore: @unchecked Sendable {
         if let e = cache[key] { return e }
         var e = Entry()
         let url = try file(key)
-        if let text = try? String(contentsOf: url, encoding: .utf8), case .object(let o) = try JSONValue.parse(text) {
-            if case .object(let d)? = o["data"] { e.data = d }
-            if case .object(let s)? = o["settings"] { e.settings = s }
+        if FileManager.default.fileExists(atPath: url.path) {
+            // Only a missing file is a new source. An unreadable or damaged
+            // file must not become an empty cache entry and be overwritten.
+            let text = try String(contentsOf: url, encoding: .utf8)
+            guard case .object(let o) = try JSONValue.parse(text) else {
+                throw CoreError("source storage must be an object")
+            }
+            for name in ["data", "settings"] {
+                if let value = o[name] {
+                    switch value {
+                    case .object(let object):
+                        if name == "data" { e.data = object } else { e.settings = object }
+                    case .null: break
+                    default: throw CoreError("source storage fields must be objects")
+                    }
+                }
+            }
         }
         cache[key] = e
         return e

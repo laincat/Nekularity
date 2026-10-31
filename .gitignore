@@ -10,3 +10,5 @@ xcuserdata/
 .DS_Store
 # Built from VeneraCat Core by scripts/fetch-core.sh; never committed.
 /Vendor/
+__pycache__/
+*.pyc

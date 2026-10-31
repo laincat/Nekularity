@@ -46,4 +46,23 @@ if [ -n "$missing" ]; then
 	exit 1
 fi
 
-printf 'check-core-surface: %s exposes all 19 Magpie methods\n' "$(basename "$framework")"
+# The standard-protocol entry points Core exports beside Magpie. A framework
+# built before them still compiles the client and fails only when a user opens
+# the screen, so they are checked here too.
+missing_core=''
+for one in ')buildAIRequest:' ')buildAIModelsRequest:' ')sendAIRequest:'; do
+	if ! grep -q -- "$one" "$header"; then
+		missing_core="$missing_core $one"
+	fi
+done
+if [ -n "$missing_core" ]; then
+	printf 'check-core-surface: the framework is older than the standard AI screen
+' >&2
+	printf '  missing:%s
+' "$missing_core" >&2
+	printf '  rebuild it with scripts/fetch-core.sh
+' >&2
+	exit 1
+fi
+
+echo "check-core-surface: $(basename "$framework") exposes 19 Magpie and 3 standard AI methods"

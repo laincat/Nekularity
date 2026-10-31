@@ -150,6 +150,15 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(try store.loadAuthJSON(provider: "demo") == #"{"type":"api","key":"old"}"#)
     }
 
+    @Test func signOutThenCloseAndDeinitOnlyClosesOnce() throws {
+        let core = StubMagpieCore()
+        var runner: MagpieRunner? = MagpieRunner(core: core, store: MemoryMagpieAuthStore())
+        try runner?.signOut(provider: "demo")
+        runner?.close()
+        runner = nil
+        #expect(core.closes == 1)
+    }
+
     @Test func signOutClosesAndForgets() throws {
         let core = StubMagpieCore()
         let store = MemoryMagpieAuthStore()

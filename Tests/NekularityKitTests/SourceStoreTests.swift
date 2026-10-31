@@ -34,6 +34,25 @@ import Testing
         }
     }
 
+    @Test func damagedFilesAreNotOverwritten() throws {
+        let s = try store()
+        defer { try? FileManager.default.removeItem(at: s.root) }
+        let url = s.root.appending(path: "sources/k.json")
+        for damaged in ["{\"data\":", "null", "[]", "{\"data\":[]}"] {
+            try Data(damaged.utf8).write(to: url)
+            #expect(throws: (any Error).self) { try s.saveData(key: "k", dataKey: "v", json: "1") }
+            #expect(try String(contentsOf: url, encoding: .utf8) == damaged)
+        }
+    }
+
+    @Test func nullObjectsRemainWritable() throws {
+        let s = try store()
+        defer { try? FileManager.default.removeItem(at: s.root) }
+        try Data(#"{"data":null,"settings":null}"#.utf8).write(to: s.root.appending(path: "sources/k.json"))
+        try s.saveData(key: "k", dataKey: "v", json: "1")
+        #expect(try s.loadData(key: "k", dataKey: "v") == "1")
+    }
+
     @Test func invalidJSONIsRejected() throws {
         let s = try store()
         #expect(throws: JSONParseError.self) { try s.saveData(key: "a", dataKey: "k", json: "{") }

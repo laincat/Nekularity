@@ -28,6 +28,19 @@ struct MagpieProvidersView: View {
 
     private var list: some View {
         List {
+            // The built-in protocols sit above the plugin list: they work on a
+            // fresh install with nothing else, which is exactly the difference
+            // a user needs to see.
+            Section {
+                NavigationLink {
+                    StandardAIView()
+                } label: {
+                    Label("标准接口(OpenAI / Anthropic)", systemImage: "key.horizontal")
+                }
+            } footer: {
+                Text("内置协议只需要自己的密钥,不需要安装任何插件。下面这些供应商则通过插件包提供。")
+            }
+
             if rows.isEmpty {
                 Section {
                     Text("还没有安装任何供应商插件。")

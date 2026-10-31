@@ -23,7 +23,7 @@
 
 | 部分 | 内容 |
 |---|---|
-| Core 封装 | `CoreClient`:async/await 接口,任务取消会传给 Core;`CoreHost`:实现 Core 的全部宿主接口;搜索按 Core 给出的选项默认值调用 `search.load` |
+| Core 封装 | `CoreClient`:async/await 接口,任务取消会传给 Core;`CoreHost`:实现 Core 的全部宿主接口;搜索按 Core 给出的选项调用 `search.load`,默认值来自源声明,界面可改选 |
 | JSON | 自写的 `JSONValue` 解析器和 `OrderedJSONDecoder`,保留键顺序和数字原文 |
 | 网络 | `URLSessionTransport`:按源隔离 Cookie,重定向中途设置的 Cookie 也会保存 |
 | Cookie | `CookieJars`:host-only 与域 Cookie、路径、Secure、过期;持久 Cookie 写入文件 |
@@ -31,9 +31,10 @@
 | 存储 | `SourceStore`:源数据、设置和插件记录,原文保存;是否登录按官方规则判断(存在 `account`) |
 | 图片 | `ImageLoader`:按源的 `onImageLoad`/`onThumbnailLoad` 发请求,降采样后缓存 |
 | 错误提示 | Core 用英文报错,界面是中文:`CoreError.readable` 把常见失败(取消、缺源、未安装、超时、人机验证、无权限)译成中文,其余保留「源返回错误:」前缀再附 Core 原文,既不把英文句子丢给用户,也不丢排查信息 |
-| 界面 | 源管理(订阅、链接安装、更新、启停、删除)、搜索(最近搜索可点选与清空;「当前源/全部源」两种范围,全部源时每个源取第一页、最多 3 个并发、按安装顺序合并并标注来源,点开别家的漫画会自动切换当前源)、详情(分组章节,读到的那一话标「读到」)、阅读器(竖向滚动或单页翻页两种排版,翻页可设「左→右/右→左」,上下章,把当前页与百分比写回书架;重开同一章会回到上次那一页;可选「自动接续」,默认关闭,只有真的滚到章末才自动进下一话,且只在竖向阅读时出现——分页用 `TabView` 会预先构建相邻页,没有可信的「快到章末」信号,与其猜不如不显示)、源发起的提示/对话框/输入/选择/加载 |
+| 界面 | 源管理(订阅、链接安装、更新、启停、删除)、搜索(最近搜索可点选与清空;「当前源/全部源」两种范围,全部源时每个源取第一页、最多 3 个并发、按安装顺序合并并标注来源,点开别家的漫画会自动切换当前源;单源搜索下有源声明的筛选条,改选后重新搜索,合并搜索仍用各源默认值;每个搜索带一个代次号,旧搜索晚到的结果不会写进新搜索的界面)、详情(分组章节,读到的那一话标「读到」)、阅读器(竖向滚动或单页翻页两种排版,翻页可设「左→右/右→左」,上下章,把当前页与百分比写回书架;重开同一章会回到上次那一页;可选「自动接续」,默认关闭,只有真的滚到章末才自动进下一话,且只在竖向阅读时出现——分页用 `TabView` 会预先构建相邻页,没有可信的「快到章末」信号,与其猜不如不显示)、源发起的提示/对话框/输入/选择/加载 |
 | 源设置 | `CoreClient.settings(key:)` 读 Core 的 `settings` 声明;源详情页进入设置页,按类型渲染下拉/开关/输入框,值以 `JSONValue` 原样写入该源 store 的 settings 段(数字、布尔不被转成字符串);input 的 `validator` 用正则校验;callback 显示为「源内操作」 |
 | 书架 | `ShelfStore`:阅读历史(每部漫画一条,含章节、页码、百分比)与收藏夹;打开章节即记录,书架页可继续阅读、移除、换夹、新建/重命名/删除收藏夹;文件 `shelf.json` 与桌面端同形 |
+| 标准 AI 界面 | 「AI 供应商」页顶部进入「标准接口」:选 OpenAI Chat/Responses 或 Anthropic Messages、自定义 API 根、填模型与最大 token;密钥只写钥匙串(按供应商分账号,不随备份迁移);可读模型目录、发一轮对话。回复目前**整包返回**,界面直接写「流式尚未接通」而不是假装流式。Core 侧走 `BuildAIRequest`/`BuildAIModelsRequest`/`SendAIRequest`,与 Magpie 插件完全分开 |
 | 搜索历史 | `SearchHistoryStore`:最近 30 条,忽略大小写去重、最新在前,可合并备份里的 `searchHistory`;文件 `searches.json` 与桌面端同形 |
 | 备份契约 | 用三个真实 `.venera` 跑 Core 的 `Plan`,把每个字段抄了下来:历史是 `{sourceKey,id,type,title,subtitle,time(毫秒),ep,page,readEpisode[],maxPage,chapterGroup}`;收藏夹是 `{name,order,items[]}`,条目里的 `time` 是字符串;图片收藏是 `{id,sourceKey,title,author,time,maxPage,episodes[{eid,ep,epName,imageFavorites[{page,imageKey,eid,ep}]}],other}`;源是 `{key,script?,data?}`;另有 `pending` 与 `settings`。本客户端的 `BackupPicture` 已按真实形状实现(页嵌在 `episodes[].imageFavorites[]`),导入时会真的落成收藏页 |
 | 图片收藏 | `ShelfStore.pictures`:阅读器「收藏本页」按当前页记下源、漫画、章节、页码与图片地址,同一地址只存一份、最新在前;有缩略图、点击进漫画详情、滑除;键名与桌面端 `shelf.json` 一致(`comicId`/`chapterId`),空表不写 `pictures`;备份导入会把官方 `episodes[].imageFavorites[]` 落成收藏页 |
@@ -47,7 +48,7 @@
 ## 未验证
 
 - **ATS 策略已定**:`App/Info.plist` 里 `NSAllowsArbitraryLoads = true`。漫画源由用户自行安装,主机无法预知,逐主机例外做不到;上架理由写在该文件与 README 里。已在读到的四个真实源上确认它们全走 https(0 处 http),放行只是不挡未来的 http 源。这个改动**已经过真正的 Xcode 构建验证**(2026-10-31,同一台 Mac):XcodeGen 从官方发布页的二进制包取用(2.46.0,放在 `/tmp/xcg`,**没有装 Homebrew、没有进系统 PATH**),`xcodegen generate` → `xcodebuild -scheme Nekularity build` 得到 `BUILD SUCCEEDED`;产物 `Nekularity.app/Info.plist` 里读出 `NSAllowsArbitraryLoads = true`,`-showBuildSettings` 回显 `INFOPLIST_FILE = App/Info.plist` 与 `GENERATE_INFOPLIST_FILE = NO`,`Copy Bundle Resources` 相关报错 0 次(即 `excludes: [Info.plist]` 生效)。`scripts/verify-ats.sh` 把这条链路写成脚本并接进 `verify-ios.sh`,现在每次整树验证都会跑真实 App 构建而不是退化成类型检查。
-- **真机与模拟器运行**:没有 iOS 模拟器运行时(机器上没有,安装需要批准),也没有在 iPhone 真机上跑过。当前的「跑起来」证据是 `swift test` 130 条用例与 App 的类型检查,不是界面在设备上的实际行为。
+- **真机与模拟器运行**:没有 iOS 模拟器运行时(机器上没有,安装需要批准),也没有在 iPhone 真机上跑过。当前的「跑起来」证据是 `swift test` 192 条用例(2026-11-01 在 Mac 上跑过)与 App 的真实 iOS 构建,不是界面在设备上的实际行为。
 - **签名与归档**:`xcodebuild -scheme Nekularity` 用的是 generic/platform=iOS 且不签名,`** BUILD SUCCEEDED **` 只证明能编译,不证明能装到设备上。没有 XcodeGen,所以也没有 `.xcodeproj` 与 App bundle。
 - **真实供应商账号**:Magpie 的登录、模型列表、用量、流式与取消都只在自己的假服务与固定回答上验过;没有任何一个真实厂商账号在设备上走完授权。
 - **真实漫画源**:由桌面端的 `TestLiveSource` 在仓库外验证(见 Nekophage),iOS 端没有同等的真源用例。
@@ -85,7 +86,14 @@ Core 侧已跑通:包快照与模块定位、`fetch`/`Headers`/`URL`/`ReadableSt
 
 **已知且无害的两条构建提示**(后续对比用,不算回归):`xcodebuild` 每次会打印 `warning: Metadata extraction skipped, no AppIntents.framework dependency found`,并另有一条以 `error:` 开头的 CoreSimulator 版本提示(`iOSSimulator: CoreSimulator is out of date … Simulator device support disabled`) —— 后者不是编译错误,`** BUILD SUCCEEDED **` 仍在。`swift test` 侧是 0 warning。出现这两条之外的 `warning:` 时才算新问题,需要单独定位。
 
-**最新一轮整树验证(2026-10-31,同一台 Mac mini)**:63 个 Swift 文件、**164 条用例 / 32 个 suite**、`shape=82fa2813dd9f4a8b397f263c1f7093a0d0294003`。`swift build` 0 error 0 warning、`swift test` 全过、`swift test --filter Magpie` **76 条 / 16 个 suite**、Kit 与 App 的 `-typecheck -swift-version 6` 均 0 error 0 warning、`xcodebuild -scheme Nekularity`(generic/platform=iOS,不签名)**BUILD SUCCEEDED**。这一轮覆盖了 `CoreVersion.swift`、供应商页脚里的 `buildLine`,以及 `theCoreVersionIsShortButIdentifiable`。唯一没跑成的是 `check-swift.py`:那台机器只有系统 Python 3.9,装不了语法版本 15 所需的 `tree-sitter>=0.24`,现在它会以 exit=3 明确表示「这台机器跑不了这个检查」,`verify-ios.sh` 记为 SKIP 而不是 FAIL —— 因为后面的步骤用的是真编译器。
+**最新一轮整树验证(2026-11-01,同一台 Mac mini)**:68 个 Swift 文件、**192 条用例 / 34 个 suite**、`shape=e2d55356aabdec360928addd42a3f9e6e7fbcab5`。`swift test` 全过(新增的 11 条标准 AI 用例全部实际执行)、`xcodebuild -scheme Nekularity`(generic/platform=iOS,不签名)**BUILD SUCCEEDED**(0 error,1 条既有的 AppIntents 提示)、`scripts/verify-ios.sh` **EXIT=0**、`scripts/check-core-surface.sh` **19 个 Magpie 方法 + 3 个标准 AI 方法**(反向:去掉三个标准 AI 选择器的头文件会 exit 1)、`check-core-pin` `469edfcb48ec`、`check-partitions`、`check-docs`、`verify-ats` 全过、`scripts/check-tree.sh` shape 一致。这一轮覆盖了「标准接口」界面(`App/StandardAIView.swift`、`Sources/NekularityKit/AI/`)、`CoreClient` 的三个标准 AI 调用与 `check-core-surface.sh` 新增的 3 个选择器检查。
+
+Mac 上实际改的 4 处都是编译问题,不是行为问题:`StandardAISettingsStore` 改为 `@unchecked Sendable`(`UserDefaults` 本身不是 `Sendable`,Swift 6 拒绝合成,官方文档保证其线程安全);`StandardAI.swift` 里两处可选模式匹配写错(`case .object(let x)? = 非可选值`);`Section("协议") { } footer: { }` 在 SwiftUI 没有这个重载,改成 `Section { } header: { } footer: { }`;测试里 `#expect(try …)` 在宏展开时不处理 `throws`,改成测试自身 `throws` 并把 `try` 提到宏外。**「流式尚未接通」这句话原文保留**。
+
+收包时做了一处规范化:包内 9 个文件是 CRLF,统一转成 LF 再落盘。理由有两条实证 —— 仓库 `.gitattributes` 是 `* text=auto eol=lf`,CRLF 提交时会被改写、md5 立刻漂移;且 CRLF 的 `scripts/check-core-surface.sh` 直接跑不起来(`set: -: invalid option`,`
+` 被当成选项)。除行尾外逐字节与收包一致(11 个文件逐一比对通过)。
+
+上一轮(2026-10-31,已被上面这段覆盖):63 个 Swift 文件、**164 条用例 / 32 个 suite**、`shape=82fa2813dd9f4a8b397f263c1f7093a0d0294003`。`swift build` 0 error 0 warning、`swift test` 全过、`swift test --filter Magpie` **76 条 / 16 个 suite**、Kit 与 App 的 `-typecheck -swift-version 6` 均 0 error 0 warning、`xcodebuild -scheme Nekularity`(generic/platform=iOS,不签名)**BUILD SUCCEEDED**。这一轮覆盖了 `CoreVersion.swift`、供应商页脚里的 `buildLine`,以及 `theCoreVersionIsShortButIdentifiable`。唯一没跑成的是 `check-swift.py`:那台机器只有系统 Python 3.9,装不了语法版本 15 所需的 `tree-sitter>=0.24`,现在它会以 exit=3 明确表示「这台机器跑不了这个检查」,`verify-ios.sh` 记为 SKIP 而不是 FAIL —— 因为后面的步骤用的是真编译器。
 
 框架的 macOS 部署目标也定下来了:Core 用 `gomobile -macosversion=26.0` 构建(与 `Package.swift` 的 macOS 26 一致),因此链接期那 16 条 `was built for newer macOS version` 归零 —— 用官方脚本、未改动任何文件复现过。
 
@@ -125,7 +133,7 @@ swift test --filter Magpie            7 tests / 2 suites 全部执行
 | 树身份 | `scripts/check-tree.sh` 打一行「commit + 是否脏 + `.swift` 数 + `@Test`/`@Suite` 数 + 按文件计数的摘要」。两台机器比对这一行就够:摘要相同说明用例在同样的文件里。只看总数不够 —— 已经两次遇到「总数对得上、文件少了」 |
 | 增量包 | `scripts/make-delta.sh SINCE OUTDIR [CHUNK]`;加上 `DELTA_SKIP_TESTS=1` 时不带 `Tests/` —— 测试文件是全树最大的,几条例句写成文字比多传二十段便宜 |
 | 传输排障 | `scripts/split-part.sh PARTS_FILE` 把一段 base64 拆成两半并分别打印 md5。出现过「长度对、md5 不对」的等长改写:这种情况整包 md5 只告诉你坏了,不给位置;有了逐段 md5 能定位到某一段,再拆半重发通常就过了 |
-| Core 版本 | `scripts/core-version` 钉到一个提交(`469edfcb48ec9564dca086a232a7b64e46fd0a9b`),不是 `main`。之前写 `main` 意味着同一个 Nekularity 提交,两天编出来的框架可能不是同一份 Core —— 「可复现」就只对客户端成立,对底座不成立。要换 Core 就改这一行,并在 STATUS 里写清为什么。**钉住的每个提交都在 Core 的 CI 上四个 job 全绿**(Go 三个平台 + Apple 的 xcframework 与两份 Swift 冒烟测试);每次整树验证都用 `scripts/fetch-core.sh` 现编框架,不用旧产物;`MobileMagpie` 的选择器没有增减,所以客户端源码不需要为换 pin 改动 |
+| Core 版本 | `scripts/core-version` 钉到一个提交(`6e0742996007e0246e1c56a14a09546325bb3e96`),不是 `main`。之前写 `main` 意味着同一个 Nekularity 提交,两天编出来的框架可能不是同一份 Core —— 「可复现」就只对客户端成立,对底座不成立。要换 Core 就改这一行,并在 STATUS 里写清为什么。**钉住的每个提交都在 Core 的 CI 上四个 job 全绿**(Go 三个平台 + Apple 的 xcframework 与两份 Swift 冒烟测试);每次整树验证都用 `scripts/fetch-core.sh` 现编框架,不用旧产物。**2026-11-01 换到 `6e07429` 的原因**:那一版 Core 新增了标准 AI 的三个入口(`BuildAIRequest`/`BuildAIModelsRequest`/`SendAIRequest`)与可选的分段传输(`HostStream`),并修掉了包桥的一处死锁 —— 包在自己的 hook 里往 `__magpieChatPush` 写,而读取侧读到结束标记就停了,写方永远等不到读者。新的 Core 加了 `MobileHostStream` 协议与 `MobileNewMagpieWithStream`,所以选择器从 19 个 Magpie 增加到 19 + 3 个标准 AI;`check-core-surface.sh` 已同步 |
 | 检查器 | `scripts/check-core-surface.sh` 在编译前检查 `Vendor/` 里的框架是否真的暴露了客户端调用的 18 个 `MobileMagpie` 方法 —— 就是那次「源码调 `chatStart`、框架里却没有」的坑;现在它会直接说缺哪几个,并提示重新 `scripts/fetch-core.sh`。注意列表里写的是 **Objective-C 选择器名**(`cancelSignIn:`),不是 Swift 导入后的 `cancelSign(in:)` |
 | 检查器(Swift) | `scripts/check-swift.py` 除了语法,还查一类「语法对、Mac 上才炸」的错:文件里出现 `Mobile*` 这类生成的 Core 类型却没有 `import VeneraCatCore`。这条是 Mac 上一轮真实报错后加的 —— 当时 `CoreMagpie.swift` 就是少了这行,Windows 上完全看不出来 |
 | 插件开关 | `MagpieOptionStore` 按 `provider|option` 存用户选择(文件小、可读,出问题能看而不是猜),`resolve` 把插件声明的开关与用户值合起来,**没动过的开关保留插件自己的默认值**;界面上的开关一改就写盘并立刻推给包 —— 只改界面不推给包的话,值看起来生效了,而真正用到它的下一次请求没有。没配保存位置的场合直接报出来 |

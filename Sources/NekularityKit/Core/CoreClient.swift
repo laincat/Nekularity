@@ -166,6 +166,37 @@ public final class CoreClient: @unchecked Sendable {
         return try Self.decode(ComicIndex.self, out)
     }
 
+    // MARK: Standard AI
+
+    /// Builds a request for one of Core's built-in standard protocols without
+    /// sending it. The wire form is returned so a caller can send it on its own
+    /// connection, which is where streaming will go.
+    public func buildAIRequest(configJSON: String, bodyJSON: String) async throws -> StandardAIWireRequest {
+        let out = try await run(cancellable: false) { core, _ in
+            try Self.call { core.buildAIRequest(configJSON, bodyJSON: bodyJSON, error: $0) }
+        }
+        return try JSONDecoder().decode(StandardAIWireRequest.self, from: Data(out.utf8))
+    }
+
+    /// The model-list request for the same root and credentials: a GET with no
+    /// body. Core builds it; the caller sends it.
+    public func buildAIModelsRequest(configJSON: String) async throws -> StandardAIWireRequest {
+        let out = try await run(cancellable: false) { core, _ in
+            try Self.call { core.buildAIModelsRequest(configJSON, error: $0) }
+        }
+        return try JSONDecoder().decode(StandardAIWireRequest.self, from: Data(out.utf8))
+    }
+
+    /// Builds and performs a standard request through this client's own
+    /// transport. The answer carries `streamed` so a caller can tell the truth
+    /// about a reply that arrived whole.
+    public func sendAIRequest(configJSON: String, bodyJSON: String) async throws -> StandardAIAnswer {
+        let out = try await run { core, id in
+            try Self.call { core.sendAIRequest(id, configJSON: configJSON, bodyJSON: bodyJSON, error: $0) }
+        }
+        return try JSONDecoder().decode(StandardAIAnswer.self, from: Data(out.utf8))
+    }
+
     // MARK: Backups
 
     /// Reads a `.venera` file and returns what it holds. Core unwinds the

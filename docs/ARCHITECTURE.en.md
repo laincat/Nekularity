@@ -2,7 +2,7 @@
 
 English | [简体中文](ARCHITECTURE.md)
 
-Date: 2026-10-30.
+Date: 2026-10-30. See [CODE-AUDIT.en.md](CODE-AUDIT.en.md) for this audit and cleanup.
 
 ## Goal
 
@@ -21,6 +21,7 @@ Sources/NekularityKit/      no UI; testable with swift test
 ├─ Core/       CoreClient (async wrapper), CoreHost (implements MobileHostProtocol),
 │              Models, JSONValue, OrderedJSONDecoder
 ├─ Platform/   URLSessionTransport, CookieJars, VerificationSession (WKWebView)
+├─ AI/         StandardAI: the built-in OpenAI/Anthropic protocols (key in the Keychain), separate from Magpie packages
 ├─ Storage/    SourceStore: source data, settings, plugin records
 └─ Library/    SourceLibrary (installs and indexes), ImageLoader
 ```

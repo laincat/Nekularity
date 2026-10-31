@@ -2,7 +2,7 @@
 
 [English](ARCHITECTURE.en.md) | 简体中文
 
-日期:2026-10-30。
+日期:2026-10-30。本轮审查与清理见 [CODE-AUDIT.md](CODE-AUDIT.md)。
 
 ## 目标
 
@@ -21,6 +21,7 @@ Sources/NekularityKit/      不含界面,可用 swift test 测试
 ├─ Core/       CoreClient(async 封装)、CoreHost(实现 MobileHostProtocol)、
 │              Models、JSONValue、OrderedJSONDecoder
 ├─ Platform/   URLSessionTransport、CookieJars、VerificationSession(WKWebView)
+├─ AI/         StandardAI:内置 OpenAI/Anthropic 标准协议(密钥进钥匙串),与 Magpie 插件分开
 ├─ Storage/    SourceStore:源数据、设置、插件记录
 └─ Library/    SourceLibrary(安装与订阅)、ImageLoader
 ```
