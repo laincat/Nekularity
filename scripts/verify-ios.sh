@@ -70,6 +70,18 @@ else
 	fail "sh scripts/check-core-pin.sh" "$out/core-pin.log"
 fi
 
+# 0c. ATS: does the plist carry the policy, and can this machine prove it reaches
+# the app? Without XcodeGen it says SKIP, which is not a failure.
+if sh scripts/verify-ats.sh >"$out/ats.log" 2>&1; then
+	if grep -q 'SKIP' "$out/ats.log"; then
+		say "SKIP  sh scripts/verify-ats.sh  (no XcodeGen here; plist contents checked)"
+	else
+		pass "sh scripts/verify-ats.sh" "$out/ats.log"
+	fi
+else
+	fail "sh scripts/verify-ats.sh" "$out/ats.log"
+fi
+
 # 1. Documentation pairs and root cleanliness.
 if sh scripts/check-docs.sh >"$out/docs.log" 2>&1; then
 	pass "sh scripts/check-docs.sh" "$out/docs.log"
