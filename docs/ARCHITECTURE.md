@@ -35,7 +35,10 @@ Sources/NekularityKit/      不含界面,可用 swift test 测试
 
 ## Magpie 插件层的分层
 
-Magpie 是 iOS 独有的 AI 供应层,和漫画源的 `plugin.Registry` 完全分开,不共用任何注册表:
+iOS 的 **Magpie 插件系统在 App 内集成并独立运行**,和漫画源的 `plugin.Registry` 完全分开,不共用任何注册表。它不依赖桌面端已安装的 Magpie、不要求访问桌面网关,也不以桌面 Bun 进程作为前置条件。桌面 Nekophage 首期连接本机安装版 Magpie,属于另一条接入路径。
+
+iOS 的目标还包括多供应商/模型的按需求、难度、订阅期限与额度路由,不能缩成一个聊天窗口。现阶段已实现的是下列供应商插件与客户端基础;完整路由策略及其他插件类别仍需补齐并逐项验证,尚不能声称已完成 Magpie 全能力集成:
+
 
 ```
 Core(magpieplugin 包)        读包、校验路径与体积、起一个独立 JS 运行时、

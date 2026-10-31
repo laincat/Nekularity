@@ -35,8 +35,10 @@ Rules:
 
 ## Layers of the Magpie plugin system
 
-Magpie is the iOS-only AI provider layer. It is entirely separate from the comic-source
-`plugin.Registry` and shares no registry with it:
+The iOS **Magpie plugin system is integrated into the app and runs independently**. It is separate from the comic-source `plugin.Registry` and shares no registry with it. It requires neither a desktop Magpie installation nor a desktop gateway or Bun process. Desktop Nekophage initially connects to a locally installed Magpie through a separate integration path.
+
+The iOS target also includes routing across providers/models by requirements, difficulty, subscription expiry and quota; it must not be reduced to a chat window. The provider-plugin and client foundation below exists today. Full routing strategies and other plugin categories still need implementation and individual verification, so full Magpie integration is not yet established:
+
 
 ```
 Core (package magpieplugin)  reads a package, validates paths and sizes, starts one
