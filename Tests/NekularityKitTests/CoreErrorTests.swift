@@ -13,6 +13,14 @@ import Testing
         #expect(CoreError.readable("cloudflare challenge") == "源要求人机验证或拒绝了请求")
     }
 
+    /// ATS refuses plain http inside the app, before any network call. It reads
+    /// like a connection failure, so it gets its own sentence.
+    @Test func aBlockedPlainHTTPConnectionSaysWhy() {
+        let text = CoreError.readable("Error Domain=NSURLErrorDomain Code=-1022 \"The resource could not be loaded because the App Transport Security policy requires the use of a secure connection.\"")
+        #expect(text.contains("http"))
+        #expect(text.contains("https"))
+    }
+
     @Test func anUnknownMessageKeepsCoresWording() {
         // A Chinese prefix, then Core's own words, so a report still carries
         // what happened without showing a bare English sentence.

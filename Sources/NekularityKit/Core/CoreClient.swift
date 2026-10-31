@@ -37,6 +37,11 @@ public struct CoreError: Error, LocalizedError, Sendable {
         if has("challenge") || has("cloudflare") || has("forbidden") || has("403") {
             return "源要求人机验证或拒绝了请求"
         }
+        // ATS refuses plain http before the request leaves the app. Saying "network
+        // error" would send the user to check their connection for a policy refusal.
+        if has("-1022") || has("app transport security") || has("secure connection") {
+            return "这个源要求使用不安全的 http 连接,iOS 默认拒绝。请改用 https,或等待应用提供该主机的例外。"
+        }
         if has("permission") || has("not allowed") {
             return "没有权限执行这个操作"
         }
