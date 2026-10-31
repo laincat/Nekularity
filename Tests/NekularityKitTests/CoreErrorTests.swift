@@ -17,8 +17,11 @@ import Testing
     /// like a connection failure, so it gets its own sentence.
     @Test func aBlockedPlainHTTPConnectionSaysWhy() {
         let text = CoreError.readable("Error Domain=NSURLErrorDomain Code=-1022 \"The resource could not be loaded because the App Transport Security policy requires the use of a secure connection.\"")
-        #expect(text.contains("http"))
-        #expect(text.contains("https"))
+        // The app allows http, so seeing this means the configuration did not take
+        // effect — the message says how to report it instead of telling the user to
+        // fix the source.
+        #expect(text.contains("ATS"))
+        #expect(text.contains("反馈"))
     }
 
     @Test func anUnknownMessageKeepsCoresWording() {

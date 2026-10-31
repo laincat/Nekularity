@@ -40,7 +40,7 @@ public struct CoreError: Error, LocalizedError, Sendable {
         // ATS refuses plain http before the request leaves the app. Saying "network
         // error" would send the user to check their connection for a policy refusal.
         if has("-1022") || has("app transport security") || has("secure connection") {
-            return "这个源要求使用不安全的 http 连接,iOS 默认拒绝。请改用 https,或等待应用提供该主机的例外。"
+            return "这次连接被 iOS 的传输安全策略(ATS)拒绝了。应用的配置允许 http,所以看到这句通常意味着 ATS 配置没有生效,请连同源的名字一起反馈。"
         }
         if has("permission") || has("not allowed") {
             return "没有权限执行这个操作"
