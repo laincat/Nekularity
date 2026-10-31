@@ -121,6 +121,16 @@ import Testing
         }
     }
 
+    /// Core says these in English now; the screens still explain them in Chinese.
+    @Test func missingFeaturesOfAPackageAreExplained() {
+        #expect(MagpieErrorText.explain("magpieplugin: checkin threw: Error: this package declares no check-in")?
+            .contains("签到") == true)
+        #expect(MagpieErrorText.explain("magpieplugin: chatPrepare threw: Error: this package declares no loader")?
+            .contains("请求入口") == true)
+        #expect(MagpieErrorText.explain("magpieplugin: Error: chat is not prepared yet")?
+            .contains("模型") == true)
+    }
+
     /// The footer names a Core; the check script guarantees it is the one that
     /// gets built, and this keeps the short form useful rather than empty.
     @Test func theCoreVersionIsShortButIdentifiable() {

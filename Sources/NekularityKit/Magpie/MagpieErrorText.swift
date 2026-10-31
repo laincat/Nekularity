@@ -19,6 +19,15 @@ public enum MagpieErrorText {
         if lower.contains("host adapter or bundled dependency") || lower.contains("node:") {
             return "这个插件包依赖 Node 内置模块或没有随包附带的 npm 依赖,当前运行时没有 Node。"
         }
+        if lower.contains("declares no check-in") {
+            return "这个插件包没有提供签到功能。"
+        }
+        if lower.contains("declares no loader") || lower.contains("no usable request entry") {
+            return "这个插件包没有提供可用的请求入口,不能用来对话。"
+        }
+        if lower.contains("chat is not prepared yet") {
+            return "请先选好模型并完成登录,再开始对话。"
+        }
         return nil
     }
 
