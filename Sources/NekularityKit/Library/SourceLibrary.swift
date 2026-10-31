@@ -89,7 +89,7 @@ public final class SourceLibrary {
     public func remove(_ key: String) async throws {
         try await core.remove(key: key)
         try core.host.store.removeSource(key: key)
-        core.host.cookies.clear(partition: "comic:\(key)")
+        core.host.cookies.clear(partition: CookiePartition.comic(key))
         try await persist()
     }
 

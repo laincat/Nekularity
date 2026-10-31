@@ -21,6 +21,16 @@ public struct WireCookie: Codable, Sendable, Hashable {
     }
 }
 
+/// The partition a comic source's cookies live in.
+///
+/// Every request a source makes names this partition, so a restore that writes
+/// anywhere else stores cookies nothing will ever send. It is spelled out once
+/// here: the readers of this string used to be scattered, which is how a restore
+/// could have written to the bare key and still passed its own test.
+public enum CookiePartition {
+    public static func comic(_ key: String) -> String { "comic:" + key }
+}
+
 /// Cookie jars, one per partition (`comic:<key>` for comic sources).
 ///
 /// Sources must never see each other's cookies, so partitions are fully

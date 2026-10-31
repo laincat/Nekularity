@@ -49,7 +49,7 @@ struct BackupCookieImportTests {
 
         #expect(result.sourcesInstalled == 1)
         #expect(result.cookiesAdded == 1)
-        let header = jars.header(partition: "mini", url: URL(string: "https://wnacg.com/")!)
+        let header = jars.header(partition: CookiePartition.comic("mini"), url: URL(string: "https://wnacg.com/")!)
         #expect(header == "sid=secret")
     }
 
@@ -67,7 +67,7 @@ struct BackupCookieImportTests {
 
         #expect(result.sourcesInstalled == 0)
         #expect(result.cookiesAdded == 0)
-        #expect(jars.header(partition: "mini", url: URL(string: "https://wnacg.com/")!) == nil)
+        #expect(jars.header(partition: CookiePartition.comic("mini"), url: URL(string: "https://wnacg.com/")!) == nil)
     }
 
     @Test func withoutJarsNothingIsWritten() async throws {
@@ -82,6 +82,6 @@ struct BackupCookieImportTests {
 
         #expect(result.sourcesInstalled == 1)
         #expect(result.cookiesAdded == 0)
-        #expect(jars.header(partition: "mini", url: URL(string: "https://wnacg.com/")!) == nil)
+        #expect(jars.header(partition: CookiePartition.comic("mini"), url: URL(string: "https://wnacg.com/")!) == nil)
     }
 }

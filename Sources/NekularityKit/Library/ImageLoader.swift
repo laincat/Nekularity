@@ -73,7 +73,7 @@ public actor ImageLoader {
             }
             let resp = try await core.host.transport.send(.init(
                 id: id, method: req.method, url: url, headers: headers, body: req.body.map { Data($0.utf8) },
-                useCookies: true, partition: "comic:\(key.source)"))
+                useCookies: true, partition: CookiePartition.comic(key.source)))
             guard (200..<300).contains(resp.status) else { throw CoreError("image HTTP \(resp.status)") }
             guard let image = Self.decode(resp.body, limit: limit) else { throw CoreError("not an image") }
             return CGImageBox(image)

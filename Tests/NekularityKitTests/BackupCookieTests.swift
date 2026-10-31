@@ -42,7 +42,7 @@ import Testing
                         targets: ["copy_manga"])
         _ = BackupImporter.restoreCookies(plan, jars: jars)
 
-        #expect(jars.header(partition: "copy_manga", url: URL(string: "https://mangadex.org/")!) == nil)
+        #expect(jars.header(partition: CookiePartition.comic("copy_manga"), url: URL(string: "https://mangadex.org/")!) == nil)
         #expect(jars.header(partition: "unrelated", url: URL(string: "https://wnacg.com/")!) == nil)
     }
 
@@ -52,7 +52,7 @@ import Testing
         let plan = plan(cookies: [BackupCookie(name: "sid", value: "a", domain: ".wnacg.com")], targets: nil)
 
         #expect(BackupImporter.restoreCookies(plan, jars: jars) == 0)
-        #expect(jars.header(partition: "copy_manga", url: URL(string: "https://wnacg.com/")!) == nil)
+        #expect(jars.header(partition: CookiePartition.comic("copy_manga"), url: URL(string: "https://wnacg.com/")!) == nil)
     }
 
     @Test func anEmptyValueIsSkipped() {
@@ -63,7 +63,7 @@ import Testing
         ], targets: ["copy_manga"])
 
         #expect(BackupImporter.restoreCookies(plan, jars: jars) == 1)
-        let header = jars.header(partition: "copy_manga", url: URL(string: "https://wnacg.com/")!)
+        let header = jars.header(partition: CookiePartition.comic("copy_manga"), url: URL(string: "https://wnacg.com/")!)
         #expect(header == "kept=v")
     }
 
@@ -91,7 +91,7 @@ import Testing
         ], targets: ["copy_manga"])
 
         #expect(BackupImporter.restoreCookies(plan, jars: jars) == 1)
-        #expect(jars.header(partition: "copy_manga", url: URL(string: "https://wnacg.com/")!) == "new=v")
+        #expect(jars.header(partition: CookiePartition.comic("copy_manga"), url: URL(string: "https://wnacg.com/")!) == "new=v")
     }
 
     @Test func restoringTwiceKeepsOneRow() {
@@ -101,7 +101,21 @@ import Testing
         _ = BackupImporter.restoreCookies(plan, jars: jars)
         _ = BackupImporter.restoreCookies(plan, jars: jars)
 
-        #expect(jars.header(partition: "copy_manga", url: URL(string: "https://wnacg.com/")!) == "sid=a")
+        #expect(jars.header(partition: CookiePartition.comic("copy_manga"), url: URL(string: "https://wnacg.com/")!) == "sid=a")
+    }
+
+    @Test func cookiesLandInThePartitionRequestsUse() {
+        // The plan names sources; every request names "comic:<key>". A restore that
+        // wrote to the bare key would store cookies nothing ever sends, and its own
+        // test would still pass if the test made the same assumption.
+        let jars = CookieJars(file: nil)
+        let plan = plan(cookies: [BackupCookie(name: "sid", value: "a", domain: ".wnacg.com")],
+                        targets: ["copy_manga"])
+        _ = BackupImporter.restoreCookies(plan, jars: jars)
+
+        let page = URL(string: "https://wnacg.com/")!
+        #expect(jars.header(partition: CookiePartition.comic("copy_manga"), url: page) == "sid=a")
+        #expect(jars.header(partition: "copy_manga", url: page) == nil)
     }
 
     @Test func aClassicBackupWithNoCookieKeysStillDecodes() {
