@@ -63,6 +63,10 @@ Files unpacked from an archive carry an mtime of 0 (1970), so `swift build` trea
 
 Swift Testing runs the tests in a suite **in parallel** by default. A shared static stub table plus a `reset()` at the start of each test means a request can arrive after another test cleared the table; the stub then answers nothing and the failure is `-1004 cannot connect to host`, which reads like a network problem. Two rules: give each test its own host names or keys and **do not clear a global table**; use `.serialized` only when it is genuinely required, and say why.
 
+## The docs on a verification machine may be old
+
+A transfer package often carries only code and tests, so `docs/` on that machine lags behind the repository. Its `check-docs.sh` still runs — it compares pairs and structure — but **its passing is not evidence that the repository's docs are current**; that is settled by the run before pushing.
+
 ## Getting the code to a verification machine
 
 That machine may be a Mac that **has no credentials for this repository**. In order:
