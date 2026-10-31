@@ -46,9 +46,10 @@
 
 ## 未验证
 
-- **编译**:`scripts/verify-ios.sh` 在 macOS 上串起检查(文档、`check-swift`、`swift test`、App 构建);没有 XcodeGen 时退化为「先给 iOS 编 Kit,再用 `swiftc -typecheck` 检查 App 源码」,仍然能抓到界面层的类型错误。代码还没在真机/模拟器里跑过,但已经在 macOS 上编译过:Kit 的 `swift build`(Swift 6 模式)与 iOS 的 `swiftc -emit-module` 都通过,App 的 `swiftc -typecheck` 先报了一处 `ShelfView` 类型检查超时(它顺带掩盖了 `folderNames` 当成属性用的真错),拆成多个 `@ViewBuilder` 后又暴露 `ReaderView` 里 `chapterID` 可选值未解包;两处都已修,并在 macOS 上按 Swift 6 模式复验通过:Kit `swift build` 0 error 0 warning、Kit `-typecheck` 0/0、iOS `-emit-module` 通过、App `-typecheck` 0 error 0 warning。每次改动仍都过 `scripts/check-swift.sh`(tree-sitter 解析,能抓语法错误,不抓类型错误)。调用 Core 的写法和 Core 仓库在 CI 上通过的 `apple/CoreSmoke` 一致;`BrowseView` 也随同一批 typecheck 一起过了类型检查。源码包被切成 base64 分段送到 macOS 时,用 `scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK TGZ_MD5 TGZ_BYTES SWIFT_FILES [WORKDIR] [clean]` 一步走完「拼接分段 → 解码 → 核归档大小与 md5 → 解包 → 核 `.swift` 个数 → 放 xcframework → macOS 上 `swift build` → `swift test` 跑 Kit 单元测试 → iOS 上 `swiftc -emit-module` 编 Kit → 用该模块 `swiftc -typecheck` 检查 App」,三步都用 `-swift-version 6`,和 `Package.swift`、`project.yml` 一致(用 Swift 5 模式检查会放过真构建会拒绝的代码);末尾传 `clean` 会在报告后删掉解包目录、拼接件与归档,机器保持原样。
-- `swift test` 已经在 macOS 上跑通:**58 个测试 / 11 个套件全绿**。它比类型检查更有用——第一轮它根本编不过:`BackupImporter.keptPages(from:)` 挂在 `@MainActor` 类型上,非隔离测试调不了;改成 `nonisolated`(它只读计划、返回值)后测试能编过,又立刻暴露 `SearchHistoryStore.merge` 把导入项反序插到本地查询之前(应为正序 `append`)。两处都已修,这也是「五项」里必须有 `swift test` 的原因。之后补的 `ReaderNavigationTests` 与书架两个破坏性操作(删历史、删收藏页)又把这层网织密:移动规则从视图搬进 Kit,才有了「本该不动却跳了」的可测断言。
-- 真机运行、真实漫画源。
+- **真机与模拟器运行**:没有 iOS 模拟器运行时(机器上没有,安装需要批准),也没有在 iPhone 真机上跑过。当前的「跑起来」证据是 `swift test` 130 条用例与 App 的类型检查,不是界面在设备上的实际行为。
+- **签名与归档**:`xcodebuild -scheme Nekularity` 用的是 generic/platform=iOS 且不签名,`** BUILD SUCCEEDED **` 只证明能编译,不证明能装到设备上。没有 XcodeGen,所以也没有 `.xcodeproj` 与 App bundle。
+- **真实供应商账号**:Magpie 的登录、模型列表、用量、流式与取消都只在自己的假服务与固定回答上验过;没有任何一个真实厂商账号在设备上走完授权。
+- **真实漫画源**:由桌面端的 `TestLiveSource` 在仓库外验证(见 Nekophage),iOS 端没有同等的真源用例。
 
 ## 下一步
 
