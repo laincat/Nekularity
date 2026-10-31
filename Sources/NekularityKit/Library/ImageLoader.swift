@@ -40,6 +40,13 @@ public actor ImageLoader {
         init(task: Task<CGImageBox, Error>) { self.task = task }
     }
 
+    /// Drops the entry only when it is still the download this call started: a
+    /// cancelled call may already have been replaced by a newer one, and
+    /// clearing that would hand every later caller a fresh download.
+    private func clear(_ ck: CacheKey, _ load: SharedLoad) {
+        if inFlight[ck] === load { inFlight[ck] = nil }
+    }
+
     /// Decrements the waiter count and cancels the download when nobody is left.
     private func release(_ ck: CacheKey) {
         guard let shared = inFlight[ck] else { return }
@@ -127,10 +134,19 @@ public actor ImageLoader {
         shared.waiters = 1
         inFlight[ck] = shared
         return try await withTaskCancellationHandler {
-            let box = try await task.value
-            inFlight[ck] = nil
-            cache.setObject(box, forKey: name, cost: box.image.bytesPerRow * box.image.height)
-            return box
+            do {
+                let box = try await task.value
+                cache.setObject(box, forKey: name, cost: box.image.bytesPerRow * box.image.height)
+                clear(ck, shared)
+                return box
+            } catch {
+                // A failure must not stay in the table: the entry would hand
+                // every later caller the same finished task, so one bad
+                // response would make that image unloadable until the app
+                // restarts.
+                clear(ck, shared)
+                throw error
+            }
         } onCancel: {
             Task { await self.giveUp(ck) }
         }
@@ -143,7 +159,7 @@ public actor ImageLoader {
     }
 
     /// One hop: the request as the source described it.
-    private static func fetch(_ req: ImageRequest, id: Int, partition: String, base: String, core: CoreClient) async throws -> Data {
+    private static func fetch(_ req: ImageRequest, id: Int64, partition: String, base: String, core: CoreClient) async throws -> Data {
         // A source may hand back an image address without its scheme, such as
         // "//images.example.com/1.jpg". RFC 3986 says such an address inherits
         // the scheme of the page, so the scheme this source last used is the one
@@ -151,6 +167,12 @@ public actor ImageLoader {
         // file://, javascript: and ftp:// alone.
         let normalized = base.isEmpty ? req.url : core.normalizeURL(req.url, base: base + "://")
         guard let url = URL(string: normalized) else { throw CoreError("invalid image URL \(normalized)") }
+        // The comment above is only true if it is enforced here: nothing below
+        // this line rejects a scheme, and URLSession would happily read a
+        // `file:` address off this device.
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            throw CoreError("image URL must be http or https: \(normalized)")
+        }
         var headers = req.headers.mapValues { [$0] }
         if headers.keys.first(where: { $0.caseInsensitiveCompare("Accept") == .orderedSame }) == nil {
             headers["Accept"] = ["image/avif,image/webp,image/*,*/*;q=0.8"]
