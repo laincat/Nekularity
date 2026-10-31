@@ -199,6 +199,8 @@ Mac 上这一轮还修掉了三处**在 Windows 上看不出来**的问题:一�
 
 验证:`swift test` 214 条 / 40 suite 全过(含新增 3 条 `ImageConfigTests`)、`verify-ios.sh` EXIT=0 `BUILD SUCCEEDED`、树 `77/214/40` shape `85dd5c3a…`、Core pin `69ed1f9`。**仍未验证**:真机上的图片流,包括真实源的 `onResponse` 改写与多镜像回退 —— 现在只证明编译、单元测试、App 构建与本机探针。
 
+**像素回传的上限按手机的内存来定(2026-11-01)**:Mac 上核过这条链的内存 —— 像素以 RGBA 交给 Core、再以 base64 回传,一次处理的峰值约为 `w·h·4×2.7`;上限设成 64M 像素时满载可达 850 MB–1.1 GB,手机上不能这么赌。iOS 侧因此收紧到 **24M 像素**:常见长条页 1080×16384(17.7M)仍在范围内(约 190 MB 峰值),更大的图原样放行,不为了让脚本跑一张图把进程逼到内存红线。判断抽成 `ImageLoader.pixelPassFits(_:_:)` 并用**除法形式**比较,`Int.max` 这种宽度也不会让乘积溢出;新增 1 条用例覆盖边界与溢出。
+
 **2026-11-01 再把 pin 移到 `eb982d6` 的原因**:iOS 自己跑不了 JavaScript,所以由 Core 提供 gomobile 入口 `modifyImage(key, script, width, height, rgbaB64)`,返回 `{width,height,rgba}`。`ImageLoader` 解码后把像素交给它、再把结果重建为 `CGImage`;像素按直通 RGBA 走 sRGB,超过 64M 像素的图原样放行(不为此失败),脚本没产出图像则如实报错并照常走镜像回退。**这条路径尚未在 Mac 上编译,更没有真机验证**,目前只有「脚本随配置一起到达」这一层的 2 条用例。
 
 **2026-11-01 把 pin 移到 `69ed1f9` 的原因**:Core 新增了图片配置的回调支持 —— `comic.onImageLoad` 除了地址和请求头,还能带 `onResponse`/`modifyImage`/`onLoadFailed` 三个函数,而函数进不了 JSON,所以客户端一直只拿到前四个字段。Core 现在把这几个函数留在源的运行时里、用句柄命名,宿主可以「把响应体交给 onResponse」「问下一个镜像」。**iOS 尚未接这三个方法**,所以这次 pin 移动对 iOS 只是协议层可用、客户端行为不变;桌面端同样还没接。这一步的意义是把「加密图的源显示破图」从「Core 做不到」变成「客户端还没接」。

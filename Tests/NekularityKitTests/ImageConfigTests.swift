@@ -49,3 +49,15 @@ struct ImageConfigTests {
     let request = try ImageRequest(json: #"{"url":"https://img.example/1.jpg"}"#, fallbackURL: "")
     #expect(request.modifyImage.isEmpty)
 }
+
+/// The pixel pass copies the image three times, so the cap is what keeps a
+/// phone from running out of memory on a very tall strip.
+@Test func thePixelPassCapCoversALongStripAndRefusesTheRest() {
+    #expect(ImageLoader.pixelPassFits(1080, 16384))   // 17.7M pixels: a real strip
+    #expect(ImageLoader.pixelPassFits(3000, 8000))   // 24M, exactly at the cap
+    #expect(!ImageLoader.pixelPassFits(3000, 8001))
+    #expect(!ImageLoader.pixelPassFits(0, 100))
+    #expect(!ImageLoader.pixelPassFits(100, 0))
+    // A width large enough to overflow a naive product is refused, not wrapped.
+    #expect(!ImageLoader.pixelPassFits(Int.max, 2))
+}

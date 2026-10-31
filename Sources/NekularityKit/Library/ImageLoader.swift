@@ -213,7 +213,7 @@ public actor ImageLoader {
     /// hand over is left as it is rather than failing the page.
     static func pixelPass(_ script: String, _ image: CGImage, source: String, core: CoreClient) async throws -> CGImage? {
         let w = image.width, h = image.height
-        guard w > 0, h > 0, w * h <= 64 << 20 else { return nil }
+        guard Self.pixelPassFits(w, h) else { return nil }
         var pixels = [UInt8](repeating: 0, count: w * h * 4)
         let space = CGColorSpaceCreateDeviceRGB()
         let info = CGImageAlphaInfo.premultipliedLast.rawValue
@@ -227,6 +227,19 @@ public actor ImageLoader {
         guard let back = CGContext(data: &result, width: out.width, height: out.height, bitsPerComponent: 8,
                                    bytesPerRow: out.width * 4, space: space, bitmapInfo: info) else { return nil }
         return back.makeImage()
+    }
+
+    /// Whether a picture is small enough to hand to Core.
+    ///
+    /// The pixels cross as RGBA and again as base64, so one pass peaks at
+    /// roughly w·h·4 × 2.7. A long strip at 1080×16384 is 17.7M pixels, about
+    /// 190 MB; the cap sits just above that and well under what a phone grants
+    /// an app. A bigger picture is passed through unmodified rather than
+    /// risking the process.
+    static func pixelPassFits(_ width: Int, _ height: Int) -> Bool {
+        guard width > 0, height > 0 else { return false }
+        // Compared in division form so a huge width cannot overflow the product.
+        return width <= (24 << 20) / height
     }
 
     /// Decodes and downsamples without decoding the full-size bitmap first.
