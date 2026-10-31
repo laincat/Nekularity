@@ -16,7 +16,10 @@ cd "$root"
 commit=$(git rev-parse --short HEAD 2>/dev/null || echo none)
 if [ -n "$(git status --porcelain 2>/dev/null)" ]; then dirty='+dirty'; else dirty=''; fi
 
-swift_files=$(find . -name '*.swift' -not -path './.build/*' -not -path './Vendor/*' | wc -l | tr -d ' ')
+# `build/` holds Core's checkout after scripts/fetch-core.sh, and its own
+# apple/CoreSmoke has .swift files. Counting those makes a verification machine
+# disagree with the repository by two, for no reason that matters.
+swift_files=$(find . -name '*.swift' -not -path './.build/*' -not -path './Vendor/*' -not -path './build/*' | wc -l | tr -d ' ')
 tests=$(grep -rho '@Test' --include='*.swift' Sources App Tests 2>/dev/null | wc -l | tr -d ' ')
 suites=$(grep -rho '@Suite' --include='*.swift' Sources App Tests 2>/dev/null | wc -l | tr -d ' ')
 
