@@ -55,6 +55,10 @@ Three of these are checked automatically now: a `Tests/` double conforming to
 without `import VeneraCatCore`, and an `App/` file that names a kit type without
 `import NekularityKit` (all in `check-swift.py`; the last two would only fail on the
 Mac, which is why catching them on Windows is worth the rule).
+## Tests must not share mutable state
+
+Swift Testing runs the tests in a suite **in parallel** by default. A shared static stub table plus a `reset()` at the start of each test means a request can arrive after another test cleared the table; the stub then answers nothing and the failure is `-1004 cannot connect to host`, which reads like a network problem. Two rules: give each test its own host names or keys and **do not clear a global table**; use `.serialized` only when it is genuinely required, and say why.
+
 ## Getting the code to a verification machine
 
 That machine may be a Mac that **has no credentials for this repository**. In order:
