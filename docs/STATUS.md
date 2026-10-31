@@ -57,8 +57,8 @@
 1. 编译与测试阶段已收尾:Kit 与 App 在 macOS 上按 Swift 6 模式通过 `swift build`、`swift test`(58 个)、`-typecheck`、iOS `-emit-module`、App `-typecheck` 五项(含多源搜索与收藏页跳章那一版);此后每一批改动仍按同一流程复验,编译器没看过的新包不会累积。
 2. 有模拟器运行时后真正启动一次 App,用真实源跑通主线(装源→搜索→详情→阅读→书架)。
 3. 备份导入已接上,并用真实 `.venera` 的字段形状核过;下一步是在模拟器里跑一遍并核对条数。
-4. 需要产品决策、暂不动的两项:视频源与播放;把旧版全局 Cookie 映射到按源分区。
-5. 需要系统级授权的两项:安装 iOS 模拟器运行时;在 Mac 上装 XcodeGen 以产出 `.xcodeproj`。
+4. 视频源与播放仍需产品决策;旧版全局 Cookie 已按源分区迁移完成(见本页「Cookie 迁移」一节)。
+5. 仍需系统级授权的一项:安装 iOS 模拟器运行时。XcodeGen 已用发布页二进制在 Mac 上取用(不进系统 PATH),`verify-ios.sh` 现在会真实构建 App。
 6. AI 能力排在主线之后:iOS 端要做的是 **Magpie 插件系统**——直接运行 Magpie 的供应商原包,账号与运行环境独立于漫画源。桌面端不做 AI 接入。
 
 ## Magpie 供应商插件(Nekularity 侧)

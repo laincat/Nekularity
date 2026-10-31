@@ -57,8 +57,8 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 1. The compile and test stage is settled: on macOS, in Swift 6 mode, the tree passes all five checks — `swift build`, `swift test` (49), `-typecheck`, the iOS `-emit-module`, and the App `-typecheck` in two consecutive rounds, including the multi-source search and kept-page chapter jump. Later changes keep going through the same loop, so no package piles up unseen by a compiler.
 2. Launch the app once a simulator runtime is available, and run the main path with a real source (install, search, details, read, shelf).
 3. Backup import is wired and was checked against the real `.venera` field shapes; the next step is running it once on a simulator and checking the counts.
-4. Two items wait on product decisions: video sources and playback; mapping an old global cookie jar onto per-source partitions.
-5. Two items need system-level approval: installing an iOS simulator runtime, and installing XcodeGen on the Mac to produce an `.xcodeproj`.
+4. Video sources and playback still wait on a product decision; the old global cookie jar is now restored into per-source partitions (see the cookie section on this page).
+5. One item still needs system-level approval: installing an iOS simulator runtime. XcodeGen now comes from the release binary on the Mac (not on the system PATH), so `verify-ios.sh` builds the app for real.
 6. AI comes after the reading path: on iOS the plan is the **Magpie plugin system** — running
    Magpie's original provider packages, with accounts and runtime separate from comic sources.
    Desktop does no AI work.
