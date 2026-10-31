@@ -193,6 +193,8 @@ swift test --filter Magpie            7 tests / 2 suites 全部执行
 | 传输排障 | `scripts/split-part.sh PARTS_FILE` 把一段 base64 拆成两半并分别打印 md5。出现过「长度对、md5 不对」的等长改写:这种情况整包 md5 只告诉你坏了,不给位置;有了逐段 md5 能定位到某一段,再拆半重发通常就过了 |
 | Core 版本 | `scripts/core-version` 钉到一个提交(`6e0742996007e0246e1c56a14a09546325bb3e96`),不是 `main`。之前写 `main` 意味着同一个 Nekularity 提交,两天编出来的框架可能不是同一份 Core —— 「可复现」就只对客户端成立,对底座不成立。要换 Core 就改这一行,并在 STATUS 里写清为什么。**钉住的每个提交都在 Core 的 CI 上四个 job 全绿**(Go 三个平台 + Apple 的 xcframework 与两份 Swift 冒烟测试);每次整树验证都用 `scripts/fetch-core.sh` 现编框架,不用旧产物。**`6e07429` 的 CI 四个 job 全绿**(Go 三个平台 + Apple 的 xcframework 与两份 Swift 冒烟测试),2026-11-01 实测:run `41194668348`。
 
+**2026-11-01 又把 pin 移到 `d98e505` 的原因**:Core 修了两处搜索参数读取 —— 选项格式「`值-文字`」的左边允许为空(`-<none>` 是「值为空」,不是字符串本身),以及多选筛选组的值是一个 JSON 数组(`SearchOptionGroup.DefaultValues`)。两者都会让源把 `undefined` 或 `-<none>` 拼进搜索请求。**iOS 端还没接这两处**:协议本身的解析在 Core 里,所以 iOS 装源后已经受益;但客户端侧把多选组拼成数组、以及只声明 `search.loadNext` 的源按游标翻页,仍是桌面端已有、iOS 待补的两项,记在「下一步」里。
+
 **2026-11-01 换到 `cc63215` 的原因**:那一版 Core 加了 `Core.NormalizeURL` —— 一个源有时把图片地址写成 `//images.example.com/1.jpg`(少了 scheme),RFC 3986 说这继承页面的 scheme,读者里就是该源最近用过的那个。桌面端按分区记住 scheme,iOS 端由 `URLSessionTransport` 记住,两边都用 Core 的同一条规则。**这不放宽安全规则**:`file://`/`javascript:`/`ftp://` 一律不改写,补全后仍要过 http(s) 校验;非协议相对的 URL 一个字都不动。选择器从 19 + 3 变成 19 + 3 + 1(`normalizeURL:`)。
 
 **2026-11-01 换到 `6e07429` 的原因**:那一版 Core 新增了标准 AI 的三个入口(`BuildAIRequest`/`BuildAIModelsRequest`/`SendAIRequest`)与可选的分段传输(`HostStream`),并修掉了包桥的一处死锁 —— 包在自己的 hook 里往 `__magpieChatPush` 写,而读取侧读到结束标记就停了,写方永远等不到读者。新的 Core 加了 `MobileHostStream` 协议与 `MobileNewMagpieWithStream`,所以选择器从 19 个 Magpie 增加到 19 + 3 个标准 AI;`check-core-surface.sh` 已同步 |
