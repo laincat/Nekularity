@@ -37,7 +37,9 @@ Sources/NekularityKit/      不含界面,可用 swift test 测试
 
 iOS 的 **Magpie 插件系统在 App 内集成并独立运行**,和漫画源的 `plugin.Registry` 完全分开,不共用任何注册表。它不依赖桌面端已安装的 Magpie、不要求访问桌面网关,也不以桌面 Bun 进程作为前置条件。桌面 Nekophage 首期连接本机安装版 Magpie,属于另一条接入路径。
 
-iOS 的目标还包括多供应商/模型的按需求、难度、订阅期限与额度路由,不能缩成一个聊天窗口。现阶段已实现的是下列供应商插件与客户端基础;完整路由策略及其他插件类别仍需补齐并逐项验证,尚不能声称已完成 Magpie 全能力集成:
+当前目标是 **Core 内置 OpenAI Chat/Responses 与 Anthropic Messages 标准 API,其他供应商及路由、用量、内容脱敏等通过安装 Magpie 插件扩展**。Core 保留协议、流式/取消、插件宿主、事件和策略调用机制;具体业务策略不继续硬编码为标准调用的必经路径。详见 Core 的 [分层取舍](https://github.com/laincat/VeneraCat-Core/blob/main/docs/AI-CORE-BOUNDARY.md)。
+
+现阶段已实现的是下列供应商插件与客户端基础,以及未接入 iOS 的路由原型。标准 API 独立入口、通用策略/中间件扩展点仍需补齐并逐项验证,尚不能声称已完成 Magpie 全能力集成:
 
 
 ```

@@ -37,7 +37,9 @@ Rules:
 
 The iOS **Magpie plugin system is integrated into the app and runs independently**. It is separate from the comic-source `plugin.Registry` and shares no registry with it. It requires neither a desktop Magpie installation nor a desktop gateway or Bun process. Desktop Nekophage initially connects to a locally installed Magpie through a separate integration path.
 
-The iOS target also includes routing across providers/models by requirements, difficulty, subscription expiry and quota; it must not be reduced to a chat window. The provider-plugin and client foundation below exists today. Full routing strategies and other plugin categories still need implementation and individual verification, so full Magpie integration is not yet established:
+The current target is **built-in OpenAI Chat/Responses and Anthropic Messages standard APIs in Core, with other providers, routing, usage and content masking supplied through installed Magpie plugins**. Core retains protocols, streaming/cancellation, the plugin host, events and strategy execution. Business policies must not become mandatory hard-coded scheduling for standard calls. See Core's [boundary assessment](https://github.com/laincat/VeneraCat-Core/blob/main/docs/AI-CORE-BOUNDARY.en.md).
+
+The provider-plugin and client foundation below exists, along with a routing prototype not yet connected to iOS. Independent standard API entry points and generic strategy/middleware extensions still need implementation and verification; full Magpie integration is not established:
 
 
 ```
