@@ -47,7 +47,10 @@ final class TransportStub: URLProtocol, @unchecked Sendable {
             client?.urlProtocol(self, didFailWithError: URLError(.cannotConnectToHost))
             return
         }
-        let deliver = { [weak self] in
+        // `@Sendable` because the delayed path hops to another executor; the stub is
+        // `@unchecked Sendable` and the reply is a value type, so nothing shared is
+        // smuggled across.
+        let deliver: @Sendable () -> Void = { [weak self] in
             guard let self else { return }
             var headers = reply.headers
             headers["Content-Length"] = String(reply.body.count)
@@ -58,7 +61,11 @@ final class TransportStub: URLProtocol, @unchecked Sendable {
             self.client?.urlProtocolDidFinishLoading(self)
         }
         if reply.delay > 0 {
-            DispatchQueue.global().asyncAfter(deadline: .now() + reply.delay, execute: deliver)
+            let delay = reply.delay
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                deliver()
+            }
         } else {
             deliver()
         }
@@ -70,7 +77,7 @@ final class TransportStub: URLProtocol, @unchecked Sendable {
 @Suite("URLSessionTransport")
 struct URLSessionTransportTests {
     private func transport(timeout: TimeInterval = 5) -> (URLSessionTransport, CookieJars) {
-        let jars = CookieJars()
+        let jars = CookieJars(file: nil)
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [TransportStub.self]
         let t = URLSessionTransport(cookies: jars, defaultUserAgent: "nk-test/1",
