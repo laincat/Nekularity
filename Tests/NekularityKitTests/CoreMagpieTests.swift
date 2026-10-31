@@ -73,6 +73,33 @@ import Testing
         }
     }
 
+    /// A downloaded package that is TypeScript is refused as TypeScript, and the user
+    /// is told what to do instead of being handed Go error text.
+    @Test func aTypeScriptPackageSaysWhatToDo() {
+        let detail = "magpieplugin: unsupported source language: index.ts is TypeScript, which this runtime does not parse"
+        let message = MagpieErrorText.message(for: detail)
+        #expect(message.contains("TypeScript"))
+        #expect(message.contains("编译后的包"))
+        // Core's own words stay available for a bug report.
+        #expect(message.contains("(Core: "))
+    }
+
+    /// A package that needs Node says so; the runtime does not pretend to have one.
+    @Test func aPackageNeedingNodeSaysSo() {
+        let detail = #"magpieplugin: module requires a host adapter or bundled dependency: "node:fs""#
+        let message = MagpieErrorText.message(for: detail)
+        #expect(message.contains("Node"))
+        #expect(message.contains("(Core: "))
+    }
+
+    /// Anything else is reported as Core said it: inventing a vague sentence would
+    /// hide the cause.
+    @Test func anUnknownRefusalIsNotRewritten() {
+        let detail = "magpieplugin: package.json has no main entry"
+        #expect(MagpieErrorText.explain(detail) == nil)
+        #expect(MagpieErrorText.message(for: detail) == detail)
+    }
+
     /// The footer names a Core; the check script guarantees it is the one that
     /// gets built, and this keeps the short form useful rather than empty.
     @Test func theCoreVersionIsShortButIdentifiable() {

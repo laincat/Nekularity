@@ -45,7 +45,7 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
         do {
             try magpie.loadPackage(filesJSON)
         } catch {
-            throw MagpieError("Core 拒绝了这个插件包: \(error.localizedDescription)")
+            throw MagpieError("Core 拒绝了这个插件包: \(MagpieErrorText.message(for: error.localizedDescription))")
         }
     }
 
