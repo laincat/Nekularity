@@ -93,7 +93,10 @@ final class AppModel {
                 auth: keychain,
                 options: MagpieOptionStore(directory: magpieDir),
                 makeRunner: { _, files in
-                    let runner = try CoreMagpie(host: host)
+                    // The chunked transport lets a package's reply arrive as
+                    // the server writes it, so a chat is drawn while it is
+                    // still being written.
+                    let runner = try CoreMagpie(host: host, stream: CoreStreamHost(transport: transport))
                     var encoded: [String: String] = [:]
                     for (path, body) in files { encoded[path] = body.base64EncodedString() }
                     let data = try JSONSerialization.data(withJSONObject: encoded, options: [.sortedKeys])
@@ -102,7 +105,7 @@ final class AppModel {
                 },
                 // Archive install needs a Core that is not bound to a package;
                 // MagpieAccounts closes it after expanding.
-                makeCore: { try CoreMagpie(host: host) })
+                makeCore: { try CoreMagpie(host: host, stream: CoreStreamHost(transport: transport)) })
             state = .ready(Environment(
                 library: library,
                 images: ImageLoader(core: core),

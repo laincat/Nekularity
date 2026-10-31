@@ -6,7 +6,7 @@ import Foundation
 /// partitions. The session is ephemeral with cookie handling off; the
 /// transport adds the partition's Cookie header itself and stores every
 /// Set-Cookie, including those on redirect hops.
-public final class URLSessionTransport: NSObject, @unchecked Sendable, URLSessionTaskDelegate {
+public final class URLSessionTransport: NSObject, @unchecked Sendable, URLSessionDataDelegate {
     public struct Request: Sendable {
         public var id: Int64
         public var method: String
@@ -34,6 +34,12 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable, URLSessio
     private var tasks: [Int64: URLSessionTask] = [:]
     /// Partition and cookie flag per task, for redirect handling.
     private var taskInfo: [Int: (partition: String, useCookies: Bool)] = [:]
+    /// The scheme each partition last used, so a source that serves its pages
+    /// over http keeps its images over http too. A scheme-relative image
+    /// address inherits this, as RFC 3986 says it inherits the page's.
+    private var partitionSchemes: [String: String] = [:]
+    /// The collector of a streaming request, keyed by the task that owns it.
+    private var streams: [Int: StreamCollector] = [:]
 
     /// `configuration` exists for tests: a stub protocol cannot be installed into a
     /// session this type builds itself, and the cookie and cancellation rules are
@@ -113,7 +119,21 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable, URLSessio
         if r.useCookies {
             cookies.store(partition: r.partition, url: finalURL, setCookieHeaders: Self.setCookieHeaders(http))
         }
+        rememberScheme(partition: r.partition, url: finalURL)
         return Response(status: http.statusCode, headers: headers, body: data, finalURL: finalURL)
+    }
+
+    /// Remembers the scheme a partition used, so a scheme-relative address
+    /// can inherit it.
+    private func rememberScheme(partition: String, url: URL) {
+        guard !partition.isEmpty, let scheme = url.scheme, scheme == "http" || scheme == "https" else { return }
+        lock.withLock { partitionSchemes[partition] = scheme }
+    }
+
+    /// The scheme a partition last used, or "" when it has not asked for
+    /// anything yet.
+    public func scheme(partition: String) -> String {
+        lock.withLock { partitionSchemes[partition] ?? "" }
     }
 
     /// Aborts request id (Core no longer waits for it).
@@ -122,6 +142,69 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable, URLSessio
         let t = tasks[id]
         lock.unlock()
         t?.cancel()
+    }
+
+    /// Sends a request and hands the body over while it is still arriving.
+    ///
+    /// The whole-reply path waits for the body; this one does not, so a chat
+    /// can be drawn as it is written. `onChunk` is called on an arbitrary
+    /// queue with each piece of the body, in the order the server sent them.
+    /// Cancelling by request id aborts the transfer.
+    public func sendStreaming(_ r: Request, onChunk: @escaping @Sendable (Data) -> Void) async throws -> Response {
+        var req = URLRequest(url: r.url)
+        req.httpMethod = r.method
+        req.httpBody = r.body
+        for (k, values) in r.headers where k.caseInsensitiveCompare("Cookie") != .orderedSame {
+            req.setValue(values.joined(separator: ", "), forHTTPHeaderField: k)
+        }
+        if req.value(forHTTPHeaderField: "User-Agent") == nil {
+            req.setValue(defaultUserAgent, forHTTPHeaderField: "User-Agent")
+        }
+        var cookieHeader = r.headers.first { $0.key.caseInsensitiveCompare("Cookie") == .orderedSame }?.value.joined(separator: "; ")
+        if r.useCookies, let stored = cookies.header(partition: r.partition, url: r.url) {
+            cookieHeader = [cookieHeader, stored].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: "; ")
+        }
+        if let cookieHeader, !cookieHeader.isEmpty { req.setValue(cookieHeader, forHTTPHeaderField: "Cookie") }
+
+        let collector = StreamCollector(onChunk: onChunk, limit: maxBodyBytes)
+        let box = TaskBox()
+        defer {
+            if let task = box.task {
+                lock.withLock {
+                    tasks[r.id] = nil
+                    taskInfo[task.taskIdentifier] = nil
+                    streams[task.taskIdentifier] = nil
+                }
+            }
+        }
+        let response: HTTPURLResponse = try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { k in
+                let task = session.dataTask(with: req)
+                lock.withLock {
+                    tasks[r.id] = task
+                    taskInfo[task.taskIdentifier] = (r.partition, r.useCookies)
+                    streams[task.taskIdentifier] = collector
+                }
+                box.set(task)
+                task.resume()
+                collector.setTask(task)
+                collector.onFinish = { result in k.resume(with: result) }
+            }
+        } onCancel: {
+            box.cancel()
+        }
+
+        var headers: [String: [String]] = [:]
+        for (k, v) in response.allHeaderFields {
+            guard let k = k as? String, let v = v as? String else { continue }
+            headers[k, default: []].append(v)
+        }
+        let finalURL = response.url ?? r.url
+        if r.useCookies {
+            cookies.store(partition: r.partition, url: finalURL, setCookieHeaders: Self.setCookieHeaders(response))
+        }
+        rememberScheme(partition: r.partition, url: finalURL)
+        return Response(status: response.statusCode, headers: headers, body: collector.body, finalURL: finalURL)
     }
 
     /// Set-Cookie values. Foundation folds repeated headers into one string,
@@ -162,12 +245,126 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable, URLSessio
         }
     }
 
+    /// Collects the pieces of a streaming reply and hands each one over as it
+    /// arrives.
+    ///
+    /// It exists because a continuation may only be resumed once, while the
+    /// body arrives in many pieces: the collector decides when the reply is
+    /// over and resumes then. The pieces are also kept, because the caller
+    /// still wants the whole body at the end.
+    final class StreamCollector: @unchecked Sendable {
+        private let lock = NSLock()
+        private var pieces: [Data] = []
+        /// The body as it arrived, so the caller can have the whole reply too.
+        private var whole = Data()
+        private var total = 0
+        private let limit: Int
+        private let onChunk: @Sendable (Data) -> Void
+        private var finished = false
+        private var head: HTTPURLResponse?
+        private var task: URLSessionTask?
+        /// Called once, when the reply is over.
+        var onFinish: ((Result<HTTPURLResponse, Error>) -> Void)?
+
+        init(onChunk: @escaping @Sendable (Data) -> Void, limit: Int) {
+            self.onChunk = onChunk
+            self.limit = limit
+        }
+
+        /// The reply's head, which arrives before the body.
+        func setHead(_ h: HTTPURLResponse) {
+            lock.lock(); defer { lock.unlock() }
+            head = h
+        }
+
+        /// The running task, so the collector can cancel it.
+        func setTask(_ t: URLSessionTask) {
+            lock.lock(); defer { lock.unlock() }
+            task = t
+        }
+
+        /// The task, if there is one.
+        var currentTask: URLSessionTask? {
+            lock.lock(); defer { lock.unlock() }
+            return task
+        }
+
+        /// The whole body, as it arrived. It is accumulated as the pieces come
+        /// in, so asking for it at the end does not copy the body again.
+        var body: Data {
+            lock.lock(); defer { lock.unlock() }
+            return whole
+        }
+
+        /// Takes one piece and hands it over.
+        func append(_ data: Data) {
+            guard !data.isEmpty else { return }
+            lock.lock()
+            if total + data.count > limit {
+                let running = task
+                lock.unlock()
+                running?.cancel()
+                finish(CoreError("response larger than \(limit) bytes"))
+                return
+            }
+            pieces.append(data)
+            whole.append(data)
+            total += data.count
+            lock.unlock()
+            onChunk(data)
+        }
+
+        /// Ends the reply: with the head when it worked, with the error when it
+        /// did not.
+        func finish(_ error: Error?) {
+            lock.lock()
+            if finished {
+                lock.unlock()
+                return
+            }
+            finished = true
+            let answer = head
+            let resume = onFinish
+            onFinish = nil
+            lock.unlock()
+            guard let resume else { return }
+            if let error {
+                resume(.failure(error))
+            } else if let answer {
+                resume(.success(answer))
+            } else {
+                resume(.failure(CoreError("empty response")))
+            }
+        }
+    }
+
     static func httpDate(_ d: Date) -> String {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.timeZone = TimeZone(identifier: "GMT")
         f.dateFormat = "EEE, dd MMM yyyy HH:mm:ss 'GMT'"
         return f.string(from: d)
+    }
+
+    // MARK: URLSessionDataDelegate
+
+    /// Hands each piece of the body over as it arrives.
+    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        let collector = lock.withLock { streams[dataTask.taskIdentifier] }
+        collector?.append(data)
+    }
+
+    /// The reply's head arrives before its body.
+    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
+                           completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        let collector = lock.withLock { streams[dataTask.taskIdentifier] }
+        if let head = response as? HTTPURLResponse { collector?.setHead(head) }
+        completionHandler(.allow)
+    }
+
+    public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        let collector = lock.withLock { streams[task.taskIdentifier] }
+        collector?.finish(error)
     }
 
     // MARK: URLSessionTaskDelegate

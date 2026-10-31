@@ -17,6 +17,18 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
         self.magpie = magpie
     }
 
+    /// A runner that can read a reply while it is still arriving.
+    ///
+    /// `stream` is the client's chunked transport. With it, a package's own
+    /// fetch is answered as the server writes it, so a chat can be drawn while
+    /// it is being written; without it the reply arrives whole.
+    public init(host: (any MobileHostProtocol)?, stream: (any MobileHostStreamProtocol)?) throws {
+        guard let magpie = MobileNewMagpieWithStream(host, stream: stream) else {
+            throw MagpieError("Core did not create a Magpie runner")
+        }
+        self.magpie = magpie
+    }
+
     // MARK: Plumbing
 
     /// gomobile keeps the `NSError**` parameter instead of importing it as

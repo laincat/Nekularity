@@ -66,14 +66,21 @@ public actor ImageLoader {
             } else {
                 req = try await core.imageRequest(key: key.source, url: key.url, comicID: key.comicID ?? "", chapterID: key.chapterID)
             }
-            guard let url = URL(string: req.url) else { throw CoreError("invalid image URL \(req.url)") }
+            // A source may hand back an image address without its scheme, such
+            // as "//images.example.com/1.jpg". RFC 3986 says such an address
+            // inherits the scheme of the page, so the scheme this source last
+            // used is the one to use. The address still has to be http(s).
+            let partition = CookiePartition.comic(key.source)
+            let base = core.host.transport.scheme(partition: partition)
+            let normalized = base.isEmpty ? req.url : core.normalizeURL(req.url, base: base + "://")
+            guard let url = URL(string: normalized) else { throw CoreError("invalid image URL \(normalized)") }
             var headers = req.headers.mapValues { [$0] }
             if headers.keys.first(where: { $0.caseInsensitiveCompare("Accept") == .orderedSame }) == nil {
                 headers["Accept"] = ["image/avif,image/webp,image/*,*/*;q=0.8"]
             }
             let resp = try await core.host.transport.send(.init(
                 id: id, method: req.method, url: url, headers: headers, body: req.body.map { Data($0.utf8) },
-                useCookies: true, partition: CookiePartition.comic(key.source)))
+                useCookies: true, partition: partition))
             guard (200..<300).contains(resp.status) else { throw CoreError("image HTTP \(resp.status)") }
             guard let image = Self.decode(resp.body, limit: limit) else { throw CoreError("not an image") }
             return CGImageBox(image)

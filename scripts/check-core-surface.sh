@@ -48,9 +48,10 @@ fi
 
 # The standard-protocol entry points Core exports beside Magpie. A framework
 # built before them still compiles the client and fails only when a user opens
-# the screen, so they are checked here too.
+# the screen, so they are checked here too. The URL rule belongs with them:
+# the client asks Core to fill in a missing scheme.
 missing_core=''
-for one in ')buildAIRequest:' ')buildAIModelsRequest:' ')sendAIRequest:'; do
+for one in ')buildAIRequest:' ')buildAIModelsRequest:' ')sendAIRequest:' ')normalizeURL:'; do
 	if ! grep -q -- "$one" "$header"; then
 		missing_core="$missing_core $one"
 	fi
@@ -65,4 +66,4 @@ if [ -n "$missing_core" ]; then
 	exit 1
 fi
 
-echo "check-core-surface: $(basename "$framework") exposes 19 Magpie and 3 standard AI methods"
+echo "check-core-surface: $(basename "$framework") exposes 19 Magpie, 3 standard AI and 1 URL rule"

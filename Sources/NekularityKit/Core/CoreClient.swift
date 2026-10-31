@@ -363,6 +363,13 @@ public final class CoreClient: @unchecked Sendable {
         let out = try await callComic(key: key, path: "comic.onThumbnailLoad", args: [.string(url)])
         return try ImageRequest(json: out, fallbackURL: url)
     }
+
+    /// Fills in the scheme of a scheme-relative URL, such as
+    /// "//images.example.com/1.jpg". Core owns the rule so both clients apply
+    /// the same one.
+    public func normalizeURL(_ raw: String, base: String = "") -> String {
+        core.normalizeURL(raw, base: base)
+    }
 }
 
 /// Configuration passed to `MobileNew`.
