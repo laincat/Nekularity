@@ -193,7 +193,11 @@ swift test --filter Magpie            7 tests / 2 suites 全部执行
 | 传输排障 | `scripts/split-part.sh PARTS_FILE` 把一段 base64 拆成两半并分别打印 md5。出现过「长度对、md5 不对」的等长改写:这种情况整包 md5 只告诉你坏了,不给位置;有了逐段 md5 能定位到某一段,再拆半重发通常就过了 |
 | Core 版本 | `scripts/core-version` 钉到一个提交(`6e0742996007e0246e1c56a14a09546325bb3e96`),不是 `main`。之前写 `main` 意味着同一个 Nekularity 提交,两天编出来的框架可能不是同一份 Core —— 「可复现」就只对客户端成立,对底座不成立。要换 Core 就改这一行,并在 STATUS 里写清为什么。**钉住的每个提交都在 Core 的 CI 上四个 job 全绿**(Go 三个平台 + Apple 的 xcframework 与两份 Swift 冒烟测试);每次整树验证都用 `scripts/fetch-core.sh` 现编框架,不用旧产物。**`6e07429` 的 CI 四个 job 全绿**(Go 三个平台 + Apple 的 xcframework 与两份 Swift 冒烟测试),2026-11-01 实测:run `41194668348`。
 
-**iOS 也接上了图片回调(2026-11-01)**:`ImageRequest` 现在带回 `handle` 与 `callbacks`,`ImageLoader` 每次最多试 4 个地址:取回成功但是错误页且有 `onLoadFailed` 就先问下一个镜像,取回成功且有 `onResponse` 就先把正文交给源改写(解密)再解码,解码失败同样问下一个镜像;每个地址都重新按分区补 scheme 并过 http(s) 校验。与桌面端同一套判断,差别只是 iOS 的解码在本机(ImageIO)、桌面的在 WebView。**尚未在 Mac 上编译与运行**(新增 3 条用例覆盖句柄解析、无句柄配置、错误页判定)。
+**iOS 也接上了图片回调,并在 Mac 上验过(2026-11-01)**:`ImageRequest` 现在带回 `handle` 与 `callbacks`,`ImageLoader` 每次最多试 4 个地址:取回成功但是错误页且有 `onLoadFailed` 就先问下一个镜像,取回成功且有 `onResponse` 就先把正文交给源改写(解密)再解码,解码失败同样问下一个镜像;每个地址都重新按分区补 scheme。
+
+Mac 上这一轮还修掉了三处**在 Windows 上看不出来**的问题:一是 `fetch` 的请求 id 类型应是 `Int64`(调用方与传输层都是 `Int64`,写成 `Int` 编译不过);二是**失败路径不清理在途表** —— 一次失败之后,同一张图的每个后续请求都会立刻拿到那个已失败的 task,等于整进程内这张图再也加载不出来,现在成功/失败都清理,且只在条目仍属于本次下载时清除;三是**注释声称会挡 `file://`、`javascript:`、`ftp://`,而代码只做了 `URL(string:)`** —— `file:` 地址会被真的交给 URLSession 读本机磁盘,现在显式拒绝非 http(s)。后两条用隔离副本做过反向验证:撤掉修复后,`file:` 地址确实进了传输层、第二次请求确实复用了旧的 `image HTTP 500`。
+
+验证:`swift test` 214 条 / 40 suite 全过(含新增 3 条 `ImageConfigTests`)、`verify-ios.sh` EXIT=0 `BUILD SUCCEEDED`、树 `77/214/40` shape `85dd5c3a…`、Core pin `69ed1f9`。**仍未验证**:真机上的图片流,包括真实源的 `onResponse` 改写与多镜像回退 —— 现在只证明编译、单元测试、App 构建与本机探针。
 
 **2026-11-01 把 pin 移到 `69ed1f9` 的原因**:Core 新增了图片配置的回调支持 —— `comic.onImageLoad` 除了地址和请求头,还能带 `onResponse`/`modifyImage`/`onLoadFailed` 三个函数,而函数进不了 JSON,所以客户端一直只拿到前四个字段。Core 现在把这几个函数留在源的运行时里、用句柄命名,宿主可以「把响应体交给 onResponse」「问下一个镜像」。**iOS 尚未接这三个方法**,所以这次 pin 移动对 iOS 只是协议层可用、客户端行为不变;桌面端同样还没接。这一步的意义是把「加密图的源显示破图」从「Core 做不到」变成「客户端还没接」。
 
