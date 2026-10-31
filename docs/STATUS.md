@@ -199,6 +199,8 @@ Mac 上这一轮还修掉了三处**在 Windows 上看不出来**的问题:一�
 
 验证:`swift test` 214 条 / 40 suite 全过(含新增 3 条 `ImageConfigTests`)、`verify-ios.sh` EXIT=0 `BUILD SUCCEEDED`、树 `77/214/40` shape `85dd5c3a…`、Core pin `69ed1f9`。**仍未验证**:真机上的图片流,包括真实源的 `onResponse` 改写与多镜像回退 —— 现在只证明编译、单元测试、App 构建与本机探针。
 
+**2026-11-01 再把 pin 移到 `eb982d6` 的原因**:iOS 自己跑不了 JavaScript,所以由 Core 提供 gomobile 入口 `modifyImage(key, script, width, height, rgbaB64)`,返回 `{width,height,rgba}`。`ImageLoader` 解码后把像素交给它、再把结果重建为 `CGImage`;像素按直通 RGBA 走 sRGB,超过 64M 像素的图原样放行(不为此失败),脚本没产出图像则如实报错并照常走镜像回退。**这条路径尚未在 Mac 上编译,更没有真机验证**,目前只有「脚本随配置一起到达」这一层的 2 条用例。
+
 **2026-11-01 把 pin 移到 `69ed1f9` 的原因**:Core 新增了图片配置的回调支持 —— `comic.onImageLoad` 除了地址和请求头,还能带 `onResponse`/`modifyImage`/`onLoadFailed` 三个函数,而函数进不了 JSON,所以客户端一直只拿到前四个字段。Core 现在把这几个函数留在源的运行时里、用句柄命名,宿主可以「把响应体交给 onResponse」「问下一个镜像」。**iOS 尚未接这三个方法**,所以这次 pin 移动对 iOS 只是协议层可用、客户端行为不变;桌面端同样还没接。这一步的意义是把「加密图的源显示破图」从「Core 做不到」变成「客户端还没接」。
 
 **2026-11-01 又把 pin 移到 `d98e505` 的原因**:Core 修了两处搜索参数读取 —— 选项格式「`值-文字`」的左边允许为空(`-<none>` 是「值为空」,不是字符串本身),以及多选筛选组的值是一个 JSON 数组(`SearchOptionGroup.DefaultValues`)。两者都会让源把 `undefined` 或 `-<none>` 拼进搜索请求。**iOS 端已接上这两处**:多选组现在按 JSON 数组发,筛选菜单对这类组改成逐项勾选并显示「已选 N 项」,只声明 `search.loadNext` 的源按游标翻页(null 起步、原样回传、空 token 结束);同时声明两个入口的源仍用页码,与桌面端一致(`lanraragi` 的 `loadNext` 只是把 token 映射回页码)。多选那一步已在 Mac 上验过并合入 `main`(206 tests / 38 suites、iOS `BUILD SUCCEEDED`);游标那一步的分页规则抽成 `SearchPaging` 值类型并有 5 条用例,桌面端另有活体证据(`ehentai`:第 1 页 25 条、第 2 页 25 条、0 条重复),iOS 侧仍在 Mac 复验中。
