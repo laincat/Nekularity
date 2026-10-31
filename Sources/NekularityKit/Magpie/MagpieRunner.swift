@@ -68,9 +68,22 @@ public final class MagpieRunner: @unchecked Sendable {
         }
         let json = try Self.encode(encoded)
         try core.loadPackage(filesJSON: json)
-        if let stored = try store.loadAuthJSON(provider: provider) {
-            try core.setAuth(provider: provider, authJSON: stored)
-        }
+        // Always, even with no account yet. Core installs the package's client
+        // bridge while it builds the runtime, and it learns which provider it is
+        // serving from this call: an install that waited for a stored sign-in
+        // would leave the package unable to ask for one.
+        let stored = try store.loadAuthJSON(provider: provider)
+        try core.setAuth(provider: provider, authJSON: stored ?? "")
+    }
+
+    /// Stores the sign-in the package wrote back.
+    ///
+    /// Every path that can refresh a token ends here. Written as one function
+    /// because the paths are easy to add and easy to forget: a refresh that only
+    /// lands on the `call` path signs the user out on the next launch.
+    private func persist(provider: String) {
+        guard let saved = try? core.savedAuthJSON(), !saved.isEmpty, saved != "null" else { return }
+        try? store.saveAuthJSON(provider: provider, json: saved)
     }
 
     /// Runs a hook exported by the package, returning its JSON answer.
@@ -79,11 +92,9 @@ public final class MagpieRunner: @unchecked Sendable {
     /// happens inside a hook, and losing it would sign the user out on the next
     /// launch. The JSON text the package wrote is stored as it is.
     public func call(provider: String, export: String, argJSON: String = "") throws -> String {
-        let answer = try core.call(export, argJSON: argJSON)
-        if let saved = try? core.savedAuthJSON(), !saved.isEmpty, saved != "null" {
-            try store.saveAuthJSON(provider: provider, json: saved)
-        }
-        return answer
+        // `defer` because a hook that refreshed and then threw still refreshed.
+        defer { persist(provider: provider) }
+        return try core.call(export, argJSON: argJSON)
     }
 
     // MARK: Sign-in
@@ -97,7 +108,8 @@ public final class MagpieRunner: @unchecked Sendable {
 
     /// The models the vendor serves. A vendor that does not list them throws
     /// Core's reason rather than answering an empty list.
-    public func models() throws -> [MagpieModel] {
+    public func models(provider: String) throws -> [MagpieModel] {
+        defer { persist(provider: provider) }
         let json = try core.modelsJSON()
         guard !json.isEmpty, json != "null" else { return [] }
         return try JSONDecoder().decode([MagpieModel].self, from: Data(json.utf8))
@@ -113,13 +125,18 @@ public final class MagpieRunner: @unchecked Sendable {
 
     /// Presses the account's check-in, when its plugin offers one.
     public func checkin(provider: String) throws -> MagpieCheckin {
+        defer { persist(provider: provider) }
         let json = try core.checkinJSON(provider: provider)
         return try JSONDecoder().decode(MagpieCheckin.self, from: Data(json.utf8))
     }
 
     /// A conversation through this package.
-    public func makeChat(pollInterval: Duration = .milliseconds(40)) -> MagpieChat {
-        MagpieChat(core: core, pollInterval: pollInterval)
+    public func makeChat(provider: String, pollInterval: Duration = .milliseconds(40)) -> MagpieChat {
+        // A turn can refresh the token mid-conversation; the chat has no store of
+        // its own, so it hands the result back here.
+        MagpieChat(core: core, pollInterval: pollInterval) { [weak self] in
+            self?.persist(provider: provider)
+        }
     }
 
     /// A sign-in for this package's account, driven by one object the UI can
@@ -134,12 +151,14 @@ public final class MagpieRunner: @unchecked Sendable {
 
     /// Runs the package's usage hook, as the package answered it.
     public func usage(provider: String) throws -> String {
-        try core.usageJSON(provider: provider)
+        defer { persist(provider: provider) }
+        return try core.usageJSON(provider: provider)
     }
 
     /// The account's usage in the shape every provider shares, or nil when the
     /// package reports none.
     public func usageReport(provider: String) throws -> MagpieUsage? {
+        defer { persist(provider: provider) }
         let json = try core.usageSummaryJSON(provider: provider)
         guard !json.isEmpty, json != "null" else { return nil }
         return try JSONDecoder().decode(MagpieUsage.self, from: Data(json.utf8))

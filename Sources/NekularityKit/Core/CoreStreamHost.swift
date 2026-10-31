@@ -13,12 +13,10 @@ import VeneraCatCore
 public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecked Sendable {
     /// One open stream: the pieces that arrived and the head of the reply.
     ///
-    /// The transfer writes into it from a `Task`, and Core reads from it on
-    /// whichever thread called `streamNext`, so it crosses into a `@Sendable`
-    /// closure. The buffer is guarded by the condition variable; `status`,
-    /// `headers`, `finalURL` and `failure` are written by the transfer before
-    /// it signals the end, and only read after `next()` has returned nil, so
-    /// they are never read while being written.
+    /// `@unchecked Sendable`: the buffer is guarded by its own `NSCondition`,
+    /// and the status/headers/finalURL fields are written by the transfer task
+    /// before `finish()` and read by Core's poll only after it. That ordering is
+    /// what the condition variable establishes; there is no other shared state.
     private final class Stream: @unchecked Sendable {
         /// The pieces the server sent, in order.
         private let lock = NSCondition()
@@ -161,7 +159,7 @@ public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecke
             }
             return Self.json(chunk)
         }
-        var chunk = StreamChunk(done: false, chunkBase64: piece.base64EncodedString(),
+        let chunk = StreamChunk(done: false, chunkBase64: piece.base64EncodedString(),
                                 status: nil, headers: nil, finalUrl: nil, error: nil)
         return Self.json(chunk)
     }

@@ -155,8 +155,11 @@ public final class MagpieSignIn: @unchecked Sendable {
     public func waitForResult() async -> MagpieSignInOutcome {
         let deadline = ContinuousClock.now.advanced(by: timeout)
         while true {
-            if ContinuousClock.now > deadline { return .failed(reason: "登录超时,请重新开始") }
+            if ContinuousClock.now > deadline { return finish(reason: "登录超时,请重新开始") }
             if lock.withLock({ cancelled }) { return .cancelled }
+            // The screen that started this may have gone away without calling
+            // `cancel`; the package must not keep polling the vendor for it.
+            if Task.isCancelled { cancel(); return .cancelled }
             guard let start = lock.withLock({ started }) else { return .failed(reason: "登录尚未开始") }
             if let immediate = start.immediateAuthJSON { return .success(authJSON: immediate) }
             do {
@@ -181,6 +184,15 @@ public final class MagpieSignIn: @unchecked Sendable {
             }
             try? await Task.sleep(for: pollInterval)
         }
+    }
+
+    /// Ends a wait that ran out of time, and tells Core to stop the callback.
+    ///
+    /// A timeout is the client giving up, not the package finishing: without the
+    /// cancel, Core keeps a sign-in alive that nobody will ever read.
+    private func finish(reason: String) -> MagpieSignInOutcome {
+        cancel()
+        return .failed(reason: reason)
     }
 
     /// Stops waiting and tells the package, so its callback does not keep

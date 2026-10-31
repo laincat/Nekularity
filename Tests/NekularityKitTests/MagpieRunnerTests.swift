@@ -113,11 +113,15 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(core.auths == [#"demo:{"type":"api","key":"k"}"#])
     }
 
-    @Test func installWithoutAStoredSignInSendsNone() throws {
+    /// No account yet is not "say nothing": Core builds the package's client
+    /// bridge while it starts the runtime, and it learns the provider from this
+    /// call. An install that stayed silent left the package unable to ask for a
+    /// sign-in at all.
+    @Test func installWithoutAStoredSignInStillBindsTheProvider() throws {
         let core = StubMagpieCore()
         let runner = MagpieRunner(core: core, store: MemoryMagpieAuthStore())
         try runner.install(provider: "demo", files: files)
-        #expect(core.auths.isEmpty)
+        #expect(core.auths == ["demo:"])
     }
 
     /// A refresh happens inside a hook; losing what the package saved would
@@ -148,6 +152,49 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         core.savedToReturn = "null"
         _ = try runner.call(provider: "demo", export: "Plugin")
         #expect(try store.loadAuthJSON(provider: "demo") == #"{"type":"api","key":"old"}"#)
+    }
+
+    /// Every path that can refresh a token must store what the package wrote.
+    /// `call` alone was not enough: usage, check-in and the model list all let a
+    /// package refresh, and a missed write signs the user out next launch.
+    @Test func everyPathThatCanRefreshStoresTheSignIn() throws {
+        let refreshed = #"{"type":"oauth","access":"new","refresh":"r2"}"#
+        let usage = #"{"plan":"p","until":"","renew":"","balance":"","error":"","user":"","signIn":"","resets":null,"windows":[]}"#
+        let cases: [(String, (MagpieRunner) throws -> Void)] = [
+            ("call", { _ = try $0.call(provider: "demo", export: "Plugin") }),
+            ("usage", { _ = try $0.usage(provider: "demo") }),
+            ("usageReport", { _ = try $0.usageReport(provider: "demo") }),
+            ("models", { _ = try $0.models(provider: "demo") }),
+            ("checkin", { _ = try $0.checkin(provider: "demo") }),
+        ]
+        for (name, run) in cases {
+            let core = StubMagpieCore()
+            core.savedToReturn = refreshed
+            core.usageToReturn = "{}"
+            core.usageSummaryToReturn = usage
+            core.modelsToReturn = "[]"
+            let store = MemoryMagpieAuthStore()
+            let runner = MagpieRunner(core: core, store: store)
+
+            try run(runner)
+
+            #expect(try store.loadAuthJSON(provider: "demo") == refreshed, "\(name) did not store the refresh")
+        }
+    }
+
+    /// A turn can refresh mid-conversation, and the chat has no store of its own.
+    @Test func aChatTurnStoresTheRefreshToo() async throws {
+        let core = StubMagpieCore()
+        core.chatEvents = [#"{"kind":"text","text":"hi"}"#, #"{"kind":"end"}"#]
+        core.savedToReturn = #"{"type":"oauth","access":"chat","refresh":"r3"}"#
+        let store = MemoryMagpieAuthStore()
+        let runner = MagpieRunner(core: core, store: store)
+
+        for try await _ in runner.makeChat(provider: "demo", pollInterval: .milliseconds(1))
+            .send(model: "m", messages: [MagpieMessage(role: "user", content: "hi")]) {}
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(try store.loadAuthJSON(provider: "demo") == core.savedToReturn)
     }
 
     @Test func signOutThenCloseAndDeinitOnlyClosesOnce() throws {
@@ -357,6 +404,9 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
             return
         }
         #expect(reason.contains("超时"))
+        // Giving up is the client's decision, so Core is told to stop: otherwise
+        // the package keeps polling the vendor for a sign-in nobody will read.
+        #expect(core.cancelledIDs == [7])
     }
 
     /// Cancelling stops both the wait and the package's own callback.
@@ -662,6 +712,26 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(ObjectIdentifier(first) == ObjectIdentifier(second))
     }
 
+    /// A signed-out account must not hand back the runner that was closed for it:
+    /// every call through a closed runtime fails, and the next sign-in would look
+    /// broken.
+    @Test func signingOutDropsTheClosedRunner() throws {
+        let core = StubMagpieCore()
+        let (accounts, _, _, _) = try accounts(core)
+        let folder = try tempFolder([
+            "package.json": #"{"name":"p","version":"1.0.0","main":"./index.mjs"}"#,
+            "index.mjs": "export async function Plugin() { return {} }",
+        ])
+        _ = try accounts.install(provider: "p", folder: folder)
+        let first = try accounts.runner(for: "p")
+
+        try accounts.signOut(provider: "p")
+        #expect(core.closes == 1)
+
+        let second = try accounts.runner(for: "p")
+        #expect(ObjectIdentifier(first) != ObjectIdentifier(second))
+    }
+
     @Test func aProviderThatIsNotInstalledIsRefused() throws {
         let core = StubMagpieCore()
         let (accounts, _, _, _) = try accounts(core)
@@ -906,6 +976,26 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(usage.windows[1].aside)
     }
 
+    /// Core writes a Go nil slice as `null`. That is "the vendor did not fill this
+    /// in", not a broken answer: the report must still be readable.
+    @Test func nullArraysAreAnEmptyListNotAFailure() throws {
+        let json = """
+        {"plan":"p","until":"","renew":"","balance":"","error":"","user":"","signIn":"",
+         "resets":{"count":0,"until":"","byWindow":false,"fiveHour":0,"weekly":0,"team":false,"each":null},
+         "windows":[{"name":"W","used":null,"resetsAt":"","resetSecs":0,"display":"","amount":0,"limit":0,
+                     "unit":"","span":0,"model":"","models":null,"notModels":null,"aside":false,
+                     "runsOutAt":"","runsOut":0,"balance":null}]}
+        """
+        let usage = try JSONDecoder().decode(MagpieUsage.self, from: Data(json.utf8))
+
+        #expect(usage.windows.count == 1)
+        #expect(usage.windows[0].models.isEmpty)
+        #expect(usage.windows[0].notModels.isEmpty)
+        #expect(usage.resets?.each.isEmpty == true)
+        // An unreported share stays unknown: the screen must not print 0%.
+        #expect(usage.windows[0].used == nil)
+    }
+
     @Test func anEmptyAnswerIsNoReport() throws {
         let core = StubMagpieCore()
         core.usageSummaryToReturn = ""
@@ -945,7 +1035,7 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         [{"id":"gpt-4o","name":"GPT-4o","context":128000,"output":16384,"modalities":["text","image"],"vendor":"openai"},
          {"id":"o3","name":"o3","context":0,"output":0,"modalities":null,"vendor":""}]
         """
-        let models = try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).models()
+        let models = try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).models(provider: "p")
         #expect(models.count == 2)
         #expect(models[0].id == "gpt-4o")
         #expect(models[0].context == 128000)
@@ -958,7 +1048,7 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
     @Test func anEmptyAnswerIsAnEmptyList() throws {
         let core = StubMagpieCore()
         core.modelsToReturn = "null"
-        #expect(try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).models().isEmpty)
+        #expect(try MagpieRunner(core: core, store: MemoryMagpieAuthStore()).models(provider: "p").isEmpty)
     }
 
     /// A vendor that refuses the list must surface as an error, not as "no
@@ -985,7 +1075,7 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
             func close() {}
         }
         #expect(throws: MagpieError.self) {
-            _ = try MagpieRunner(core: RefusingCore(), store: MemoryMagpieAuthStore()).models()
+            _ = try MagpieRunner(core: RefusingCore(), store: MemoryMagpieAuthStore()).models(provider: "p")
         }
     }
 }

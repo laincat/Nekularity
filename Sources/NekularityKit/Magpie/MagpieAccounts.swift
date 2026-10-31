@@ -194,11 +194,27 @@ public final class MagpieAccounts: @unchecked Sendable {
             throw MagpieError("这个插件没有声明 auth.provider,无法作为供应商使用")
         }
         let provider = spec.provider
+        // The provisional runner was bound to the folder's name, so Core built it
+        // for a provider that does not exist. It is replaced rather than reused:
+        // otherwise every sign-in through it would be refused as someone else's.
+        let bound: MagpieRunner
+        if provider == provisional {
+            bound = runner
+        } else {
+            runner.close()
+            bound = try makeRunner(provider, files)
+        }
+        do {
+            _ = try bound.auth(provider: provider)
+        } catch {
+            bound.close()
+            throw error
+        }
         let package = try packages.install(provider: provider, files: files,
                                            specJSON: declarationJSON(spec))
         let previous = lock.withLock { () -> MagpieRunner? in
             let old = runners[provider]
-            runners[provider] = runner
+            runners[provider] = bound
             specs[provider] = spec
             return old
         }
@@ -217,7 +233,13 @@ public final class MagpieAccounts: @unchecked Sendable {
     }
 
     public func signOut(provider: String) throws {
-        let runner = lock.withLock { runners[provider] }
+        // Removed before it is closed: a closed runner left in the cache would be
+        // handed to the next sign-in, and every call through it would fail on a
+        // runtime this account already ended.
+        let runner = lock.withLock { () -> MagpieRunner? in
+            specs[provider] = nil
+            return runners.removeValue(forKey: provider)
+        }
         try runner?.signOut(provider: provider)
         try auth.remove(provider: provider)
     }

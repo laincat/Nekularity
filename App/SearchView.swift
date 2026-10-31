@@ -289,8 +289,19 @@ final class SearchModel {
     /// One value per group, in the source's declared order. Falls back to the
     /// defaults for a source whose groups have not been read yet: search.load
     /// indexes into this array, so a short array would crash the source.
+    ///
+    /// The result always has one entry per group. A slot the user left empty
+    /// takes the group's own default rather than an empty string: an empty
+    /// option is not a value the source can search with.
     private func optionValues(for key: String, groups list: [SearchOptionGroup]) -> [String] {
-        if key == optionSource, choices.count == groups.count, !groups.isEmpty { return choices }
+        if key == optionSource, choices.count == list.count, !list.isEmpty {
+            return list.indices.map { index in
+                let chosen = choices[index]
+                if !chosen.isEmpty { return chosen }
+                let fallback = list[index].defaultKey
+                return fallback.isEmpty ? chosen : fallback
+            }
+        }
         return list.map(\.defaultKey)
     }
 

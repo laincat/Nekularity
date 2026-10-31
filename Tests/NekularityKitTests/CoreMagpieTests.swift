@@ -34,6 +34,33 @@ import Testing
         #expect(answer.contains(#""model":"m""#))
     }
 
+    /// Core gives the package its client bridge while it builds the runtime, and
+    /// it learns the provider from `setAuth`. So the order is not a detail: a
+    /// binding that arrives after the first call leaves `client.auth` undefined
+    /// for the life of that runtime, which is what a Copilot sign-in looked like.
+    @Test func theClientBridgeFollowsTheOrderOfSetAuth() throws {
+        let probe = [
+            "package.json": #"{"name":"probe","version":"0.1.0","main":"./index.mjs"}"#,
+            "index.mjs": #"export async function Plugin() { return { bridge: globalThis.__magpieClient ? "installed" : "missing" } }"#,
+        ]
+
+        // Bound before the runtime starts: the package can ask for a sign-in.
+        let early = try CoreMagpie()
+        defer { early.close() }
+        try early.loadPackage(filesJSON: try package(files: probe))
+        try early.setAuth(provider: "github-copilot", authJSON: "")
+        #expect(try early.call("Plugin", argJSON: "{}").contains("installed"))
+
+        // Bound after it started: the runtime is already built, and this is why
+        // `install` must hand Core the provider rather than waiting for a call.
+        let late = try CoreMagpie()
+        defer { late.close() }
+        try late.loadPackage(filesJSON: try package(files: probe))
+        _ = try late.call("Plugin", argJSON: "{}")
+        try late.setAuth(provider: "github-copilot", authJSON: "")
+        #expect(try late.call("Plugin", argJSON: "{}").contains("missing"))
+    }
+
     @Test func anUnknownExportIsAnError() throws {
         let magpie = try CoreMagpie()
         defer { magpie.close() }

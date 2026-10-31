@@ -30,10 +30,15 @@ public struct MagpieChatEvent: Sendable, Hashable {
 public final class MagpieChat: @unchecked Sendable {
     private let core: MagpieRunner.Core
     private let pollInterval: Duration
+    /// Called when a turn ends, because a turn can refresh the sign-in and the
+    /// chat has nowhere to store it.
+    private let onFinish: (@Sendable () -> Void)?
 
-    public init(core: MagpieRunner.Core, pollInterval: Duration = .milliseconds(40)) {
+    public init(core: MagpieRunner.Core, pollInterval: Duration = .milliseconds(40),
+                onFinish: (@Sendable () -> Void)? = nil) {
         self.core = core
         self.pollInterval = pollInterval
+        self.onFinish = onFinish
     }
 
     /// Sends one turn and yields its events. Cancelling the reading task (or the
@@ -49,12 +54,13 @@ public final class MagpieChat: @unchecked Sendable {
         timeout: Duration = .seconds(600)
     ) -> AsyncThrowingStream<MagpieChatEvent, Error> {
         AsyncThrowingStream { continuation in
-            let task = Task { [core, pollInterval, timeout] in
+            let task = Task { [core, pollInterval, timeout, onFinish] in
                 var handle: Int64?
                 defer {
                     // Whoever stopped reading — a cancelled task or a view that
                     // went away — the vendor request stops here too.
                     if let handle { core.chatCancel(handle: handle) }
+                    onFinish?()
                 }
                 do {
                     let messagesJSON = try Self.encode(messages)

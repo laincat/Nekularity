@@ -23,8 +23,9 @@ public final class CoreMagpie: MagpieRunner.Core, @unchecked Sendable {
     /// fetch is answered as the server writes it, so a chat can be drawn while
     /// it is being written; without it the reply arrives whole.
     ///
-    /// The second argument has no label: gomobile gives the Objective-C
-    /// parameter no name, so the Swift import is positional.
+    /// gomobile imports `MobileNewMagpieWithStream(host, stream)` with both
+    /// parameters unlabelled — the Objective-C prototype has no argument names
+    /// on the second one, so there is no `stream:` label to write.
     public init(host: (any MobileHostProtocol)?, stream: (any MobileHostStreamProtocol)?) throws {
         guard let magpie = MobileNewMagpieWithStream(host, stream) else {
             throw MagpieError("Core did not create a Magpie runner")

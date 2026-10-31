@@ -92,16 +92,20 @@ final class AppModel {
                 packages: MagpiePackageStore(directory: magpieDir),
                 auth: keychain,
                 options: MagpieOptionStore(directory: magpieDir),
-                makeRunner: { _, files in
-                    // The chunked transport lets a package's reply arrive as
-                    // the server writes it, so a chat is drawn while it is
-                    // still being written.
-                    let runner = try CoreMagpie(host: host, stream: CoreStreamHost(transport: transport))
-                    var encoded: [String: String] = [:]
-                    for (path, body) in files { encoded[path] = body.base64EncodedString() }
-                    let data = try JSONSerialization.data(withJSONObject: encoded, options: [.sortedKeys])
-                    try runner.loadPackage(filesJSON: String(decoding: data, as: UTF8.self))
-                    return MagpieRunner(core: runner, store: keychain)
+                makeRunner: { provider, files in
+                    // `install` loads the package and then hands Core its
+                    // provider, which is the call Core builds the package's
+                    // client bridge from. Doing it here rather than on the first
+                    // sign-in is what keeps `client.auth` from being missing.
+                    //
+                    // The chunked transport lets a package's reply arrive as the
+                    // server writes it, so a chat is drawn while it is still
+                    // being written.
+                    let runner = try MagpieRunner(
+                        core: CoreMagpie(host: host, stream: CoreStreamHost(transport: transport)),
+                        store: keychain)
+                    try runner.install(provider: provider, files: files)
+                    return runner
                 },
                 // Archive install needs a Core that is not bound to a package;
                 // MagpieAccounts closes it after expanding.

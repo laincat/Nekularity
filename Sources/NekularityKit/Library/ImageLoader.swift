@@ -24,10 +24,30 @@ public actor ImageLoader {
 
     private let core: CoreClient
     private let cache = NSCache<NSString, CGImageBox>()
-    private var inFlight: [CacheKey: Task<CGImageBox, Error>] = [:]
+    private var inFlight: [CacheKey: SharedLoad] = [:]
     private var nextID: Int64 = 1 << 40 // distinct from Core's request ids
 
     struct CacheKey: Hashable { var key: Key; var limit: Limit }
+
+    /// One download shared by every caller that asked for the same image.
+    ///
+    /// The download outlives the caller that started it, but not every caller:
+    /// the last one to give up cancels it. Cancelling it for one waiter would
+    /// abort an image another visible cell is still waiting for.
+    private final class SharedLoad {
+        let task: Task<CGImageBox, Error>
+        var waiters = 0
+        init(task: Task<CGImageBox, Error>) { self.task = task }
+    }
+
+    /// Decrements the waiter count and cancels the download when nobody is left.
+    private func release(_ ck: CacheKey) {
+        guard let shared = inFlight[ck] else { return }
+        shared.waiters -= 1
+        guard shared.waiters <= 0 else { return }
+        inFlight[ck] = nil
+        shared.task.cancel()
+    }
 
     public init(core: CoreClient, memoryLimitBytes: Int = 128 << 20) {
         self.core = core
@@ -54,7 +74,14 @@ public actor ImageLoader {
         let ck = CacheKey(key: key, limit: limit)
         let name = "\(key.source)|\(key.isThumbnail)|\(key.comicID ?? "")|\(key.chapterID ?? "")|\(key.url)|\(limit)" as NSString
         if let hit = cache.object(forKey: name) { return hit }
-        if let running = inFlight[ck] { return try await running.value }
+        if let running = inFlight[ck] {
+            running.waiters += 1
+            return try await withTaskCancellationHandler {
+                try await running.task.value
+            } onCancel: {
+                Task { await self.giveUp(ck) }
+            }
+        }
 
         nextID += 1
         let id = nextID
@@ -69,7 +96,8 @@ public actor ImageLoader {
             // A source may hand back an image address without its scheme, such
             // as "//images.example.com/1.jpg". RFC 3986 says such an address
             // inherits the scheme of the page, so the scheme this source last
-            // used is the one to use. The address still has to be http(s).
+            // used is the one to use. The address still has to be http(s):
+            // Core's rule leaves file://, javascript: and ftp:// alone.
             let partition = CookiePartition.comic(key.source)
             let base = core.host.transport.scheme(partition: partition)
             let normalized = base.isEmpty ? req.url : core.normalizeURL(req.url, base: base + "://")
@@ -85,11 +113,23 @@ public actor ImageLoader {
             guard let image = Self.decode(resp.body, limit: limit) else { throw CoreError("not an image") }
             return CGImageBox(image)
         }
-        inFlight[ck] = task
-        defer { inFlight[ck] = nil }
-        let box = try await task.value
-        cache.setObject(box, forKey: name, cost: box.image.bytesPerRow * box.image.height)
-        return box
+        let shared = SharedLoad(task: task)
+        shared.waiters = 1
+        inFlight[ck] = shared
+        return try await withTaskCancellationHandler {
+            let box = try await task.value
+            inFlight[ck] = nil
+            cache.setObject(box, forKey: name, cost: box.image.bytesPerRow * box.image.height)
+            return box
+        } onCancel: {
+            Task { await self.giveUp(ck) }
+        }
+    }
+
+    /// Called when a waiter's task is cancelled. The loader is an actor, so the
+    /// count is adjusted in one place whatever thread cancelled.
+    private func giveUp(_ ck: CacheKey) {
+        release(ck)
     }
 
     /// Decodes and downsamples without decoding the full-size bitmap first.

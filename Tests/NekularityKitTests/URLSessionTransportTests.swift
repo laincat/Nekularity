@@ -16,11 +16,17 @@ final class TransportStub: URLProtocol, @unchecked Sendable {
         var headers: [String: String] = [:]
         var body = Data()
         var delay: TimeInterval = 0
+        /// Streamed pieces, used to prove the transport stops reading rather than
+        /// buffering a body it will refuse. `chunks > 0` also omits Content-Length,
+        /// which is how a server without a declared size behaves.
+        var chunks = 0
+        var chunkSize = 0
     }
 
     private static let lock = NSLock()
     nonisolated(unsafe) private static var replies: [String: Reply] = [:]
     nonisolated(unsafe) private static var seen: [(url: URL, headers: [String: String])] = []
+    nonisolated(unsafe) private static var delivered: [String: Int] = [:]
 
     static func reply(_ url: String, with reply: Reply) {
         lock.lock(); defer { lock.unlock() }
@@ -30,6 +36,17 @@ final class TransportStub: URLProtocol, @unchecked Sendable {
     static func lookup(_ url: URL) -> Reply? {
         lock.lock(); defer { lock.unlock() }
         return replies[url.absoluteString]
+    }
+
+    /// Bytes handed to the client for a host, which is what "stopped early" means.
+    static func bytesDelivered(host: String) -> Int {
+        lock.lock(); defer { lock.unlock() }
+        return delivered[host] ?? 0
+    }
+
+    static func addDelivered(host: String, _ n: Int) {
+        lock.lock(); defer { lock.unlock() }
+        delivered[host, default: 0] += n
     }
 
     static func record(_ url: URL, _ headers: [String: String]) {
@@ -56,6 +73,13 @@ final class TransportStub: URLProtocol, @unchecked Sendable {
         // `@Sendable` because the delayed path hops to another executor; the stub is
         // `@unchecked Sendable` and the reply is a value type, so nothing shared is
         // smuggled across.
+        if reply.chunks > 0 {
+            let response = HTTPURLResponse(url: url, statusCode: reply.status,
+                                           httpVersion: "HTTP/1.1", headerFields: reply.headers)!
+            self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            stream(reply, host: url.host ?? "", piece: Data(repeating: 0x41, count: reply.chunkSize))
+            return
+        }
         let deliver: @Sendable () -> Void = { [weak self] in
             guard let self else { return }
             var headers = reply.headers
@@ -77,7 +101,28 @@ final class TransportStub: URLProtocol, @unchecked Sendable {
         }
     }
 
-    override func stopLoading() {}
+    override func stopLoading() { stopped = true }
+
+    private var stopped = false
+
+    /// Delivers one piece at a time on a background task and stops as soon as the
+    /// client cancels, so an early refusal is visible as a byte count.
+    private func stream(_ reply: Reply, host: String, piece: Data) {
+        let chunks = reply.chunks
+        let size = piece.count
+        Task { @Sendable [weak self] in
+            guard let self else { return }
+            for _ in 0..<chunks {
+                guard !self.stopped else { return }
+                self.client?.urlProtocol(self, didLoad: piece)
+                Self.addDelivered(host: host, size)
+                // The client cancels from its own queue: without a hop it would
+                // only see the whole body after it had already been handed over.
+                try? await Task.sleep(nanoseconds: 1_000_000)
+            }
+            self.client?.urlProtocolDidFinishLoading(self)
+        }
+    }
 }
 
 @Suite("URLSessionTransport")
@@ -167,6 +212,111 @@ struct URLSessionTransportTests {
     }
 
     /// Cancelling by request id stops that request and leaves the next one alone.
+    /// A cancel that lands before the request is registered must still be honoured:
+    /// the call is never sent at all.
+    @Test func aCancelBeforeRegistrationStopsTheRequest() async throws {
+        let host = "earlycancel.test"
+        TransportStub.reply("https://\(host)/x", with: .init(body: Data("should not run".utf8)))
+        let (t, _) = transport()
+
+        t.cancel(id: 99)
+        await #expect(throws: (any Error).self) {
+            _ = try await t.send(request("https://\(host)/x", id: 99))
+        }
+        try await Task.sleep(nanoseconds: 50_000_000)
+        #expect(TransportStub.requests(host: host).isEmpty)
+    }
+
+    private func state(_ origin: String, headers: [String: [String]] = [:], cookies: Bool = true,
+                       manualCookie: String? = nil, partition: String = "test") -> TaskState {
+        TaskState(limit: 1 << 20, partition: partition, useCookies: cookies,
+                  manualHeaders: headers, manualCookie: manualCookie,
+                  cookies: CookieJars(file: nil), origin: URL(string: origin)!)
+    }
+
+    /// The caller's own credential headers belong to its origin. Cookie is
+    /// rebuilt from the jar either way, but `X-Api-Key` and friends must not
+    /// follow a redirect to another host — Foundation only strips Authorization.
+    @Test func anotherOriginDoesNotReceiveCallerCredentials() throws {
+        let s = state("https://leak-from.test/start",
+                      headers: ["X-Api-Key": ["secret-key"], "Authorization": ["Bearer secret"]],
+                      manualCookie: "mine=1")
+        var request = URLRequest(url: URL(string: "https://leak-to.test/next")!)
+        request.setValue("secret-key", forHTTPHeaderField: "X-Api-Key")
+        request.setValue("Bearer secret", forHTTPHeaderField: "Authorization")
+        request.setValue("mine=1", forHTTPHeaderField: "Cookie")
+
+        let out = s.redirected(request)
+
+        #expect(out.value(forHTTPHeaderField: "X-Api-Key") == nil)
+        #expect(out.value(forHTTPHeaderField: "Authorization") == nil)
+        #expect(out.value(forHTTPHeaderField: "Cookie") == nil)
+    }
+
+    /// A redirect inside one origin keeps them: that is the same server.
+    @Test func theSameOriginKeepsCallerCredentials() throws {
+        let s = state("https://same-origin.test/start", headers: ["X-Api-Key": ["secret-key"]],
+                      manualCookie: "mine=1")
+
+        let out = s.redirected(URLRequest(url: URL(string: "https://same-origin.test/next")!))
+
+        #expect(out.value(forHTTPHeaderField: "X-Api-Key") == "secret-key")
+        #expect(out.value(forHTTPHeaderField: "Cookie") == "mine=1")
+    }
+
+    /// A different port is a different origin even when the host matches.
+    @Test func aPortChangeIsAnotherOrigin() throws {
+        let s = state("http://localhost:8080/start", headers: ["X-Api-Key": ["secret-key"]])
+
+        let out = s.redirected(URLRequest(url: URL(string: "http://localhost:8081/next")!))
+
+        #expect(out.value(forHTTPHeaderField: "X-Api-Key") == nil)
+    }
+
+    /// The jar's cookies for the new host still travel, because those are the
+    /// new host's cookies and not a leaked credential.
+    @Test func theJarStillAnswersForTheNewHost() throws {
+        let s = state("https://jar-a.test/start", manualCookie: "old=1")
+        s.cookies.store(partition: "test", url: URL(string: "https://jar-b.test/")!,
+                        setCookieHeaders: ["fresh=2; Path=/"])
+
+        let out = s.redirected(URLRequest(url: URL(string: "https://jar-b.test/next")!))
+
+        let cookie = out.value(forHTTPHeaderField: "Cookie") ?? ""
+        #expect(cookie.contains("fresh=2"))
+        #expect(!cookie.contains("old=1"))
+    }
+
+    /// A body with no declared length is refused while it arrives, not after the
+    /// whole 256 KiB has been buffered.
+    @Test func anOversizedStreamIsRefusedWhileItArrives() async throws {
+        let host = "stream.test"
+        let total = 256 * 1024
+        let chunk = 1024
+        TransportStub.reply("https://\(host)/stream", with: .init(chunks: total / chunk, chunkSize: chunk))
+        let (t, _) = transport()
+        t.maxBodyBytes = 1024
+
+        await #expect(throws: (any Error).self) {
+            _ = try await t.send(request("https://\(host)/stream"))
+        }
+        try await Task.sleep(nanoseconds: 100_000_000)
+        #expect(TransportStub.bytesDelivered(host: host) < total)
+    }
+
+    /// URLSession keeps its delegate alive, so a session built with `delegate: self`
+    /// would keep the transport alive for the life of the process.
+    @Test func theTransportIsReleasedWithItsSession() async throws {
+        weak var weakTransport: URLSessionTransport?
+        do {
+            let (t, _) = transport()
+            weakTransport = t
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        try await Task.sleep(nanoseconds: 200_000_000)
+        #expect(weakTransport == nil)
+    }
+
     @Test func cancelStopsTheNamedRequestOnly() async throws {
         let host = "cancel.test"
         TransportStub.reply("https://\(host)/slow", with: .init(body: Data("late".utf8), delay: 0.5))

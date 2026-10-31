@@ -116,17 +116,23 @@ public final class SourceLibrary {
         return s
     }
 
-    /// GET over an ephemeral session: no cookies, 4 MiB limit, http(s) only.
+    /// GET over a session with no cookies: 4 MiB limit, http(s) only.
+    ///
+    /// The limit is enforced while the body arrives, through the same transport
+    /// the sources use: a `Data` that is only measured after it has been buffered
+    /// has already spent the memory the limit exists to protect.
     public nonisolated static let plainFetch: @Sendable (URL) async throws -> Data = { url in
         guard ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { throw CoreError("only http and https URLs") }
-        let config = URLSessionConfiguration.ephemeral
-        config.httpCookieAcceptPolicy = .never
-        config.timeoutIntervalForRequest = 30
-        let (data, response) = try await URLSession(configuration: config).data(from: url)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw CoreError("download failed: HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+        let transport = URLSessionTransport(cookies: CookieJars(file: nil), defaultUserAgent: plainUserAgent,
+                                            timeout: 30)
+        transport.maxBodyBytes = 4 << 20
+        let response = try await transport.send(.init(id: 0, method: "GET", url: url, headers: [:],
+                                                      body: nil, useCookies: false, partition: "index"))
+        guard (200..<300).contains(response.status) else {
+            throw CoreError("download failed: HTTP \(response.status)")
         }
-        guard data.count <= 4 << 20 else { throw CoreError("file larger than 4 MiB") }
-        return data
+        return response.body
     }
+
+    private nonisolated static let plainUserAgent = "Nekularity/1.0"
 }

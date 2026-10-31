@@ -80,3 +80,76 @@ public struct MagpieUsage: Codable, Sendable, Hashable {
         return String(format: "%.1f", value)
     }
 }
+
+// MARK: - Reading Core's answer
+
+/// Core writes a Go nil slice as `null`, not `[]`.
+///
+/// A field the vendor did not fill must not turn into a decode failure for the
+/// whole report: an unreported list is read as empty, and an unreported figure
+/// stays `nil` so the screen does not print a zero nobody measured.
+///
+/// These live in extensions so the memberwise initialisers stay available for
+/// the tests and for a report built in memory.
+extension MagpieUsage {
+    private enum CodingKeys: String, CodingKey {
+        case plan, until, renew, balance, error, user, signIn, resets, windows
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        plan = try c.decode(String.self, forKey: .plan)
+        until = try c.decode(String.self, forKey: .until)
+        renew = try c.decode(String.self, forKey: .renew)
+        balance = try c.decode(String.self, forKey: .balance)
+        error = try c.decode(String.self, forKey: .error)
+        user = try c.decode(String.self, forKey: .user)
+        signIn = try c.decode(String.self, forKey: .signIn)
+        resets = try c.decodeIfPresent(Resets.self, forKey: .resets)
+        windows = try c.decodeIfPresent([Window].self, forKey: .windows) ?? []
+    }
+}
+
+extension MagpieUsage.Resets {
+    private enum CodingKeys: String, CodingKey {
+        case count, until, byWindow, fiveHour, weekly, team, each
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        count = try c.decode(Double.self, forKey: .count)
+        until = try c.decode(String.self, forKey: .until)
+        byWindow = try c.decode(Bool.self, forKey: .byWindow)
+        fiveHour = try c.decode(Double.self, forKey: .fiveHour)
+        weekly = try c.decode(Double.self, forKey: .weekly)
+        team = try c.decode(Bool.self, forKey: .team)
+        each = try c.decodeIfPresent([ResetWindow].self, forKey: .each) ?? []
+    }
+}
+
+extension MagpieUsage.Window {
+    private enum CodingKeys: String, CodingKey {
+        case name, used, resetsAt, resetSecs, display, amount, limit, unit, span
+        case model, models, notModels, aside, runsOutAt, runsOut, balance
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decode(String.self, forKey: .name)
+        used = try c.decodeIfPresent(Double.self, forKey: .used)
+        resetsAt = try c.decode(String.self, forKey: .resetsAt)
+        resetSecs = try c.decode(Double.self, forKey: .resetSecs)
+        display = try c.decode(String.self, forKey: .display)
+        amount = try c.decode(Double.self, forKey: .amount)
+        limit = try c.decode(Double.self, forKey: .limit)
+        unit = try c.decode(String.self, forKey: .unit)
+        span = try c.decode(Double.self, forKey: .span)
+        model = try c.decode(String.self, forKey: .model)
+        models = try c.decodeIfPresent([String].self, forKey: .models) ?? []
+        notModels = try c.decodeIfPresent([String].self, forKey: .notModels) ?? []
+        aside = try c.decode(Bool.self, forKey: .aside)
+        runsOutAt = try c.decode(String.self, forKey: .runsOutAt)
+        runsOut = try c.decode(Double.self, forKey: .runsOut)
+        balance = try c.decodeIfPresent(Double.self, forKey: .balance)
+    }
+}

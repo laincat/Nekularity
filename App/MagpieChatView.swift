@@ -114,7 +114,7 @@ struct MagpieChatView: View {
     private func loadModels() async {
         do {
             let list = try await Task.detached { [accounts, provider] in
-                try accounts.runner(for: provider).models()
+                try accounts.runner(for: provider).models(provider: provider)
             }.value
             models = list
             if model.isEmpty, let first = list.first { model = first.id }
@@ -140,7 +140,7 @@ struct MagpieChatView: View {
         task = Task {
             defer { running = false }
             do {
-                let chat = try accounts.runner(for: provider).makeChat()
+                let chat = try accounts.runner(for: provider).makeChat(provider: provider)
                 for try await event in chat.send(model: model, messages: history) {
                     switch event.kind {
                     case .text: reply += event.text
