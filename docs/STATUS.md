@@ -90,6 +90,24 @@ Core 侧已跑通:包快照与模块定位、`fetch`/`Headers`/`URL`/`ReadableSt
 
 这一轮还第一次拿到了**模拟器运行时的证据**:runtimes 两个 iOS 27.2,`devices available` 12 台(含已 Booted 的 `iPhone 18 Pro`),`xcodebuild -showsdks` 的 iOS SDK 为 27.2。
 
+### 分段传输的实情(2026-11-01)
+
+iOS 端的 `URLSessionTransport.sendStreaming` 复用 `send` 的同一条请求路径(同样的 Cookie、取消、限额、重定向策略),只是把正文**边收边给**。`CoreStreamHost` 实现 Core 的 `MobileHostStream` 协议,把它交出去。
+
+**一个必须知道的实测约束**:**Foundation 会把小于约 256 字节的相邻 `URLProtocol` 分片合并**再交给 delegate。Mac 上量的:
+
+```text
+16B × 3   → 收到 1 块
+64B × 3   → 收到 1 块
+256B × 3  → 收到 2 块
+1024B × 3 → 收到 3 块
+8192B × 3 → 收到 3 块  首块 5ms、中块 315ms、末块 618ms
+```
+
+所以「分片要能一块一块地到」这件事,在**测试替身**里必须用 1024 字节以上的分片,否则量到的是 Foundation 的合并行为,不是我们的流式。真实服务器那组时间戳(5ms / 315ms / 618ms)才是「边收边给」的真凭据。
+
+**接口名以生成的 objc 头为准,不靠猜**:`MobileNewMagpieWithStream(_ host:, _ stream:)` 的第二个参数**无标签** —— 头文件里 ObjC 原型没给参数名。这一点我先写错成 `stream:`,是 Mac 编译报 `extraneous argument label 'stream:' in call` 之后改的。
+
 ### 未决:本地树与验证树对不上(2026-11-01 发现)
 
 同一份 `scripts/check-tree.sh`,两边报的数字不一样:

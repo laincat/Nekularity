@@ -110,6 +110,24 @@ Simulator runtime (absent on that machine), a real device and a real vendor acco
 
 This run also produced the **first evidence of a simulator runtime**: two iOS 27.2 runtimes, 12 devices available (including a booted `iPhone 18 Pro`), and `xcodebuild -showsdks` listing iOS SDK 27.2.
 
+### What the chunked transport actually does (2026-11-01)
+
+The iOS `URLSessionTransport.sendStreaming` reuses the same request path as `send` (same cookies, cancellation, size limit and redirect policy) and only hands the body over **as it arrives**. `CoreStreamHost` implements Core's `MobileHostStream` protocol and passes it along.
+
+**One measured constraint worth knowing**: **Foundation merges adjacent `URLProtocol` pieces smaller than about 256 bytes** before the delegate sees them. Measured on the Mac:
+
+```text
+16 B × 3   → 1 chunk
+64 B × 3   → 1 chunk
+256 B × 3  → 2 chunks
+1024 B × 3 → 3 chunks
+8192 B × 3 → 3 chunks, first at 5 ms, middle at 315 ms, last at 618 ms
+```
+
+So a test double that wants to prove "pieces arrive one at a time" must use pieces of 1024 bytes or more; smaller ones measure Foundation's merging, not our streaming. The real-server timestamps (5 ms / 315 ms / 618 ms) are the actual evidence that the body is handed over as it arrives.
+
+**Names come from the generated Objective-C header, not from guessing**: the second parameter of `MobileNewMagpieWithStream(_ host:, _ stream:)` has **no label**, because the Objective-C prototype gives it no name. I wrote `stream:` first and only changed it after the Mac reported `extraneous argument label 'stream:' in call`.
+
 ### Open: the local tree and the verified tree do not match (found 2026-11-01)
 
 The same `scripts/check-tree.sh` reports different numbers on the two machines:

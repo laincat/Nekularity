@@ -12,7 +12,14 @@ import VeneraCatCore
 /// the cancellation rules stay the ones the client already has.
 public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecked Sendable {
     /// One open stream: the pieces that arrived and the head of the reply.
-    private final class Stream {
+    ///
+    /// The transfer writes into it from a `Task`, and Core reads from it on
+    /// whichever thread called `streamNext`, so it crosses into a `@Sendable`
+    /// closure. The buffer is guarded by the condition variable; `status`,
+    /// `headers`, `finalURL` and `failure` are written by the transfer before
+    /// it signals the end, and only read after `next()` has returned nil, so
+    /// they are never read while being written.
+    private final class Stream: @unchecked Sendable {
         /// The pieces the server sent, in order.
         private let lock = NSCondition()
         private var pending: [Data] = []

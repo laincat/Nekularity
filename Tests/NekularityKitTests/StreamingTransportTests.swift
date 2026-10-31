@@ -59,14 +59,15 @@ final class StreamStub: URLProtocol, @unchecked Sendable {
             let response = HTTPURLResponse(url: url, statusCode: reply.status,
                                            httpVersion: "HTTP/1.1", headerFields: headers)!
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            var index = 0
+            // The cursor outlives one call because the pieces are delivered
+            // across several turns of the run loop; the box keeps it off the
+            // captured variable list, which a @Sendable closure may not mutate.
+            let cursor = PieceCursor()
             func sendNext() {
-                guard index < reply.pieces.count else {
+                guard let piece = cursor.take(from: reply.pieces) else {
                     client?.urlProtocolDidFinishLoading(self)
                     return
                 }
-                let piece = reply.pieces[index]
-                index += 1
                 client?.urlProtocol(self, didLoad: piece)
                 Self.record(url, piece)
                 if reply.gap > 0 {
@@ -96,6 +97,23 @@ struct StreamingTransportTests {
                                   timeout: 5, configuration: config)
     }
 
+    /// One piece of `size` bytes whose first five bytes are `tag`.
+    ///
+    /// The size matters: Foundation merges adjacent `URLProtocol` pieces that
+    /// are smaller than about 256 bytes before the delegate sees them, so a
+    /// tiny stub piece would never arrive as its own chunk. 1024 bytes is
+    /// comfortably above that, and the tag keeps each piece identifiable.
+    private func piece(_ tag: String, size: Int = 1024) -> Data {
+        var data = Data(tag.utf8)
+        data.append(Data(repeating: 0x20, count: max(0, size - data.count)))
+        return data
+    }
+
+    /// The first five bytes of a piece, as text.
+    private func tag(_ data: Data) -> String {
+        String(decoding: data.prefix(5), as: UTF8.self)
+    }
+
     private func request(_ url: String, id: Int64 = 1) -> URLSessionTransport.Request {
         URLSessionTransport.Request(id: id, method: "GET", url: URL(string: url)!,
                                     headers: [:], body: nil, useCookies: false, partition: "magpie")
@@ -105,7 +123,7 @@ struct StreamingTransportTests {
     @Test func piecesArriveBeforeTheBodyEnds() async throws {
         let host = "stream.test"
         StreamStub.reply("https://\(host)/chat", with: .init(pieces: [
-            Data("one".utf8), Data("two".utf8), Data("three".utf8),
+            piece("one  "), piece("two  "), piece("three"),
         ]))
         let t = transport()
         let collector = ChunkRecorder()
@@ -114,9 +132,9 @@ struct StreamingTransportTests {
             collector.append(data)
         }
 
-        #expect(collector.pieces.map { String(decoding: $0, as: UTF8.self) } == ["one", "two", "three"])
-        #expect(String(decoding: response.body, as: UTF8.self) == "onetwothree")
+        #expect(collector.pieces.map(tag) == ["one  ", "two  ", "three"])
         #expect(response.status == 200)
+        #expect(response.body.count == 3 * 1024)
     }
 
     /// The first piece must arrive while the server is still writing, not after
@@ -124,12 +142,11 @@ struct StreamingTransportTests {
     @Test func theFirstPieceArrivesWhileTheServerIsStillWriting() async throws {
         let host = "early.test"
         StreamStub.reply("https://\(host)/chat", with: .init(
-            pieces: [Data("first".utf8), Data("second".utf8)], gap: 0.3))
+            pieces: [piece("first"), piece("secnd")], gap: 0.3))
         let t = transport()
 
-        let firstAt = ContinuousClock.now
-        var arrived: [Duration] = []
-        let collector = ChunkRecorder(onPiece: { _ in arrived.append(.now - firstAt) })
+        let stamps = ArrivalStamps()
+        let collector = ChunkRecorder(onPiece: { _ in stamps.mark() })
         _ = try await t.sendStreaming(request("https://\(host)/chat")) { data in
             collector.append(data)
         }
@@ -137,10 +154,11 @@ struct StreamingTransportTests {
         #expect(collector.pieces.count == 2)
         // The whole reply takes at least two gaps; the first piece must come
         // before the second one, so it cannot have waited for the end.
+        let arrived = stamps.marks
         let total = arrived.last ?? .zero
         #expect(arrived.count == 2)
         #expect(total < .milliseconds(550))
-        #expect(arrived[0] < arrived[1])
+        #expect(arrived.count == 2 && arrived[0] < arrived[1])
     }
 
     /// The head of the reply is known even when the body is empty.
@@ -170,7 +188,9 @@ struct StreamingTransportTests {
     /// The pieces come in the order the server sent them.
     @Test func thePiecesKeepTheirOrder() async throws {
         let host = "order.test"
-        let expected = (0..<20).map { Data("p\($0)".utf8) }
+        // 20 pieces of 1024 bytes each: big enough that Foundation does not
+        // merge them, and enough of them that an order bug would show.
+        let expected = (0..<20).map { piece("p\(String(format: "%03d", $0))") }
         StreamStub.reply("https://\(host)/chat", with: .init(pieces: expected, gap: 0.001))
         let t = transport()
         let collector = ChunkRecorder()
@@ -179,7 +199,8 @@ struct StreamingTransportTests {
             collector.append(data)
         }
 
-        #expect(collector.pieces == expected)
+        #expect(collector.pieces.map(tag) == expected.map(tag))
+        #expect(collector.pieces.count == 20)
     }
 }
 
@@ -203,5 +224,41 @@ final class ChunkRecorder: @unchecked Sendable {
         stored.append(data)
         lock.unlock()
         onPiece?(data)
+    }
+}
+
+/// Hands out the pieces of a reply one at a time.
+///
+/// The cursor lives in an object because the pieces are delivered across
+/// several turns of the run loop, and a `@Sendable` closure may not mutate a
+/// captured variable.
+final class PieceCursor: @unchecked Sendable {
+    private let lock = NSLock()
+    private var index = 0
+
+    func take(from pieces: [Data]) -> Data? {
+        lock.lock(); defer { lock.unlock() }
+        guard index < pieces.count else { return nil }
+        let piece = pieces[index]
+        index += 1
+        return piece
+    }
+}
+
+/// Records when each piece arrived, relative to the first.
+final class ArrivalStamps: @unchecked Sendable {
+    private let lock = NSLock()
+    private let start = ContinuousClock.now
+    private var stored: [Duration] = []
+
+    func mark() {
+        let now = ContinuousClock.now
+        lock.lock(); defer { lock.unlock() }
+        stored.append(now - start)
+    }
+
+    var marks: [Duration] {
+        lock.lock(); defer { lock.unlock() }
+        return stored
     }
 }
