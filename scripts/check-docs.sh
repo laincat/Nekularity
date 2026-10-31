@@ -26,6 +26,23 @@ for f in $(git ls-files --cached --others --exclude-standard '*.md'); do
 		head -n 5 "$f" | grep -q "](\(\./\)\{0,1\}$(basename "$en"))" || err "$f does not link to $(basename "$en") near the top"
 		;;
 	esac
+
+	# A pair that links correctly can still say different things: one side gains a
+	# table row and the other does not. Counting rows and headings catches that
+	# without comparing prose, which cannot be automated.
+	case "$f" in
+	*.en.md) ;;
+	*)
+		en="${f%.md}.en.md"
+		[ -f "$en" ] || continue
+		rows=$(grep -c '^|' "$f" 2>/dev/null || true)
+		enrows=$(grep -c '^|' "$en" 2>/dev/null || true)
+		[ "$rows" = "$enrows" ] || err "$f has ${rows:-0} table rows, $en has ${enrows:-0}"
+		heads=$(grep -c '^#' "$f" 2>/dev/null || true)
+		enheads=$(grep -c '^#' "$en" 2>/dev/null || true)
+		[ "$heads" = "$enheads" ] || err "$f has ${heads:-0} headings, $en has ${enheads:-0}"
+		;;
+	esac
 done
 
 for entry in $(ls -A); do
