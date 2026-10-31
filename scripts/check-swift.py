@@ -32,7 +32,9 @@ try:
     # install a new enough tree-sitter cannot load it, and that is an environment
     # limit, not a broken tree: the Mac has the real compiler, so the runner turns
     # this into a skip instead of a failure. Exit code 3 is how it says so.
-    tree_sitter.Language(tree_sitter_swift.language())
+    # Constructing a Parser is what actually raises for a grammar built against a
+    # newer ABI; the Language object alone does not.
+    tree_sitter.Parser(tree_sitter.Language(tree_sitter_swift.language()))
 except ImportError:  # pragma: no cover - the message is the point
     print(
         "check-swift: tree-sitter is not installed; run\n"

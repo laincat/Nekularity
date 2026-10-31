@@ -81,10 +81,11 @@ fi
 python3 scripts/check-swift.py >"$out/syntax.log" 2>&1 && syntax=$? || syntax=$?
 if [ "$syntax" -eq 0 ]; then
 	pass "python3 scripts/check-swift.py" "$out/syntax.log"
-elif [ "$syntax" -eq 3 ]; then
-	# The parser cannot load on this machine (an old system Python with a grammar
-	# newer than its tree-sitter). Saying FAIL would blame the tree for it, and the
-	# steps after this one compile with the real Swift compiler anyway.
+elif [ "$syntax" -eq 2 ] || [ "$syntax" -eq 3 ]; then
+	# 2: tree-sitter is not installed. 3: it is installed but cannot load this
+	# machine's grammar version. Both are limits of the machine, not of the tree, and
+	# the steps after this one compile with the real Swift compiler anyway. A
+	# developer machine still gets a hard failure from scripts/check-swift.sh.
 	say "SKIP  python3 scripts/check-swift.py  (parser unavailable here; see $out/syntax.log)"
 else
 	fail "python3 scripts/check-swift.py" "$out/syntax.log"
