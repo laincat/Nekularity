@@ -25,7 +25,11 @@ public struct SearchPaging: Equatable, Sendable {
     /// The page number or cursor to request next. Nil means the search is over.
     public var next: (page: Int, cursor: String?)? {
         guard !stopped else { return nil }
-        if mode == .cursor { return (page: page + 1, cursor: cursor) }
+        if mode == .cursor {
+            // An empty token is the source saying it has nothing more.
+            guard let cursor, !cursor.isEmpty else { return nil }
+            return (page: page + 1, cursor: cursor)
+        }
         if let maxPage, page >= maxPage { return nil }
         return (page: page + 1, cursor: nil)
     }

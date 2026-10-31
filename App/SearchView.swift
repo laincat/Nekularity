@@ -366,7 +366,8 @@ final class SearchModel {
                                 result = try await core.search(key: key, keyword: keyword, page: 1, options: options)
                             } else {
                                 result = try await core.searchNext(key: key, keyword: keyword, cursor: nil, options: options)
-                            }                            return (index, result.comics.map { Hit(source: key, comic: $0) }, false)
+                            }
+                            return (index, result.comics.map { Hit(source: key, comic: $0) }, false)
                         } catch {
                             return (index, [], true)
                         }
