@@ -239,8 +239,10 @@ final class SearchModel {
     private(set) var failedSources: [String] = []
     /// The source being paged; empty for a merged search.
     private(set) var source = ""
-    private var page = 1
-    private var maxPage: Int?
+    private var paging = SearchPaging()
+    /// Whether the source being read pages with a cursor; decided once per
+    /// search by its own declaration.
+    private var declaresCursor = false
     /// Which search is the current one. A request that started earlier must not
     /// write into the screen after a newer search took over: its results belong
     /// to a keyword the user has already replaced.
@@ -327,8 +329,8 @@ final class SearchModel {
         self.keyword = keyword
         source = scope == .current ? (sources.first ?? "") : ""
         hits = []
-        page = 0
-        maxPage = nil
+        paging = SearchPaging()
+        declaresCursor = false
         error = nil
         searched = false
         failedSources = []
@@ -357,8 +359,12 @@ final class SearchModel {
                         let key = key
                         do {
                             let options = try await core.searchOptions(key: key).map(\.defaultSearchValue)
-                            let result = try await core.search(key: key, keyword: keyword, page: 1, options: options)
-                            return (index, result.comics.map { Hit(source: key, comic: $0) }, false)
+                            let result: ComicPage
+                            if await core.hasComic(key: key, path: "search.loadNext") {
+                                result = try await core.searchNext(key: key, keyword: keyword, cursor: nil, options: options)
+                            } else {
+                                result = try await core.search(key: key, keyword: keyword, page: 1, options: options)
+                            }                            return (index, result.comics.map { Hit(source: key, comic: $0) }, false)
                         } catch {
                             return (index, [], true)
                         }
@@ -391,7 +397,7 @@ final class SearchModel {
 
     /// Next page of the one source being read. Merged searches never page.
     func loadMore(_ core: CoreClient) async {
-        guard canPage, !loading, maxPage.map({ page < $0 }) ?? true else { return }
+        guard canPage, !loading, paging.next != nil else { return }
         await loadPage(core, source: source, generation: generation.currentToken)
     }
 
@@ -400,28 +406,42 @@ final class SearchModel {
         defer {
             if generation.isCurrent(current) { loading = false }
         }
-        let next = page + 1
+        guard let step = paging.next else {
+            loading = false
+            searched = true
+            return
+        }
         do {
             // One value per search group, in the source's order: what the
             // filter row has chosen, or the source's defaults.
             let declared = try await core.searchOptions(key: key)
             let options = optionValues(for: key, groups: declared)
-            let result = try await core.search(key: key, keyword: keyword, page: next, options: options)
+            // The source's declaration decides how it pages, and only the
+            // first request of a search asks: changing mid-search would skip
+            // or repeat a page.
+            if paging.mode == nil {
+                declaresCursor = await core.hasComic(key: key, path: "search.loadNext")
+            }
+            let result: ComicPage
+            if paging.mode == .cursor || (paging.mode == nil && declaresCursor) {
+                result = try await core.searchNext(key: key, keyword: keyword, cursor: step.cursor, options: options)
+            } else {
+                result = try await core.search(key: key, keyword: keyword, page: step.page, options: options)
+            }
             // Another search started while this one was answering; its results
             // would belong to a keyword that is no longer on screen.
             guard generation.isCurrent(current) else { return }
             // Sources repeat items across pages; keep the first.
             let seen = Set(hits.map(\.id))
             hits += result.comics.map { Hit(source: key, comic: $0) }.filter { !seen.contains($0.id) }
-            page = next
-            maxPage = result.maxPage ?? (result.comics.isEmpty ? next : nil)
+            paging.record(result, declaresCursor: declaresCursor)
         } catch {
             guard generation.isCurrent(current) else { return }
             if (error as? CoreError)?.isCancelled != true {
                 self.error = error.localizedDescription
             }
             // Stop paging after a failure; a retry restarts the search.
-            maxPage = page
+            paging.fail()
         }
         searched = true
     }

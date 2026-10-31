@@ -266,6 +266,13 @@ public final class CoreClient: @unchecked Sendable {
         return try Self.decode(ComicPage.self, out)
     }
 
+    /// Cursor-based comic sources accept null for the first page.
+    public func searchNext(key: String, keyword: String, cursor: String?, options: [String]) async throws -> ComicPage {
+        let out = try await callComic(key: key, path: "search.loadNext",
+                                      args: [.string(keyword), .array(options.map(JSONValue.string)), cursor.map(JSONValue.string) ?? .null])
+        return try Self.decode(ComicPage.self, out)
+    }
+
     /// The browses a source offers (its `explore` list); empty when it has
     /// none.
     public func explorePages(key: String) async throws -> [ExplorePage] {
