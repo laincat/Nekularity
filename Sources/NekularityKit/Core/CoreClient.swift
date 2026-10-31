@@ -375,7 +375,14 @@ public final class CoreClient: @unchecked Sendable {
         let out = try await run(cancellable: false) { core, _ in
             try Self.call { core.imageConfig(key, url: url, comic: "", chapter: "", thumbnail: true, error: $0) }
         }
-        return try ImageRequest(json: out, fallbackURL: url)
+        var request = try ImageRequest(json: out, fallbackURL: url)
+        // The official client documents modifyImage and onLoadFailed as ignored
+        // for thumbnails: a cover is small and a pixel pass would cost more than
+        // it gains.
+        request.modifyImage = ""
+        // onResponse stays: a scrambled cover still has to be made readable.
+        request.callbacks = request.callbacks.filter { $0 != "onLoadFailed" }
+        return request
     }
 
     /// Runs the config's `onResponse` over a fetched body: a source may

@@ -61,3 +61,18 @@ struct ImageConfigTests {
     // A width large enough to overflow a naive product is refused, not wrapped.
     #expect(!ImageLoader.pixelPassFits(Int.max, 2))
 }
+
+/// A cover drops the pixel script and the mirror fallback, but keeps the body
+/// transform: a scrambled cover still has to be made readable.
+@Test func aCoverConfigDropsWhatTheOfficialClientIgnores() throws {
+    var request = try ImageRequest(
+        json: #"{"url":"https://img.example/c.jpg","handle":"i3","callbacks":["onResponse","onLoadFailed"],"modifyImage":"let modifyImage = (i) => i"}"#,
+        fallbackURL: "")
+    // What thumbnailRequest does to the parsed config.
+    request.modifyImage = ""
+    request.callbacks = request.callbacks.filter { $0 != "onLoadFailed" }
+    #expect(request.modifyImage.isEmpty)
+    #expect(request.callbacks == ["onResponse"])
+    #expect(request.has("onResponse"))
+    #expect(!request.has("onLoadFailed"))
+}

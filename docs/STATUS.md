@@ -199,6 +199,8 @@ Mac 上这一轮还修掉了三处**在 Windows 上看不出来**的问题:一�
 
 验证:`swift test` 214 条 / 40 suite 全过(含新增 3 条 `ImageConfigTests`)、`verify-ios.sh` EXIT=0 `BUILD SUCCEEDED`、树 `77/214/40` shape `85dd5c3a…`、Core pin `69ed1f9`。**仍未验证**:真机上的图片流,包括真实源的 `onResponse` 改写与多镜像回退 —— 现在只证明编译、单元测试、App 构建与本机探针。
 
+**封面也按规格跳过像素脚本与镜像回退(2026-11-01)**:`onThumbnailLoad` 的注释写明 `modifyImage` 与 `onLoadFailed` 对缩略图会被忽略,所以 `thumbnailRequest` 解析出配置后把这两项去掉;**`onResponse` 保留** —— 打散的封面仍然要能被解开才看得见。新增 1 条用例钉住这个取舍。另外订正一处我写错的常量:上一版用 `24 << 20`(25,165,824),与用例假定的 3000×8000 边界对不上,已改为 `24_000_000`。
+
 **像素回传的上限按手机的内存来定(2026-11-01)**:Mac 上核过这条链的内存 —— 像素以 RGBA 交给 Core、再以 base64 回传,一次处理的峰值约为 `w·h·4×2.7`;上限设成 64M 像素时满载可达 850 MB–1.1 GB,手机上不能这么赌。iOS 侧因此收紧到 **24M 像素**:常见长条页 1080×16384(17.7M)仍在范围内(约 190 MB 峰值),更大的图原样放行,不为了让脚本跑一张图把进程逼到内存红线。判断抽成 `ImageLoader.pixelPassFits(_:_:)` 并用**除法形式**比较,`Int.max` 这种宽度也不会让乘积溢出;新增 1 条用例覆盖边界与溢出。
 
 **2026-11-01 再把 pin 移到 `eb982d6` 的原因**:iOS 自己跑不了 JavaScript,所以由 Core 提供 gomobile 入口 `modifyImage(key, script, width, height, rgbaB64)`,返回 `{width,height,rgba}`。`ImageLoader` 解码后把像素交给它、再把结果重建为 `CGImage`;像素按直通 RGBA 走 sRGB,超过 64M 像素的图原样放行(不为此失败),脚本没产出图像则如实报错并照常走镜像回退。**这条路径尚未在 Mac 上编译,更没有真机验证**,目前只有「脚本随配置一起到达」这一层的 2 条用例。
