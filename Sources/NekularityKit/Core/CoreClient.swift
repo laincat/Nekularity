@@ -11,6 +11,10 @@ public struct CoreError: Error, LocalizedError, Sendable {
     /// The call was cancelled (task cancellation or Core.Cancel).
     public var isCancelled: Bool { message.contains("context canceled") }
 
+    /// The source declared no such image callback; the caller should carry on
+    /// with what it already has rather than treat this as a failure.
+    public var isCallbackAbsent: Bool { message.contains("no such callback") }
+
     /// Core speaks English and its text is what a developer needs; the
     /// interface is Chinese. Well-known failures get a Chinese sentence, and
     /// anything else keeps Core's own words after a Chinese prefix, so a
@@ -356,19 +360,48 @@ public final class CoreClient: @unchecked Sendable {
     }
 
     /// `comic.onImageLoad(url, comicId, epId)`: request options for one
-    /// image (url, method, headers, data). nil when the source has none.
+    /// image, plus a handle for the callbacks the source declared.
     public func imageRequest(key: String, url: String, comicID: String, chapterID: String?) async throws -> ImageRequest {
         guard await hasComic(key: key, path: "comic.onImageLoad") else { return ImageRequest(url: url) }
-        let out = try await callComic(key: key, path: "comic.onImageLoad",
-                                      args: [.string(url), .string(comicID), chapterID.map(JSONValue.string) ?? .null])
+        let out = try await run(cancellable: false) { core, _ in
+            try Self.call { core.imageConfig(key, url: url, comic: comicID, chapter: chapterID ?? "", thumbnail: false, error: $0) }
+        }
         return try ImageRequest(json: out, fallbackURL: url)
     }
 
     /// `comic.onThumbnailLoad(url)` for covers.
     public func thumbnailRequest(key: String, url: String) async throws -> ImageRequest {
         guard await hasComic(key: key, path: "comic.onThumbnailLoad") else { return ImageRequest(url: url) }
-        let out = try await callComic(key: key, path: "comic.onThumbnailLoad", args: [.string(url)])
+        let out = try await run(cancellable: false) { core, _ in
+            try Self.call { core.imageConfig(key, url: url, comic: "", chapter: "", thumbnail: true, error: $0) }
+        }
         return try ImageRequest(json: out, fallbackURL: url)
+    }
+
+    /// Runs the config's `onResponse` over a fetched body: a source may
+    /// decrypt or rewrite what the server sent. Returns nil when the source
+    /// declared no such callback.
+    public func applyImageResponse(key: String, handle: String, body: Data) async throws -> Data? {
+        let out = try await run(cancellable: true) { core, _ in
+            try Self.call { core.applyImageResponse(key, handle: handle, bodyB64: body.base64EncodedString(), error: $0) }
+        }
+        guard !out.isEmpty, let data = Data(base64Encoded: out) else { return nil }
+        return data
+    }
+
+    /// The next mirror a config offers, when the first address did not work.
+    /// nil when the source declared no fallback.
+    public func imageFallback(key: String, handle: String) async throws -> ImageRequest? {
+        let out: String
+        do {
+            out = try await run(cancellable: true) { core, _ in
+                try Self.call { core.imageFallback(key, handle: handle, error: $0) }
+            }
+        } catch let error as CoreError where error.isCallbackAbsent {
+            return nil
+        }
+        let request = try ImageRequest(json: out, fallbackURL: "")
+        return request.url.isEmpty ? nil : request
     }
 
     /// Fills in the scheme of a scheme-relative URL, such as
@@ -399,8 +432,15 @@ public struct ImageRequest: Sendable, Hashable {
     public var method: String = "GET"
     public var headers: [String: String] = [:]
     public var body: String?
+    /// Names the config's callbacks inside the source's runtime; empty when
+    /// the source declared none, in which case the body is used as it is.
+    public var handle: String = ""
+    /// Which of onResponse/onLoadFailed the handle carries.
+    public var callbacks: [String] = []
 
     public init(url: String) { self.url = url }
+
+    public func has(_ callback: String) -> Bool { callbacks.contains(callback) }
 
     init(json: String, fallbackURL: String) throws {
         url = fallbackURL
@@ -412,5 +452,7 @@ public struct ImageRequest: Sendable, Hashable {
             for (k, v) in h.entries { if let s = v.stringValue { headers[k] = s } }
         }
         if let d = o["data"]?.stringValue { body = d }
+        if let h = o["handle"]?.stringValue { handle = h }
+        if case .array(let list)? = o["callbacks"] { callbacks = list.compactMap(\.stringValue) }
     }
 }

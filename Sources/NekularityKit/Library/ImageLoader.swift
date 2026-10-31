@@ -87,31 +87,41 @@ public actor ImageLoader {
         let id = nextID
         let core = self.core
         let task = Task<CGImageBox, Error> {
-            let req: ImageRequest
+            var req: ImageRequest
             if key.isThumbnail {
                 req = try await core.thumbnailRequest(key: key.source, url: key.url)
             } else {
                 req = try await core.imageRequest(key: key.source, url: key.url, comicID: key.comicID ?? "", chapterID: key.chapterID)
             }
-            // A source may hand back an image address without its scheme, such
-            // as "//images.example.com/1.jpg". RFC 3986 says such an address
-            // inherits the scheme of the page, so the scheme this source last
-            // used is the one to use. The address still has to be http(s):
-            // Core's rule leaves file://, javascript: and ftp:// alone.
             let partition = CookiePartition.comic(key.source)
             let base = core.host.transport.scheme(partition: partition)
-            let normalized = base.isEmpty ? req.url : core.normalizeURL(req.url, base: base + "://")
-            guard let url = URL(string: normalized) else { throw CoreError("invalid image URL \(normalized)") }
-            var headers = req.headers.mapValues { [$0] }
-            if headers.keys.first(where: { $0.caseInsensitiveCompare("Accept") == .orderedSame }) == nil {
-                headers["Accept"] = ["image/avif,image/webp,image/*,*/*;q=0.8"]
+            // A source may name several mirrors and a body transform, and both
+            // live in its runtime behind `req.handle`. A mirror that answers
+            // with an error page, or a body that will not decode, is what the
+            // official client calls a failed load, so it asks for the next one.
+            var lastError: Error = CoreError("not an image")
+            for _ in 0..<4 {
+                do {
+                    var body = try await Self.fetch(req, id: id, partition: partition, base: base, core: core)
+                    if req.has("onLoadFailed"), Self.looksLikeHTML(body) {
+                        throw CoreError("image response is an HTML page")
+                    }
+                    if !req.handle.isEmpty, req.has("onResponse"),
+                       let rewritten = try await core.applyImageResponse(key: key.source, handle: req.handle, body: body) {
+                        // The bytes are the source's now, so nothing may assume
+                        // they are what the server described.
+                        body = rewritten
+                    }
+                    guard let image = Self.decode(body, limit: limit) else { throw CoreError("not an image") }
+                    return CGImageBox(image)
+                } catch {
+                    lastError = error
+                    guard req.has("onLoadFailed"),
+                          let next = try? await core.imageFallback(key: key.source, handle: req.handle) else { throw error }
+                    req = next
+                }
             }
-            let resp = try await core.host.transport.send(.init(
-                id: id, method: req.method, url: url, headers: headers, body: req.body.map { Data($0.utf8) },
-                useCookies: true, partition: partition))
-            guard (200..<300).contains(resp.status) else { throw CoreError("image HTTP \(resp.status)") }
-            guard let image = Self.decode(resp.body, limit: limit) else { throw CoreError("not an image") }
-            return CGImageBox(image)
+            throw lastError
         }
         let shared = SharedLoad(task: task)
         shared.waiters = 1
@@ -130,6 +140,40 @@ public actor ImageLoader {
     /// count is adjusted in one place whatever thread cancelled.
     private func giveUp(_ ck: CacheKey) {
         release(ck)
+    }
+
+    /// One hop: the request as the source described it.
+    private static func fetch(_ req: ImageRequest, id: Int, partition: String, base: String, core: CoreClient) async throws -> Data {
+        // A source may hand back an image address without its scheme, such as
+        // "//images.example.com/1.jpg". RFC 3986 says such an address inherits
+        // the scheme of the page, so the scheme this source last used is the one
+        // to use. The address still has to be http(s): Core's rule leaves
+        // file://, javascript: and ftp:// alone.
+        let normalized = base.isEmpty ? req.url : core.normalizeURL(req.url, base: base + "://")
+        guard let url = URL(string: normalized) else { throw CoreError("invalid image URL \(normalized)") }
+        var headers = req.headers.mapValues { [$0] }
+        if headers.keys.first(where: { $0.caseInsensitiveCompare("Accept") == .orderedSame }) == nil {
+            headers["Accept"] = ["image/avif,image/webp,image/*,*/*;q=0.8"]
+        }
+        let resp = try await core.host.transport.send(.init(
+            id: id, method: req.method, url: url, headers: headers, body: req.body.map { Data($0.utf8) },
+            useCookies: true, partition: partition))
+        guard (200..<300).contains(resp.status) else { throw CoreError("image HTTP \(resp.status)") }
+        return resp.body
+    }
+
+    /// Whether a body is a web page rather than an image. A mirror that is out
+    /// of quota answers 200 with an error page, and only the source knows
+    /// another mirror.
+    static func looksLikeHTML(_ data: Data) -> Bool {
+        let head = data.prefix(512)
+        let text = String(decoding: head, as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        for prefix in ["<!doctype html", "<html", "<?xml", "<head", "<body"] where text.hasPrefix(prefix) {
+            return true
+        }
+        return false
     }
 
     /// Decodes and downsamples without decoding the full-size bitmap first.

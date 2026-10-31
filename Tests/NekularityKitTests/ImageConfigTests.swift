@@ -1,0 +1,36 @@
+import Foundation
+import Testing
+@testable import NekularityKit
+
+@Suite("Image config callbacks")
+struct ImageConfigTests {
+    @Test func aConfigKeepsItsCallbacks() throws {
+        let json = #"{"url":"https://img.example/1.jpg","method":"get","headers":{"Referer":"https://e/"},"handle":"i7","callbacks":["onResponse","onLoadFailed"]}"#
+        let request = try ImageRequest(json: json, fallbackURL: "https://old/1.jpg")
+        #expect(request.url == "https://img.example/1.jpg")
+        #expect(request.method == "GET")
+        #expect(request.headers["Referer"] == "https://e/")
+        #expect(request.handle == "i7")
+        #expect(request.has("onResponse"))
+        #expect(request.has("onLoadFailed"))
+        #expect(!request.has("modifyImage"))
+    }
+
+    @Test func aPlainConfigHasNoHandle() throws {
+        let json = #"{"url":"https://thumb.example/1.jpg"}"#
+        let request = try ImageRequest(json: json, fallbackURL: "https://old/1.jpg")
+        #expect(request.url == "https://thumb.example/1.jpg")
+        #expect(request.handle.isEmpty)
+        #expect(request.callbacks.isEmpty)
+        #expect(!request.has("onResponse"))
+    }
+
+    @Test func anErrorPageIsNotAnImage() {
+        #expect(ImageLoader.looksLikeHTML(Data("<!DOCTYPE html><html></html>".utf8)))
+        #expect(ImageLoader.looksLikeHTML(Data("\n  <html><body>404</body></html>".utf8)))
+        #expect(!ImageLoader.looksLikeHTML(Data([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10])))
+        // An empty body is a failed load, not an error page: the caller must
+        // not spend a mirror hop on it unless the source asked for one.
+        #expect(!ImageLoader.looksLikeHTML(Data()))
+    }
+}
