@@ -16,7 +16,7 @@ For people and AI assistants working on the code. Read before changing it.
 ## Repository conventions
 
 - The root holds only files that tools or conventions require there.
-- Every `.md` exists in Chinese (`X.md`) and English (`X.en.md`), linked to each other at the top. Change both together. `scripts/check-docs.sh` checks the pairs and the root.
+- Every `.md` exists in Chinese (`X.md`) and English (`X.en.md`), linked to each other at the top. Change both together, with `scripts/update-pair.py`: it finds every anchor in both files before writing, so one side cannot be left behind. `scripts/check-docs.sh` checks the pairs, the root, and that both sides have the same number of table rows and headings.
 - `Vendor/` holds the built Core and is not committed.
 - **Do not mix gomobile's two import shapes.** A method returning `NSString*` keeps its
   `NSError**` parameter (`magpie.call(export, argJSON:, error: $0)`); one returning `BOOL`

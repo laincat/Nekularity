@@ -16,7 +16,7 @@
 ## 仓库约定
 
 - 根目录只放工具链或惯例要求必须在根目录的文件。
-- 所有 `.md` 都提供中英双语:`X.md` 为中文,`X.en.md` 为英文,顶部互相链接。修改其中一份时同步修改另一份。`scripts/check-docs.sh` 会检查配对和根目录。
+- 所有 `.md` 都提供中英双语:`X.md` 为中文,`X.en.md` 为英文,顶部互相链接。修改其中一份时同步修改另一份,用 `scripts/update-pair.py` —— 它先在两边都找到锚点才写,避免只改了一边。`scripts/check-docs.sh` 会检查配对、根目录以及两边的表格行数与标题数。
 - `Vendor/` 存放编译出的 Core,不提交。
 - **gomobile 的两种导入形状不要混**:返回 `NSString*` 的方法保留 `NSError**` 形参
   (`magpie.call(export, argJSON:, error: $0)`);返回 `BOOL` 的方法导成
