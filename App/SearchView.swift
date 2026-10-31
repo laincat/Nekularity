@@ -77,7 +77,7 @@ struct SearchView: View {
                                     // that did nothing.
                                     if model.searched { start() }
                                 } label: {
-                                    Text(model.choice(at: index) == value
+                                    Text(model.isSelected(value, group: index)
                                          ? "✓ " + groupLabel(group, slot)
                                          : groupLabel(group, slot))
                                 }
@@ -264,7 +264,7 @@ final class SearchModel {
         guard let list = try? await core.searchOptions(key: key) else { return }
         guard optionSource == key else { return } // the user moved on meanwhile
         groups = list
-        choices = list.map(\.defaultKey)
+        choices = list.map(\.defaultSearchValue)
     }
 
     /// The chosen value of one group, or "" when it has none.
@@ -277,32 +277,45 @@ final class SearchModel {
         guard groups.indices.contains(index) else { return "" }
         let group = groups[index]
         let value = choice(at: index)
+        if group.isMultiSelect {
+            let selected = SearchOptionGroup.decodeSelections(value)
+            return selected.isEmpty ? "未选择" : "已选 \(selected.count) 项"
+        }
         if let slot = group.values.firstIndex(of: value) { return groupLabel(group, slot) }
         return value.isEmpty ? "默认" : value
     }
 
+    func isSelected(_ value: String, group index: Int) -> Bool {
+        guard groups.indices.contains(index) else { return false }
+        let choice = choice(at: index)
+        return groups[index].isMultiSelect
+            ? SearchOptionGroup.decodeSelections(choice).contains(value)
+            : choice == value
+    }
+
     func choose(_ value: String, group index: Int) {
-        guard choices.indices.contains(index) else { return }
-        choices[index] = value
+        guard choices.indices.contains(index), groups.indices.contains(index) else { return }
+        if groups[index].isMultiSelect {
+            var selected = SearchOptionGroup.decodeSelections(choices[index])
+            if selected.contains(value) { selected.removeAll { $0 == value } }
+            else { selected.append(value) }
+            choices[index] = SearchOptionGroup.encodeSelections(selected)
+        } else {
+            choices[index] = value
+        }
     }
 
     /// One value per group, in the source's declared order. Falls back to the
     /// defaults for a source whose groups have not been read yet: search.load
     /// indexes into this array, so a short array would crash the source.
     ///
-    /// The result always has one entry per group. A slot the user left empty
-    /// takes the group's own default rather than an empty string: an empty
-    /// option is not a value the source can search with.
+    /// The result has one entry per group. Empty values are preserved because
+    /// a source may explicitly declare an empty option.
     private func optionValues(for key: String, groups list: [SearchOptionGroup]) -> [String] {
         if key == optionSource, choices.count == list.count, !list.isEmpty {
-            return list.indices.map { index in
-                let chosen = choices[index]
-                if !chosen.isEmpty { return chosen }
-                let fallback = list[index].defaultKey
-                return fallback.isEmpty ? chosen : fallback
-            }
+            return choices
         }
-        return list.map(\.defaultKey)
+        return list.map(\.defaultSearchValue)
     }
 
     /// Only one source can be paged; a merged search takes one page each.
@@ -343,7 +356,7 @@ final class SearchModel {
                     group.addTask {
                         let key = key
                         do {
-                            let options = try await core.searchOptions(key: key).map(\.defaultKey)
+                            let options = try await core.searchOptions(key: key).map(\.defaultSearchValue)
                             let result = try await core.search(key: key, keyword: keyword, page: 1, options: options)
                             return (index, result.comics.map { Hit(source: key, comic: $0) }, false)
                         } catch {

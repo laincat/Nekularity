@@ -111,8 +111,28 @@ public struct SearchOptionGroup: Codable, Sendable, Hashable {
     public var labels: [String]
     /// The key search.load expects when the user has not chosen.
     public var `default`: String?
+    /// The source's declared defaults for a multi-select group.
+    public var defaultValues: [String]?
 
+    public var isMultiSelect: Bool { type == "multi-select" }
     public var defaultKey: String { `default` ?? values.first ?? "" }
+
+    /// Multi-select values cross the source API as a JSON array inside one string.
+    public var defaultSearchValue: String {
+        guard isMultiSelect else { return defaultKey }
+        return Self.encodeSelections(defaultValues ?? [])
+    }
+
+    public static func encodeSelections(_ values: [String]) -> String {
+        guard let data = try? JSONEncoder().encode(values),
+              let result = String(data: data, encoding: .utf8) else { return "[]" }
+        return result
+    }
+
+    public static func decodeSelections(_ value: String) -> [String] {
+        guard let data = value.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([String].self, from: data)) ?? []
+    }
 }
 
 /// One entry of a source's settings declaration: what the source wants drawn
