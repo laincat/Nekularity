@@ -39,6 +39,13 @@ struct ReaderView: View {
                 ContentUnavailableView {
                     Label("加载失败", systemImage: "exclamationmark.triangle")
                 } description: { Text(error) } actions: { Button("重试") { Task { await load() } } }
+            } else if images.isEmpty {
+                // A chapter can come back empty without being an error: the source
+                // answered, it just has no pages to show. An empty screen would read
+                // as a broken reader.
+                ContentUnavailableView {
+                    Label("这一话没有可读的页面", systemImage: "photo.on.rectangle.angled")
+                } description: { Text("源没有返回图片,可以换一话或稍后再试。") }
             }
         }
         .background(Color.black.opacity(0.03))
