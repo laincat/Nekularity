@@ -78,6 +78,22 @@ import Testing
         }
     }
 
+    @Test func anExpiredCookieIsNotRestored() {
+        // A dead cookie is not a sign-in. Writing it would make the summary claim
+        // something that no longer works, and leave a row the jar can never send.
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let jars = CookieJars(file: nil, now: { now })
+        let stale = Int64((now.timeIntervalSince1970 - 3600) * 1000)
+        let live = Int64((now.timeIntervalSince1970 + 3600) * 1000)
+        let plan = plan(cookies: [
+            BackupCookie(name: "old", value: "v", domain: "wnacg.com", expires: stale),
+            BackupCookie(name: "new", value: "v", domain: "wnacg.com", expires: live),
+        ], targets: ["copy_manga"])
+
+        #expect(BackupImporter.restoreCookies(plan, jars: jars) == 1)
+        #expect(jars.header(partition: "copy_manga", url: URL(string: "https://wnacg.com/")!) == "new=v")
+    }
+
     @Test func restoringTwiceKeepsOneRow() {
         let jars = CookieJars(file: nil)
         let plan = plan(cookies: [BackupCookie(name: "sid", value: "a", domain: ".wnacg.com")],

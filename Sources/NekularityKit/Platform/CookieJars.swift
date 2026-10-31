@@ -133,7 +133,13 @@ public final class CookieJars: @unchecked Sendable {
             guard Self.isHost(domain) else { continue }
             let path = (c.path?.isEmpty == false) ? (c.path ?? "/") : "/"
             var expiresAt: Date?
-            if let ms = c.expires, ms > 0 { expiresAt = Date(timeIntervalSince1970: TimeInterval(ms) / 1000) }
+            if let ms = c.expires, ms > 0 {
+                let when = Date(timeIntervalSince1970: TimeInterval(ms) / 1000)
+                // Already dead: writing it would store a row the jar can never
+                // send, and the count would claim a sign-in that no longer works.
+                if when <= now() { continue }
+                expiresAt = when
+            }
             let row = Stored(name: name, value: c.value, domain: domain, hostOnly: hostOnly,
                              path: path.hasPrefix("/") ? path : "/" + path,
                              secure: c.secure ?? false, httpOnly: c.httpOnly ?? false, expiresAt: expiresAt)
