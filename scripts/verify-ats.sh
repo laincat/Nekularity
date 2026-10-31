@@ -1,7 +1,11 @@
 #!/bin/sh
 # Proves that the ATS settings reach the built app, or says it cannot.
 #
-#   scripts/verify-ats.sh
+#   scripts/verify-ats.sh [plist]
+#
+# The plist defaults to App/Info.plist. Passing another path is how the reverse
+# case is checked: point it at a copy with the key set to false and the script must
+# fail, without touching the repository's own file.
 #
 # The plist being valid is not the same as Xcode using it: `verify-ios.sh` falls
 # back to type checking when XcodeGen is absent, and then no app bundle is built at
@@ -16,8 +20,9 @@ cd "$root"
 out=build/ats
 mkdir -p "$out"
 
-if [ ! -f App/Info.plist ]; then
-	printf 'verify-ats: App/Info.plist is missing\n' >&2
+plist=${1:-App/Info.plist}
+if [ ! -f "$plist" ]; then
+	printf 'verify-ats: %s is missing\n' "$plist" >&2
 	exit 1
 fi
 
@@ -61,10 +66,11 @@ fi
 
 # What can always be checked, on any machine: the file itself. python3 is used rather
 # than plutil so this half also runs where plutil does not exist.
-python3 - <<'PY'
+ATS_PLIST="$plist" python3 - <<'PY'
 import plistlib, sys
 
-with open("App/Info.plist", "rb") as handle:
+import os
+with open(os.environ["ATS_PLIST"], "rb") as handle:
     data = plistlib.load(handle)
 ats = data.get("NSAppTransportSecurity") or {}
 allows = ats.get("NSAllowsArbitraryLoads")
