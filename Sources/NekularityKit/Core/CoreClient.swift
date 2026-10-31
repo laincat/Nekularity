@@ -181,10 +181,12 @@ public final class CoreClient: @unchecked Sendable {
     /// Builds the plan a restore would write. Every part is selected here:
     /// settings and cookies are deliberately left out, because a backup's
     /// device settings should not overwrite this device's.
-    public func planBackup(path: String, tempDir: String, knownKeys: [String]) async throws -> BackupPlan {
+    public func planBackup(path: String, tempDir: String, knownKeys: [String],
+                           includeCookies: Bool = false) async throws -> BackupPlan {
         let keys = try Self.encodeKnownKeys(knownKeys)
+        let cookies = includeCookies ? "true" : "false"
         let selection = """
-        {"history":true,"favorites":true,"imageFavorites":true,"settings":false,        "searchHistory":true,"sources":true,"sourceData":true,"cookies":false}
+        {"history":true,"favorites":true,"imageFavorites":true,"settings":false,        "searchHistory":true,"sources":true,"sourceData":true,"cookies":\(cookies)}
         """
         let out = try await run(cancellable: false) { core, _ in
             try Self.call { core.planBackup(path, tempDir: tempDir, knownKeysJSON: keys, selectionJSON: selection, error: $0) }

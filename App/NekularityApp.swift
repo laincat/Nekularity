@@ -84,7 +84,7 @@ final class AppModel {
             let core = try await Task.detached { try CoreClient(config: config, host: host) }.value
             let prompts = PromptCenter(cookies: cookies, userAgent: ua)
             host.ui = prompts
-            let library = SourceLibrary(core: core)
+            let library = SourceLibrary(core: core, cookieJars: cookies)
             await library.restore()
             let keychain = KeychainMagpieAuthStore()
             let magpieDir = support.appending(path: "Magpie", directoryHint: .isDirectory)

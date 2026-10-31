@@ -16,9 +16,16 @@ public final class SourceLibrary {
 
     /// `fetch` downloads index and script files. It is separate from the
     /// source transport: these requests carry no source cookies.
-    public init(core: CoreClient, fetch: @escaping @Sendable (URL) async throws -> Data = SourceLibrary.plainFetch) {
+    /// The jars sources' cookies live in. Optional so a test can build a library
+    /// without storage; a backup restore is the only thing that writes to them
+    /// from here, and it does nothing when they are absent.
+    public let cookieJars: CookieJars?
+
+    public init(core: CoreClient, fetch: @escaping @Sendable (URL) async throws -> Data = SourceLibrary.plainFetch,
+                cookieJars: CookieJars? = nil) {
         self.core = core
         self.fetch = fetch
+        self.cookieJars = cookieJars
     }
 
     public var comicSources: [PluginRecord] { sources.filter(\.isComic) }

@@ -112,6 +112,46 @@ public final class CookieJars: @unchecked Sendable {
         save(partition: partition, url: url, cookies: parsed)
     }
 
+    /// Writes cookies that came from a backup into one partition.
+    ///
+    /// These are not page-set, so the domain is taken as given rather than
+    /// checked against a request host: the backup is a local file the user chose
+    /// to restore. Entries whose domain is not a host are skipped, and the count
+    /// returned is what was actually stored. Restoring never falls back to a
+    /// shared jar — the caller names one partition at a time.
+    @discardableResult
+    public func restore(partition: String, cookies: [WireCookie]) -> Int {
+        var stored = 0
+        lock.lock(); defer { lock.unlock() }
+        var jar = jars[partition] ?? []
+        for c in cookies {
+            let name = c.name.trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty, !c.value.isEmpty else { continue }
+            let raw = (c.domain ?? "").trimmingCharacters(in: .whitespaces).lowercased()
+            let hostOnly = !raw.hasPrefix(".")
+            let domain = raw.hasPrefix(".") ? String(raw.dropFirst()) : raw
+            guard Self.isHost(domain) else { continue }
+            let path = (c.path?.isEmpty == false) ? (c.path ?? "/") : "/"
+            var expiresAt: Date?
+            if let ms = c.expires, ms > 0 { expiresAt = Date(timeIntervalSince1970: TimeInterval(ms) / 1000) }
+            let row = Stored(name: name, value: c.value, domain: domain, hostOnly: hostOnly,
+                             path: path.hasPrefix("/") ? path : "/" + path,
+                             secure: c.secure ?? false, httpOnly: c.httpOnly ?? false, expiresAt: expiresAt)
+            jar.removeAll { $0.name == row.name && $0.domain == row.domain && $0.path == row.path }
+            jar.append(row)
+            stored += 1
+        }
+        jars[partition] = jar
+        persist()
+        return stored
+    }
+
+    /// A domain a cookie could belong to, as opposed to junk such as `https://x`.
+    static func isHost(_ domain: String) -> Bool {
+        !domain.isEmpty && domain.contains(".") && !domain.contains("/")
+            && !domain.contains(":") && !domain.contains(" ")
+    }
+
     /// Copies cookies from a WebView after a challenge (cf_clearance).
     public func importCookies(partition: String, _ cookies: [HTTPCookie]) {
         lock.lock(); defer { lock.unlock() }

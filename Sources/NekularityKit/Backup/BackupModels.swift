@@ -13,6 +13,10 @@ public struct BackupPlan: Decodable, Sendable {
     /// Rows Core could not attribute to a source the client knows. They are
     /// not lost: install the matching source and import again.
     public var pending: BackupPending?
+    /// The old app's single-jar cookies, present only when the import asked for
+    /// them. `cookieTargets` says which partitions they belong in.
+    public var cookies: [BackupCookie]?
+    public var cookieTargets: [String]?
 
     public init() {}
 }
@@ -84,4 +88,25 @@ public struct BackupSource: Decodable, Sendable {
     public var script: String?
     /// The source's own data, kept as JSON so numbers and key order survive.
     public var data: JSONValue?
+}
+
+/// One cookie from the official app's global jar.
+///
+/// `domain` is a host, not a URL: rows carrying `https://` are junk and Core
+/// drops them before the plan is returned.
+public struct BackupCookie: Decodable, Sendable, Hashable {
+    public var name: String
+    public var value: String
+    public var domain: String
+    public var path: String?
+    /// Unix milliseconds, absent when the cookie had no expiry.
+    public var expires: Int64?
+    public var secure: Bool
+    public var httpOnly: Bool
+
+    public init(name: String, value: String, domain: String, path: String? = nil,
+                expires: Int64? = nil, secure: Bool = false, httpOnly: Bool = false) {
+        self.name = name; self.value = value; self.domain = domain; self.path = path
+        self.expires = expires; self.secure = secure; self.httpOnly = httpOnly
+    }
 }

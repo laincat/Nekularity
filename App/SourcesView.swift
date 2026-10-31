@@ -9,6 +9,9 @@ struct SourcesView: View {
     @Environment(SearchHistoryStore.self) private var searches
     @State private var showAdd = false
     @State private var pickingBackup = false
+    /// Restoring the old single jar's cookies is off unless asked for: they are
+    /// credentials, and the default import has always left them out.
+    @State private var restoreCookies = false
     /// One notice at a time: a view shows one alert, so failures and the
     /// import summary share it.
     @State private var notice: Notice?
@@ -53,7 +56,16 @@ struct SourcesView: View {
                     Button { showAdd = true } label: { Label("添加", systemImage: "plus") }
                 }
                 ToolbarItem(placement: .secondaryAction) {
-                    Button { pickingBackup = true } label: { Label("导入备份", systemImage: "square.and.arrow.down") }
+                    Menu {
+                        Button { restoreCookies = false; pickingBackup = true } label: {
+                            Label("导入备份", systemImage: "square.and.arrow.down")
+                        }
+                        Button { restoreCookies = true; pickingBackup = true } label: {
+                            Label("导入备份并恢复登录状态", systemImage: "key")
+                        }
+                    } label: {
+                        Label("导入备份", systemImage: "square.and.arrow.down")
+                    }
                 }
             }
             .sheet(isPresented: $showAdd) { AddSourceView() }
@@ -90,8 +102,13 @@ struct SourcesView: View {
             let plan = try await library.core.planBackup(
                 path: tmp.path,
                 tempDir: tmp.deletingLastPathComponent().path,
-                knownKeys: library.sources.map(\.key))
-            let result = await BackupImporter().apply(plan, library: library, shelf: shelf, searches: searches)
+                knownKeys: library.sources.map(\.key),
+                includeCookies: restoreCookies)
+            // Only hand the jars over when the user chose cookies: an import that
+            // silently wrote credentials would be worse than one that skipped them.
+            let result = await BackupImporter().apply(
+                plan, library: library, shelf: shelf, searches: searches,
+                jars: restoreCookies ? library.cookieJars : nil)
             var parts = [
                 "源 \(result.sourcesInstalled) 个",
                 "历史 \(result.historyAdded) 条",
@@ -110,6 +127,9 @@ struct SourcesView: View {
                     line += "、\(result.pagesSkipped) 页"
                 }
                 parts.append(line)
+            }
+            if result.cookiesAdded > 0 {
+                parts.append("登录状态 \(result.cookiesAdded) 条")
             }
             if result.pendingRows > 0 {
                 parts.append("\(result.pendingRows) 条待装源后再导")

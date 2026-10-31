@@ -27,6 +27,9 @@ public struct BackupImporter {
         public var pagesSkipped = 0
         /// Rows that need a source the backup did not carry a script for.
         public var pendingRows = 0
+        /// Cookie rows written into source partitions. Zero unless the import
+        /// asked for cookies; the old app had one jar and this client has none.
+        public var cookiesAdded = 0
     }
 
     public init() {}
@@ -35,7 +38,8 @@ public struct BackupImporter {
         _ plan: BackupPlan,
         library: SourceLibrary,
         shelf: ShelfStore,
-        searches: SearchHistoryStore
+        searches: SearchHistoryStore,
+        jars: CookieJars? = nil
     ) async -> Result {
         var out = Result()
 
@@ -91,8 +95,32 @@ public struct BackupImporter {
                 out.pagesAlreadyKept += 1
             }
         }
+        // Cookies go last: their partitions are the sources this plan installs,
+        // so the names are only meaningful once the sources are in place.
+        if let jars {
+            out.cookiesAdded = BackupImporter.restoreCookies(plan, jars: jars)
+        }
         out.pendingRows = plan.pending?.rowCount ?? 0
         return out
+    }
+
+    /// Writes the plan's cookies into the partitions Core named.
+    ///
+    /// Every cookie goes to every target; a jar only sends one to a matching
+    /// domain, so a copy in a partition that never visits the host does nothing.
+    /// Without targets nothing is written: a restore must not invent a shared jar.
+    public nonisolated static func restoreCookies(_ plan: BackupPlan, jars: CookieJars) -> Int {
+        guard let cookies = plan.cookies, !cookies.isEmpty else { return 0 }
+        guard let targets = plan.cookieTargets, !targets.isEmpty else { return 0 }
+        let wire = cookies.map {
+            WireCookie(name: $0.name, value: $0.value, domain: $0.domain, path: $0.path,
+                       expires: $0.expires, secure: $0.secure, httpOnly: $0.httpOnly)
+        }
+        var written = 0
+        for partition in targets {
+            written += jars.restore(partition: partition, cookies: wire)
+        }
+        return written
     }
 
     /// The kept pages a backup carries, in the official shape:
