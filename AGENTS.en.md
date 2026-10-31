@@ -92,6 +92,24 @@ The pin lives in four places and the other machine checks hashes. Typing those h
 
 A transfer package often carries only code and tests, so `docs/` on that machine lags behind the repository. Its `check-docs.sh` still runs — it compares pairs and structure — but **its passing is not evidence that the repository's docs are current**; that is settled by the run before pushing.
 
+## A whole-tree run has to build the app
+
+Without XcodeGen, `verify-ios.sh` falls back to building the Kit with SwiftPM and **never builds the app
+bundle** — so `Info.plist`, `excludes` and ATS, which only take effect in the resource phase, are all
+unverified while the output still says `EXIT=0`.
+
+When that step matters, take the binary from the release page rather than installing Homebrew:
+
+```sh
+mkdir -p /tmp/xcg && cd /tmp/xcg
+curl -fsSL -o xcodegen.zip https://github.com/yonaskolb/XcodeGen/releases/latest/download/xcodegen.zip
+unzip -o -q xcodegen.zip
+PATH="$(dirname $(find /tmp/xcg -name xcodegen -type f | head -1)):$PATH" sh scripts/verify-ats.sh
+```
+
+`/tmp/xcg` is a temporary directory: delete it to revert. That is easier to undo than `brew install` and
+leaves the system alone.
+
 ## Getting the code to a verification machine
 
 That machine may be a Mac that **has no credentials for this repository**. In order:

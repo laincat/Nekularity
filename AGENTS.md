@@ -78,6 +78,21 @@ pin 出现在四个地方,而对方要拿 md5 对账。手写这两个哈希已�
 
 补丁包常常只带代码与测试,于是验证机上的 `docs/` 会落后于仓库。那边的 `check-docs.sh` 仍可跑(它只检查文件之间的配对与结构),但**不要把它的通过当成「仓库文档已同步」的证据**;文档的正确性由推送前在本机跑的那一次负责。
 
+## 整树验证要能真构建 App
+
+`verify-ios.sh` 在没有 XcodeGen 时会退化成 SwiftPM 编 Kit——**App bundle 从不构建**,于是 `Info.plist`、`excludes`、ATS 这类只在资源阶段生效的配置全都验不到,而输出仍是 `EXIT=0`。
+
+需要那一步时,取官方发布页的二进制包,不要装 Homebrew:
+
+```sh
+mkdir -p /tmp/xcg && cd /tmp/xcg
+curl -fsSL -o xcodegen.zip https://github.com/yonaskolb/XcodeGen/releases/latest/download/xcodegen.zip
+unzip -o -q xcodegen.zip
+PATH="$(dirname $(find /tmp/xcg -name xcodegen -type f | head -1)):$PATH" sh scripts/verify-ats.sh
+```
+
+`/tmp/xcg` 是临时目录,删掉即还原;这比 `brew install` 更容易回退,也不改系统。
+
 ## 把代码送到验证机
 
 验证机可能是另一台 Mac,而且**拿不到本仓库的凭据**。顺序是:
