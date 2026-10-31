@@ -6,7 +6,7 @@ iOS/iPadOS 漫画客户端(视频为后续阶段),界面使用 SwiftUI,许可证
 
 ## 状态
 
-主线是:**添加漫画源 → 搜索 / 浏览 → 查看详情 → 阅读 → 记进书架**。另有一个独立的「AI 供应商」页,运行 Magpie 供应商插件包:装包(文件夹或 `.zip`/`.tar.gz`)、登录、用量、模型列表、对话、打卡、插件自己的开关。两者互不相干 —— 不同的包、不同的账号、不同的 Cookie,AI 凭据只进 Keychain。
+主线是:**添加漫画源 → 搜索 / 浏览 → 查看详情 → 阅读 → 记进书架**。另有一个独立的「AI 供应商」页,运行 Magpie 供应商插件包:装包(文件夹或 `.zip`/`.tar.gz`)、登录、用量、模型列表、对话、打卡、插件自己的开关。两者互不相干 —— 不同的包、不同的账号、不同的 Cookie,AI 凭据只进 Keychain。装包被拒时会说明原因:TypeScript 源码、需要 Node 内置模块这两类会给出「该怎么办」,并附上 Core 的原文;认不出的拒绝就原样显示 Core 的话,不编造理由。
 
 在 macOS 27 / Xcode 27 / Swift 6.4 上的一次真实验证:`swift build`、`swift test`(**119 tests / 27 suites**)、Kit 与 App 的 Swift 6 类型检查、iOS 模块产出全过,0 error 0 warning;Core 接口检查 18/18;`swift test --filter Magpie` 61 tests。**没有**跑过 `xcodebuild` 归档与签名,也没有 iOS 模拟器运行时。详见 [docs/STATUS.md](docs/STATUS.md),那里也写明了这次验证覆盖不到的部分。每次改动仍先过 `scripts/check-swift.sh`(解析全部 Swift 文件,抓语法错误)。
 

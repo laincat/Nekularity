@@ -39,7 +39,7 @@ open Nekularity.xcodeproj
 
 ## Installing a provider package
 
-The app ships no provider package. To try one, make your own: Core's `magpieplugin/testdata/openai-compatible/` and `anthropic-compatible/` are two packages that **run** (fetch only, no Node), and zipping either one is enough to install it from the AI providers screen. The contract and how to check your own are in Core's [docs/PROVIDER-TEMPLATE.en.md](https://github.com/laincat/VeneraCat-Core/blob/main/docs/PROVIDER-TEMPLATE.en.md).
+The app ships no provider package. To try one, make your own: Core's `magpieplugin/testdata/openai-compatible/` and `anthropic-compatible/` are two packages that **run** (fetch only, no Node), and zipping either one is enough to install it from the AI providers screen. The contract and how to check your own are in Core's [docs/PROVIDER-TEMPLATE.en.md](https://github.com/laincat/VeneraCat-Core/blob/main/docs/PROVIDER-TEMPLATE.en.md). A package that is refused says why: TypeScript sources and packages needing Node built-ins get a sentence that tells you what to do, with Core's own text beside it; anything unrecognised is shown exactly as Core wrote it rather than guessed at.
 
 ## The repository
 
