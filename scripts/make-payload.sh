@@ -36,7 +36,17 @@ for f in "$@"; do
 		exit 1
 	fi
 	mkdir -p "$work/files/$(dirname "$f")"
-	cp "$f" "$work/files/$f"
+	# Ship the bytes git stores, not the bytes in the working tree. The
+	# repository says `* text=auto eol=lf`, so on Windows the working tree is
+	# CRLF while the object is LF; copying the working tree would hand the
+	# receiver CRLF files, and `scripts/check-core-surface.sh` would not even
+	# run there (`set: -: invalid option`). A file git does not know about is
+	# taken as it is.
+	if git cat-file -e ":$f" 2>/dev/null; then
+		git cat-file blob ":$f" > "$work/files/$f"
+	else
+		cp "$f" "$work/files/$f"
+	fi
 done
 
 # The archive holds the repository itself, not a "files/" wrapper around it: a

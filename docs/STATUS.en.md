@@ -40,7 +40,7 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 | Backup contract | Running Core's `Plan` over the three real `.venera` files pinned every field: history is `{sourceKey,id,type,title,subtitle,time(ms),ep,page,readEpisode[],maxPage,chapterGroup}`; folders are `{name,order,items[]}` and an item's `time` is a string; a kept picture is `{id,sourceKey,title,author,time,maxPage,episodes[{eid,ep,epName,imageFavorites[{page,imageKey,eid,ep}]}],other}`; a source is `{key,script?,data?}`; `pending` and `settings` also appear. `BackupPicture` now matches that shape (pages nested under `episodes[].imageFavorites[]`), so a restore really writes kept pages |
 | Backup import | goes through Core's `planBackup` (Core unwinds the archive, reads the sqlite tables and resolves type hashes); `BackupImporter` installs the listed sources, merges history and favourite folders, and merges search history. Device settings and cookies are not applied over this device, and kept pages are written to the picture shelf; the result reports new rows, rows already there, and rows skipped. |
 | Patch making | `scripts/make-patch.sh BASE OUT FILE...` diffs the copy the other machine holds against this one, then applies that patch to a scratch copy here and compares md5 per file. Describing "delete these lines, keep one blank line" in prose did not converge twice; a patch proven to reproduce the bytes does not need a third round |
-| Transfer manifest | `scripts/make-payload.sh OUTDIR FILE...` prints the archive size and md5, the md5 of each file after unpacking, and the per-segment md5s — one block to paste. It exists because a message once paired a correct archive md5 with the md5 of an older copy of a file, so the receiver would have rejected good data for the wrong reason |
+| Transfer manifest | `scripts/make-payload.sh OUTDIR FILE...` prints the archive size and md5, the md5 of each file after unpacking, and the per-segment md5s — one block to paste. It exists because a message once paired a correct archive md5 with the md5 of an older copy of a file, so the receiver would have rejected good data for the wrong reason. **One rule added 2026-11-01**: the script now reads the bytes with `git cat-file blob` instead of copying the working tree. On Windows `core.autocrlf=true` makes the working tree CRLF while the object is LF (the repository says `* text=auto eol=lf`), so a plain `cp` sent CRLF to the receiver: the md5 never matched what was computed from the repository, and the CRLF `scripts/check-core-surface.sh` would not even run on the Mac (`set: -: invalid option`). That wasted one transfer round, so the fix lives in the script rather than in someone's memory |
 | Surface without a Mac | `scripts/check-surface-offline.sh` generates the ObjC header with gobind on Windows and runs the same selector list the Mac check uses: 9.7 seconds, 18/18. That check used to be possible only after an xcframework existed, by which point a mismatch had already cost a transfer. It also settled the list itself: a no-argument method generates `auth:`, `models:` and `savedAuth:`, not `…WithError:` |
 | Static check (test doubles) | `check-swift.py` checks that `Tests/` doubles conforming to `MagpieRunner.Core` have every method. When the protocol gains one, the gap is silent on Windows and a `swift test` compile error on the Mac — a whole validation round. Verified against a copy with the stub removed: it reports `RefusingCore lacks readPackageArchive` |
 | Browsing | `CoreClient.explorePages` and `explore` cover the four browse kinds (single page with parts, multi-page list, mixed, multi-part page); `BrowseView` switches between browses with chips, pins section headers, pages, and refreshes by pulling |
@@ -48,7 +48,7 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 ## Not verified
 
 **This change has been through a real Xcode build** (2026-10-31, the same Mac): XcodeGen came from the release page binary (2.46.0, in `/tmp/xcg`, **no Homebrew and not on the system PATH**), `xcodegen generate` → `xcodebuild -scheme Nekularity build` reported `BUILD SUCCEEDED`, and the built `Nekularity.app/Info.plist` carries `NSAllowsArbitraryLoads = true`; `-showBuildSettings` echoes `INFOPLIST_FILE = App/Info.plist` and `GENERATE_INFOPLIST_FILE = NO`, with zero `Copy Bundle Resources` complaints, so `excludes: [Info.plist]` works. `scripts/verify-ats.sh` runs this chain and is part of `verify-ios.sh`, so every whole-tree run now really builds the app instead of falling back to type checking.
-- **Running on a device or simulator**: there is no iOS Simulator runtime on the verification machine (installing one needs approval) and nothing has run on a real iPhone. The current evidence of "it works" is 192 tests (run on the Mac on 2026-11-01) and a real iOS build of the App, not the screens behaving on a device.
+- **A real iPhone**: nothing has run on one. **The simulator does run** (2026-11-01, first time): it installs, launches, draws its interface, does not crash, reports zero Core framework load failures, and reaches the interface in about 0.7 s — see "Running on a simulator for the first time" above. That was an empty container, though, so the main path (install a source, search, details, read, shelf) has not been walked on a device yet.
 - **Signing and archiving**: `xcodebuild -scheme Nekularity` uses generic/platform=iOS and does not sign; `** BUILD SUCCEEDED **` proves it compiles, not that it installs. XcodeGen is absent, so there is no `.xcodeproj` and no app bundle either.
 - **A real vendor account**: Magpie's sign-in, model list, usage, streaming and cancellation have only been exercised against local fake services and canned answers; no real vendor account has completed authorization on a device.
 - **Real comic sources**: the desktop's `TestLiveSource` covers these outside the repository (see Nekophage); the iOS side has no equivalent.
@@ -56,10 +56,10 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 ## Next
 
 1. The compile and test stage is settled: on macOS, in Swift 6 mode, the tree passes all five checks — `swift build`, `swift test` (49), `-typecheck`, the iOS `-emit-module`, and the App `-typecheck` in two consecutive rounds, including the multi-source search and kept-page chapter jump. Later changes keep going through the same loop, so no package piles up unseen by a compiler.
-2. Launch the app once a simulator runtime is available, and run the main path with a real source (install, search, details, read, shelf).
+2. Run the main path with a real source on the simulator that is now available (install, search, details, read, shelf). Launching is already proven; this step is about actually using it.
 3. Backup import is wired and was checked against the real `.venera` field shapes; the next step is running it once on a simulator and checking the counts.
 4. Video sources and playback still wait on a product decision; the old global cookie jar is now restored into per-source partitions (see the cookie section on this page).
-5. One item still needs system-level approval: installing an iOS simulator runtime. XcodeGen now comes from the release binary on the Mac (not on the system PATH), so `verify-ios.sh` builds the app for real.
+5. ~~Installing an iOS simulator runtime~~ **done** (2026-11-01): two iOS 27.2 runtimes, 12 devices available, and the App installed and launched on an iPhone 18 Pro simulator.
 6. AI comes after the reading path: on iOS the plan is the **Magpie plugin system** — running
    Magpie's original provider packages, with accounts and runtime separate from comic sources.
    Desktop does no AI work.
@@ -109,6 +109,26 @@ Simulator runtime (absent on that machine), a real device and a real vendor acco
 **Latest whole-tree run (2026-11-01, same Mac mini, including the search generations and the pin move)**: 70 Swift files, **196 tests in 35 suites**, `shape=e18d20cb0465bbbaa651d9634b1d0a8a31dde9db`. `sh scripts/fetch-core.sh` built Core `6e07429` from GitHub (`gofmt` / `go vet` / `go test` all pass, 22 packages), then bound the framework and checked every file's SHA256 (23 files, 0 mismatches); `check-core-surface.sh` reports **19 Magpie methods + 3 standard AI methods**, and the new framework shows `streamOpen:` / `streamNext:` / `streamClose:` and `MobileNewMagpieWithStream`; `check-core-pin` **ok (6e0742996007)**; `PATH=/tmp/xcg/xcodegen/bin:$PATH sh scripts/verify-ios.sh` **EXIT=0**; `swift test` **196 tests / 35 suites, 0 warnings**; `xcodebuild generic/platform=iOS` **BUILD SUCCEEDED, 0 errors** (one pre-existing AppIntents notice; the product is newer than the framework, so it used the new one); `check-partitions` / `check-docs` / `verify-ats` all pass. **Negative check**: putting `469edfcb48ec…` back into `scripts/core-version` makes `check-core-pin.sh` exit 1 and name the mismatch; putting it back to `6e07429` makes it exit 0.
 
 This run also produced the **first evidence of a simulator runtime**: two iOS 27.2 runtimes, 12 devices available (including a booted `iPhone 18 Pro`), and `xcodebuild -showsdks` listing iOS SDK 27.2.
+
+### Running on a simulator for the first time (2026-11-01)
+
+This is the first evidence that the App installs, launches and shows an interface on a device — not that it compiles:
+
+```text
+iPhone 18 Pro (1E57B720-…) already booted; bootstatus -b → rc=0
+simulator build rebuilt → BUILD SUCCEEDED (build/verify only had Debug-iphoneos, which cannot be installed on a simulator)
+simctl install → rc=0, 1s
+simctl launch  → rc=0, PID 78149, 165 ms round trip
+screenshot → /tmp/nk/logs/audit-docs/app.png
+process alive → UIKitApplication:com.laincat.nekularity
+crash check → 272 log lines with no crash/fatal/signal/exception/abort; no Nekularity .ips in DiagnosticReports
+Core framework load failures → 0 (grep for VeneraCatCore|dyld|Library not loaded|image not found|Go runtime|MobileNew found nothing)
+startup → first line 19:13:52.835 → interface ready 19:13:53.538, about 0.7 s
+```
+
+**What the screenshot shows**: the title "搜索", a search field with the placeholder "关键词", an empty-state illustration with "没有可用的漫画源" and "先在“漫画源”里添加并启用一个源。", and five tabs (搜索 / 浏览 / 书架 / 漫画源 / AI 供应商) with 搜索 selected. This is a **fresh container** after the pin change, so an empty source list is expected rather than a load failure — the same log reports zero Core framework load failures.
+
+**The boundary of this evidence**: it shows the App installs, launches, draws its interface, does not crash, and loads the Core framework. Real provider sign-in (Magpie / OpenAI / Anthropic) still has no credentials, live streaming is still not connected, and nothing has run on a real device.
 
 **Measured evidence for the Core deadlock fix**: `go test -race -run 'Reply|Chat' ./magpieplugin/` inside `build/core` passes the six buffer tests and the three chat tests — `TestReplyBufferWriteDoesNotWaitForAReader` is exactly the fixed behaviour: the writer does not wait for the reader.
 

@@ -40,7 +40,7 @@
 | 图片收藏 | `ShelfStore.pictures`:阅读器「收藏本页」按当前页记下源、漫画、章节、页码与图片地址,同一地址只存一份、最新在前;有缩略图、点击进漫画详情、滑除;键名与桌面端 `shelf.json` 一致(`comicId`/`chapterId`),空表不写 `pictures`;备份导入会把官方 `episodes[].imageFavorites[]` 落成收藏页 |
 | 备份导入 | 走 Core 的 `planBackup`(它自己解压、读 sqlite、认 type hash),客户端只负责落库:`BackupImporter` 按计划装源、合并历史与收藏夹、合并搜索历史;设备类设置与 cookies 不覆盖本机;图片收藏按官方 `episodes[].imageFavorites[]` 落成收藏页,结果里分开报「新写入 / 已在书架 / 跳过」 |
 | 补丁生成 | `scripts/make-patch.sh BASE OUT FILE...`:以对方手里的旧副本为基准生成 `fix.patch`,并**先在本机把它应用到一份草稿副本上**,逐文件比对 md5。以前是“用文字描述改哪几行”,对方照做后 md5 仍不同,只能再来一轮;现在发出去的补丁已经证明能落到目标字节 |
-| 传输清单 | `scripts/make-payload.sh OUTDIR FILE...` 一次输出归档大小与 md5、解包后逐文件 md5、逐段 md5 与段数 —— 一整块可原样粘贴。之所以要一个脚本:我曾在同一条消息里给出「归档 md5」和一个**旧版本**文件的 md5,收方校到一半就会判定数据错,而实际错的是说明文字 |
+| 传输清单 | `scripts/make-payload.sh OUTDIR FILE...` 一次输出归档大小与 md5、解包后逐文件 md5、逐段 md5 与段数 —— 一整块可原样粘贴。之所以要一个脚本:我曾在同一条消息里给出「归档 md5」和一个**旧版本**文件的 md5,收方校到一半就会判定数据错,而实际错的是说明文字。**2026-11-01 补了一条**:脚本现在用 `git cat-file blob` 取**仓库里的字节**而不是工作树里的。Windows 上 `core.autocrlf=true` 让工作树是 CRLF、对象是 LF(仓库 `.gitattributes` 是 `* text=auto eol=lf`),直接 `cp` 会把 CRLF 发给对方:md5 与我按仓库算的永远对不上,而且 CRLF 的 `scripts/check-core-surface.sh` 在 Mac 上根本跑不起来(`set: -: invalid option`)。这已经让一轮传输白跑过,所以修在脚本里而不是靠人记得 |
 | 接口面(免 Mac) | `scripts/check-surface-offline.sh` 用 gobind 在 Windows 上生成 ObjC 头,再跑与 Mac 同一个选择器清单:9.7 秒、18/18。以前这件事只能在拿到 xcframework 之后做,那时一个方法不匹配已经花掉一趟传输。顺带确认清单本身是对的 —— 无参方法生成的是 `auth:`/`models:`/`savedAuth:`,不是 `…WithError:` |
 | 静态检查(测试替身) | `check-swift.py` 会核对 `Tests/` 里 conform `MagpieRunner.Core` 的替身是否缺方法。协议新增方法时,这类缺失在 Windows 上是静默的、在 Mac 上是 `swift test` 编译错误 —— 代价是一整轮验证。用删掉 stub 的副本反向验证过,它会准确报出 `RefusingCore lacks readPackageArchive` |
 | 分类浏览 | `CoreClient.explorePages` 与 `explore` 支持四种 browse 类型(单页多分区、多页列表、混合、多分区页);`BrowseView` 用标签切换分类、分区标题吸顶、分页、下拉刷新 |
@@ -48,7 +48,7 @@
 ## 未验证
 
 - **ATS 策略已定**:`App/Info.plist` 里 `NSAllowsArbitraryLoads = true`。漫画源由用户自行安装,主机无法预知,逐主机例外做不到;上架理由写在该文件与 README 里。已在读到的四个真实源上确认它们全走 https(0 处 http),放行只是不挡未来的 http 源。这个改动**已经过真正的 Xcode 构建验证**(2026-10-31,同一台 Mac):XcodeGen 从官方发布页的二进制包取用(2.46.0,放在 `/tmp/xcg`,**没有装 Homebrew、没有进系统 PATH**),`xcodegen generate` → `xcodebuild -scheme Nekularity build` 得到 `BUILD SUCCEEDED`;产物 `Nekularity.app/Info.plist` 里读出 `NSAllowsArbitraryLoads = true`,`-showBuildSettings` 回显 `INFOPLIST_FILE = App/Info.plist` 与 `GENERATE_INFOPLIST_FILE = NO`,`Copy Bundle Resources` 相关报错 0 次(即 `excludes: [Info.plist]` 生效)。`scripts/verify-ats.sh` 把这条链路写成脚本并接进 `verify-ios.sh`,现在每次整树验证都会跑真实 App 构建而不是退化成类型检查。
-- **真机与模拟器运行**:没有 iOS 模拟器运行时(机器上没有,安装需要批准),也没有在 iPhone 真机上跑过。当前的「跑起来」证据是 `swift test` 192 条用例(2026-11-01 在 Mac 上跑过)与 App 的真实 iOS 构建,不是界面在设备上的实际行为。
+- **真机**:没有在 iPhone 真机上跑过。**模拟器已经跑起来了**(2026-11-01,首次):装、启动、界面出来、无崩溃、Core 框架加载失败 0,约 0.7 秒到界面 —— 详见上面「模拟器上第一次真的跑起来」那段。但那是空容器,主线(装源→搜索→详情→阅读→书架)还没在设备上走过。
 - **签名与归档**:`xcodebuild -scheme Nekularity` 用的是 generic/platform=iOS 且不签名,`** BUILD SUCCEEDED **` 只证明能编译,不证明能装到设备上。没有 XcodeGen,所以也没有 `.xcodeproj` 与 App bundle。
 - **真实供应商账号**:Magpie 的登录、模型列表、用量、流式与取消都只在自己的假服务与固定回答上验过;没有任何一个真实厂商账号在设备上走完授权。
 - **真实漫画源**:由桌面端的 `TestLiveSource` 在仓库外验证(见 Nekophage),iOS 端没有同等的真源用例。
@@ -56,10 +56,10 @@
 ## 下一步
 
 1. 编译与测试阶段已收尾:Kit 与 App 在 macOS 上按 Swift 6 模式通过 `swift build`、`swift test`(58 个)、`-typecheck`、iOS `-emit-module`、App `-typecheck` 五项(含多源搜索与收藏页跳章那一版);此后每一批改动仍按同一流程复验,编译器没看过的新包不会累积。
-2. 有模拟器运行时后真正启动一次 App,用真实源跑通主线(装源→搜索→详情→阅读→书架)。
+2. 在已就绪的模拟器上用真实源跑通主线(装源→搜索→详情→阅读→书架) —— App 能启动这一步已完成,这一步是让它真的用起来。
 3. 备份导入已接上,并用真实 `.venera` 的字段形状核过;下一步是在模拟器里跑一遍并核对条数。
 4. 视频源与播放仍需产品决策;旧版全局 Cookie 已按源分区迁移完成(见本页「Cookie 迁移」一节)。
-5. 仍需系统级授权的一项:安装 iOS 模拟器运行时。XcodeGen 已用发布页二进制在 Mac 上取用(不进系统 PATH),`verify-ios.sh` 现在会真实构建 App。
+5. ~~安装 iOS 模拟器运行时~~ **已完成**(2026-11-01):两个 iOS 27.2 runtime、12 台可用设备,App 已在 iPhone 18 Pro 模拟器上装起来并启动。
 6. AI 能力排在主线之后:iOS 端要做的是 **Magpie 插件系统**——直接运行 Magpie 的供应商原包,账号与运行环境独立于漫画源。桌面端不做 AI 接入。
 
 ## Magpie 供应商插件(Nekularity 侧)
@@ -89,6 +89,26 @@ Core 侧已跑通:包快照与模块定位、`fetch`/`Headers`/`URL`/`ReadableSt
 **最新一轮整树验证(2026-11-01,同一台 Mac mini,含搜索代次号与换 pin)**:70 个 Swift 文件、**196 条用例 / 35 个 suite**、`shape=e18d20cb0465bbbaa651d9634b1d0a8a31dde9db`。`sh scripts/fetch-core.sh` 从 GitHub 现编 Core 到 `6e07429`(`gofmt`/`go vet`/`go test` 全过,22 个包),随后 bind 出框架并逐文件核对 SHA256(23 个文件,0 mismatch);`check-core-surface.sh` **19 个 Magpie 方法 + 3 个标准 AI 方法**,并在新框架里确认了 `streamOpen:`/`streamNext:`/`streamClose:` 与 `MobileNewMagpieWithStream`;`check-core-pin` **ok (6e0742996007)**;`PATH=/tmp/xcg/xcodegen/bin:$PATH sh scripts/verify-ios.sh` **EXIT=0**;`swift test` **196 tests / 35 suites,0 warning**;`xcodebuild generic/platform=iOS` **BUILD SUCCEEDED,0 error**(1 条既有 AppIntents 提示;产物时间晚于框架,用的是新框架);`check-partitions`/`check-docs`/`verify-ats` 全过。**反向验证**:把 `scripts/core-version` 改回 `469edfcb48ec…`,`check-core-pin.sh` 以 rc=1 并指出两侧不一致,改回后 rc=0。
 
 这一轮还第一次拿到了**模拟器运行时的证据**:runtimes 两个 iOS 27.2,`devices available` 12 台(含已 Booted 的 `iPhone 18 Pro`),`xcodebuild -showsdks` 的 iOS SDK 为 27.2。
+
+### 模拟器上第一次真的跑起来(2026-11-01)
+
+这是本项目第一次拿到「App 在设备上装起来、启动、界面出来」的证据,不是编译通过:
+
+```text
+iPhone 18 Pro (1E57B720-…) 已 Booted；bootstatus -b → rc=0
+模拟器版重建 → BUILD SUCCEEDED（此前 build/verify 里只有 Debug-iphoneos，装不进模拟器）
+simctl install → rc=0，1s
+simctl launch  → rc=0，PID 78149，往返 165ms
+截图 → /tmp/nk/logs/audit-docs/app.png
+进程存活 → UIKitApplication:com.laincat.nekularity
+崩溃检查 → 272 行日志里 crash/fatal/signal/exception/abort 全 0；DiagnosticReports 无任何 .ips
+Core 框架加载失败 → 0（grep VeneraCatCore|dyld|Library not loaded|image not found|Go runtime|MobileNew 全 0）
+启动耗时 → 19:13:52.835 首行 → 19:13:53.538 界面就绪，约 0.7 秒
+```
+
+**截图上是**:标题「搜索」、搜索框占位「关键词」、中央空状态插图 + 「没有可用的漫画源」+「先在“漫画源”里添加并启用一个源。」、底部五个标签(搜索 / 浏览 / 书架 / 漫画源 / AI 供应商)且选中「搜索」。这是换 pin 后重装的**全新容器**,源列表为空是预期,不是加载失败 —— 同一份日志里 Core 框架加载失败为 0。
+
+**这条证据的边界**:只证明「能装、能启动、界面能出来、无崩溃、Core 框架能加载」。真实供应商登录(Magpie / OpenAI / Anthropic)仍无凭据,实时流式仍未接通,真机仍未跑。
 
 **Core 侧死锁修复的实测证据**:在 `build/core` 跑 `go test -race -run 'Reply|Chat' ./magpieplugin/`,`TestReplyBufferWriteDoesNotWaitForAReader` 等 6 条缓冲用例与 3 条聊天用例全部 PASS —— 这正是修复的那个行为:写方不等待读者。
 
