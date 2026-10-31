@@ -96,9 +96,13 @@ public struct BackupImporter {
             }
         }
         // Cookies go last: their partitions are the sources this plan installs,
-        // so the names are only meaningful once the sources are in place.
+        // so a source whose script failed has no partition to write into — the
+        // cookie would be stored where nothing can ever send it.
         if let jars {
-            out.cookiesAdded = BackupImporter.restoreCookies(plan, jars: jars)
+            let present = Set(library.sources.map(\.key))
+            var scoped = plan
+            scoped.cookieTargets = plan.cookieTargets?.filter { present.contains($0) }
+            out.cookiesAdded = BackupImporter.restoreCookies(scoped, jars: jars)
         }
         out.pendingRows = plan.pending?.rowCount ?? 0
         return out
