@@ -82,6 +82,13 @@ else
 	fail "sh scripts/verify-ats.sh" "$out/ats.log"
 fi
 
+# 0d. One spelling of a cookie partition name.
+if sh scripts/check-partitions.sh >"$out/partitions.log" 2>&1; then
+	pass "sh scripts/check-partitions.sh" "$out/partitions.log"
+else
+	fail "sh scripts/check-partitions.sh" "$out/partitions.log"
+fi
+
 # 1. Documentation pairs and root cleanliness.
 if sh scripts/check-docs.sh >"$out/docs.log" 2>&1; then
 	pass "sh scripts/check-docs.sh" "$out/docs.log"
