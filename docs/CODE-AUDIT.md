@@ -4,7 +4,7 @@
 
 ## 范围与基线
 
-基线为 Nekularity `b294f04`,Core pin 为 `469edfcb48ec9564dca086a232a7b64e46fd0a9b`。本轮 Lead 检查分层、存储、生命周期与桥接;Orca Worker 在 Mac 隔离目录审查网络、缓存、取消与 Magpie,并验证修复树。Windows 的语法通过不代表 Swift 6 类型检查或 App 构建通过。
+基线为 Nekularity `b294f04`,Core pin 为 `469edfcb48ec9564dca086a232a7b64e46fd0a9b`(那是审查开始时的 pin;审查之后 Core 已发布为单提交 `6e0742996007e0246e1c56a14a09546325bb3e96`,两端 pin 随之更新)。本轮 Lead 检查分层、存储、生命周期与桥接;Orca Worker 在 Mac 隔离目录审查网络、缓存、取消与 Magpie,并验证修复树。Windows 的语法通过不代表 Swift 6 类型检查或 App 构建通过。
 
 ## 本轮本地修复
 

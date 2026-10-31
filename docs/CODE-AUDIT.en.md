@@ -4,7 +4,7 @@ English | [简体中文](CODE-AUDIT.md)
 
 ## Scope and baseline
 
-Baseline: Nekularity `b294f04`, Core pin `469edfcb48ec9564dca086a232a7b64e46fd0a9b`. Lead reviewed boundaries, persistence, lifecycle and bridging. An Orca Worker reviews networking, caching, cancellation and Magpie in an isolated Mac directory and validates the patched tree. Windows syntax checks do not establish Swift 6 type correctness or an App build.
+Baseline: Nekularity `b294f04`, Core pin `469edfcb48ec9564dca086a232a7b64e46fd0a9b` (the pin when the review started; afterwards Core was published as a single commit `6e0742996007e0246e1c56a14a09546325bb3e96` and both clients' pins moved with it). Lead reviewed boundaries, persistence, lifecycle and bridging. An Orca Worker reviews networking, caching, cancellation and Magpie in an isolated Mac directory and validates the patched tree. Windows syntax checks do not establish Swift 6 type correctness or an App build.
 
 ## Local fixes in this pass
 
