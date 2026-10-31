@@ -42,7 +42,10 @@ fi
 printf '\n--- message to send ---\n\n'
 printf '```sh\n'
 printf 'cd /tmp/nk\n'
-if [ "${GH_CREATE_GIST:-0}" = "1" ] && command -v gh >/dev/null 2>&1; then
+# Creating the gist by default keeps the printed block self-contained: splitting it into
+# "here are the hashes" and "here is the URL" is how a receiver ends up waiting for a
+# message that already went out. GH_CREATE_GIST=0 prints the block without uploading.
+if [ "${GH_CREATE_GIST:-1}" = "1" ] && command -v gh >/dev/null 2>&1; then
 	url=$(gh gist create "$out/p.b64" --desc "Nekularity transfer" --filename p.b64 2>/dev/null | tr -d '\r' | tail -1)
 	# The file name contains a dot, so the jq path has to be subscripted;
 	# `.files.p.b64` would look for nested objects and quietly return nothing.

@@ -55,6 +55,10 @@ Three of these are checked automatically now: a `Tests/` double conforming to
 without `import VeneraCatCore`, and an `App/` file that names a kit type without
 `import NekularityKit` (all in `check-swift.py`; the last two would only fail on the
 Mac, which is why catching them on Windows is worth the rule).
+## Clear the build products before verifying
+
+Files unpacked from an archive carry an mtime of 0 (1970), so `swift build` treats them as older than what is in `.build` — and **new tests are never compiled while the run looks green**. `touch` the files and `rm -rf .build` first, or trust only a clean build. This is not hypothetical: the tar is built with zeroed mtimes for reproducibility, and this is the price.
+
 ## Tests must not share mutable state
 
 Swift Testing runs the tests in a suite **in parallel** by default. A shared static stub table plus a `reset()` at the start of each test means a request can arrive after another test cleared the table; the stub then answers nothing and the failure is `-1004 cannot connect to host`, which reads like a network problem. Two rules: give each test its own host names or keys and **do not clear a global table**; use `.serialized` only when it is genuinely required, and say why.

@@ -48,6 +48,10 @@ swift test                 # macOS,需先运行 scripts/fetch-core.sh
 - 测试被放进另一个 suite,而它用到的助手是那个 suite 里定义的
 
 已经能自动查的三种:`Tests/` 里 conform `MagpieRunner.Core` 的替身缺方法、文件用了生成的 `Mobile*` 类型却没 `import VeneraCatCore`、以及 `App/` 里用了 kit 的类型却没 `import NekularityKit`(`check-swift.py`;后两条都是「在 Mac 上才会炸」的编译错误,在 Windows 上就能先拦住)。
+## 验证前先清构建产物
+
+解包出来的文件 mtime 是 0(1970),`swift build` 会认为它们比 `.build` 里的旧,于是**新用例没被编译却显示全绿**。验证前先 `touch` 相关文件并 `rm -rf .build`,或者干脆只信一次干净构建的结果。这不是理论风险: 打包成 tar 时故意把 mtime 归零是为了可复现,代价就是这个。
+
 ## 测试之间不要共享可变状态
 
 Swift Testing 默认**并行**跑同一个 suite 里的用例。共享的静态 stub 表加上「每个用例开头清空一次」,会让某个请求在别人清表之后才到,查不到应答就报 `-1004 cannot connect to host` —— 看起来像网络问题,实际是测试互踩。两条规矩:用例各用各的主机名/键,**不要用 `reset()` 清全局表**;真需要串行才用 `.serialized`,并写清为什么。
