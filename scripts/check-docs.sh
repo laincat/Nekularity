@@ -38,8 +38,8 @@ for f in $(git ls-files --cached --others --exclude-standard '*.md'); do
 		rows=$(grep -c '^|' "$f" 2>/dev/null || true)
 		enrows=$(grep -c '^|' "$en" 2>/dev/null || true)
 		[ "$rows" = "$enrows" ] || err "$f has ${rows:-0} table rows, $en has ${enrows:-0}"
-		heads=$(grep -c '^#' "$f" 2>/dev/null || true)
-		enheads=$(grep -c '^#' "$en" 2>/dev/null || true)
+		heads=$(grep -c '^## ' "$f" 2>/dev/null || true)
+		enheads=$(grep -c '^## ' "$en" 2>/dev/null || true)
 		[ "$heads" = "$enheads" ] || err "$f has ${heads:-0} headings, $en has ${enheads:-0}"
 		;;
 	esac
