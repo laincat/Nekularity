@@ -35,12 +35,18 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable, URLSessio
     /// Partition and cookie flag per task, for redirect handling.
     private var taskInfo: [Int: (partition: String, useCookies: Bool)] = [:]
 
-    public init(cookies: CookieJars, defaultUserAgent: String, timeout: TimeInterval = 30) {
+    /// `configuration` exists for tests: a stub protocol cannot be installed into a
+    /// session this type builds itself, and the cookie and cancellation rules are
+    /// exactly what is worth testing.
+    public init(cookies: CookieJars, defaultUserAgent: String, timeout: TimeInterval = 30,
+                configuration: URLSessionConfiguration? = nil) {
         self.cookies = cookies
         self.defaultUserAgent = defaultUserAgent
         super.init()
-        let config = URLSessionConfiguration.ephemeral
+        let config = configuration ?? URLSessionConfiguration.ephemeral
         config.httpCookieAcceptPolicy = .never
+        // A caller-supplied configuration keeps its protocol classes but not its
+        // cookie policy: mixing partitions is the thing this type exists to prevent.
         config.httpShouldSetCookies = false
         config.httpCookieStorage = nil
         config.urlCache = nil
