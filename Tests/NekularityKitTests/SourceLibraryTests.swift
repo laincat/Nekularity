@@ -5,6 +5,8 @@ import Testing
 /// Installing a source and then listing it is the first thing the app does, and it
 /// crosses three layers: the library, Core's runtime and the store. The fake
 /// network is only used for downloads, so this runs without a server.
+// The library is @MainActor: its initialiser and its properties are isolated.
+@MainActor
 @Suite("SourceLibrary")
 struct SourceLibraryTests {
     private let script = """

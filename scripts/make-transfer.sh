@@ -62,6 +62,9 @@ printf 'md5 p.b64        # %s\n' "$b64_md5"
 printf 'base64 -D -i p.b64 -o p.tar.gz\n'
 printf 'md5 p.tar.gz     # %s\n' "$archive_md5"
 printf 'cd src && tar -xzf ../p.tar.gz && chmod -R u+rwX .\n'
+# Archive entries carry mtime 0, older than anything in .build, so a freshly unpacked
+# file can be skipped by the build and the run still looks green.
+printf 'find . -name "*.swift" -exec touch {} +   # or the build may skip them\n'
 printf '%s\n' "$payload" | sed -n '/^[0-9a-f]\{32\}  /p' |
 	sed 's/^\([0-9a-f]\{32\}\)  \(.*\)$/md5 \2   # \1/'
 printf '```\n'
