@@ -39,8 +39,10 @@ for f in "$@"; do
 	cp "$f" "$work/files/$f"
 done
 
-( cd "$work" && tar --format=ustar --mtime=@0 --owner=0 --group=0 \
-	--numeric-owner --sort=name --mode=0644 -cf p.tar files ) || {
+# The archive holds the repository itself, not a "files/" wrapper around it: a
+# receiver that has to flatten the tree first can get that wrong.
+( cd "$work/files" && tar --format=ustar --mtime=@0 --owner=0 --group=0 \
+	--numeric-owner --sort=name --mode=0644 -cf ../p.tar . ) || {
 	printf 'make-payload: tar failed\n' >&2
 	exit 1
 }

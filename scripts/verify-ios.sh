@@ -78,8 +78,14 @@ else
 fi
 
 # 2. Swift syntax, which needs no macOS at all.
-if python3 scripts/check-swift.py >"$out/syntax.log" 2>&1; then
+python3 scripts/check-swift.py >"$out/syntax.log" 2>&1 && syntax=$? || syntax=$?
+if [ "$syntax" -eq 0 ]; then
 	pass "python3 scripts/check-swift.py" "$out/syntax.log"
+elif [ "$syntax" -eq 3 ]; then
+	# The parser cannot load on this machine (an old system Python with a grammar
+	# newer than its tree-sitter). Saying FAIL would blame the tree for it, and the
+	# steps after this one compile with the real Swift compiler anyway.
+	say "SKIP  python3 scripts/check-swift.py  (parser unavailable here; see $out/syntax.log)"
 else
 	fail "python3 scripts/check-swift.py" "$out/syntax.log"
 fi

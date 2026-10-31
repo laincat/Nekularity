@@ -99,9 +99,7 @@ Mac mini (macOS 27.0.1 / Xcode 27.1 / Swift 6.4) and every one exited 0: `swift 
 and `check-tree` printed `swift=56 tests=129 suites=27 shape=8457d8e43ce3d36849577f4cdcc07a92079b4015`,
 the same shape this repository prints. **Still unverified**: an `xcodebuild` archive and signing, an iOS
 Simulator runtime (absent on that machine), a real device and a real vendor account.
-Also, the Core-commit footer added in `0d0dcff` and its test (57 Swift files, 130 tests) have
-passed only the parser and `check-tree` — no Swift **type check** has seen them yet; the next
-whole-tree run will cover them. The paragraph
+**Latest whole-tree run (2026-10-31, same Mac mini)**: 57 Swift files, **130 tests in 27 suites**, `shape=784ddbee7b6d374640902eb56f22eaf2b780a6c7`; `swift build` with 0 errors and 0 warnings, `swift test` all green, `swift test --filter Magpie` **72 tests in 16 suites**, Kit and App `-typecheck -swift-version 6` both clean, and `xcodebuild -scheme Nekularity` (generic/platform=iOS, unsigned) **BUILD SUCCEEDED**. That run covered `CoreVersion.swift`, the footer `buildLine`, and `theCoreVersionIsShortButIdentifiable`. The one step that could not run is `check-swift.py`: that machine has only the system Python 3.9 and cannot install the `tree-sitter>=0.24` that grammar version 15 needs. It now exits 3 to mean "this machine cannot run the check", and `verify-ios.sh` records that as SKIP rather than FAIL — the steps after it compile with the real Swift compiler.
 describes the tree on the Mac; whether the two trees match file for file is settled by md5, not by shape — and
 that was done: thirteen Magpie sources plus the test file were compared one by one, ending with
 `MagpieAccounts.swift` `3ec891ff…`, `MagpiePackageStore.swift` `c0530a35…` and `MagpieRunnerTests.swift`

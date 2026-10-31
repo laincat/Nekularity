@@ -28,11 +28,27 @@ import sys
 try:
     import tree_sitter
     import tree_sitter_swift
+    # The grammar is compiled for a specific tree-sitter ABI. A Python too old to
+    # install a new enough tree-sitter cannot load it, and that is an environment
+    # limit, not a broken tree: the Mac has the real compiler, so the runner turns
+    # this into a skip instead of a failure. Exit code 3 is how it says so.
+    tree_sitter.Language(tree_sitter_swift.language())
 except ImportError:  # pragma: no cover - the message is the point
-    sys.exit(
+    print(
         "check-swift: tree-sitter is not installed; run\n"
-        "  python3 -m pip install tree-sitter tree-sitter-swift"
+        "  python3 -m pip install tree-sitter tree-sitter-swift",
+        file=sys.stderr,
     )
+    sys.exit(2)
+except ValueError as exc:  # pragma: no cover - depends on the machine's Python
+    print(
+        f"check-swift: the Swift grammar cannot load here ({exc});\n"
+        "  a Python 3.10+ with tree-sitter>=0.24 is needed",
+        file=sys.stderr,
+    )
+    # 3 means "this machine cannot run the check", which is not the same as
+    # "the tree is broken" — a machine with the real compiler may treat it as a skip.
+    sys.exit(3)
 
 # Tokens newer than the grammar. Each is replaced by nothing, which keeps
 # line numbers right and leaves the surrounding syntax to be checked.
