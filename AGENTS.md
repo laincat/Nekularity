@@ -56,6 +56,10 @@ swift test                 # macOS,需先运行 scripts/fetch-core.sh
 
 Swift Testing 默认**并行**跑同一个 suite 里的用例。共享的静态 stub 表加上「每个用例开头清空一次」,会让某个请求在别人清表之后才到,查不到应答就报 `-1004 cannot connect to host` —— 看起来像网络问题,实际是测试互踩。两条规矩:用例各用各的主机名/键,**不要用 `reset()` 清全局表**;真需要串行才用 `.serialized`,并写清为什么。
 
+## 小文件直接贴正文
+
+给验证机送一个**新文件**(脚本、plist 之类)时,`scripts/make-transfer.sh --inline FILE` 会打印 md5 加全文。原因是实测过的:链接和正文分两条消息发,两次都没到。整包仍然走 gist(文件多、正文会过长),但几十行的东西没必要增加一层不确定性。
+
 ## 换 pin 的消息也由脚本生成
 
 pin 出现在四个地方,而对方要拿 md5 对账。手写这两个哈希已经错过三次(其中两次是占位符没填)。`scripts/make-pin-message.sh` 把要发的整块打印出来,哈希从文件读 —— 和 `make-transfer.sh` 同一个道理:只要消息里有哈希,就不该由人敲。

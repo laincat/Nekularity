@@ -63,6 +63,10 @@ Files unpacked from an archive carry an mtime of 0 (1970), so `swift build` trea
 
 Swift Testing runs the tests in a suite **in parallel** by default. A shared static stub table plus a `reset()` at the start of each test means a request can arrive after another test cleared the table; the stub then answers nothing and the failure is `-1004 cannot connect to host`, which reads like a network problem. Two rules: give each test its own host names or keys and **do not clear a global table**; use `.serialized` only when it is genuinely required, and say why.
 
+## Paste a small file instead of linking it
+
+When delivering a **new file** (a script, a plist), `scripts/make-transfer.sh --inline FILE` prints its md5 and its text. This is measured, not theoretical: sending a link in one message and the hashes in another went missing twice. Whole packages still go through a gist (many files, too long to paste), but a few dozen lines do not need that extra uncertainty.
+
 ## The pin message is generated too
 
 The pin lives in four places and the other machine checks hashes. Typing those hashes by hand has gone wrong three times, twice by leaving a placeholder. `scripts/make-pin-message.sh` prints the whole block with the values read from the files — the same rule as `make-transfer.sh`: if a message contains a hash, a person should not be typing it.

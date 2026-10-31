@@ -17,8 +17,35 @@ set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
 
+md5_of() {
+	if command -v md5sum >/dev/null 2>&1; then
+		md5sum "$1" | cut -d' ' -f1
+	else
+		md5 -q "$1"
+	fi
+}
+
+# --inline prints a small file's md5 and its text instead of packing it. A script or a
+# plist that the receiver can paste is less fragile than a link in one message and the
+# hashes in another — two deliveries went missing exactly that way.
+inline=0
+if [ "${1:-}" = "--inline" ]; then
+	inline=1
+	shift
+fi
+
+if [ "$inline" -eq 1 ]; then
+	[ $# -ge 1 ] || { printf 'make-transfer: --inline needs a file\n' >&2; exit 2; }
+	file=$1
+	[ -f "$file" ] || { printf 'make-transfer: no such file: %s\n' "$file" >&2; exit 2; }
+	printf 'md5 %s -> %s\n\n```\n' "$file" "$(md5_of "$file")"
+	cat "$file"
+	printf '\n```\n'
+	exit 0
+fi
+
 if [ $# -lt 2 ]; then
-	printf 'usage: scripts/make-transfer.sh OUTDIR FILE...\n' >&2
+	printf 'usage: scripts/make-transfer.sh [--inline] OUTDIR FILE...\n' >&2
 	exit 2
 fi
 
