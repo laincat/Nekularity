@@ -122,15 +122,19 @@ public final class CookieJars: @unchecked Sendable {
         save(partition: partition, url: url, cookies: parsed)
     }
 
-    /// Writes cookies that came from a backup into one partition.
+    /// Writes cookies that came from a backup into one source's partition.
+    ///
+    /// It takes the source key, not a partition name, and adds the prefix itself:
+    /// the caller then cannot pass a bare key and store cookies no request reads,
+    /// which is exactly what happened the first time this was written.
     ///
     /// These are not page-set, so the domain is taken as given rather than
     /// checked against a request host: the backup is a local file the user chose
     /// to restore. Entries whose domain is not a host are skipped, and the count
-    /// returned is what was actually stored. Restoring never falls back to a
-    /// shared jar — the caller names one partition at a time.
+    /// returned is what was actually stored.
     @discardableResult
-    public func restore(partition: String, cookies: [WireCookie]) -> Int {
+    public func restore(source key: String, cookies: [WireCookie]) -> Int {
+        let partition = CookiePartition.comic(key)
         var stored = 0
         lock.lock(); defer { lock.unlock() }
         var jar = jars[partition] ?? []

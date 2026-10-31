@@ -122,9 +122,8 @@ public struct BackupImporter {
         }
         var written = 0
         for target in targets {
-            // The plan names sources; the jar is keyed by partition. Writing to
-            // the bare key would store cookies no request ever reads.
-            written += jars.restore(partition: CookiePartition.comic(target), cookies: wire)
+            // The plan names sources; the jar adds the partition prefix itself.
+            written += jars.restore(source: target, cookies: wire)
         }
         return written
     }

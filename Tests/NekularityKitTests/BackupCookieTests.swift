@@ -26,7 +26,10 @@ import Testing
         let written = BackupImporter.restoreCookies(plan, jars: jars)
 
         #expect(written == 4)
-        for partition in ["copy_manga", "mangadex"] {
+        for key in ["copy_manga", "mangadex"] {
+            // Through the helper, not the bare key: a literal replace missed this
+            // loop, and the case then failed only on the machine that ran it.
+            let partition = CookiePartition.comic(key)
             let sid = jars.header(partition: partition, url: URL(string: "https://wnacg.com/")!)
             #expect(sid?.contains("sid=a") == true)
             let cf = jars.header(partition: partition, url: URL(string: "https://mangadex.org/")!)
