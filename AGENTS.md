@@ -48,3 +48,12 @@ swift test                 # macOS,需先运行 scripts/fetch-core.sh
 - 测试被放进另一个 suite,而它用到的助手是那个 suite 里定义的
 
 已经能自动查的三种:`Tests/` 里 conform `MagpieRunner.Core` 的替身缺方法、文件用了生成的 `Mobile*` 类型却没 `import VeneraCatCore`、以及 `App/` 里用了 kit 的类型却没 `import NekularityKit`(`check-swift.py`;后两条都是「在 Mac 上才会炸」的编译错误,在 Windows 上就能先拦住)。
+## 把代码送到验证机
+
+验证机可能是另一台 Mac,而且**拿不到本仓库的凭据**。顺序是:
+
+1. 仓库能 clone 就 clone(公开仓不需要凭据,**私有仓需要**,验证机上常常没有);
+2. 不能 clone 时用 `scripts/make-payload.sh` 打整包,放到一个 **secret gist**,让验证机 `curl` 取回 —— 不要把几百段 base64 塞进对话,那里的等长改写和段错位很难发现;
+3. 两边都在,就只发 `scripts/make-patch.sh` 生成的补丁。
+
+发出去的包里**没有 `.git`**,所以验证机上 `scripts/check-tree.sh` 的 commit 会是 `none`;要对的是 `swift` / `tests` / `suites` / `shape` 四项,不是提交号。取包时先核对 archive md5,不对就停。

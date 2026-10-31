@@ -55,3 +55,12 @@ Three of these are checked automatically now: a `Tests/` double conforming to
 without `import VeneraCatCore`, and an `App/` file that names a kit type without
 `import NekularityKit` (all in `check-swift.py`; the last two would only fail on the
 Mac, which is why catching them on Windows is worth the rule).
+## Getting the code to a verification machine
+
+That machine may be a Mac that **has no credentials for this repository**. In order:
+
+1. Clone when you can — a public repository needs no credentials, a **private one does**, and verification machines usually lack them;
+2. When you cannot clone, build a whole payload with `scripts/make-payload.sh` and put it in a **secret gist** for the machine to `curl`. Do not push hundreds of base64 segments through a conversation: equal-length rewrites and shifted segment numbers are hard to notice there;
+3. When both sides have a copy, send only the patch from `scripts/make-patch.sh`.
+
+A payload has **no `.git`**, so on the verification machine `scripts/check-tree.sh` reports `none` for the commit — the four values to compare are `swift`, `tests`, `suites` and `shape`. Check the archive md5 on arrival and stop if it does not match.
