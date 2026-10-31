@@ -360,10 +360,12 @@ final class SearchModel {
                         do {
                             let options = try await core.searchOptions(key: key).map(\.defaultSearchValue)
                             let result: ComicPage
-                            if await core.hasComic(key: key, path: "search.loadNext") {
-                                result = try await core.searchNext(key: key, keyword: keyword, cursor: nil, options: options)
-                            } else {
+                            // Same rule as one source's own search: page
+                            // numbers when the source offers them.
+                            if await core.hasComic(key: key, path: "search.load") {
                                 result = try await core.search(key: key, keyword: keyword, page: 1, options: options)
+                            } else {
+                                result = try await core.searchNext(key: key, keyword: keyword, cursor: nil, options: options)
                             }                            return (index, result.comics.map { Hit(source: key, comic: $0) }, false)
                         } catch {
                             return (index, [], true)
@@ -418,9 +420,12 @@ final class SearchModel {
             let options = optionValues(for: key, groups: declared)
             // The source's declaration decides how it pages, and only the
             // first request of a search asks: changing mid-search would skip
-            // or repeat a page.
+            // or repeat a page. A source that declares both is asked for page
+            // numbers, which is what the desktop client does — a cursor entry
+            // there only maps the token back onto a page.
             if paging.mode == nil {
-                declaresCursor = await core.hasComic(key: key, path: "search.loadNext")
+                let byPage = await core.hasComic(key: key, path: "search.load")
+                declaresCursor = byPage ? false : await core.hasComic(key: key, path: "search.loadNext")
             }
             let result: ComicPage
             if paging.mode == .cursor || (paging.mode == nil && declaresCursor) {
