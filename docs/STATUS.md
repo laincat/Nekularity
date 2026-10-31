@@ -46,7 +46,7 @@
 
 ## 未验证
 
-- **ATS 策略已定**:`App/Info.plist` 里 `NSAllowsArbitraryLoads = true`。漫画源由用户自行安装,主机无法预知,逐主机例外做不到;上架理由写在该文件与 README 里。已在读到的四个真实源上确认它们全走 https(0 处 http),放行只是不挡未来的 http 源。这个改动**没有经过一次真正的 Xcode 构建**(`scripts/verify-ats.sh` 把待验的三步写成了可执行脚本:xcodegen → 读 `INFOPLIST_FILE` → 从构建产物里读 plist;没有 xcodegen 时它只验文件内容并明说 SKIP):验证机没有 XcodeGen,`verify-ios.sh` 只做类型检查;`Info.plist` 的语法用 `plutil` 与 Python `plistlib` 验过。
+- **ATS 策略已定**:`App/Info.plist` 里 `NSAllowsArbitraryLoads = true`。漫画源由用户自行安装,主机无法预知,逐主机例外做不到;上架理由写在该文件与 README 里。已在读到的四个真实源上确认它们全走 https(0 处 http),放行只是不挡未来的 http 源。这个改动**没有经过一次真正的 Xcode 构建**(`scripts/verify-ats.sh` 已在 Mac 上跑过正向与反向(把它指向一个 `false` 副本时退出码为 1),并已接入 `verify-ios.sh` 成为每次整树验证的一步;它把待验的三步写成了可执行脚本:xcodegen → 读 `INFOPLIST_FILE` → 从构建产物里读 plist;没有 xcodegen 时它只验文件内容并明说 SKIP):验证机没有 XcodeGen,`verify-ios.sh` 只做类型检查;`Info.plist` 的语法用 `plutil` 与 Python `plistlib` 验过。
 - **真机与模拟器运行**:没有 iOS 模拟器运行时(机器上没有,安装需要批准),也没有在 iPhone 真机上跑过。当前的「跑起来」证据是 `swift test` 130 条用例与 App 的类型检查,不是界面在设备上的实际行为。
 - **签名与归档**:`xcodebuild -scheme Nekularity` 用的是 generic/platform=iOS 且不签名,`** BUILD SUCCEEDED **` 只证明能编译,不证明能装到设备上。没有 XcodeGen,所以也没有 `.xcodeproj` 与 App bundle。
 - **真实供应商账号**:Magpie 的登录、模型列表、用量、流式与取消都只在自己的假服务与固定回答上验过;没有任何一个真实厂商账号在设备上走完授权。
