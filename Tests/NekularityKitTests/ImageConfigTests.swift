@@ -34,3 +34,18 @@ struct ImageConfigTests {
         #expect(!ImageLoader.looksLikeHTML(Data()))
     }
 }
+
+/// The pixel pass is JavaScript text in the config, not a callback, so it has
+/// to survive parsing on its own field.
+@Test func aConfigCarriesItsPixelScript() throws {
+    let json = #"{"url":"https://img.example/1.jpg","modifyImage":"let modifyImage = (image) => image.copyAndRotate90()"}"#
+    let request = try ImageRequest(json: json, fallbackURL: "")
+    #expect(request.modifyImage.contains("copyAndRotate90"))
+    #expect(request.callbacks.isEmpty)
+    #expect(request.handle.isEmpty)
+}
+
+@Test func aPlainConfigHasNoPixelScript() throws {
+    let request = try ImageRequest(json: #"{"url":"https://img.example/1.jpg"}"#, fallbackURL: "")
+    #expect(request.modifyImage.isEmpty)
+}

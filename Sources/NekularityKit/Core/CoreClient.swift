@@ -404,6 +404,27 @@ public final class CoreClient: @unchecked Sendable {
         return request.url.isEmpty ? nil : request
     }
 
+    /// Runs a source's `modifyImage` script over one decoded image: iOS has no
+    /// JavaScript of its own, so Core runs the script and the pixels make the
+    /// trip as base64 RGBA. Throws when the script produced no image, which the
+    /// loader treats like a failed load.
+    public func modifyImage(key: String, script: String, width: Int, height: Int, rgba: Data) async throws -> (width: Int, height: Int, rgba: Data) {
+        let out = try await run(cancellable: true) { core, _ in
+            try Self.call {
+                core.modifyImage(key, script: script, width: width, height: height,
+                                 rgbaB64: rgba.base64EncodedString(), error: $0)
+            }
+        }
+        let value = try JSONValue.parse(out)
+        guard case .object(let o) = value,
+              let w = o["width"]?.stringValue.flatMap(Int.init),
+              let h = o["height"]?.stringValue.flatMap(Int.init),
+              let text = o["rgba"]?.stringValue, let pixels = Data(base64Encoded: text) else {
+            throw CoreError("modifyImage returned nothing usable")
+        }
+        return (w, h, pixels)
+    }
+
     /// Fills in the scheme of a scheme-relative URL, such as
     /// "//images.example.com/1.jpg". Core owns the rule so both clients apply
     /// the same one.
@@ -437,6 +458,9 @@ public struct ImageRequest: Sendable, Hashable {
     public var handle: String = ""
     /// Which of onResponse/onLoadFailed the handle carries.
     public var callbacks: [String] = []
+    /// The source's pixel-buffer script, when it supplied one. It is
+    /// JavaScript text, run by Core because iOS has no engine of its own.
+    public var modifyImage: String = ""
 
     public init(url: String) { self.url = url }
 
@@ -454,5 +478,6 @@ public struct ImageRequest: Sendable, Hashable {
         if let d = o["data"]?.stringValue { body = d }
         if let h = o["handle"]?.stringValue { handle = h }
         if case .array(let list)? = o["callbacks"] { callbacks = list.compactMap(\.stringValue) }
+        if let script = o["modifyImage"]?.stringValue { modifyImage = script }
     }
 }

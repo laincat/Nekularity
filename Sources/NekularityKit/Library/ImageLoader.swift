@@ -119,7 +119,15 @@ public actor ImageLoader {
                         // they are what the server described.
                         body = rewritten
                     }
-                    guard let image = Self.decode(body, limit: limit) else { throw CoreError("not an image") }
+                    guard let decoded = Self.decode(body, limit: limit) else { throw CoreError("not an image") }
+                    // A source may ask for a pixel pass — jm reorders the blocks
+                    // of a long strip, others rotate a page. iOS has no JS, so
+                    // Core runs the script over the pixels.
+                    var image = decoded
+                    if !req.modifyImage.isEmpty,
+                       let fixed = try await Self.pixelPass(req.modifyImage, decoded, source: key.source, core: core) {
+                        image = fixed
+                    }
                     return CGImageBox(image)
                 } catch {
                     lastError = error
@@ -196,6 +204,29 @@ public actor ImageLoader {
             return true
         }
         return false
+    }
+
+    /// Runs the source's modifyImage script over a decoded picture.
+    ///
+    /// The pixels go to Core as straight RGBA and come back the same way, so
+    /// nothing here assumes a colour space beyond sRGB. A picture too large to
+    /// hand over is left as it is rather than failing the page.
+    static func pixelPass(_ script: String, _ image: CGImage, source: String, core: CoreClient) async throws -> CGImage? {
+        let w = image.width, h = image.height
+        guard w > 0, h > 0, w * h <= 64 << 20 else { return nil }
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        let space = CGColorSpaceCreateDeviceRGB()
+        let info = CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let ctx = CGContext(data: &pixels, width: w, height: h, bitsPerComponent: 8,
+                                  bytesPerRow: w * 4, space: space, bitmapInfo: info) else { return nil }
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        let out = try await core.modifyImage(key: source, script: script, width: w, height: h,
+                                             rgba: Data(pixels))
+        guard out.width > 0, out.height > 0, out.rgba.count == out.width * out.height * 4 else { return nil }
+        var result = [UInt8](out.rgba)
+        guard let back = CGContext(data: &result, width: out.width, height: out.height, bitsPerComponent: 8,
+                                   bytesPerRow: out.width * 4, space: space, bitmapInfo: info) else { return nil }
+        return back.makeImage()
     }
 
     /// Decodes and downsamples without decoding the full-size bitmap first.
