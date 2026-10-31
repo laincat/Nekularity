@@ -41,6 +41,10 @@ open Nekularity.xcodeproj
 
 The app ships no provider package. To try one, make your own: Core's `magpieplugin/testdata/openai-compatible/` and `anthropic-compatible/` are two packages that **run** (fetch only, no Node), and zipping either one is enough to install it from the AI providers screen. The contract and how to check your own are in Core's [docs/PROVIDER-TEMPLATE.en.md](https://github.com/laincat/VeneraCat-Core/blob/main/docs/PROVIDER-TEMPLATE.en.md). A package that is refused says why: TypeScript sources and packages needing Node built-ins get a sentence that tells you what to do, with Core's own text beside it; anything unrecognised is shown exactly as Core wrote it rather than guessed at.
 
+## Network policy (for App Store review)
+
+`App/Info.plist` sets `NSAllowsArbitraryLoads = true`. The reason is not convenience: comic sources are installed by the user, so their host names cannot be known, and a per-host exception list cannot be written; refusing plain http would make some working sources unusable. The four real sources checked use https only, so what this allows is **a future http source**, not a present failure. `ITSAppUsesNonExemptEncryption = false` sits in the same file — the app uses only the system's own transport encryption.
+
 ## The repository
 
 This repository is **private**: `https://github.com/laincat/Nekularity`. Core is not — it is public — so a

@@ -41,6 +41,10 @@ open Nekularity.xcodeproj
 
 App 本身不随附供应商包。要试,可以自己压一个:Core 仓库的 `magpieplugin/testdata/openai-compatible/` 与 `anthropic-compatible/` 是两个**能跑**的模板(只用 `fetch`,没有 Node 依赖),把它们压成 zip 后在「AI 供应商」里安装即可;契约与自测方法见 Core 的 [docs/PROVIDER-TEMPLATE.md](https://github.com/laincat/VeneraCat-Core/blob/main/docs/PROVIDER-TEMPLATE.md)。
 
+## 网络策略(上架说明用)
+
+`App/Info.plist` 里 `NSAllowsArbitraryLoads = true`。理由不是「图省事」:漫画源由用户自行安装,主机名无法预知,逐主机例外(NSExceptionDomains)列不出来;而拒绝 http 会让一部分能用的源直接不可用。已核对的四个真实源全部只走 https,所以放行的是**未来可能出现的 http 源**,不是当前故障。`ITSAppUsesNonExemptEncryption = false` 也写在同一个文件里 —— 应用只用系统提供的传输加密,没有自研加密。
+
 ## 仓库
 
 本仓库是**私有**的:`https://github.com/laincat/Nekularity`。Core 与它不同,是公开的 —— 所以验证机器可以 clone Core,却需要凭据才能拿到这里的源码。
