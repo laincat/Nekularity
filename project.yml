@@ -23,7 +23,11 @@ targets:
     type: application
     platform: iOS
     sources:
-      - App
+      - path: App
+        # An Info.plist inside the sources is also copied as a resource, and Xcode
+        # then fails the build with "contains this target's Info.plist".
+        excludes:
+          - Info.plist
     dependencies:
       - package: NekularityKit
         product: NekularityKit
