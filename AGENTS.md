@@ -56,4 +56,4 @@ swift test                 # macOS,需先运行 scripts/fetch-core.sh
 2. 不能 clone 时用 `scripts/make-payload.sh` 打整包,放到一个 **secret gist**,让验证机 `curl` 取回 —— 不要把几百段 base64 塞进对话,那里的等长改写和段错位很难发现;
 3. 两边都在,就只发 `scripts/make-patch.sh` 生成的补丁。
 
-发出去的包里**没有 `.git`**,所以验证机上 `scripts/check-tree.sh` 的 commit 会是 `none`;要对的是 `swift` / `tests` / `suites` / `shape` 四项,不是提交号。取包时先核对 archive md5,不对就停。包内是仓库本身(`./App`、`./Sources`…),不需要再摊平一层。macOS 的 `base64` 不吃位置参数:`base64 -D -i p.b64 -o p.tar.gz`。若目标机没有 tree-sitter 或只有系统 Python 3.9,`check-swift.py` 分别以 **exit=2 / exit=3** 表示「这台机器跑不了」,`verify-ios.sh` 记为 SKIP —— 环境限制,不是树有问题;开发机直接跑 `scripts/check-swift.sh` 仍然会硬失败。
+发出去的包里**没有 `.git`**,所以验证机上 `scripts/check-tree.sh` 的 commit 会是 `none`;要对的是 `swift` / `tests` / `suites` / `shape` 四项,不是提交号。取包时先核对 archive md5,不对就停。**验证一旦拿到代码,gist 立刻删掉**(`gh gist delete <id>`)—— secret gist 不列出,但拿到链接的人就能读,它不是仓库的替代品。包内是仓库本身(`./App`、`./Sources`…),不需要再摊平一层。macOS 的 `base64` 不吃位置参数:`base64 -D -i p.b64 -o p.tar.gz`。若目标机没有 tree-sitter 或只有系统 Python 3.9,`check-swift.py` 分别以 **exit=2 / exit=3** 表示「这台机器跑不了」,`verify-ios.sh` 记为 SKIP —— 环境限制,不是树有问题;开发机直接跑 `scripts/check-swift.sh` 仍然会硬失败。
