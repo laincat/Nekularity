@@ -55,6 +55,23 @@ Three of these are checked automatically now: a `Tests/` double conforming to
 without `import VeneraCatCore`, and an `App/` file that names a kit type without
 `import NekularityKit` (all in `check-swift.py`; the last two would only fail on the
 Mac, which is why catching them on Windows is worth the rule).
+## A test can be wrong the same way the code is
+
+Restoring a backup's cookies wrote them into the partition named by the bare source key, while
+every request reads `"comic:<key>"`. The cookies landed where nothing would ever read them and the
+import summary claimed "N sign-ins restored". **The test asserted the same wrong assumption**
+(`partition: "mini"`), so it passed.
+
+That is not the same as "uncovered code": coverage, syntax checks and the cases themselves were all
+fine — the case was confirming a misunderstanding. What catches it:
+
+- check a **fact source outside the code** (here, the key the transport actually uses) instead of
+  trusting the implementation;
+- make the wrong call impossible (`restore(source:)` adds the prefix) instead of relying on "remember
+  the helper";
+- have the regression case assert **the right place has it and the wrong place does not** — a case
+  that only asserts presence passes under a different wrong assumption too.
+
 ## Clear the build products before verifying
 
 Files unpacked from an archive carry an mtime of 0 (1970), so `swift build` treats them as older than what is in `.build` — and **new tests are never compiled while the run looks green**. `touch` the files and `rm -rf .build` first, or trust only a clean build. This is not hypothetical: the tar is built with zeroed mtimes for reproducibility, and this is the price.

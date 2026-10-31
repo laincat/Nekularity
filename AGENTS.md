@@ -48,6 +48,16 @@ swift test                 # macOS,需先运行 scripts/fetch-core.sh
 - 测试被放进另一个 suite,而它用到的助手是那个 suite 里定义的
 
 已经能自动查的三种:`Tests/` 里 conform `MagpieRunner.Core` 的替身缺方法、文件用了生成的 `Mobile*` 类型却没 `import VeneraCatCore`、以及 `App/` 里用了 kit 的类型却没 `import NekularityKit`(`check-swift.py`;后两条都是「在 Mac 上才会炸」的编译错误,在 Windows 上就能先拦住)。
+## 测试可能和代码一起错
+
+恢复备份的 cookie 时,代码把 cookie 写进了「裸源 key」分区,而所有请求读的是 `"comic:<key>"` —— cookie 落在一个没人会读的地方,导入摘要却显示「恢复了 N 条」。**当时的测试断言的是同一个错误假设**(`partition: "mini"`),所以全绿。
+
+这类错误和「测试没覆盖到」不同:覆盖率、语法检查、甚至用例本身都正常,只是**用例在帮我确认误解**。能拦住它的办法不是多写用例,而是:
+
+- 去代码以外的**事实源**核对(这里是传输层真正用的 key),而不是相信自己的实现;
+- 让错写不成立(`restore(source:)` 内部加前缀),而不是靠「记得用助手」;
+- 回归用例同时断言**正确位置有、错误位置没有** —— 只断言「有」的用例换个假设也能通过。
+
 ## 验证前先清构建产物
 
 解包出来的文件 mtime 是 0(1970),`swift build` 会认为它们比 `.build` 里的旧,于是**新用例没被编译却显示全绿**。验证前先 `touch` 相关文件并 `rm -rf .build`,或者干脆只信一次干净构建的结果。这不是理论风险: 打包成 tar 时故意把 mtime 归零是为了可复现,代价就是这个。
