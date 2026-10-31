@@ -100,6 +100,27 @@ import Testing
         #expect(MagpieErrorText.message(for: detail) == detail)
     }
 
+    /// End to end through Core, not just the mapping: a TypeScript entry is refused,
+    /// and what reaches the screen already explains it while keeping Core's words.
+    @Test func aTypeScriptPackageArrivesExplained() throws {
+        let magpie = try CoreMagpie()
+        defer { magpie.close() }
+        let typed = [
+            "package.json": #"{"name":"typed","version":"0.1.0","main":"./index.ts"}"#,
+            "index.ts": "export async function Plugin() { return {} }",
+        ]
+
+        do {
+            try magpie.loadPackage(filesJSON: try package(files: typed))
+            Issue.record("a TypeScript package was accepted")
+        } catch let error as MagpieError {
+            let text = error.description
+            #expect(text.contains("TypeScript"))
+            #expect(text.contains("编译后的包"))
+            #expect(text.contains("(Core: "))
+        }
+    }
+
     /// The footer names a Core; the check script guarantees it is the one that
     /// gets built, and this keeps the short form useful rather than empty.
     @Test func theCoreVersionIsShortButIdentifiable() {
