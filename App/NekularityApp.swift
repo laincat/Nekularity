@@ -31,6 +31,7 @@ struct NekularityApp: App {
                         .environment(env.themes)
                         .environment(env.media)
                         .environment(env.servers)
+                        .environment(env.metadata)
                         .environment(env.home)
                         .environment(env.profiles)
                         .environment(\.switchProfile, env.switchProfile)
@@ -69,6 +70,9 @@ final class AppModel {
         /// Media servers (Jellyfin/Emby): an account with a library, kept apart
         /// from comic sources and from each other per environment.
         let servers: MediaServerStore
+        /// Show metadata (TMDB), cached, so the calendar can say when the next
+        /// episode airs instead of guessing.
+        let metadata: MetadataStore
         let home: HomeLayout
         /// The signed-in environment this whole object graph belongs to.
         let profiles: ProfileStore
@@ -153,6 +157,9 @@ final class AppModel {
                 downloads: downloads,
                 themes: ThemeStore(directory: support.appending(path: "Themes", directoryHint: .isDirectory)),
                 media: VideoLibraryStore(directory: root.appending(path: "Media", directoryHint: .isDirectory)),
+                metadata: MetadataStore(
+                    directory: root,
+                    keys: KeychainMetadataKeyStore(service: profiles.keychainService(for: profiles.activeID) + ".tmdb")),
                 servers: MediaServerStore(
                     directory: root,
                     tokens: KeychainMediaTokenStore(service: profiles.keychainService(for: profiles.activeID) + ".media")),

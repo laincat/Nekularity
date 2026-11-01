@@ -10,6 +10,7 @@ struct MediaHubView: View {
     @Environment(MediaServerStore.self) private var servers
     @Environment(VideoLibraryStore.self) private var media
     @Environment(ShelfStore.self) private var shelf
+    @Environment(MetadataStore.self) private var metadata
 
     @State private var query = ""
     @State private var serverRows: [(name: String, id: String, items: [MediaItem])] = []
@@ -198,5 +199,24 @@ struct MediaHubView: View {
             }
         }
         serverRows = loaded
+        await identifyShows()
+    }
+
+    /// Turns the series names a server reports into shows the calendar can date.
+    ///
+    /// Cached answers are free, so this only spends requests on names it has never
+    /// seen; a name that matches nothing is left alone rather than retried on
+    /// every visit.
+    private func identifyShows() async {
+        guard metadata.hasKey, let key = metadata.apiKey() else { return }
+        let client = TMDBClient.live(apiKey: key)
+        let names = Set(serverRows.flatMap { row in row.items.map(\.series) }.filter { !$0.isEmpty })
+        var looked = 0
+        for name in names {
+            guard looked < 6 else { break }
+            if metadata.series.values.contains(where: { $0.name == name }) { continue }
+            looked += 1
+            _ = try? await metadata.identify(title: name, client: client)
+        }
     }
 }

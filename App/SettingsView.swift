@@ -29,6 +29,9 @@ struct SettingsView: View {
     @Environment(DownloadStore.self) private var downloads
     @Environment(VideoLibraryStore.self) private var media
     @Environment(ProfileStore.self) private var profiles
+    @Environment(MetadataStore.self) private var metadata
+    @State private var tmdbKey = ""
+    @State private var metadataNote: String?
     @Environment(\.switchProfile) private var switchProfile
     @State private var showingProfiles = false
     @State private var importing = false
@@ -93,6 +96,33 @@ struct SettingsView: View {
                         Label("漫画源与视频源", systemImage: "puzzlepiece.extension")
                     }
                     .accessibilityIdentifier("settings.sources")
+                }
+
+                Section {
+                    SecureField(metadata.hasKey ? "已保存,粘贴新 key 可替换" : "TMDB API key",
+                                text: $tmdbKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .accessibilityIdentifier("settings.tmdbKey")
+                    HStack {
+                        Button("保存") { saveKey() }
+                            .disabled(tmdbKey.trimmingCharacters(in: .whitespaces).isEmpty)
+                        Spacer()
+                        if metadata.hasKey {
+                            Button("清除", role: .destructive) {
+                                try? metadata.setKey("")
+                                tmdbKey = ""
+                                metadataNote = "已清除"
+                            }
+                        }
+                    }
+                    if let metadataNote {
+                        Text(metadataNote).font(.caption).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("元数据")
+                } footer: {
+                    Text("TMDB 的 key 或 v4 令牌,都存在钥匙串里。用它把剧名对到播出日期,日历才有「即将播出」。")
                 }
 
                 Section("外观") {
@@ -179,4 +209,26 @@ struct SettingsView: View {
     static var version: String {
         (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "?"
     }
+
+    /// Saving is also the check: a key that the source rejects is worse than no
+    /// key, because the calendar would then quietly show nothing for ever.
+    private func saveKey() {
+        do {
+            try metadata.setKey(tmdbKey)
+            let client = TMDBClient.live(apiKey: tmdbKey.trimmingCharacters(in: .whitespacesAndNewlines))
+            metadataNote = "正在验证…"
+            Task {
+                do {
+                    let found = try await client.search(query: "Severance")
+                    metadataNote = found.isEmpty ? "key 可用" : "key 可用,能查到剧集"
+                } catch {
+                    metadataNote = error.localizedDescription
+                }
+                tmdbKey = ""
+            }
+        } catch {
+            metadataNote = error.localizedDescription
+        }
+    }
+
 }

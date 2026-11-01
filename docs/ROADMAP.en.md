@@ -30,7 +30,7 @@ Updated 2026-11-01. This file keeps **what is to be done and what counts as done
 | G6 One entry for servers and local files | ~~资源库 was a placeholder~~ One searchable list, grouped by origin | Servers and local video appear in one list, searchable |
 | G7 Playback experience | ~~The screen did not use it~~ Speed, subtitle tracks, remembered position and native PiP are wired; cue **drawing** and software-route PiP are not | Speed, subtitle track choice, remembered position, picture in picture |
 | G8 Calendar and reminders | ~~Airing calendar~~ The reading and watching calendar is done; reminders lack the air-date premise and depend on G9 | A reading calendar that works (done); items with air dates carrying reminders (after G9) |
-| G9 Trakt and TMDB metadata | Needs an account and an API key | Once connected, history syncs and posters and synopses appear |
+| G9 Trakt and TMDB metadata | ~~Needs an account and an API key~~ TMDB is wired (poster, synopsis, upcoming); Trakt and account history sync are not | Once connected, history syncs and posters and synopses appear (needs a real key) |
 | G10 Danmaku and intro skipping | Depends on a danmaku source; the largest piece | A chosen source plays with a danmaku track, and an intro range can be skipped |
 | G11 Batch source update | ~~One at a time~~ A batch updates and reports the three outcomes separately | One action updates every source with a URL and lists updated, current and failed |
 | G12 Local comics | The original Venera has it; we do not | Import a folder or a zip/cbz and read it |

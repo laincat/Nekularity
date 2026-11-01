@@ -10,6 +10,7 @@ import SwiftUI
 /// can answer for them.
 struct CalendarView: View {
     @Environment(ShelfStore.self) private var shelf
+    @Environment(MetadataStore.self) private var metadata
 
     @State private var month = Date()
     @State private var selected = Date()
@@ -49,6 +50,34 @@ struct CalendarView: View {
                               unit: "天", label: "连续")
                     StatValue(value: "\(counts.values.reduce(0, +))", unit: "条", label: "总记录")
                     StatValue(value: "\(counts.count)", unit: "天", label: "有记录")
+                }
+            }
+
+            let upcoming = metadata.upcoming()
+            if !upcoming.isEmpty {
+                Section {
+                    ForEach(upcoming, id: \.info.key) { item in
+                        HStack(alignment: .top, spacing: 10) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.info.name).font(.callout)
+                                if let episode = item.info.nextEpisode {
+                                    Text("S\(String(episode.season))E\(String(episode.number)) · \(episode.name)")
+                                        .font(.caption2).foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer()
+                            Text(item.airs.formatted(.dateTime.month().day()))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("即将播出")
+                } footer: {
+                    // The date came from TMDB, not from the source that serves the
+                    // episodes: saying so is the difference between a fact and a
+                    // guess that looks like one.
+                    Text("日期来自 TMDB,不是来自提供资源的源。").font(.caption2)
                 }
             }
 
