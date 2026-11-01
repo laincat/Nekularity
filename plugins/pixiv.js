@@ -20,7 +20,7 @@ class Pixiv extends ComicSource {
     key = "pixiv"
     version = "1.0.0"
     minAppVersion = "1.0.0"
-    url = "https://raw.githubusercontent.com/laincat/Nekularity/main/sources/pixiv.js"
+    url = "https://raw.githubusercontent.com/laincat/Nekularity/main/plugins/pixiv.js"
 
     base = "https://www.pixiv.net"
     // A desktop UA on purpose. Measured 2026-11-01: with a mobile UA,
