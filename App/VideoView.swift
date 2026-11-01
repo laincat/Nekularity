@@ -1,6 +1,7 @@
 import NekularityKit
 import Observation
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// One video provider's search results.
 ///
@@ -39,40 +40,169 @@ final class VideoSearchModel {
             failure = CoreError.readable(error.localizedDescription)
         }
     }
-
-    @ObservationIgnored var library: CoreClient!
 }
 
-/// Video browsing: pick a provider, search it, open a result.
+/// Video, in two places: what is on this device, and what the sources offer.
+///
+/// The device comes first because it is the half that works with no connection
+/// and no account — it is the part of a library the user owns outright.
 struct VideoView: View {
+    private enum Mode: String, CaseIterable, Identifiable {
+        case library, sources
+        var id: String { rawValue }
+        var title: String { self == .library ? "本机" : "在线源" }
+    }
+
     @Environment(SourceLibrary.self) private var library
+    @Environment(VideoLibraryStore.self) private var media
+    @State private var mode: Mode = .library
     @State private var model = VideoSearchModel()
+    @State private var importing = false
+    @State private var playing: Playing?
+    @State private var note: String?
 
     private var sources: [PluginRecord] {
         library.sources.filter { $0.enabled && $0.isVideo }
     }
 
+    struct Playing: Identifiable {
+        let id = UUID()
+        let title: String
+        let play: VideoPlay
+        let start: Double
+        let local: VideoLibraryStore.Item?
+    }
+
     var body: some View {
         NavigationStack {
             Group {
-                if sources.isEmpty {
-                    ContentUnavailableView("没有可用的视频源", systemImage: "play.rectangle",
-                                           description: Text("视频源是插件：先安装一个再回来。"))
-                } else {
-                    VStack(spacing: 0) {
-                        field
-                        results
-                    }
+                switch mode {
+                case .library: libraryTab
+                case .sources: sourcesTab
                 }
             }
             .navigationTitle("视频")
+            .safeAreaInset(edge: .top) {
+                Picker("来源", selection: $mode) {
+                    ForEach(Mode.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.bottom, 6)
+                .accessibilityIdentifier("video.mode")
+            }
             .navigationDestination(for: VideoRoute.self) { route in
                 VideoDetailView(route: route)
+            }
+            .fileImporter(isPresented: $importing, allowedContentTypes: [.movie, .video]) { result in
+                switch result {
+                case .success(let url):
+                    do {
+                        try media.importVideo(from: url)
+                    } catch {
+                        note = error.localizedDescription
+                    }
+                case .failure(let error):
+                    note = error.localizedDescription
+                }
+            }
+            .sheet(item: $playing) { item in
+                VideoPlayerView(title: item.title, play: item.play, startPosition: item.start) { position, seconds in
+                    guard let local = item.local else { return }
+                    media.update(local, position: position, seconds: seconds)
+                }
+            }
+            .alert(note ?? "", isPresented: Binding(get: { note != nil }, set: { if !$0 { note = nil } })) {
+                Button("好") { note = nil }
             }
         }
         .task {
             if model.sourceKey.isEmpty || !sources.contains(where: { $0.key == model.sourceKey }) {
                 model.sourceKey = sources.first?.key ?? ""
+            }
+        }
+    }
+
+    // MARK: - This device
+
+    private var libraryTab: some View {
+        Group {
+            if media.items.isEmpty {
+                ContentUnavailableView {
+                    Label("本机还没有视频", systemImage: "play.rectangle.on.rectangle")
+                } description: {
+                    Text("把手机里的视频导入进来，这里会记住你看到哪儿。")
+                } actions: {
+                    Button("导入视频") { importing = true }
+                        .buttonStyle(.borderedProminent)
+                }
+            } else {
+                List {
+                    if let resume = media.resume {
+                        Section("继续观看") {
+                            row(resume, prominent: true)
+                        }
+                    }
+                    Section("本机视频") {
+                        ForEach(media.items) { item in row(item, prominent: false) }
+                    }
+                }
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { importing = true } label: {
+                    Label("导入", systemImage: "plus")
+                }
+                .accessibilityIdentifier("video.import")
+            }
+        }
+    }
+
+    private func row(_ item: VideoLibraryStore.Item, prominent: Bool) -> some View {
+        Button {
+            let url = media.url(for: item)
+            playing = Playing(title: item.title, play: VideoPlay(url: url.absoluteString, format: "mp4"),
+                              start: item.position, local: item)
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(item.title).font(prominent ? .headline : .body)
+                if item.seconds > 0 {
+                    ProgressView(value: item.progress)
+                    HStack {
+                        Text(Self.clock(item.position)).font(.caption.monospacedDigit())
+                        Spacer()
+                        Text(Self.clock(item.seconds)).font(.caption.monospacedDigit())
+                    }
+                    .foregroundStyle(.secondary)
+                } else {
+                    Text("未看").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .swipeActions {
+            Button("删除", role: .destructive) { media.remove(item) }
+        }
+    }
+
+    private static func clock(_ seconds: Double) -> String {
+        let total = Int(seconds.rounded())
+        let h = total / 3600, m = (total % 3600) / 60, s = total % 60
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
+    }
+
+    // MARK: - Sources
+
+    private var sourcesTab: some View {
+        Group {
+            if sources.isEmpty {
+                ContentUnavailableView("没有可用的视频源", systemImage: "play.rectangle",
+                                       description: Text("视频源是插件：先安装一个再回来。"))
+            } else {
+                VStack(spacing: 0) {
+                    field
+                    results
+                }
             }
         }
     }

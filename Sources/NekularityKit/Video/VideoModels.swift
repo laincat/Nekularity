@@ -61,6 +61,16 @@ public struct VideoPlay: Decodable, Sendable {
     public var sniff: Sniff?
 
     public var isPlayable: Bool { (url?.isEmpty == false) && encrypted != true }
+
+    /// A play answer the client builds itself, for a file on this device.
+    public init(url: String?, format: String? = nil, headers: [String: String]? = nil,
+                encrypted: Bool? = nil, sniff: Sniff? = nil) {
+        self.url = url
+        self.format = format
+        self.headers = headers
+        self.encrypted = encrypted
+        self.sniff = sniff
+    }
 }
 
 extension PluginRecord {

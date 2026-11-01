@@ -18,6 +18,8 @@ final class VideoPlayerModel {
     private(set) var failure: String?
     private(set) var phase = "idle"
     private(set) var duration: Double?
+    /// The engine's own clock, read when the screen closes.
+    private(set) var position: Double = 0
     private(set) var format = ""
     @ObservationIgnored private var started = false
     @ObservationIgnored private var watch: AnyCancellable?
@@ -32,7 +34,7 @@ final class VideoPlayerModel {
         do {
             let made = try AetherEngine()
             engine = made
-            try await made.load(url: url,
+            try await made.load(url: url, startPosition: startPosition,
                                 options: LoadOptions(httpHeaders: play.headers ?? [:]))
             made.play()
             watch = made.objectWillChange.sink { [weak self] _ in
@@ -48,6 +50,7 @@ final class VideoPlayerModel {
     /// properties is what lets this screen redraw.
     private func sync(_ engine: AetherEngine) {
         duration = engine.duration
+        if engine.currentTime > 0 { position = engine.currentTime }
         format = String(describing: engine.videoFormat)
         switch engine.state {
         case .idle: phase = "idle"
@@ -74,6 +77,10 @@ final class VideoPlayerModel {
 struct VideoPlayerView: View {
     let title: String
     let play: VideoPlay
+    /// Where to start, for a file the library already knows.
+    var startPosition: Double = 0
+    /// Called when the screen closes, with where playback got to.
+    var onClose: ((Double, Double) -> Void)?
     @Environment(\.dismiss) private var dismiss
     @State private var model = VideoPlayerModel()
 
@@ -98,7 +105,11 @@ struct VideoPlayerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("关闭") { model.stop(); dismiss() }
+                    Button("关闭") {
+                        onClose?(model.position, model.duration ?? 0)
+                        model.stop()
+                        dismiss()
+                    }
                         .accessibilityIdentifier("video.close")
                 }
             }
