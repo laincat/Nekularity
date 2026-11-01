@@ -46,7 +46,8 @@ public final class LocalComicStore {
         if let decoded = try? JSONDecoder().decode([LocalComic].self, from: data) {
             comics = decoded
         } else {
-            failure = "本地漫画列表读不出来,文件保留未改"
+            _ = StoreRescue.keepCopy(of: file)
+            failure = "本地漫画列表读不出来,旧数据已另存一份"
         }
     }
 

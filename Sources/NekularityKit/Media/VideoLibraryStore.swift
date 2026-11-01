@@ -92,8 +92,12 @@ public final class VideoLibraryStore {
 
     private func load() {
         let manifest = directory.appending(path: "videos.json")
-        guard let data = try? Data(contentsOf: manifest),
-              let list = try? JSONDecoder().decode([Item].self, from: data) else { return }
+        guard let data = try? Data(contentsOf: manifest) else { return }
+        guard let list = try? JSONDecoder().decode([Item].self, from: data) else {
+            // Silently starting empty would let the next save overwrite the list.
+            _ = StoreRescue.keepCopy(of: manifest)
+            return
+        }
         // A file deleted behind the app's back must not stay in the list.
         items = list.filter { FileManager.default.fileExists(atPath: videos.appending(path: $0.file).path) }
     }

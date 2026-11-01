@@ -111,7 +111,8 @@ public final class MediaServerStore {
             // A file that will not decode is left alone rather than overwritten:
             // the addresses in it are still the user's, and clobbering them loses
             // the only record of what to reconnect to.
-            failure = "媒体服务器列表读不出来(\(error.localizedDescription)),文件保留未改"
+            _ = StoreRescue.keepCopy(of: file)
+            failure = "媒体服务器列表读不出来(\(error.localizedDescription)),旧数据已另存一份"
         }
     }
 

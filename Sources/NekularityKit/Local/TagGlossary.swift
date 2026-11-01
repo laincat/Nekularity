@@ -109,7 +109,8 @@ public final class TagGlossaryStore {
         if let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
             overrides = decoded
         } else {
-            failure = "标签翻译表读不出来,已忽略"
+            _ = StoreRescue.keepCopy(of: file)
+            failure = "标签翻译表读不出来,旧数据已另存一份"
         }
     }
 

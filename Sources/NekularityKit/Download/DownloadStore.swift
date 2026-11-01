@@ -70,6 +70,8 @@ public final class DownloadStore {
     }
 
     public private(set) var chapters: [String: Chapter] = [:]
+    /// Why the manifest could not be read, when it could not.
+    public private(set) var failure: String?
     public private(set) var progress: [String: Progress] = [:]
 
     private let root: URL
@@ -202,8 +204,15 @@ public final class DownloadStore {
 
     private func load() {
         let manifest = root.appending(path: "manifest.json")
-        guard let data = try? Data(contentsOf: manifest),
-              let list = try? JSONDecoder().decode([Chapter].self, from: data) else { return }
+        guard let data = try? Data(contentsOf: manifest) else { return }
+        guard let list = try? JSONDecoder().decode([Chapter].self, from: data) else {
+            // A manifest that will not decode means chapters that exist on disk but
+            // are unreachable; saving an empty one next would delete the record of
+            // files the user still has.
+            _ = StoreRescue.keepCopy(of: manifest)
+            failure = "下载清单读不出来,旧数据已另存一份"
+            return
+        }
         for chapter in list {
             chapters[chapter.id] = chapter
             for (page, file) in zip(chapter.pages, chapter.files) {

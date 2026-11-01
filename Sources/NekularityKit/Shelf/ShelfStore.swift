@@ -460,9 +460,13 @@ public final class ShelfStore {
             folders = file.folders
             pictures = file.pictures ?? []
         } catch {
-            // A broken file is reported, not silently replaced: the reader
-            // can still see the error and the file stays for repair.
+            // A broken file is reported, not silently replaced: the reader can
+            // still see the error and the file stays for repair. It is also copied
+            // aside, because the next recorded page would save an empty shelf over
+            // it — the loss would come from the save, not from the decode.
+            let kept = StoreRescue.keepCopy(of: url)
             lastError = "reading shelf.json: \(error.localizedDescription)"
+                + (kept.map { ", 旧数据已另存为 \($0.lastPathComponent)" } ?? "")
         }
     }
 

@@ -86,6 +86,8 @@ public final class SearchHistoryStore {
         do {
             queries = try JSONDecoder().decode(File.self, from: data).queries
         } catch {
+            // Before the next search saves an empty list over it.
+            _ = StoreRescue.keepCopy(of: url)
             lastError = "reading searches.json: \(error.localizedDescription)"
         }
     }

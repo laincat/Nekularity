@@ -179,7 +179,8 @@ public final class IntroStore {
         if let decoded = try? JSONDecoder().decode([String: IntroMark].self, from: data) {
             marks = decoded
         } else {
-            failure = "片头标记读不出来,已忽略"
+            _ = StoreRescue.keepCopy(of: file)
+            failure = "片头标记读不出来,旧数据已另存一份"
         }
     }
 

@@ -112,7 +112,8 @@ public final class MetadataStore {
         guard let decoded = try? JSONDecoder().decode([String: SeriesInfo].self, from: data) else {
             // Left on disk unchanged: a cache that will not decode is worth less
             // than the file that might after a version that can read it.
-            failure = "元数据缓存读不出来,已忽略"
+            _ = StoreRescue.keepCopy(of: file)
+            failure = "元数据缓存读不出来,旧数据已另存一份"
             return
         }
         series = decoded
