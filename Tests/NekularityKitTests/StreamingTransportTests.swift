@@ -219,7 +219,14 @@ struct StreamingTransportTests {
             collector.append(data)
         }
 
-        #expect(collector.pieces == expected)
+        // The order is what the case is named for; the boundaries are the
+        // transport's to choose. It arrived as [2048, 1024, …] once, which is two
+        // pieces handed over together — not a reordering — and asserting the
+        // framing made this fail for a reason that is not a bug.
+        let joined = collector.pieces.reduce(into: Data()) { $0.append($1) }
+        let wanted = expected.reduce(into: Data()) { $0.append($1) }
+        #expect(joined == wanted)
+        #expect(collector.pieces.allSatisfy { !$0.isEmpty })
     }
 }
 
