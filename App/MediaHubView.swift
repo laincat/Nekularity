@@ -202,7 +202,9 @@ struct MediaHubView: View {
             do {
                 var all: [MediaItem] = []
                 for library in try await client.libraries(server: server, token: token) {
-                    all += try await client.items(server: server, token: token, library: library)
+                    // Paged and capped: a library with thousands of episodes is not
+                    // something a list should pull in one response.
+                    all += try await client.allItems(server: server, token: token, library: library)
                 }
                 loaded.append((server.displayName, server.id, all))
             } catch {

@@ -127,6 +127,44 @@ struct MediaServerClientTests {
         #expect(sent.headers["X-Emby-Authorization"]?.contains("Token=\"tok-1\"") == true)
     }
 
+    @Test("a big library is fetched page by page and stops at the cap")
+    func pagesThroughALibrary() async throws {
+        var fake = FakeServer()
+        let base = "http://192.168.1.9:8096/Users/user-7/Items?Recursive=true"
+            + "&IncludeItemTypes=Movie,Episode&Fields=Overview,RunTimeTicks,PrimaryImageTag"
+        let first = base + "&StartIndex=0&Limit=200&ParentId=lib-1"
+        let second = base + "&StartIndex=200&Limit=200&ParentId=lib-1"
+        func page(_ ids: [Int], total: Int) -> String {
+            let items = ids.map { "{\"Id\":\"v-\($0)\",\"Name\":\"第\($0)集\"}" }.joined(separator: ",")
+            return "{\"Items\":[\(items)],\"TotalRecordCount\":\(total)}"
+        }
+        fake.replies[first] = (200, page(Array(0..<200), total: 250))
+        fake.replies[second] = (200, page(Array(200..<250), total: 250))
+
+        let server = MediaServer(kind: .jellyfin, baseURL: "192.168.1.9:8096", userID: "user-7")
+        let items = try await fake.client().allItems(
+            server: server, token: "t",
+            library: MediaLibrary(id: "lib-1", name: "剧", kind: "tvshows"))
+        #expect(items.count == 250)
+        // Two requests, not one for everything and not an endless third.
+        #expect(fake.log.all.count == 2)
+        #expect(fake.log.all.allSatisfy { $0.url.contains("Limit=") })
+    }
+
+    @Test("a short page ends the walk even when the total lies")
+    func stopsOnShortPage() async throws {
+        var fake = FakeServer()
+        let base = "http://192.168.1.9:8096/Users/user-7/Items?Recursive=true"
+            + "&IncludeItemTypes=Movie,Episode&Fields=Overview,RunTimeTicks,PrimaryImageTag"
+        fake.replies[base + "&StartIndex=0&Limit=200"] =
+            (200, #"{"Items":[{"Id":"v-1","Name":"只有一个"}],"TotalRecordCount":9999}"#)
+        let server = MediaServer(kind: .jellyfin, baseURL: "192.168.1.9:8096", userID: "user-7")
+        let items = try await fake.client().allItems(server: server, token: "t", library: nil)
+        // A server claiming more than it sends must not make the client loop.
+        #expect(items.count == 1)
+        #expect(fake.log.all.count == 1)
+    }
+
     @Test("a server without a user id is not asked to store progress")
     func refusesWithoutUser() async {
         let client = MediaServerClient(deviceID: "d") { _ in .init(status: 204) }

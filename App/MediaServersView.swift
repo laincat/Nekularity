@@ -288,7 +288,7 @@ struct MediaBrowserView: View {
         loading = true
         defer { loading = false }
         do {
-            items = try await client.items(server: server, token: token, library: selected)
+            items = try await client.allItems(server: server, token: token, library: selected)
             failure = nil
         } catch {
             failure = error.localizedDescription

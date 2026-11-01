@@ -142,6 +142,9 @@ public struct MediaServerClient: Sendable {
                 throw MediaServerError("地址不是有效的网址:\(request.url)")
             }
             var req = URLRequest(url: url)
+            // A NAS that stopped answering must fail, not hang: 30 s is longer than
+            // any local server needs and shorter than a user's patience.
+            req.timeoutInterval = 30
             req.httpMethod = request.method
             req.httpBody = request.body
             for (name, value) in request.headers { req.setValue(value, forHTTPHeaderField: name) }
@@ -225,13 +228,20 @@ public struct MediaServerClient: Sendable {
         }
     }
 
-    public func items(server: MediaServer, token: String, library: MediaLibrary?) async throws -> [MediaItem] {
+    /// One page of items, plus how many the server says there are in total.
+    ///
+    /// `Recursive=true` with no limit asks a big library for everything at once:
+    /// thousands of rows in one response, on a phone, over wifi. The page size is
+    /// the caller's because the screen decides how much it is willing to show.
+    public func itemPage(server: MediaServer, token: String, library: MediaLibrary?,
+                         startIndex: Int = 0, limit: Int = 200) async throws -> (items: [MediaItem], total: Int) {
         guard server.kind.speaksEmbyAPI else {
             throw MediaServerError("\(server.kind.title) 用的是另一套接口,客户端还没有接上")
         }
         let base = try normalizedBase(server.baseURL)
         var url = base + "/Users/" + (server.userID.isEmpty ? "" : server.userID) + "/Items"
         url += "?Recursive=true&IncludeItemTypes=Movie,Episode&Fields=Overview,RunTimeTicks,PrimaryImageTag"
+        url += "&StartIndex=" + String(max(0, startIndex)) + "&Limit=" + String(max(1, limit))
         if let library { url += "&ParentId=" + library.id }
         let response = try await send(authorized(url: url, token: token, device: deviceID))
         try expectOK(response, what: "读取影片")
@@ -248,9 +258,10 @@ public struct MediaServerClient: Sendable {
                 var UserData: UserData?
             }
             var Items: [Item]
+            var TotalRecordCount: Int?
         }
         let answer = try decode(Answer.self, from: response, what: "影片")
-        return answer.Items.map { item in
+        let mapped = answer.Items.map { item in
             MediaItem(
                 id: item.Id,
                 title: item.Name,
@@ -263,6 +274,34 @@ public struct MediaServerClient: Sendable {
                 position: Int((item.UserData?.PlaybackPositionTicks ?? 0) / 10_000_000)
             )
         }
+        // A server that does not report a total gets "at least this many", so a
+        // caller never reads a missing field as "there is nothing more".
+        return (mapped, answer.TotalRecordCount ?? (startIndex + mapped.count))
+    }
+
+    /// One page, kept for callers that only ever need the first.
+    public func items(server: MediaServer, token: String, library: MediaLibrary?) async throws -> [MediaItem] {
+        try await itemPage(server: server, token: token, library: library).items
+    }
+
+    /// Every item up to `max`, one page at a time.
+    ///
+    /// The cap is deliberate: a library with ten thousand episodes is not something
+    /// a list should load in full, and a silent truncated list is better than an
+    /// app that appears to hang. The caller is told what it got.
+    public func allItems(server: MediaServer, token: String, library: MediaLibrary?,
+                         pageSize: Int = 200, max: Int = 600) async throws -> [MediaItem] {
+        var collected: [MediaItem] = []
+        var start = 0
+        while collected.count < max {
+            let page = try await itemPage(server: server, token: token, library: library,
+                                         startIndex: start, limit: min(pageSize, max - collected.count))
+            collected += page.items
+            // A short page, or a total we have reached, is the end.
+            if page.items.isEmpty || collected.count >= page.total { break }
+            start += page.items.count
+        }
+        return collected
     }
 
     /// Where the bytes are, for the player.
