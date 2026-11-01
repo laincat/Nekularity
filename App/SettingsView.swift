@@ -31,6 +31,8 @@ struct SettingsView: View {
     @Environment(ProfileStore.self) private var profiles
     @Environment(MetadataStore.self) private var metadata
     @State private var tmdbKey = ""
+    @State private var reminders = AiringReminders()
+    @State private var remindersOn = false
     @State private var metadataNote: String?
     @Environment(\.switchProfile) private var switchProfile
     @State private var showingProfiles = false
@@ -123,6 +125,31 @@ struct SettingsView: View {
                     Text("元数据")
                 } footer: {
                     Text("TMDB 的 key 或 v4 令牌,都存在钥匙串里。用它把剧名对到播出日期,日历才有「即将播出」。")
+                }
+
+                Section {
+                    Toggle("追剧提醒", isOn: $remindersOn)
+                        .accessibilityIdentifier("settings.reminders")
+                        .onChange(of: remindersOn) { _, on in
+                            Task { await toggleReminders(on) }
+                        }
+                    Button {
+                        Task { await syncReminders() }
+                    } label: {
+                        Label("立即同步提醒", systemImage: "bell.badge")
+                    }
+                    .disabled(!reminders.authorised)
+                    .accessibilityIdentifier("settings.reminders.sync")
+                    if reminders.authorised {
+                        Text("已安排 \(reminders.pending) 条").font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let message = reminders.message {
+                        Text(message).font(.caption).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("提醒")
+                } footer: {
+                    Text("在播出日当天上午提醒。日期来自 TMDB;没有 key 时没有日期,也就没有提醒。")
                 }
 
                 Section("外观") {
@@ -236,6 +263,23 @@ struct SettingsView: View {
         } catch {
             metadataNote = error.localizedDescription
         }
+    }
+
+
+    private func toggleReminders(_ on: Bool) async {
+        guard on else {
+            await reminders.cancelAll()
+            return
+        }
+        guard await reminders.requestAuthorisation() else { return }
+        await syncReminders()
+    }
+
+    /// Plans from what the metadata store already knows, so this needs no network
+    /// round-trip of its own.
+    private func syncReminders() async {
+        let plan = AiringPlan.plan(metadata.upcoming(within: 30, from: Date()))
+        await reminders.sync(plan: plan)
     }
 
 }
