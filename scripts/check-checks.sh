@@ -98,7 +98,24 @@ else
 ' "$core_src"
 fi
 
-# 4. A pair that links but says a different amount: one side gained a row.
+# 4. The JSON key rule: a property the client reads and Core never sends. This is
+#    the failure the check exists for, and the one that shipped when Core renamed
+#    the video line title to name.
+if [ -n "$core_src" ]; then
+	mkdir -p "$tmp/json/Sources"
+	cp -R Sources/NekularityKit "$tmp/json/Sources/NekularityKit"
+	part="$tmp/json/Sources/NekularityKit/Core/Models.swift"
+	python3 scripts/check-checks-add-key.py "$part" CategoryPart bogusProbeKey
+	expect_failure "the JSON key rule" 'reads "bogusProbeKey"' \
+		env NK_CLIENT_ROOT="$tmp/json" NK_CORE_SRC="$core_src" python3 scripts/check-json-keys.py
+	cp Sources/NekularityKit/Core/Models.swift "$part"
+	expect_pass "the JSON key rule" \
+		env NK_CLIENT_ROOT="$tmp/json" NK_CORE_SRC="$core_src" python3 scripts/check-json-keys.py
+else
+	printf 'check-checks: the JSON key rule SKIPPED (no Core checkout)\n'
+fi
+
+# 5. A pair that links but says a different amount: one side gained a row.
 printf '[en](lonely.en.md)\n\n# a\n\n| x |\n| - |\n' >"$tmp/docs/docs/lonely.md"
 expect_failure "the pair-content rule" \
 	"table rows" \

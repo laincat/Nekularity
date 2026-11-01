@@ -25,7 +25,10 @@ import pathlib
 import re
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+# NK_CLIENT_ROOT points the comparison at a copy of the kit, so
+# scripts/check-checks.sh can add a key Core never sends and watch this report it.
+ROOT = pathlib.Path(os.environ.get("NK_CLIENT_ROOT") or
+                    pathlib.Path(__file__).resolve().parent.parent)
 
 # Go type in Core → Swift type in this kit. Both are matched by name, and the Go
 # side is searched for across the whole checkout so a move does not break this.
@@ -60,6 +63,10 @@ SWIFT_CASE_LINE = re.compile(r"^\s*case\s+(.+?)\s*$", re.MULTILINE)
 # A stored property: `var name: Type` with nothing else on the line. A computed
 # property (`{ ... }`) or one with an initialiser is not part of the wire format,
 # and taking those was how this check first reported `id` and `isRandom` as keys.
+# A property with a default is not a wire key: the client fills it itself, and
+# `ComicComment.fallbackID` is the one that exists. Leaving `=` out of the class is
+# what expresses that, so a field Core sends and the kit also defaults is invisible
+# here — worth knowing if one is ever added.
 SWIFT_STORED = re.compile(
     r"^\s*(?:public\s+|internal\s+|private\s+)?(?:var|let)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*[^={]+$",
     re.MULTILINE,

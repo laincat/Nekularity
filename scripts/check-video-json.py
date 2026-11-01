@@ -58,7 +58,8 @@ SWIFT_FIELD = re.compile(r"^[ \t]*(?:public\s+|internal\s+|private\s+)?var\s+([A
 
 GO_TAG = re.compile(r'json:"([^"]+)"')
 SWIFT_DECL = re.compile(r"\b(?:public\s+)?struct\s+([A-Za-z_][A-Za-z0-9_]*)")
-# Newlines are excluded on purpose: without that the character class spans lines
+# As in check-json-keys: a property with a default (`= …`) is filled by the client,
+# not decoded, so it is not a wire key. Newlines are excluded on purpose too: without that the character class spans lines
 # and one match swallows a whole struct, which is how this check first reported
 # every field as missing.
 SWIFT_PROPERTY = re.compile(
