@@ -37,13 +37,17 @@ Updated 2026-11-01. This file keeps **what is to be done and what counts as done
 | G13 Tag translation and rating | ~~Translation~~ ~~Rating blocked on Core~~ Both done: translated tags and the source's own rating | Tags show a translation; a rating appears where the source offers one |
 | G14 Real device and real account | Only simulator evidence exists; a diagnostics page now makes the evidence copyable | A device install, a real sign-in, and lock-screen and background behaviour all recorded (**needs you to install and sign in**) |
 
-## Not doing, or needs a decision first
+## Not doing, deferred, and the evidence for each
 
-| Item | State |
-|---|---|
-| Pixiv OAuth (the app API) | Needs a client credential; in a plugin that is a published credential, and natively it is a second account architecture. The web login is used instead |
-| Linux and the web client | After iOS, macOS and Windows are done |
-| Bringing the desktop to parity | The desktop has the reading path only; video and the media library have not started |
+This section exists because I wrote "not possible" three times when the truth was "I did not look" — rating, Plex and software-route PiP, each overturned by reading one file. So every conclusion here says **what was checked**, and "not verified" where nothing was.
+
+| Item | Conclusion | Evidence (what was checked) |
+|---|---|---|
+| Pixiv OAuth (the app API) | Not doing it; the web login is used | Measured 2026-11-01: `app-api.pixiv.net/v1/illust/ranking` answers **HTTP 400** without a bearer; `www.pixiv.net/ajax/user/self` answers **HTTP 200** with a null `userData` when anonymous |
+| An online danmaku source | Not doing it; local files only | `grep -ril danmaku --include=*.go` over all of Core returns **nothing**; neither the comic runtime nor the video contract has a danmaku interface |
+| The rest of G7: drawing subtitle cues | **Possible, not done** (not blocked) | AetherEngine 7.53.1 publishes `$subtitleCues` with `.text`, `.richText` and `.image` bodies, which is enough to draw an overlay |
+| Linux and the web client | Deferred | **Not verified**: Core's non-Apple build and an interface approach have not been assessed |
+| Bringing the desktop to parity | Deferred | **Not verified**: Nekophage's current state was not rechecked (last record is the reading path only) |
 
 ## What counts as a round of progress
 
