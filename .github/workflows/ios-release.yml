@@ -60,10 +60,16 @@ jobs:
         run: xcodegen generate
       - name: Build unsigned device app
         run: |
+          # The previous run ended mid-compile with no error line and no failing
+          # command, which is what an out-of-memory kill looks like: the log simply
+          # stops. Two jobs at a time and no index store cost minutes, not
+          # correctness.
+          vm_stat | head -4 || true
+          df -h "$RUNNER_TEMP" | tail -1 || true
           xcodebuild -project Nekularity.xcodeproj -scheme Nekularity \
-            -configuration Release -sdk iphoneos \
+            -configuration Release -sdk iphoneos -jobs 2 -quiet \
             -derivedDataPath "$RUNNER_TEMP/nekularity-derived" \
-            CODE_SIGNING_ALLOWED=NO build
+            COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGNING_ALLOWED=NO build
       - name: Package unsigned IPA
         run: |
           mkdir -p "$RUNNER_TEMP/package/Payload"
