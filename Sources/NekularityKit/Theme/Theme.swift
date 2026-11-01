@@ -40,15 +40,23 @@ extension Theme {
     /// Whether text drawn on `accent` should be black rather than white.
     ///
     /// A theme's accent is a hex string from a file, so it can be anything: the
-    /// shipped ones are all dark enough for white text, and a pale one is not.
+    /// shipped and imported accents can both benefit from dark text.
     /// White on a pale accent is unreadable and no screenshot catches it because
     /// it only happens with a theme nobody installed yet.
     public var accentTextIsDark: Bool {
         guard let rgb = Self.components(of: accent) else { return false }
-        // WCAG contrast against black and against white; the larger one wins.
-        let onBlack = (Self.luminance(rgb) + 0.05) / 0.05
-        let onWhite = 1.05 / (Self.luminance(rgb) + 0.05)
-        return onBlack > onWhite
+        // White only when it is still readable. The shipped accents all clear this
+        // (iOS blue is 3.44:1, above the 3:1 large-text floor), and flipping them to
+        // black because black scores a little higher would restyle the whole app to
+        // fix a case that is not broken. Below the floor white is genuinely unreadable
+        // and dark text wins.
+        return Self.contrast(Self.luminance(rgb), 1) < 3
+    }
+
+    /// Contrast ratio between two relative luminances.
+    static func contrast(_ a: Double, _ b: Double) -> Double {
+        let (hi, lo) = a > b ? (a, b) : (b, a)
+        return (hi + 0.05) / (lo + 0.05)
     }
 
     /// Parses `#RRGGBB`, with or without the hash.

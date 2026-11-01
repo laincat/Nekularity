@@ -63,12 +63,15 @@ struct ThemeTests {
     }
 
     // A theme's accent is a hex string from a file, so white text is only right
-    // when the accent is dark. Every shipped accent is; a pale one is not, and
-    // white on it is invisible.
+    // when the accent is dark enough for white. The shipped accents are; flipping
+    // them to black because black scores higher would restyle the whole app to fix
+    // a case that is not broken. A pale one cannot carry white and needs dark text.
     @Test("text on an accent follows its lightness")
     func accentTextFollowsTheAccent() {
         #expect(!Theme(id: "a", name: "a", accent: "#0A84FF").accentTextIsDark)
         #expect(!Theme(id: "b", name: "b", accent: "#3482FF").accentTextIsDark)
+        // 2.51:1 with white — the dark theme's pastel accent needs dark text.
+        #expect(Theme(id: "b2", name: "b2", accent: "#6BA4FF").accentTextIsDark)
         #expect(Theme(id: "c", name: "c", accent: "#FFF59D").accentTextIsDark)
         #expect(Theme(id: "d", name: "d", accent: "#FFFFFF").accentTextIsDark)
         #expect(Theme(id: "e", name: "e", accent: "FFFF00").accentTextIsDark)

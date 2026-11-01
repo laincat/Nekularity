@@ -68,6 +68,10 @@ struct Pill: ButtonStyle {
     }
 }
 
+extension Theme {
+    var onAccent: Color { accentTextIsDark ? .black : .white }
+}
+
 /// A section title with the chevron that says "there is more behind this".
 struct SectionHeader: View {
     let title: String
