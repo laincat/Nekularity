@@ -10,6 +10,7 @@ The point of this file: **do not treat those changes as verified.** The table is
 
 | Commit | What changed | How it could break | Look first at |
 |---|---|---|---|
+| `33c5c7a` | `seed-simulator.sh` writes into the environment actually in use | If the resolution is wrong the seed lands where nothing reads it, which looks like "no sources" | Whether a seeded run really shows the five sources |
 | `a4ead24` | Closing the player writes the position back to the server | The write runs in the sheet's dismissal closure; a wrong shape there crashes on close | Play one server item and close it; the three write-back tests |
 | `0031190` `40e0962` | The release workflow is back in the repo; version 0.2.0 | A wrong script path in the job only shows up on CI | Not checkable locally; needs a tag or a manual trigger |
 | `27dd92c` | Three home cards; reading lists filter out videos | A missing case in the home template switch, or a broken layout | Rendering the home screen; the two new `HomeLayout` tests |
@@ -38,7 +39,7 @@ The point of this file: **do not treat those changes as verified.** The table is
 git log --oneline b9fdf3c..HEAD
 ```
 
-Every hash above should appear in the table. Writing this file is how `a4ead24` (progress write-back) was found missing from it — the list drifts, so it has to be checkable in one command.
+Every commit above that **touched code or scripts** should appear in the table; pure documentation commits are not listed because they do not compile. Writing this file is how `a4ead24` (progress write-back) was found missing from it — the list drifts, so it has to be checkable in one command.
 
 ## How to run it
 
