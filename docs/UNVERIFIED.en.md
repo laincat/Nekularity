@@ -2,31 +2,42 @@
 
 [简体中文](UNVERIFIED.md) | English
 
-Updated 2026-11-01. The last tree that was **fully run on a Mac** is `b9fdf3c` (app built, 16 interface cases, `swift test`). Everything after it has only had the static parse check (`scripts/check-swift.py`) and the test sources themselves — it has not been compiled.
+Updated 2026-11-01. **This tree compiles.** GitHub Actions run `41316459367` (commit `71c8c97`) built the pinned Core, ran the four repository checks, generated the project, compiled the app with `xcodebuild` on macOS, and produced an unsigned IPA (18.9 MB). The worry that the commits after `b9fdf3c` had never seen a compiler is now settled.
 
-The point of this file: **do not treat those changes as verified.** The table is ordered by how they could break, so a Mac run can start at the top.
+Compiling is not behaving. The iPhone interface cases and `swift test` still do not run on CI, and a real device and real servers are still missing.
 
-## Ordered by risk
+## What the build proved
 
-| Commit | What changed | How it could break | Look first at |
+| Item | Evidence |
+|---|---|
+| The kit and the app compile against the real iOS SDK | The "Build unsigned device app" step of run `41316459367` succeeded |
+| The IPA packaging path works | "Package unsigned IPA" and the artifact upload succeeded in the same run |
+| The repository checks pass on macOS too | The same run's check step: `check-docs`, `check-partitions`, `check-core-pin`, `check-kit-core-calls`, `check-swift` (152 files really parsed, tree-sitter installed) |
+| The Core pin is reproducible | The same run fetched and built Core at `8aebcedd5c6a` first |
+
+The first real compile found four errors that no static check of mine could see, all now fixed: `ComicDetails`' rating fields decoded into `Comic` (**which would have failed every details screen**), a static method on a `@MainActor` class called from a nonisolated context, two `status == errSecSuccess || errSecItemNotFound` comparisons that treat `OSStatus` as `Bool`, and then twelve interface errors in the app target (a style ternary, `Environment` argument order, optional chaining, the PiP content source and its cross-thread snapshot).
+
+## Still unverified
+
+| Commit | What changed | Where it stands | What is left |
 |---|---|---|---|
-| `33c5c7a` | `seed-simulator.sh` writes into the environment actually in use | If the resolution is wrong the seed lands where nothing reads it, which looks like "no sources" | Whether a seeded run really shows the five sources |
-| this commit (cue overlay) | Text cues drawn from `$subtitleCues`; the overlay now follows `clock.$sourceTime` | `SubtitleCue`'s fields and `PlaybackClock`'s visibility were read from source, but **the publisher signatures can only be confirmed by a Mac build** | The app compiling; one subtitle-bearing source played |
-| this commit | Software-route PiP (`AVPictureInPictureSampleBufferPlaybackDelegate`) | Only reached with a software-decoded source (VP9/AV1); a wrong `ContentSource(sampleBufferDisplayLayer:)` or delegate signature shows up at compile time or on a device | The app compiling; one software-decoded title going into PiP on a device |
-| `198d1ad` | Airing reminders: kit planning plus `UNUserNotificationCenter` | The notification API and its permission flow only a device can verify; a `UNCalendarNotificationTrigger` with missing date parts silently never fires | On a device, turn it on and check the count; the seven planning tests |
-| `43decff` | Plex video source and Node fixture tests | Never loaded by Core's runtime; a wrong `VideoSource` contract only shows up once installed | Install `plugins/plex.js` as a source; `node plugins/plex.test.mjs` |
-| `ab1ebbb` | Details read and show `stars`/`likesCount`/`isLiked` | New `ComicDetails` fields and a view row; a decoding mistake fails the whole details screen | The details screen; the three rating tests |
-| `a4ead24` | Closing the player writes the position back to the server | The write runs in the sheet's dismissal closure; a wrong shape there crashes on close | Play one server item and close it; the three write-back tests |
-| `0031190` `40e0962` | The release workflow is back in the repo; version 0.2.0 | A wrong script path in the job only shows up on CI | Not checkable locally; needs a tag or a manual trigger |
-| `27dd92c` | Three home cards; reading lists filter out videos | A missing case in the home template switch, or a broken layout | Rendering the home screen; the two new `HomeLayout` tests |
-| `467b9c5` `4db8265` | Duplicate zip page names, danmaku row identity, integer timestamps | Unit-test level only, low risk | `LocalComic` and `Danmaku` tests |
-| `017522b` | Server paging and a 30 s timeout | A wrong query build would empty the media library | Whether the media library lists anything (needs a real server) |
-| `7787b3b` | `PlaybackProgress` consolidates the arithmetic | Wide type-level change, the likeliest compile failure | The whole kit compiling; durations on three screens |
-| `a693a63` | Zip CRC checking | If the checksums the tests build are wrong, every import test goes red | The four import tests |
-| `6ffe7d7` | `VideoPlayerView` argument order | One four-site compile error was found and fixed; a similar order bug could remain | The app compiling |
-| `4b80a57` | Import moved off the main actor, `importComic` is async | A call site missing `await` is a compile error | `LocalComicsView`, and the four import tests, now `async` |
-| `e460fba` | Unreadable files are copied aside | Nine stores each gained a line; one may name the wrong variable | Each store's `load()` |
-| `6d7dc5d` | The migration crash window | Adoption picks the most recently modified directory; that assumption needs a real device | The three upgrade tests; an actual upgrade on a device |
+| `33c5c7a` | `seed-simulator.sh` writes into the environment actually in use | Script-level, not compiled | Whether a seeded run really shows the five sources |
+| cue overlay | Text cues drawn from `$subtitleCues`, following `clock.$sourceTime` | Compiles | One subtitle-bearing source played, cues appearing in time |
+| software-route PiP | `AVPictureInPictureSampleBufferPlaybackDelegate` | Compiles; the content source is now built from a layer, and the two synchronous answers live in a lock-guarded snapshot | One software-decoded title (VP9/AV1) going into PiP on a device |
+| `198d1ad` | Airing reminders: kit planning plus `UNUserNotificationCenter` | Compiles | On a device, turn it on and check the count; the seven planning tests |
+| `43decff` | Plex video source and Node fixture tests | `node plugins/plex.test.mjs` passes its five cases | Installed as a source and loaded once by Core's own runtime |
+| `ab1ebbb` | Details read and show `stars`/`likesCount`/`isLiked` | Compiles (the fields moved from `Comic` to `ComicDetails`) | A rating number visible on a details screen from a live source |
+| `a4ead24` | Closing the player writes the position back to the server | Compiles | Play one server item and close it; the three write-back tests |
+| `0031190` `40e0962` | The release workflow is back in the repo; version 0.2.0 | **Verified**: a manual trigger now builds and uploads | Only a tag takes the release branch, and none has been pushed |
+| `27dd92c` | Three home cards; reading lists filter out videos | Compiles | Rendering the home screen; the two `HomeLayout` tests |
+| `467b9c5` `4db8265` | Duplicate zip page names, danmaku row identity, integer timestamps | Compiles, low risk | The matching unit tests |
+| `017522b` | Server paging and a 30 s timeout | Compiles | Whether the media library lists anything (needs a real server) |
+| `7787b3b` | `PlaybackProgress` consolidates the arithmetic | Compiles (this was the biggest worry, now ruled out) | Durations and resume position on three screens |
+| `a693a63` | Zip CRC checking | Compiles | The four import tests |
+| `6ffe7d7` | `VideoPlayerView` argument order | Compiles | The player screen as it actually draws |
+| `4b80a57` | Import moved off the main actor, `importComic` is async | Compiles | Import a folder and a `.cbz` |
+| `e460fba` | Unreadable files are copied aside | Compiles | Break a store file and check the copy is left behind |
+| `6d7dc5d` | The migration crash window | Compiles | The three upgrade tests; one real upgrade on a device |
 
 ## Needs real conditions
 
@@ -35,7 +46,7 @@ The point of this file: **do not treat those changes as verified.** The table is
 | Media server connect, browse, play, progress write-back | A Jellyfin/Emby address and account |
 | 即将播出 | A TMDB key |
 | Pixiv following and bookmarks after signing in | A real Pixiv account |
-| Picture in Picture, lock-screen playback | A real device |
+| Picture in Picture, lock-screen playback, notifications firing | A real device |
 | Local videos and imported comics | Files on a real device |
 
 ## Checking this list itself
@@ -44,7 +55,7 @@ The point of this file: **do not treat those changes as verified.** The table is
 git log --oneline b9fdf3c..HEAD
 ```
 
-Every commit above that **touched code or scripts** should appear in the table; pure documentation commits are not listed because they do not compile. Writing this file is how `a4ead24` (progress write-back) was found missing from it — the list drifts, so it has to be checkable in one command.
+Every commit that **touched code or scripts** should appear in the table; pure documentation commits are not listed because they do not compile. Writing this file is how `a4ead24` (progress write-back) was found missing from it — the list drifts, so it has to be checkable in one command.
 
 ## How to run it
 
@@ -53,4 +64,4 @@ sh scripts/fetch-core.sh
 NK_UI_TESTS=1 NK_UI_SEED=/tmp/seed.json NK_UI_SEED_REPLACE=1 sh scripts/verify-ios.sh
 ```
 
-The expected `swift test` count grows with the commits: the last confirmed number was 249 / 48 (before `b9fdf3c`). Count the tests added since rather than checking a remembered number against it.
+CI currently builds without running tests: the `xcodebuild` action is `build`. To bring the unit tests in, the workflow needs a `test` step with a simulator destination — that is the next thing to add. The expected `swift test` count grows with the commits: the last confirmed number was 249 / 48 (before `b9fdf3c`). Count the tests added since rather than checking a remembered number against it.

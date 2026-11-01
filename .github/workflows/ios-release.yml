@@ -56,6 +56,17 @@ jobs:
           run_check python3 scripts/check-kit-core-calls.py
           run_check "$parse_python" scripts/check-swift.py
           exit $fail
+      - name: Run the kit's unit tests
+        run: |
+          # The kit declares macOS alongside iOS so its tests run on the host the
+          # build already happens on. Without this step a green run means "it
+          # compiles", which is not the same as "the tests pass".
+          if ! swift test > "$RUNNER_TEMP/swift-test.log" 2>&1; then
+            grep -E "error:|XCTAssert|failed" "$RUNNER_TEMP/swift-test.log" | head -40 || true
+            tail -25 "$RUNNER_TEMP/swift-test.log"
+            exit 1
+          fi
+          grep -E "Executed [0-9]+ test" "$RUNNER_TEMP/swift-test.log" | tail -1
       - name: Generate project
         run: xcodegen generate
       - name: Build unsigned device app

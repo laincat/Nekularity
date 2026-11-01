@@ -2,31 +2,42 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
-更新:2026-11-01。最后一次**在 Mac 上完整跑过**的树是 `b9fdf3c`(App 构建通过、16 条界面用例、`swift test`)。之后的所有提交只有静态检查(`scripts/check-swift.py`)与单测源码,没有编译过。
+更新:2026-11-01。**这棵树编译过了**:GitHub Actions 运行 `41316459367`(提交 `71c8c97`)在 macOS 上完成内置 Core 构建、四项仓库检查、工程生成、`xcodebuild` 编译,并产出了未签名 IPA(18.9 MB)。此前 `b9fdf3c` 之后的一批提交从未经过编译器,那份顾虑到此为止。
 
-这份文件的意义:**不要把这些改动当成已验证**。下表按「可能怎么坏」排列,拿到一台 Mac 时从上往下看。
+编译通过不等于行为正确。iPhone 界面用例与 `swift test` 仍未在 CI 上跑,真机与真实服务器仍是空白。
 
-## 按风险排列
+## 构建已经证明的
 
-| 提交 | 改了什么 | 可能怎么坏 | 先看哪里 |
+| 项目 | 证据 |
+|---|---|
+| 整个 kit 与 App 能在真实 iOS SDK 上编译 | 运行 `41316459367` 的「Build unsigned device app」成功 |
+| 打包成 IPA 的路径可用 | 同一次运行的「Package unsigned IPA」与产物上传成功 |
+| 仓库检查在 macOS 上同样通过 | 同一运行的检查步骤:`check-docs`、`check-partitions`、`check-core-pin`、`check-kit-core-calls`、`check-swift`(已装 tree-sitter,真解析 152 个文件) |
+| 内核 pin 可复现 | 同一运行先从 `8aebcedd5c6a` 拉取并构建 Core 成功 |
+
+首次真实编译抓到并已修掉的四个错误,都是静态检查看不见的:`ComicDetails` 的评分字段被误写进 `Comic`(**会让每个详情页整页失败**)、`@MainActor` 类里的静态方法被非隔离调用、两处 `status == errSecSuccess || errSecItemNotFound`(把 `OSStatus` 当 `Bool`),以及随后 App 目标暴露的 12 个界面错误(样式三元、`Environment` 参数顺序、可选链、PiP 内容源与跨线程快照)。
+
+## 还没验证的
+
+| 提交 | 改了什么 | 现在的状态 | 还剩什么 |
 |---|---|---|---|
-| `33c5c7a` | `seed-simulator.sh` 写入真正在用的环境目录 | 路径解析若错,seed 会写进没人读的地方,表现为「没有源」 | 一次 seeded 运行是否真的出现 5 个源 |
-| 本轮(字幕叠层) | 用 `$subtitleCues` 画文字字幕;叠层改为跟随 `clock.$sourceTime` | `SubtitleCue` 字段与 `PlaybackClock` 的公开性靠读源码确认,但 **Publishers 的签名只有在 Mac 上编译才能证实** | App 编译;播放一次带字幕的源 |
-| 本轮 | 软件通路画中画(`AVPictureInPictureSampleBufferPlaybackDelegate`) | 只在软解源(VP9/AV1)下才会走到;`ContentSource(sampleBufferDisplayLayer:)` 签名或委托签名写错只有编译时/真机才暴露 | App 编译;真机软解一次并转画中画 |
-| `198d1ad` | 追剧提醒:kit 规划 + `UNUserNotificationCenter` 接线 | 通知 API 用法与权限流只有真机才验证得了;`UNCalendarNotificationTrigger` 若日期组件缺失会静默不触发 | 真机开通知后看「已安排 N 条」;7 个规划单测 |
-| `43decff` | Plex 视频源 + Node 固件测试 | 未被真实 Core 运行时加载过,`VideoSource` 契约写错只有装进 App 才会暴露 | 把 `plugins/plex.js` 装进源列表;`node plugins/plex.test.mjs` |
-| `ab1ebbb` | 详情读 `stars`/`likesCount`/`isLiked` 并显示评分 | 新增 `ComicDetails` 字段与一个视图行;解码若写错会让详情页整页失败 | 详情页;3 个评分解码测试 |
-| `a4ead24` | 关闭播放器时把位置回写服务器 | 回写跑在 sheet 关闭闭包里;错误姿势会在关闭时崩 | 播放一次服务器条目后关闭;`MediaServer` 3 个回写测试 |
-| `0031190` `40e0962` | 发布流水线回到仓库、版本 0.2.0 | 工作流引用的脚本路径若写错,只有在 CI 上才会暴露 | 本地 `bash -n` 无用,需要一次 tag 或手动触发 |
-| `27dd92c` | 首页三张卡;继续阅读过滤视频 | 首页布局或模板 switch 少一个 case | 首页渲染;`swift test` 里 `HomeLayout` 两个新用例 |
-| `467b9c5` `4db8265` | 压缩包重名页、弹幕行标识、整数时间戳 | 只有单测覆盖,风险低 | `LocalComic`/`Danmaku` 测试 |
-| `017522b` | 服务器分页 + 30 秒超时 | 分页请求拼接错误会让媒体库空掉 | 媒体库能否列出条目(需真实服务器) |
-| `7787b3b` | `PlaybackProgress` 收敛 | 类型改动面广,最可能编译失败 | 整个 kit 编译;三个播放界面的时长显示 |
-| `a693a63` | zip CRC 校崄 | 测试构造的压缩包若 CRC 写错,全部导入测试会红 | 4 个导入测试 |
-| `6ffe7d7` | `VideoPlayerView` 参数顺序 | 已修一个四处编译错误;同类顺序问题可能还有 | App 编译 |
-| `4b80a57` | 导入移到后台、`importComic` 变 async | 调用点少了 `await` 就是编译错误 | `LocalComicsView`、4 个导入测试改成 `async` |
-| `e460fba` | 读不出的文件先备份 | 九个 store 各加一处,可能漏掉某个 `url` 变量名 | 各 store 的 `load()` |
-| `6d7dc5d` | 迁移崩溃窗口 | 接管逻辑取「最新修改的目录」,时序假设需要真机确认 | 3 个升级测试;真机升级一次 |
+| `33c5c7a` | `seed-simulator.sh` 写入真正在用的环境目录 | 脚本级改动,不参与编译 | 一次 seeded 运行是否真的出现 5 个源 |
+| 字幕叠层 | 用 `$subtitleCues` 画文字字幕,跟随 `clock.$sourceTime` | 编译通过 | 播放一次带字幕的源,确认文字按时间出现 |
+| 软件通路画中画 | `AVPictureInPictureSampleBufferPlaybackDelegate` | 编译通过;内容源改为按图层构造,两个同步问题的答案放进带锁的快照 | 真机软解一次(VP9/AV1)并转画中画 |
+| `198d1ad` | 追剧提醒:kit 规划 + `UNUserNotificationCenter` | 编译通过 | 真机开通知后看「已安排 N 条」;7 个规划单测 |
+| `43decff` | Plex 视频源 + Node 固件测试 | `node plugins/plex.test.mjs` 五项通过 | 装进源列表,由真实 Core 运行时加载一次 |
+| `ab1ebbb` | 详情读 `stars`/`likesCount`/`isLiked` 并显示评分 | 编译通过(字段已从 `Comic` 移到 `ComicDetails`) | 真实来源下一次详情页见到评分数字 |
+| `a4ead24` | 关闭播放器时把位置回写服务器 | 编译通过 | 播放一次服务器条目后关闭;`MediaServer` 3 个回写测试 |
+| `0031190` `40e0962` | 发布流水线回到仓库、版本 0.2.0 | **已验证**:手动触发即可完成构建并上传产物 | 打 tag 才会走发布分支;未打 |
+| `27dd92c` | 首页三张卡;继续阅读过滤视频 | 编译通过 | 首页渲染;`HomeLayout` 两个新用例 |
+| `467b9c5` `4db8265` | 压缩包重名页、弹幕行标识、整数时间戳 | 编译通过,风险低 | 对应单测 |
+| `017522b` | 服务器分页 + 30 秒超时 | 编译通过 | 媒体库能否列出条目(需真实服务器) |
+| `7787b3b` | `PlaybackProgress` 收敛 | 编译通过(原先最担心的一处,已排除) | 三个播放界面的时长与续播显示 |
+| `a693a63` | zip CRC 校验 | 编译通过 | 4 个导入测试 |
+| `6ffe7d7` | `VideoPlayerView` 参数顺序 | 编译通过 | 播放器界面实际显示 |
+| `4b80a57` | 导入移到后台、`importComic` 变 async | 编译通过 | 导入一个文件夹与一个 `.cbz` |
+| `e460fba` | 读不出的文件先备份 | 编译通过 | 造一个坏 store 文件,看是否留下副本 |
+| `6d7dc5d` | 迁移崩溃窗口 | 编译通过 | 3 个升级测试;真机升级一次 |
 
 ## 需要真实条件才能验证
 
@@ -35,16 +46,16 @@
 | 媒体服务器连接、浏览、播放、进度回写 | 一台 Jellyfin/Emby 的地址与账号 |
 | 「即将播出」 | 一个 TMDB key |
 | Pixiv 登录后的关注与收藏 | 真实 Pixiv 账号 |
-| 画中画、锁屏后台播放 | 真机 |
+| 画中画、锁屏后台播放、通知触发 | 真机 |
 | 本机视频与导入的漫画 | 真机上的文件 |
 
-## 这份清单本身怎么核对
+## 核对清单本身
 
 ```sh
 git log --oneline b9fdf3c..HEAD
 ```
 
-上面每个**改动过代码或脚本**的提交都应出现在表格里(纯文档提交不列,它们不参与编译)。写这份文档时正是这么发现 `a4ead24`(进度回写)被漏掉的——清单会漂移,所以要能一句话核对。
+表格里**改动过代码或脚本**的提交都该出现;纯文档提交不列,它不参与编译。写这份文档时正是这样发现 `a4ead24`(进度回写)被漏掉的——清单会漂移,所以要能一句话核对。
 
 ## 怎么跑
 
@@ -53,4 +64,4 @@ sh scripts/fetch-core.sh
 NK_UI_TESTS=1 NK_UI_SEED=/tmp/seed.json NK_UI_SEED_REPLACE=1 sh scripts/verify-ios.sh
 ```
 
-`swift test` 的期望值随提交增长:最近一次确认为 249 / 48(在 `b9fdf3c` 之前);此后新增的测试都应计入,以实际输出为准,不要用记下来的数字对账。
+CI 上目前只构建、不跑测试:`xcodebuild` 的目标是 `build`。要把单测也纳入,需要给工作流加一步 `test`,并指定模拟器目标——这是下一件该做的事。`swift test` 的期望数随提交增长,最后一次确认的是 249 / 48(在 `b9fdf3c` 之前),应按新增用例数核对,而不是记住一个数字。
