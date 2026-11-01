@@ -296,7 +296,9 @@ except (ValueError, KeyError):
 				if xcodebuild test-without-building -scheme Nekularity $only \
 					-destination "platform=iOS Simulator,id=$device" \
 					-derivedDataPath "$ui/dd" >"$ui/tests.log" 2>&1; then
-					ran=$(sed -n 's/.*Executed \([0-9][0-9]*\) tests\?,.*/\1/p' "$ui/tests.log" | tail -1)
+					# grep -o, not sed: BSD sed has no \? and matched nothing silently,
+					# which turned two passing cases into "asked for 2, ran 0".
+					ran=$(grep -o 'Executed [0-9][0-9]* test' "$ui/tests.log" | tail -1 | grep -o '[0-9][0-9]*')
 					if [ -n "$wanted" ] && [ "${ran:-0}" != "$wanted" ]; then
 						printf 'expected %s case(s), ran %s\n' "$wanted" "${ran:-0}" >>"$ui/tests.log"
 						fail "xcodebuild test-without-building (asked for $wanted case(s), ran ${ran:-0})" "$ui/tests.log"
