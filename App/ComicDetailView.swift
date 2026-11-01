@@ -154,6 +154,32 @@ struct ComicDetailView: View {
         }
     }
 
+    /// The source's own score, drawn as five stars with the number beside them.
+    ///
+    /// The number is what the source said; the stars are only a reading of it, so
+    /// they are rounded for display and never replace the value.
+    private func ratingRow(stars: Double, likes: Int?, liked: Bool?) -> some View {
+        HStack(spacing: 6) {
+            HStack(spacing: 1) {
+                ForEach(0..<5, id: \.self) { index in
+                    Image(systemName: Double(index) + 0.5 <= stars ? "star.fill" : "star")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+            }
+            Text(String(format: "%.1f", stars)).font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+            if let likes, likes > 0 {
+                Text("· \(likes) 人喜欢").font(.caption2).foregroundStyle(.secondary)
+            }
+            if liked == true {
+                Image(systemName: "heart.fill").font(.caption2).foregroundStyle(.pink)
+            }
+        }
+        .accessibilityIdentifier("detail.rating")
+        .accessibilityValue(String(format: "%.1f", stars))
+    }
+
     private func content(_ d: ComicDetails) -> some View {
         List {
             Section {
@@ -165,6 +191,13 @@ struct ComicDetailView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(d.title.isEmpty ? route.comic.title : d.title).font(.title3.bold()).textSelection(.enabled)
                         if let sub = d.subtitle, !sub.isEmpty { Text(sub).foregroundStyle(.secondary) }
+                        // The source rates it or it does not; a row of empty stars
+                        // would be a claim that it was rated zero.
+                        if let stars = d.stars {
+                            ratingRow(stars: stars, likes: d.likesCount, liked: d.isLiked)
+                        } else if let likes = d.likesCount, likes > 0 {
+                            Text("\(likes) 人喜欢").font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))

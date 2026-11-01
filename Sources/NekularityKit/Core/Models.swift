@@ -505,6 +505,9 @@ public struct Comic: Decodable, Sendable, Hashable, Identifiable {
         tags = (try? c.decode([String].self, forKey: .tags)) ?? []
         description = c.lenientString(.description)
         favoriteId = c.lenientString(.favoriteId)
+        stars = c.lenientDouble(.stars)
+        likesCount = c.lenientInt(.likesCount)
+        isLiked = try? c.decodeIfPresent(Bool.self, forKey: .isLiked)
     }
 }
 
@@ -543,6 +546,13 @@ public struct ComicDetails: Decodable, Sendable {
     /// The source's secondary identifier for this comic, which some comment
     /// threads are keyed by.
     public var subId: String?
+    /// What the source rates this comic, out of five. Core has carried this from
+    /// the start; the client simply was not reading it.
+    public var stars: Double?
+    /// How many readers liked it, when the source counts.
+    public var likesCount: Int?
+    /// Whether this account already liked it, so a control can show its state.
+    public var isLiked: Bool?
 
     public struct Chapter: Sendable, Hashable, Identifiable {
         public var id: String
@@ -551,12 +561,16 @@ public struct ComicDetails: Decodable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case title, subtitle, subTitle, cover, description, tags, chapters, favoriteId, subId
+        case title, subtitle, subTitle, cover, description, tags, chapters, favoriteId, subId,
+             stars, likesCount, isLiked
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         favoriteId = c.lenientString(.favoriteId)
+        stars = c.lenientDouble(.stars)
+        likesCount = c.lenientInt(.likesCount)
+        isLiked = try? c.decodeIfPresent(Bool.self, forKey: .isLiked)
         // A source uses this to place a comment thread under the right work; a
         // declared but undecoded field would mean every thread got "" instead.
         subId = c.lenientString(.subId)
@@ -609,6 +623,13 @@ extension KeyedDecodingContainer {
     func lenientString(_ key: Key) -> String? {
         if let s = try? decode(String.self, forKey: key) { return s }
         if let n = try? decode(JSONValue.self, forKey: key), case .number(let text) = n { return text }
+        return nil
+    }
+
+    func lenientDouble(_ key: Key) -> Double? {
+        if let d = try? decode(Double.self, forKey: key) { return d }
+        if let i = try? decode(Int.self, forKey: key) { return Double(i) }
+        if let s = try? decode(String.self, forKey: key) { return Double(s) }
         return nil
     }
 
