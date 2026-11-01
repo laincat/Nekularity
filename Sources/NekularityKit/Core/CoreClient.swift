@@ -833,3 +833,44 @@ public struct ImageRequest: Sendable, Hashable {
         if let script = o["modifyImage"]?.stringValue { modifyImage = script }
     }
 }
+
+// MARK: - Video providers
+
+/// Video providers answer with results, details and a play address. Core holds
+/// the plugins and rules; the client holds the player, so nothing here decodes
+/// video — these calls only ever return JSON a screen can draw.
+extension CoreClient {
+    public func videoSearch(key: String, keyword: String, cursor: String = "") async throws -> VideoPage {
+        let json = try await run { core, id in
+            try Self.call {
+                core.videoSearch(id, key: key, keyword: keyword, cursor: cursor, error: $0)
+            }
+        }
+        return try Self.decode(VideoPage.self, json)
+    }
+
+    public func videoDetails(key: String, id videoID: String) async throws -> VideoDetails {
+        let json = try await run { core, callID in
+            try Self.call {
+                core.videoDetails(callID, key: key, id: videoID, error: $0)
+            }
+        }
+        return try Self.decode(VideoDetails.self, json)
+    }
+
+    /// Asks the provider where one episode plays.
+    ///
+    /// The answer is an address plus the headers that must ride with it. A
+    /// provider that instead needs a page sniffed says so, and that is the
+    /// caller's problem to solve, not this method's.
+    public func videoPlay(key: String, itemID: String, lineID: String,
+                          episodeID: String) async throws -> VideoPlay {
+        let json = try await run { core, callID in
+            try Self.call {
+                core.videoPlay(callID, key: key, itemID: itemID, lineID: lineID,
+                               episodeID: episodeID, error: $0)
+            }
+        }
+        return try Self.decode(VideoPlay.self, json)
+    }
+}
