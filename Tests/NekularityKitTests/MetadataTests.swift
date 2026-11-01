@@ -132,7 +132,7 @@ struct MetadataStoreTests {
         let far = SeriesInfo(source: "tmdb", id: 3, name: "太远",
                              nextEpisode: .init(airDate: "2027-01-01", season: 1, number: 1, name: ""))
         let none = SeriesInfo(source: "tmdb", id: 4, name: "没日期")
-        for info in [soon, later, far, none] { store.series[info.key] = info }
+        for info in [soon, later, far, none] { store.remember(info) }
 
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!

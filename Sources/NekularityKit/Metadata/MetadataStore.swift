@@ -150,14 +150,21 @@ public final class MetadataStore {
         return info
     }
 
+    /// Records a show the caller already knows: an answer from TMDB, or one carried
+    /// by an import. Writing `series` from outside was only possible in this module,
+    /// which left the tests reaching for a setter that is not there.
+    public func remember(_ info: SeriesInfo, saving: Bool = true) {
+        series[info.key] = info
+        if saving { save() }
+    }
+
     /// Looks one show up, using the cache when it is fresh.
     @discardableResult
     public func lookup(id: Int, client: TMDBClient) async throws -> SeriesInfo {
         let key = "tmdb/\(id)"
         if let hit = cached(key) { return hit }
         let info = try await client.series(id: id)
-        series[key] = info
-        save()
+        remember(info)
         return info
     }
 
