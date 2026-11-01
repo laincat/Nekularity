@@ -21,6 +21,9 @@ public final class DownloadStore {
         public var chapterID: String
         public var chapterTitle: String
         public var pages: [String]
+        /// Paths **relative to the download root**. An absolute path contains the
+        /// app's container UUID, which changes on reinstall and between devices,
+        /// so a manifest written that way points at a file that no longer exists.
         public var files: [String]
 
         public var id: String { "\(sourceKey)|\(comicID)|\(chapterID)" }
@@ -94,8 +97,8 @@ public final class DownloadStore {
     /// Read on every page of the reader, so the hot path is a dictionary lookup;
     /// only a hit touches the disk.
     public func bytes(for key: ImageLoader.Key) -> Data? {
-        guard let path = index["\(key.source)|\(key.chapterID ?? "")|\(key.url)"] else { return nil }
-        return try? Data(contentsOf: URL(fileURLWithPath: path))
+        guard let relative = index["\(key.source)|\(key.chapterID ?? "")|\(key.url)"] else { return nil }
+        return try? Data(contentsOf: root.appending(path: relative))
     }
 
     /// Chapters archived for one comic, in the order they were downloaded.
@@ -109,7 +112,7 @@ public final class DownloadStore {
         chapters.values.reduce(0) { sum, chapter in
             sum + chapter.files.reduce(0) { inner, file in
                 inner + Int64((try? FileManager.default.attributesOfItem(
-                    atPath: URL(fileURLWithPath: file).path)[.size] as? Int) ?? 0)
+                    atPath: root.appending(path: file).path)[.size] as? Int) ?? 0)
             }
         }
     }
@@ -172,7 +175,7 @@ public final class DownloadStore {
                 let body = try await loader.raw(key)
                 let file = folder.appending(path: "\(number).img")
                 try body.write(to: file, options: .atomic)
-                files.append(file.path)
+                files.append(file.path.replacingOccurrences(of: root.path + "/", with: ""))
                 saved.append(page)
                 progress[id] = Progress(done: number + 1, total: request.pages.count, failure: nil)
             }

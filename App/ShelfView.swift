@@ -79,9 +79,6 @@ struct ShelfView: View {
                         NavigationLink { DownloadsView() } label: {
                             Label("下载", systemImage: "arrow.down.circle")
                         }
-                        NavigationLink { SettingsView() } label: {
-                            Label("设置", systemImage: "gearshape")
-                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }

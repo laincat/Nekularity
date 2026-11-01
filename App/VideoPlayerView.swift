@@ -24,7 +24,7 @@ final class VideoPlayerModel {
     @ObservationIgnored private var started = false
     @ObservationIgnored private var watch: AnyCancellable?
 
-    func start(_ play: VideoPlay) async {
+    func start(_ play: VideoPlay, from startPosition: Double) async {
         guard !started else { return }
         started = true
         guard let url = play.url.flatMap(URL.init(string:)) else {
@@ -113,7 +113,7 @@ struct VideoPlayerView: View {
                         .accessibilityIdentifier("video.close")
                 }
             }
-            .task { await model.start(play) }
+            .task { await model.start(play, from: startPosition) }
             .onDisappear { model.stop() }
         }
     }

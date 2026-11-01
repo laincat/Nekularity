@@ -69,8 +69,10 @@ struct MineView: View {
                     Text("\(entries.count)").font(.system(size: 34, weight: .bold, design: .rounded))
                     Text("部漫画").font(.caption).foregroundStyle(.secondary)
                 }
-                ForEach(entries.prefix(5)) { entry in
-                    NavigationLink(value: entry.comic.route) {
+                ForEach(entries.prefix(5), id: \.key) { entry in
+                    NavigationLink(value: ComicRoute(source: entry.source,
+                                                     comic: Comic(id: entry.id, title: entry.title,
+                                                                  subtitle: entry.author, cover: entry.cover))) {
                         HStack {
                             Text(entry.comic.title).font(.callout).lineLimit(1)
                             Spacer()
@@ -122,8 +124,10 @@ struct MineView: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(Array(items)) { comic in
-                            NavigationLink(value: comic.route) {
+                        ForEach(Array(items), id: \.id) { comic in
+                            NavigationLink(value: ComicRoute(source: comic.source,
+                                                            comic: Comic(id: comic.id, title: comic.title,
+                                                                         subtitle: comic.author, cover: comic.cover))) {
                                 VStack(spacing: 4) {
                                     Group {
                                         if let cover = comic.cover, let url = URL(string: cover) {

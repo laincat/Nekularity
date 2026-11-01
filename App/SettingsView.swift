@@ -31,7 +31,6 @@ struct SettingsView: View {
     @State private var importing = false
     @State private var note: String?
     @State private var showAI = false
-    @State private var showSources = false
 
     private var videoBytes: Int64 { Int64(media.items.reduce(0) { $0 + $1.bytes }) }
     private var total: Int64 { max(1, videoBytes + downloads.totalBytes) }
@@ -75,7 +74,9 @@ struct SettingsView: View {
                 }
 
                 Section("模块与源") {
-                    Button { showSources = true } label: {
+                    NavigationLink {
+                        SourcesView(magpie: magpie)
+                    } label: {
                         Label("漫画源与视频源", systemImage: "puzzlepiece.extension")
                     }
                     .accessibilityIdentifier("settings.sources")
@@ -118,7 +119,6 @@ struct SettingsView: View {
             }
             .navigationTitle("设置")
             .sheet(isPresented: $showAI) { MagpieProvidersView(accounts: magpie, showsClose: true) }
-            .sheet(isPresented: $showSources) { SourcesView(magpie: magpie, showsClose: true) }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
                 switch result {
                 case .success(let url):

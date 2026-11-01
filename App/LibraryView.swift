@@ -72,8 +72,8 @@ struct LibraryView: View {
                 .padding(16)
             }
             .navigationTitle("资源库")
-            .sheet(isPresented: $allSearch) { SearchView(startsInAllSources: true) }
-            .sheet(isPresented: $watching) { VideoView() }
+            .navigationDestination(isPresented: $allSearch) { SearchView(startsInAllSources: true) }
+            .navigationDestination(isPresented: $watching) { VideoView() }
         }
     }
 

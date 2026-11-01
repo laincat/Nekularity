@@ -790,8 +790,6 @@ final class NekularityUITests: XCTestCase {
         shot.lifetime = .keepAlways
         add(shot)
     }
-}
-
 
     /// 资源库 is the hub: 全源搜索, 书库, 视频, 下载 are its entries.
     ///
@@ -831,6 +829,9 @@ final class NekularityUITests: XCTestCase {
         let app = launch()
         try openVideo(app)
 
+        // The tab opens on 本机; the provider search is the other segment.
+        let online = app.buttons["在线源"].firstMatch
+        if online.waitForExistence(timeout: 10) { online.tap() }
         let picker = element(app, "video.source")
         guard picker.waitForExistence(timeout: 20) else {
             throw XCTSkip("the 视频 tab has no source picker")
@@ -873,6 +874,9 @@ final class NekularityUITests: XCTestCase {
     func testDownloadedChapterReadsWithNoServer() throws {
         let server = try LocalImageServer()
         try server.start()
+        // Always stop it: a case that fails before this point used to hold port
+        // 18731 and fail the next three cases with "address already in use".
+        defer { server.stop() }
 
         let app = launch()
         try openSearch(app)
@@ -921,3 +925,4 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(app.buttons["收藏本页"].waitForExistence(timeout: 60),
                       "the reader drew nothing with the server down, so the download did not serve the pages")
     }
+}

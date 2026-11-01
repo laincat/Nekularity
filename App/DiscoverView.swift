@@ -45,6 +45,12 @@ struct DiscoverView: View {
                     }
                     .accessibilityIdentifier("discover.edit")
                 }
+                if editing {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { adding = true } label: { Label("从源添加", systemImage: "plus") }
+                            .accessibilityIdentifier("discover.addBlock")
+                    }
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button { searching = true } label: { Label("搜索", systemImage: "magnifyingglass") }
                         .accessibilityIdentifier("discover.search")
@@ -54,10 +60,12 @@ struct DiscoverView: View {
                         .accessibilityIdentifier("discover.browse")
                 }
             }
-            .sheet(isPresented: $searching) { SearchView() }
-            .sheet(isPresented: $browsing) { BrowseView() }
-            .sheet(isPresented: $watching) { VideoView() }
-            .sheet(isPresented: $editing) { HomeEditorView().environment(layout).environment(library) }
+            .navigationDestination(isPresented: $searching) { SearchView() }
+            .navigationDestination(isPresented: $browsing) { BrowseView() }
+            .navigationDestination(isPresented: $watching) { VideoView() }
+            .sheet(isPresented: $adding) {
+                SourcePickerView { ref in layout.add(ref) }.environment(library)
+            }
             .navigationDestination(for: ComicRoute.self) { ComicDetailView(route: $0) }
         }
     }
@@ -77,6 +85,25 @@ struct DiscoverView: View {
                 }
             case .source(let ref):
                 SourceStrip(ref: ref)
+            }
+            if editing {
+                HStack(spacing: 14) {
+                    Button { layout.setEnabled(block, false) } label: {
+                        Label("隐藏", systemImage: "eye.slash")
+                    }
+                    Button { layout.move(block, by: -1) } label: {
+                        Label("上移", systemImage: "arrow.up")
+                    }
+                    .disabled(layout.blocks.first?.id == block.id)
+                    Button { layout.move(block, by: 1) } label: {
+                        Label("下移", systemImage: "arrow.down")
+                    }
+                    .disabled(layout.blocks.last?.id == block.id)
+                    Spacer()
+                }
+                .font(.caption)
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
             }
         }
         .padding(12)
@@ -107,8 +134,10 @@ struct DiscoverView: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
-                        ForEach(recent) { entry in
-                            NavigationLink(value: entry.comic.route) {
+                        ForEach(recent, id: \.key) { entry in
+                            NavigationLink(value: ComicRoute(source: entry.source,
+                                                             comic: Comic(id: entry.id, title: entry.title,
+                                                                          subtitle: entry.author, cover: entry.cover))) {
                                 VStack(alignment: .leading, spacing: 4) {
                                     cover(entry.source, entry.comic.cover, width: 96, height: 132)
                                     Text(entry.comic.title).font(.caption).lineLimit(1)
@@ -147,7 +176,7 @@ struct DiscoverView: View {
 
     private var searchesBlock: some View {
         Group {
-            let words = Array(searches.keywords.prefix(6))
+            let words = Array(searches.queries.prefix(6))
             if words.isEmpty {
                 Text("没有搜索记录").font(.caption).foregroundStyle(.secondary)
             } else {

@@ -143,8 +143,22 @@ public final class HomeLayout {
         blocks.filter { if case .source = $0.kind { true } else { false } }
     }
 
+    /// Moves the blocks at `from` so they land before `to`.
+    ///
+    /// Written out rather than taken from SwiftUI's `move(fromOffsets:toOffset:)`:
+    /// the kit has no SwiftUI, and a test target linking only the kit failed to
+    /// resolve that symbol.
     public func move(from: IndexSet, to: Int) {
-        blocks.move(fromOffsets: from, toOffset: to)
+        let moving = from.sorted().compactMap { index in
+            blocks.indices.contains(index) ? blocks[index] : nil
+        }
+        guard !moving.isEmpty else { return }
+        let removed = from.sorted().reversed().compactMap { index in
+            blocks.indices.contains(index) ? index : nil
+        }
+        for index in removed { blocks.remove(at: index) }
+        let destination = max(0, min(blocks.count, to - from.filter { $0 < to }.count))
+        blocks.insert(contentsOf: moving, at: destination)
         save()
     }
 
@@ -157,6 +171,13 @@ public final class HomeLayout {
 
     public func toggle(_ template: HomeBlock.Template) {
         setEnabled(template, !(blocks.first { $0.id == "template:\(template.rawValue)" }?.enabled ?? false))
+    }
+
+    /// Hides or shows a block by identity, whatever kind it is.
+    public func setEnabled(_ block: HomeBlock, _ on: Bool) {
+        guard let index = blocks.firstIndex(where: { $0.id == block.id }) else { return }
+        blocks[index].enabled = on
+        save()
     }
 
     public func setEnabled(_ template: HomeBlock.Template, _ on: Bool) {
