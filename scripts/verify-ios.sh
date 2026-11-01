@@ -110,6 +110,19 @@ else
 	fail "python3 scripts/check-kit-core-calls.py" "$out/core-calls.log"
 fi
 
+# 0c2. The video payloads specifically: a line's label is `name` in Core and was
+# decoded as `title`, which failed the whole payload instead of one field, so every
+# video detail screen stayed on its spinner. Separate from 0d because those pairs
+# are matched by last component and three Episode-shaped types exist here.
+python3 scripts/check-video-json.py >"$out/video-json.log" 2>&1 && video=$? || video=$?
+if [ "$video" -eq 0 ]; then
+	pass "python3 scripts/check-video-json.py" "$out/video-json.log"
+elif [ "$video" -eq 3 ]; then
+	say "SKIP  python3 scripts/check-video-json.py  (no Core checkout; see $out/video-json.log)"
+else
+	fail "python3 scripts/check-video-json.py" "$out/video-json.log"
+fi
+
 # 0d. The JSON keys the kit decodes are keys Core actually sends. A field that is
 # always nil shows up as a screen with less on it than it should have, and
 # nothing else reports it.
