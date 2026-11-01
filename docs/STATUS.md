@@ -46,6 +46,7 @@
 | 追剧提醒 | 有 TMDB 播出日期时,可在设置里开启系统通知:**播出当天上午 9 点**提醒(不用播出时间——那是服务器所在时区的时间,本机并不知道,猜一个时点不如给一个日期);同一部剧只排一条、按最近优先、上限 20 条(iOS 有 pending 上限);已过去的日期不排(只能立刻触发,看起来像 bug);重新同步会先取消多余的再排,标识带 `airing:` 前缀,取消不会碰到别人的通知。规划逻辑在 kit 里,有 7 个单测。 | 7 个单测;权限与真实触发需真机 |
 | 画中画(两条通路) | 原生通路用 `AVPlayer`,软件解码通路用 `softwarePiPSource` 的 `AVSampleBufferDisplayLayer` + `AVPictureInPictureSampleBufferPlaybackDelegate`(播放/暂停、时间轴、跳转四项)。时间轴与暂停状态**在主线程刷新成快照**,委托同步读取——用 `assumeIsolated` 一旦线程假设错了就是崩溃,而这里只需要一个短暂过期的快照。 | 需真机;软件通路要用软解源(VP9/AV1)才走得到 |
 | 字幕叠层与播放时钟 | 用引擎的 `$subtitleCues` 画文字字幕(纯文本与富文本都经 `cue.text` 合并),位图字幕**不画**——软件通路本来就会把它合成进帧里,画坏不如不画。同时修了一个真实缺陷:叠层原先读 `position`,而 `position` 只在引擎状态变化时更新,所以**弹幕和字幕在播放中不会前进**;现在跟随 `clock.$sourceTime`(约 10 Hz),关闭播放器时的位置也改读 `$currentTime`,不再停在最后一次状态变化处。 | 需真机/软解源验证 |
+| 引擎接口签名自查 | 把 App 用到的 **28 个 AetherEngine 符号**逐个对到 7.53.1 源码:初始化、`load` 签名、`LoadOptions(httpHeaders:)` 的公开 init、播放/暂停/跳转、`setRate`/`maxSupportedRate`、`state` 的 `case error(String)`、字幕轨与 `subtitleCues`、`currentAVPlayer`、`softwarePiPSource` 的 `layer`/`timeRange`/`setPlaying`/`skip`、`SubtitleCue.startTime`/`text`、`AetherPlayerSurface(engine:)`。**全部命中**。这一步替代不了编译(Apple SDK 签名与 SwiftUI 约束仍需编译器),但能挡掉「把引擎 API 记错」这一类错误。 | 28 项核对,无缺失 |
 
 ## Mac 上已经跑过的检查
 
