@@ -145,6 +145,19 @@ public final class ProfileStore {
     /// nothing would read them again.
     private func migrateLegacyIfNeeded() {
         guard !FileManager.default.fileExists(atPath: manifest.path) else { return }
+
+        // A environment directory with no manifest means a migration was
+        // interrupted between moving the files and recording that it had run.
+        // Creating a *new* first environment there would leave the moved data in a
+        // directory nothing points at, which is the same as deleting it.
+        if let adopted = adoptedExistingDirectory() {
+            profiles = [adopted]
+            activeID = adopted.id
+            save()
+            moveLegacyItems(into: directory(for: adopted.id))
+            return
+        }
+
         let present = Self.legacyItems.filter {
             FileManager.default.fileExists(atPath: support.appending(path: $0).path)
         }
@@ -152,12 +165,40 @@ public final class ProfileStore {
         let first = Profile(name: "默认环境")
         let root = directory(for: first.id)
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        for item in present {
-            try? FileManager.default.moveItem(at: support.appending(path: item),
-                                              to: root.appending(path: item))
-        }
+        // Recorded before the files are moved, so an interruption leaves a manifest
+        // that points at the directory instead of a directory nothing points at.
         profiles = [first]
         activeID = first.id
         save()
+        moveLegacyItems(into: root)
+    }
+
+    /// A directory under `Profiles/` that already holds something, if any.
+    private func adoptedExistingDirectory() -> Profile? {
+        let parent = support.appending(path: "Profiles", directoryHint: .isDirectory)
+        guard let entries = try? FileManager.default.contentsOfDirectory(at: parent,
+                                                                        includingPropertiesForKeys: nil) else {
+            return nil
+        }
+        let directories = entries.filter {(try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true }
+        // Newest first: if more than one survived an interruption, the most recent
+        // is the one that was being migrated.
+        let newest = directories.sorted {
+            let left = (try? $0.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+            let right = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+            return left > right
+        }.first
+        guard let newest else { return nil }
+        return Profile(id: newest.lastPathComponent, name: "默认环境")
+    }
+
+    /// Moves anything still at the support root into an environment.
+    private func moveLegacyItems(into root: URL) {
+        try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        for item in Self.legacyItems where FileManager.default.fileExists(atPath: support.appending(path: item).path) {
+            let destination = root.appending(path: item)
+            guard !FileManager.default.fileExists(atPath: destination.path) else { continue }
+            try? FileManager.default.moveItem(at: support.appending(path: item), to: destination)
+        }
     }
 }
