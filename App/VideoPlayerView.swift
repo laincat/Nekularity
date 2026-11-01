@@ -210,7 +210,7 @@ struct VideoPlayerView: View {
             subtitleMenu(engine)
             danmakuMenu
             if let duration = model.duration, duration > 0 {
-                Text(Self.clock(duration)).font(.caption.monospacedDigit())
+                Text(PlaybackProgress.clock(duration)).font(.caption.monospacedDigit())
                     .accessibilityIdentifier("video.duration")
             }
             if !model.format.isEmpty {
@@ -399,11 +399,7 @@ struct VideoPlayerView: View {
         return "字幕 \(track.id)"
     }
 
-    private static func clock(_ seconds: Double) -> String {
-        let total = Int(seconds.rounded())
-        let h = total / 3600, m = (total % 3600) / 60, s = total % 60
-        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
-    }
+
 }
 
 /// Picture in Picture around the engine's own AVPlayer.

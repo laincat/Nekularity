@@ -315,5 +315,9 @@ struct VideoResumeTests {
         // Two seconds in is not a position worth keeping.
         #expect(shelf.playbackStart(provider: "p", videoID: "c") == nil)
         #expect(shelf.playbackStart(provider: "p", videoID: "missing") == nil)
+        // A length nobody recorded cannot be told apart from "nearly finished",
+        // so it is not offered as a position.
+        shelf.recordVideo(provider: "p", videoID: "d", title: "丁", seconds: 120, duration: 0)
+        #expect(shelf.playbackStart(provider: "p", videoID: "d") == nil)
     }
 }

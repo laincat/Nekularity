@@ -78,7 +78,9 @@ public struct MediaItem: Codable, Hashable, Identifiable, Sendable {
         self.position = position
     }
 
-    public var progress: Double { runtime > 0 ? min(1, max(0, Double(position) / Double(runtime))) : 0 }
+    public var progress: Double {
+        PlaybackProgress.fraction(position: Double(position), duration: Double(runtime))
+    }
 }
 
 /// A library on a server: films, series, or something else worth listing.
@@ -270,8 +272,8 @@ public struct MediaServerClient: Sendable {
                 overview: item.Overview,
                 poster: item.PrimaryImageTag == nil ? nil : imageURL(base: base, id: item.Id, token: token),
                 // Ticks are 100ns each; a rounded second is all this app shows.
-                runtime: Int((item.RunTimeTicks ?? 0) / 10_000_000),
-                position: Int((item.UserData?.PlaybackPositionTicks ?? 0) / 10_000_000)
+                runtime: PlaybackProgress.seconds(fromTicks: item.RunTimeTicks ?? 0),
+                position: PlaybackProgress.seconds(fromTicks: item.UserData?.PlaybackPositionTicks ?? 0)
             )
         }
         // A server that does not report a total gets "at least this many", so a
@@ -327,7 +329,7 @@ public struct MediaServerClient: Sendable {
         guard !server.userID.isEmpty else { throw MediaServerError("服务器没有给出用户 id") }
         guard seconds >= 0 else { throw MediaServerError("播放位置不能是负数") }
         let base = try normalizedBase(server.baseURL)
-        let ticks = Int64((seconds * 10_000_000).rounded())
+        let ticks = PlaybackProgress.ticks(fromSeconds: seconds)
         var request = Request(url: base + "/Users/" + server.userID + "/Items/" + itemID + "/UserData",
                               method: "POST")
         request.headers["Content-Type"] = "application/json"

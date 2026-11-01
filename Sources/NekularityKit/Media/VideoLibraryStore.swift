@@ -23,7 +23,9 @@ public final class VideoLibraryStore {
         /// Size on disk, so the library can say what it costs.
         public var bytes: Int
 
-        public var progress: Double { seconds > 0 ? min(1, max(0, position / seconds)) : 0 }
+        public var progress: Double {
+            PlaybackProgress.fraction(position: position, duration: seconds)
+        }
     }
 
     public private(set) var items: [Item] = []

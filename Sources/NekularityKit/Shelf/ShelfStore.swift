@@ -81,7 +81,7 @@ public struct ShelfHistory: Codable, Hashable, Sendable {
     /// How far through the video, 0–100, for the same bar a chapter gets.
     public var videoPercent: Int? {
         guard let seconds, let duration, duration > 0 else { return percent }
-        return min(100, max(0, seconds * 100 / duration))
+        return PlaybackProgress.percent(position: Double(seconds), duration: Double(duration))
     }
 
     public init(
@@ -102,7 +102,7 @@ public struct ShelfHistory: Codable, Hashable, Sendable {
         self.chapter = episode
         self.chapterIndex = 0
         self.page = nil
-        self.percent = duration > 0 ? min(100, max(0, seconds * 100 / duration)) : nil
+        self.percent = PlaybackProgress.percent(position: Double(seconds), duration: Double(duration))
         self.time = time
         self.kind = "video"
         self.seconds = seconds
@@ -234,9 +234,10 @@ public final class ShelfStore {
     /// knows better (a server's own position) can keep its own guess.
     public func playbackStart(provider: String, videoID: String) -> Double? {
         guard let entry = entry(source: provider, id: videoID), entry.isVideo,
-              let seconds = entry.seconds, seconds > 5 else { return nil }
-        if let duration = entry.duration, duration > 0,
-           Double(seconds) / Double(duration) >= 0.95 { return nil }
+              let seconds = entry.seconds, let duration = entry.duration else { return nil }
+        guard PlaybackProgress.isResumable(position: Double(seconds), duration: Double(duration)) else {
+            return nil
+        }
         return Double(seconds)
     }
 

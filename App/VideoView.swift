@@ -180,9 +180,9 @@ struct VideoView: View {
                 if item.seconds > 0 {
                     ProgressView(value: item.progress)
                     HStack {
-                        Text(Self.clock(item.position)).font(.caption.monospacedDigit())
+                        Text(PlaybackProgress.clock(item.position)).font(.caption.monospacedDigit())
                         Spacer()
-                        Text(Self.clock(item.seconds)).font(.caption.monospacedDigit())
+                        Text(PlaybackProgress.clock(item.seconds)).font(.caption.monospacedDigit())
                     }
                     .foregroundStyle(.secondary)
                 } else {
@@ -193,12 +193,6 @@ struct VideoView: View {
         .swipeActions {
             Button("删除", role: .destructive) { media.remove(item) }
         }
-    }
-
-    private static func clock(_ seconds: Double) -> String {
-        let total = Int(seconds.rounded())
-        let h = total / 3600, m = (total % 3600) / 60, s = total % 60
-        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
     }
 
     // MARK: - Sources

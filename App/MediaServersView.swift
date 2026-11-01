@@ -257,7 +257,7 @@ struct MediaBrowserView: View {
                 }
                 HStack(spacing: 8) {
                     if let year = item.year { Text("\(String(year))") }
-                    if item.runtime > 0 { Text(Self.clock(item.runtime)) }
+                    if item.runtime > 0 { Text(PlaybackProgress.clock(Double(item.runtime))) }
                 }
                 .font(.caption2).foregroundStyle(.secondary)
                 if item.progress > 0 {
@@ -302,11 +302,5 @@ struct MediaBrowserView: View {
         } catch {
             failure = error.localizedDescription
         }
-    }
-
-    private static func clock(_ seconds: Int) -> String {
-        let minutes = seconds / 60
-        let rest = seconds % 60
-        return "\(minutes):" + (rest < 10 ? "0\(rest)" : "\(rest)")
     }
 }
