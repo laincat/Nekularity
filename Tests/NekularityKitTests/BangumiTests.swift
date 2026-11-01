@@ -279,6 +279,7 @@ struct BangumiStoreTests {
     @Test("watching subjects become shows with air dates for the reminder planner")
     func airing() async {
         var fake = FakeBangumi()
+        fake.replies["GET /v0/me"] = (200, #"{"id":1,"username":"laincat"}"#)
         fake.replies["GET /v0/users/-/collections"] = (200, """
         {"data":[{"subject_id":12,"type":3,"ep_status":5,"subject":\(subjectJSON)}]}
         """)
@@ -304,6 +305,7 @@ struct BangumiStoreTests {
     @Test("a subject whose episodes fail does not empty the list")
     func airingSurvivesOneFailure() async {
         var fake = FakeBangumi()
+        fake.replies["GET /v0/me"] = (200, #"{"id":1,"username":"laincat"}"#)
         fake.replies["GET /v0/users/-/collections"] = (200, """
         {"data":[{"subject_id":12,"type":3,"subject":\(subjectJSON)}]}
         """)

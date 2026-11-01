@@ -109,20 +109,21 @@ public final class LocalComicStore {
                 try? FileManager.default.removeItem(at: destination)
                 throw ZipReader.Failure.unsupported("里面没有图片")
             }
+            // Archives usually wrap everything in one folder ("pages/01.png").
+            // That shared folder is noise and comes off, so those pages keep plain
+            // names. Whatever is left over is meaningful: two chapters each with
+            // "01.png" keep their own folder in the name, because flattening them
+            // onto one another silently drops a page.
+            let paths = entries.map { $0.name.split(separator: "/").map(String.init) }
+            let shared = Self.sharedFolders(paths)
             var taken = Set<String>()
-            for entry in entries {
+            for (entry, path) in zip(entries, paths) {
                 let bytes = try ZipReader.contents(of: entry, in: data)
-                // Only the last path component is kept: an archive may nest pages
-                // two directories deep and the reader wants a flat list. Two
-                // folders can hold the same file name, though — flattening them
-                // onto one another silently drops a page, so a clash keeps its
-                // parent as a prefix.
-                let parts = entry.name.split(separator: "/")
-                let flat = parts.last.map(String.init) ?? entry.name
-                // Nested pages keep their folder as a prefix whether or not the
-                // name clashes: renaming only the loser of a clash left the first
-                // page unattributed, and the sort then mixed chapters together.
-                let name = parts.count >= 2 ? Self.prefixed(entry.name, fallback: flat) : flat
+                let relative = Array(path.dropFirst(shared))
+                let flat = relative.last ?? entry.name
+                let name = relative.count >= 2
+                    ? Self.prefixed(relative.joined(separator: "/"), fallback: flat)
+                    : flat
                 if taken.contains(name) {
                     throw ZipReader.Failure.unsupported("压缩包里有重名图片:\(entry.name)")
                 }
@@ -155,6 +156,21 @@ public final class LocalComicStore {
 
     /// `chapter2/01.png` → `chapter2-01.png`, which keeps reading order intact
     /// because the sort is natural and the prefix comes first.
+    /// How many leading folders every entry has in common. The file name itself
+    /// never counts, or two pages in one folder would have "no folder" and be
+    /// renamed for no reason.
+    private nonisolated static func sharedFolders(_ paths: [[String]]) -> Int {
+        guard let first = paths.first, let shortest = paths.map(\.count).min() else { return 0 }
+        let limit = max(0, shortest - 1)
+        var shared = 0
+        while shared < limit {
+            let folder = first[shared]
+            if paths.contains(where: { $0[shared] != folder }) { break }
+            shared += 1
+        }
+        return shared
+    }
+
     private nonisolated static func prefixed(_ path: String, fallback: String) -> String {
         let parts = path.split(separator: "/").map(String.init)
         guard parts.count >= 2 else { return fallback }
