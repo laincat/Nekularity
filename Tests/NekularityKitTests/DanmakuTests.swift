@@ -37,6 +37,15 @@ struct DanmakuTests {
         #expect(comments[0].color == 255)
     }
 
+    @Test("a whole-second timestamp is a number, not zero")
+    func parsesIntegerTime() {
+        // `as? Double` on an integer JSON number is false, which put every comment
+        // of such a file at 0:00.
+        let json = #"{"comments":[{"time":7,"m":"甲"},{"time":9.5,"m":"乙"}]}"#
+        let comments = DanmakuParser.parse(json: json)
+        #expect(comments.map(\.time) == [7, 9.5])
+    }
+
     @Test("only the recent window is drawn, capped")
     func activeWindow() {
         let comments = (0..<100).map { DanmakuComment(time: Double($0), text: "\($0)") }

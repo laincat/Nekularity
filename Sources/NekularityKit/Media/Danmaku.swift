@@ -87,7 +87,7 @@ public enum DanmakuParser {
         for item in list {
             // `p` is "time,mode,colour" in this format; `time` may also be there.
             let p = (item["p"] as? String)?.split(separator: ",").map(String.init) ?? []
-            let time = (p.first.flatMap(Double.init)) ?? (item["time"] as? Double) ?? 0
+            let time = (p.first.flatMap(Double.init)) ?? number(item["time"]) ?? 0
             guard let text = (item["m"] as? String) ?? (item["text"] as? String), !text.isEmpty else { continue }
             comments.append(DanmakuComment(time: time, text: text,
                                            mode: p.count > 1 ? (Int(p[1]) ?? 1) : 1,
@@ -111,6 +111,17 @@ public enum DanmakuParser {
         }
         // Newest last, so the newest line is the one nearest the picture.
         return Array(shown.suffix(limit))
+    }
+
+    /// A JSON number is an `NSNumber`, and `as? Double` fails on an integer even
+    /// though the value is the same number.
+    private static func number(_ value: Any?) -> Double? {
+        switch value {
+        case let double as Double: double
+        case let int as Int: Double(int)
+        case let number as NSNumber: number.doubleValue
+        default: nil
+        }
     }
 
     private static func decodeEntities(_ text: String) -> String {

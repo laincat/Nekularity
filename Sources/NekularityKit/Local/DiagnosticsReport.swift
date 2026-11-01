@@ -45,7 +45,7 @@ public struct DiagnosticsReport: Sendable {
     ///
     /// No secrets: this is written to be pasted, so it carries counts, versions and
     /// booleans — never a token, a cookie value or a password.
-    public func text(now: Date? = nil) -> String {
+    public func text() -> String {
         var out = ["Nekularity 自检 · " + Self.stamp(takenAt)]
         for section in sections {
             out.append("")

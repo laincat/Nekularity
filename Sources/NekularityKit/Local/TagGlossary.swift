@@ -153,10 +153,6 @@ public final class TagGlossaryStore {
         save()
     }
 
-    public func set(_ translated: String, for tag: String) {
-        setTranslation(translated, for: tag)
-    }
-
     public func isOverridden(_ tag: String) -> Bool {
         overrides[TagGlossary.normalise(tag)] != nil
     }
