@@ -55,6 +55,7 @@ jobs:
           run_check sh scripts/check-core-pin.sh
           run_check python3 scripts/check-kit-core-calls.py
           run_check python3 scripts/check-video-json.py
+          run_check python3 scripts/check-magpie-event.py
           run_check "$parse_python" scripts/check-swift.py
           exit $fail
       - name: Run the kit's unit tests

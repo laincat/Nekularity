@@ -123,6 +123,17 @@ else
 	fail "python3 scripts/check-video-json.py" "$out/video-json.log"
 fi
 
+# 0c3. The chat events Core emits: a field the kit never reads is dropped without
+# a word, and a kind the kit does not name arrives as `.other` and is ignored.
+python3 scripts/check-magpie-event.py >"$out/magpie-event.log" 2>&1 && event=$? || event=$?
+if [ "$event" -eq 0 ]; then
+	pass "python3 scripts/check-magpie-event.py" "$out/magpie-event.log"
+elif [ "$event" -eq 3 ]; then
+	say "SKIP  python3 scripts/check-magpie-event.py  (no Core checkout; see $out/magpie-event.log)"
+else
+	fail "python3 scripts/check-magpie-event.py" "$out/magpie-event.log"
+fi
+
 # 0d. The JSON keys the kit decodes are keys Core actually sends. A field that is
 # always nil shows up as a screen with less on it than it should have, and
 # nothing else reports it.
