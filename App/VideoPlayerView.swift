@@ -127,12 +127,16 @@ final class VideoPlayerModel {
 struct VideoPlayerView: View {
     let title: String
     let play: VideoPlay
-    /// Where to start, for a file the library already knows.
-    var startPosition: Double = 0
     /// The provider and show this belongs to. Empty means "no show identity", and
     /// then no opening is offered rather than one guessed from the episode title.
+    ///
+    /// Declared before `startPosition` on purpose: a memberwise initialiser takes
+    /// its arguments in declaration order, and every call site reads
+    /// provider → show → position.
     var provider: String = ""
     var showTitle: String = ""
+    /// Where to start, for a file the library already knows.
+    var startPosition: Double = 0
     /// Called when the screen closes, with where playback got to.
     var onClose: ((Double, Double) -> Void)?
     @Environment(\.dismiss) private var dismiss
