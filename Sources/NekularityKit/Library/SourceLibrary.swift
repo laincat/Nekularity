@@ -92,7 +92,7 @@ public final class SourceLibrary {
     }
 
     /// The key Core names when it refuses to install a source it already has.
-    static func existingKey(in message: String) -> String? {
+    nonisolated static func existingKey(in message: String) -> String? {
         if let start = message.range(of: "key(") {
             let rest = message[start.upperBound...]
             if let close = rest.firstIndex(of: ")") {
