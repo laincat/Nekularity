@@ -9,6 +9,7 @@
 `CoreHost` 的 21 个方法逐个比过 Core 里 `apple/CoreSmoke` 的 Swift 宿主实现(那份在 CI 里真的编译并跑过):返回对象的方法由 Clang 导入成 `(参数…, error: NSErrorPointer) -> String`,返回 `void`/`Bool` 的方法导入成 `throws`。例如 `http(_:error:) -> String`、`saveData(_:dataKey:valueJSON:) throws`、`writeClipboard(_:) throws`、`readClipboard(_:) -> String`,Nekularity 的写法与之一致。这只是签名对得上,不等于编译通过——真正的类型检查仍要等 Mac 上那次 `swift build`。
 
 界面层调用的 Kit 成员也逐个核过:`library.comicSources / sources / refresh / install / loadIndex / restoreFailures / setEnabled / remove`,`core.search / searchOptions / explore / explorePages`,`shelf.recentHistory / record / forgetHistory / folders / createFolder / renameFolder / deleteFolder / remove / lastError`,`searches.add`,`store.loadSetting / saveSetting` 全部存在且参数对得上。
+| 视频 | 视频源是 Core 里的插件(`video-js`、Kazumi 规则、内置源),客户端只负责播:`CoreClient.videoSearch/videoDetails/videoPlay` 三个调用;「视频」页选源、搜索、加载更多;详情页按站点给的线路分组列出剧集;点剧集后向源取播放地址,带 `Referer`/`User-Agent` 交给 **AetherEngine** 播放(AetherEngine 只依赖在 App target,`NekularityKit` 不引入,免得 `swift test` 拉二进制框架)。源若只给「嗅探播放页」而不给直链,界面明说这条路径尚未实现,而不是给一个黑屏。**尚未编译、未在真机或真实视频源上验证。** |
 
 ## Mac 上已经跑过的检查
 
