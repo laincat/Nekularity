@@ -13,7 +13,7 @@
 | 整个 kit 与 App 能在真实 iOS SDK 上编译 | 运行 `41316459367` 的「Build unsigned device app」成功 |
 | 打包成 IPA 的路径可用 | 同一次运行的「Package unsigned IPA」与产物上传成功 |
 | 仓库检查在 macOS 上同样通过 | 同一运行的检查步骤:`check-docs`、`check-partitions`、`check-core-pin`、`check-kit-core-calls`、`check-swift`(已装 tree-sitter,真解析 152 个文件) |
-| 内核 pin 可复现 | 同一运行先从 `6e3e761bf245` 拉取并构建 Core 成功 |
+| 内核 pin 可复现 | 同一运行先从 `214e7782190d` 拉取并构建 Core 成功 |
 
 首次真实编译抓到并已修掉的四个错误,都是静态检查看不见的:`ComicDetails` 的评分字段被误写进 `Comic`(**会让每个详情页整页失败**)、`@MainActor` 类里的静态方法被非隔离调用、两处 `status == errSecSuccess || errSecItemNotFound`(把 `OSStatus` 当 `Bool`),以及随后 App 目标暴露的 12 个界面错误(样式三元、`Environment` 参数顺序、可选链、PiP 内容源与跨线程快照)。
 

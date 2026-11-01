@@ -13,7 +13,7 @@ Compiling is not behaving. The iPhone interface cases and `swift test` still do 
 | The kit and the app compile against the real iOS SDK | The "Build unsigned device app" step of run `41316459367` succeeded |
 | The IPA packaging path works | "Package unsigned IPA" and the artifact upload succeeded in the same run |
 | The repository checks pass on macOS too | The same run's check step: `check-docs`, `check-partitions`, `check-core-pin`, `check-kit-core-calls`, `check-swift` (152 files really parsed, tree-sitter installed) |
-| The Core pin is reproducible | The same run fetched and built Core at `6e3e761bf245` first |
+| The Core pin is reproducible | The same run fetched and built Core at `214e7782190d` first |
 
 The first real compile found four errors that no static check of mine could see, all now fixed: `ComicDetails`' rating fields decoded into `Comic` (**which would have failed every details screen**), a static method on a `@MainActor` class called from a nonisolated context, two `status == errSecSuccess || errSecItemNotFound` comparisons that treat `OSStatus` as `Bool`, and then twelve interface errors in the app target (a style ternary, `Environment` argument order, optional chaining, the PiP content source and its cross-thread snapshot).
 
