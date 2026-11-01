@@ -71,7 +71,7 @@ public final class KeychainMetadataKeyStore: MetadataKeyStore, @unchecked Sendab
 
     public func remove() throws {
         let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || errSecItemNotFound else {
+        guard status == errSecSuccess || status == errSecItemNotFound else {
             throw MetadataError("钥匙串拒绝了删除(\(status))")
         }
     }

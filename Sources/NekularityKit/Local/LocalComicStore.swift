@@ -151,7 +151,7 @@ public final class LocalComicStore {
 
     /// `chapter2/01.png` → `chapter2-01.png`, which keeps reading order intact
     /// because the sort is natural and the prefix comes first.
-    private static func prefixed(_ path: String, fallback: String) -> String {
+    private nonisolated static func prefixed(_ path: String, fallback: String) -> String {
         let parts = path.split(separator: "/").map(String.init)
         guard parts.count >= 2 else { return fallback }
         return parts.suffix(2).joined(separator: "-")

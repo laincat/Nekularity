@@ -74,7 +74,7 @@ public final class KeychainMediaTokenStore: MediaTokenStore, @unchecked Sendable
 
     public func remove(id: String) throws {
         let status = SecItemDelete(query(id) as CFDictionary)
-        guard status == errSecSuccess || errSecItemNotFound else {
+        guard status == errSecSuccess || status == errSecItemNotFound else {
             throw MediaServerError("钥匙串拒绝了删除(\(status))")
         }
     }

@@ -505,9 +505,6 @@ public struct Comic: Decodable, Sendable, Hashable, Identifiable {
         tags = (try? c.decode([String].self, forKey: .tags)) ?? []
         description = c.lenientString(.description)
         favoriteId = c.lenientString(.favoriteId)
-        stars = c.lenientDouble(.stars)
-        likesCount = c.lenientInt(.likesCount)
-        isLiked = try? c.decodeIfPresent(Bool.self, forKey: .isLiked)
     }
 }
 
