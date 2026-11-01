@@ -24,6 +24,19 @@ struct MineView: View {
                 VStack(spacing: 20) {
                     profileBar
                     weekStrip
+                    NavigationLink { CalendarView() } label: {
+                        HStack {
+                            Image(systemName: "calendar")
+                            Text("阅读日历").font(.subheadline.weight(.medium))
+                            Spacer()
+                            Text("\(shelf.history.count) 条记录").font(.caption).foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
+                        }
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("mine.calendar")
                     dayCard
                     heatmap
                     watchlist

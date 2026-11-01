@@ -40,11 +40,11 @@ public struct ShelfHistory: Codable, Hashable, Sendable {
     public var time: Int
     /// `nil` and "comic" mean reading; "video" means watching. Optional so that
     /// shelves written before the field existed still decode.
-    public var kind: String?
+    public var kind: String? = nil
     /// Playback position in seconds, for a video.
-    public var seconds: Int?
+    public var seconds: Int? = nil
     /// The video's length, for a progress bar. Zero when the source never said.
-    public var duration: Int?
+    public var duration: Int? = nil
 
     /// The comic's identity, source included: two sources may hand out the
     /// same comic id for different comics.
