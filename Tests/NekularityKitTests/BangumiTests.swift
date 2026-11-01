@@ -134,7 +134,8 @@ struct BangumiClientTests {
         var live = episodesJSON
         live = live.replacingOccurrences(of: "\"2026-10-01\"", with: "\"2026-01-01\"")
         live = live.replacingOccurrences(of: "\"2026-12-01\"", with: "\"2026-12-01\"")
-        let episodes = try JSONDecoder().decode([String: [BangumiEpisode]].self, from: Data(live.utf8)).data
+        struct Answer: Decodable { var data: [BangumiEpisode] }
+        let episodes = try JSONDecoder().decode(Answer.self, from: Data(live.utf8)).data
 
         let subject = try JSONDecoder().decode(BangumiSubject.self, from: Data(subjectJSON.utf8))
         let formatter = BangumiEpisode.dayFormatter
@@ -178,7 +179,10 @@ struct BangumiClientTests {
     @Test("a missing collection is nil, not an error")
     func missingCollection() async throws {
         let fake = FakeBangumi()
-        #expect(try await fake.client().collection(subjectID: 99) == nil)
+        // Decoded first rather than inside the macro: an autoclosure is not the
+        // place for an await.
+        let missing = try await fake.client().collection(subjectID: 99)
+        #expect(missing == nil)
     }
 
     @Test("marking an episode watched accepts the queued 202")
