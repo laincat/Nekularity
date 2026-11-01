@@ -22,8 +22,7 @@ struct NekularityApp: App {
                         Button("重试") { Task { await app.start() } }
                     }
                 case .ready(let env):
-                    RootView()
-                        .environment(env.magpie)
+                    RootView(magpie: env.magpie)
                         .environment(env.library)
                         .environment(env.prompts)
                         .environment(env.shelf)

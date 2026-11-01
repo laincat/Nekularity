@@ -2,6 +2,10 @@ import SwiftUI
 import NekularityKit
 
 struct RootView: View {
+    /// Magpie accounts are a plain class, not an Observable one, so they are
+    /// passed down rather than put in the SwiftUI environment.
+    let magpie: MagpieAccounts
+
     var body: some View {
         // Five tabs, because the bar holds five: a sixth pushes the last ones
         // into 更多, and 漫画源 is where the source screens live. The AI
@@ -12,7 +16,7 @@ struct RootView: View {
             Tab("浏览", systemImage: "square.grid.2x2") { BrowseView() }
             Tab("书架", systemImage: "books.vertical") { ShelfView() }
             Tab("视频", systemImage: "play.rectangle") { VideoView() }
-            Tab("漫画源", systemImage: "puzzlepiece.extension") { SourcesView() }
+            Tab("漫画源", systemImage: "puzzlepiece.extension") { SourcesView(magpie: magpie) }
         }
     }
 }

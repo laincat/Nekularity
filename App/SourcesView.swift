@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 
 /// Installed sources, install from URL or index, and source details.
 struct SourcesView: View {
+    let magpie: MagpieAccounts
     @Environment(SourceLibrary.self) private var library
     @Environment(ShelfStore.self) private var shelf
     @Environment(SearchHistoryStore.self) private var searches
@@ -20,7 +21,6 @@ struct SourcesView: View {
     @State private var exported: ExportFile?
     @State private var showLogs = false
     @State private var showAI = false
-    @Environment(MagpieAccounts.self) private var magpie
 
     var body: some View {
         NavigationStack {

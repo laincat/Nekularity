@@ -279,17 +279,29 @@ except (ValueError, KeyError):
 						fail "scripts/seed-simulator.sh" "$ui/seed.log"
 					fi
 				fi
-				# NK_UI_ONLY=testSomething runs one case. Twelve cases take minutes; when one
-				# of them fails, re-running the other eleven spends the round on cases that
-				# already passed.
+				# NK_UI_ONLY=testSomething runs one case; a comma or a pipe separates
+				# several. A whole string is not a test name, and xcodebuild answers a
+				# name it cannot find with exit 0 having executed nothing — that looked
+				# like two passing cases until the log was read. So the count is
+				# checked here, not the exit code.
 				only=""
+				wanted=""
 				if [ -n "${NK_UI_ONLY:-}" ]; then
-					only="-only-testing:NekularityUITests/NekularityUITests/${NK_UI_ONLY}"
+					names=$(printf '%s' "$NK_UI_ONLY" | tr '|,' '  ')
+					wanted=$(printf '%s\n' $names | wc -l | tr -d ' ')
+					for name in $names; do
+						only="$only -only-testing:NekularityUITests/NekularityUITests/$name"
+					done
 				fi
 				if xcodebuild test-without-building -scheme Nekularity $only \
 					-destination "platform=iOS Simulator,id=$device" \
 					-derivedDataPath "$ui/dd" >"$ui/tests.log" 2>&1; then
-					pass "xcodebuild test-without-building ($device${NK_UI_ONLY:+ only $NK_UI_ONLY})" "$ui/tests.log"
+					ran=$(sed -n 's/.*Executed \([0-9][0-9]*\) tests\?,.*/\1/p' "$ui/tests.log" | tail -1)
+					if [ -n "$wanted" ] && [ "${ran:-0}" != "$wanted" ]; then
+						printf 'expected %s case(s), ran %s\n' "$wanted" "${ran:-0}" >>"$ui/tests.log"
+						fail "xcodebuild test-without-building (asked for $wanted case(s), ran ${ran:-0})" "$ui/tests.log"
+					fi
+					pass "xcodebuild test-without-building ($device${NK_UI_ONLY:+ only $NK_UI_ONLY, ${ran:-?} case(s)})" "$ui/tests.log"
 				else
 					fail "xcodebuild test-without-building ($device${NK_UI_ONLY:+ only $NK_UI_ONLY})" "$ui/tests.log"
 				fi
