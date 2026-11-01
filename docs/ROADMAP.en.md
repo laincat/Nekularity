@@ -22,7 +22,7 @@ Updated 2026-11-01. This file keeps **what is to be done and what counts as done
 
 | Goal | Why first | Acceptance |
 |---|---|---|
-| G1 Compile the current tree and run every interface case | Six changes have never been compiled on a Mac (themes, downloads, the four-section rebuild, the look, environments) | Build succeeds, all 16 cases pass, `swift test` passes. **Now (`ad3aef4`): the build succeeds, `swift test` is 370/71/0, and 15 of 16 interface cases pass**; the one left is `testVideoPlaysTheSourcesClip` (the player opens but no duration arrives) |
+| G1 Compile the current tree and run every interface case | Six changes have never been compiled on a Mac (themes, downloads, the four-section rebuild, the look, environments) | **Done (`9b48b56`)**: the build succeeds, `swift test` is 371 / 71 / 0, all **16 of 16** interface cases pass, and `verify-ios.sh` is green twice |
 | G2 Settle the look | It is glass cards and a floating bar now, but nobody has seen it render | Four screenshots each in light and dark, no overlap, clipping or unreadable contrast |
 | G3 Try the Pixiv login for real | Bookmark and following sections cannot be verified without an account | After signing in, 关注的新作 and 我的收藏 both show content, and still do after a relaunch |
 | G4 One history for reading and watching | ~~The calendar only knew about reading~~ Written, awaiting a compile | Watching a video writes the same history, and the calendar and statistics include it |

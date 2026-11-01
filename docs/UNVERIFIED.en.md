@@ -2,7 +2,7 @@
 
 [简体中文](UNVERIFIED.md) | English
 
-Updated 2026-11-01. **The last tree fully run on a Mac is `ad3aef4`**: `swift test` 370 tests / 71 suites / 0 failures, and 15 of the 16 interface cases pass (`testVideoPlaysTheSourcesClip` is still red: the player opens and asks for the clip, but no duration arrives).
+Updated 2026-11-01. **The last tree fully run on a Mac is `9b48b56`**: `swift test` 371 tests / 71 suites / 0 failures, and **all 16 interface cases pass**.
 
 Earlier evidence: **this tree compiles.** GitHub Actions run `41316459367` (commit `71c8c97`) built the pinned Core, ran the four repository checks, generated the project, compiled the app with `xcodebuild` on macOS, and produced an unsigned IPA (18.9 MB). The worry that the commits after `b9fdf3c` had never seen a compiler is now settled.
 
