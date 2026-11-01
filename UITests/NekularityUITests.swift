@@ -872,16 +872,22 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(episode.waitForExistence(timeout: 30), "the detail page lists no episode")
         episode.tap()
 
-        XCTAssertFalse(firstElement(app, containing: "无法播放").waitForExistence(timeout: 15),
-                       "the player reported a failure instead of playing")
-        // Three different failures used to share one message: the player never
-        // opened, it opened and never asked for the clip, or it asked and drew
-        // nothing. Saying which one it is costs a line and saves a round trip.
+        // Three different failures used to share one message: the detail page
+        // refused the play answer, the player never opened, or it opened and drew
+        // nothing. Waiting for either of the first two says which one happened.
+        let player = element(app, "video.close")
+        let refused = element(app, "video.failure")
+        let deadline = Date().addingTimeInterval(60)
+        while Date() < deadline, !player.exists, !refused.exists {
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        XCTAssertTrue(player.exists || refused.exists,
+                      "tapping the episode did nothing: neither a player nor a refusal appeared")
+        XCTAssertFalse(refused.exists, "the detail page refused to open a player")
         // 关闭 lives in the navigation bar, so it is there whether or not the
         // transport bar has auto-hidden: this asks "did the screen open", nothing
         // about playback.
-        XCTAssertTrue(element(app, "video.close").waitForExistence(timeout: 30),
-                      "the player screen never opened")
+        XCTAssertTrue(player.exists, "the player screen never opened")
         XCTAssertTrue(element(app, "video.duration").waitForExistence(timeout: 90),
                       "no duration: \(server.clipSummary())")
     }

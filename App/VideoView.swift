@@ -294,6 +294,9 @@ struct VideoDetailView: View {
                 } description: {
                     Text(failure)
                 }
+                // Named so a test can tell "the detail page refused" from "the
+                // player never opened": both look like nothing happened.
+                .accessibilityIdentifier("video.failure")
             } else if let details {
                 List {
                     Section {
