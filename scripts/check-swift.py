@@ -353,6 +353,44 @@ def unknown_identifiers(root: pathlib.Path, files: list[pathlib.Path]) -> list[t
                 problems.append((str(path.relative_to(root)), f"asks for {literal!r}, which no identifier in App or Sources creates"))
     return problems
 
+def missing_kit_import(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
+    """A file that names a kit type without importing the kit.
+
+    This shipped once: DesignSystem named ThemeStore and Theme after the kit was
+    split out, and nothing said so until CI built it — three commits, none of them
+    compiling. Parsing cannot see it, because the syntax is perfect.
+    """
+    declared: set[str] = set()
+    for path in root.rglob("*.swift"):
+        parts = path.relative_to(root).parts
+        if parts[0] != "Sources":
+            continue
+        text = path.read_text(encoding="utf-8")
+        declared |= set(re.findall(
+            # `public final class ThemeStore` is the shape that got missed.
+            r"^public\s+(?:final\s+|open\s+|indirect\s+|@\w+\s+)*"
+            r"(?:struct|class|enum|protocol|actor|typealias|func|var|let)\s+([A-Z]\w*)",
+            text, re.M))
+
+    problems: list[tuple[str, str]] = []
+    for path in files:
+        parts = path.relative_to(root).parts
+        if parts[0] not in ("App", "Tests"):
+            continue
+        text = path.read_text(encoding="utf-8")
+        if re.search(r"^\s*(?:@testable\s+)?import NekularityKit\s*$", text, re.M):
+            continue
+        # Names this file declares itself are its own.
+        local = set(re.findall(r"^\s*(?:public\s+)?(?:struct|class|enum|protocol|actor)\s+([A-Z]\w*)",
+                               text, re.M))
+        used = {name for name in declared - local
+                if name in text}
+        if used:
+            problems.append((str(path.relative_to(root)),
+                             f"names {', '.join(sorted(used)[:3])} from the kit without importing it"))
+    return problems
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quiet", action="store_true", help="only print the summary")
@@ -406,6 +444,10 @@ def main() -> int:
         print(f"{rel}: {detail} is declared twice")
 
     for rel, detail in unterminated_strings(root, files):
+        failed += 1
+        print(f"{rel}: {detail}")
+
+    for rel, detail in missing_kit_import(root, files):
         failed += 1
         print(f"{rel}: {detail}")
 
