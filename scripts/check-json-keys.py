@@ -48,6 +48,11 @@ TYPES: list[tuple[str, str]] = [
     ("CommentSupport", "CommentSupport"),
     ("Plan", "BackupPlan"),
     ("SourceRestore", "BackupSource"),
+    # The usage card: Core builds this report itself from whatever the package
+    # answered, so a renamed key here is a quota that stops being shown.
+    ("UsageReport", "MagpieUsage"),
+    ("UsageResets", "Resets"),
+    ("UsageWindow", "Window"),
 ]
 
 GO_TAG = re.compile(r'json:"([^",]+)')
