@@ -31,6 +31,8 @@ struct NekularityApp: App {
                         .environment(env.themes)
                         .environment(env.media)
                         .environment(env.home)
+                        .environment(env.profiles)
+                        .environment(\.switchProfile, env.switchProfile)
                         .environment(\.imageLoader, env.images)
                         .sourcePrompts(env.prompts)
                 }
@@ -64,10 +66,18 @@ final class AppModel {
         let themes: ThemeStore
         let media: VideoLibraryStore
         let home: HomeLayout
+        /// The signed-in environment this whole object graph belongs to.
+        let profiles: ProfileStore
+        /// Opens another environment. A closure because opening one means
+        /// replacing the object graph, which only the app model can do.
+        let switchProfile: @MainActor (String) async -> Void
     }
 
     var state: State = .starting
     private var started = false
+    /// Kept so a switch can rebuild the graph; the environment hands it to the
+    /// views, but the app model is what opens another one.
+    @ObservationIgnored private var profileStore: ProfileStore?
 
     func start() async {
         guard !started else { return }
@@ -76,8 +86,14 @@ final class AppModel {
         do {
             let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
                 .appending(path: "Nekularity", directoryHint: .isDirectory)
-            let store = try SourceStore(root: support)
-            let cookies = CookieJars(file: support.appending(path: "cookies.json"))
+            let profiles = ProfileStore(support: support)
+            profileStore = profiles
+            // Everything an environment owns lives under its own directory; the
+            // themes stay at the root, because a look is not an account.
+            let root = profiles.activeDirectory
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            let store = try SourceStore(root: root)
+            let cookies = CookieJars(file: root.appending(path: "cookies.json"))
             let ua = Self.userAgent
             let transport = URLSessionTransport(cookies: cookies, defaultUserAgent: ua)
             let host = CoreHost(store: store, cookies: cookies, transport: transport, log: { level, title, content in
@@ -94,8 +110,8 @@ final class AppModel {
             host.ui = prompts
             let library = SourceLibrary(core: core, cookieJars: cookies)
             await library.restore()
-            let keychain = KeychainMagpieAuthStore()
-            let magpieDir = support.appending(path: "Magpie", directoryHint: .isDirectory)
+            let keychain = KeychainMagpieAuthStore(service: profiles.keychainService(for: profiles.activeID))
+            let magpieDir = root.appending(path: "Magpie", directoryHint: .isDirectory)
             let magpie = MagpieAccounts(
                 packages: MagpiePackageStore(directory: magpieDir),
                 auth: keychain,
@@ -120,24 +136,39 @@ final class AppModel {
                 makeCore: { try CoreMagpie(host: host, stream: CoreStreamHost(transport: transport)) })
             // Downloads are asked before the network, so a kept chapter opens
             // with no connection at all.
-            let downloads = DownloadStore(root: support.appending(path: "Downloads", directoryHint: .isDirectory))
+            let downloads = DownloadStore(root: root.appending(path: "Downloads", directoryHint: .isDirectory))
             state = .ready(Environment(
                 library: library,
                 images: ImageLoader(core: core, offline: { key in
                     await downloads.bytes(for: key)
                 }),
                 prompts: prompts,
-                shelf: ShelfStore(directory: support),
-                searches: SearchHistoryStore(directory: support),
+                shelf: ShelfStore(directory: root),
+                searches: SearchHistoryStore(directory: root),
                 magpie: magpie,
                 downloads: downloads,
                 themes: ThemeStore(directory: support.appending(path: "Themes", directoryHint: .isDirectory)),
-                media: VideoLibraryStore(directory: support.appending(path: "Media", directoryHint: .isDirectory)),
-                home: HomeLayout()))
+                media: VideoLibraryStore(directory: root.appending(path: "Media", directoryHint: .isDirectory)),
+                home: HomeLayout(),
+                profiles: profiles,
+                switchProfile: { [weak self] id in await self?.switchProfile(to: id) }))
         } catch {
             started = false
             state = .failed(error.localizedDescription)
         }
+    }
+
+    /// Opens another environment, rebuilding everything it owns.
+    ///
+    /// A switch is not a filter over the same objects: Core itself is built from
+    /// the environment's source records and its cookie jar, so the client has to
+    /// be made again. The old one is dropped by dropping the environment.
+    func switchProfile(to id: String) async {
+        guard let profiles = profileStore, profiles.activeID != id else { return }
+        profiles.activate(id)
+        state = .starting
+        started = false
+        await start()
     }
 
     /// The source API level, named once in the kit so a test can check it.

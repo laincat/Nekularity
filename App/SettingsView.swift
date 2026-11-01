@@ -28,6 +28,9 @@ struct SettingsView: View {
     @Environment(ThemeStore.self) private var themes
     @Environment(DownloadStore.self) private var downloads
     @Environment(VideoLibraryStore.self) private var media
+    @Environment(ProfileStore.self) private var profiles
+    @Environment(\.switchProfile) private var switchProfile
+    @State private var showingProfiles = false
     @State private var importing = false
     @State private var note: String?
     @State private var showAI = false
@@ -62,6 +65,16 @@ struct SettingsView: View {
                         .font(.caption2)
                     }
                     .padding(.vertical, 4)
+                }
+
+                Section("环境") {
+                    Button { showingProfiles = true } label: {
+                        LabeledContent("当前环境", value: profiles.active.name)
+                    }
+                    .accessibilityIdentifier("settings.profiles")
+                    if profiles.profiles.count > 1 {
+                        Text("共 \(profiles.profiles.count) 个环境").font(.caption).foregroundStyle(.secondary)
+                    }
                 }
 
                 Section("账号与平台") {
@@ -118,6 +131,9 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("设置")
+            .sheet(isPresented: $showingProfiles) {
+                ProfilesView(profiles: profiles, switchTo: switchProfile)
+            }
             .sheet(isPresented: $showAI) { MagpieProvidersView(accounts: magpie, showsClose: true) }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
                 switch result {

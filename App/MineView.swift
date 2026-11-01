@@ -10,6 +10,9 @@ import SwiftUI
 struct MineView: View {
     @Environment(ShelfStore.self) private var shelf
     @Environment(DownloadStore.self) private var downloads
+    @Environment(ProfileStore.self) private var profiles
+    @Environment(\.switchProfile) private var switchProfile
+    @State private var showingProfiles = false
 
     @State private var selected = Date()
 
@@ -19,6 +22,7 @@ struct MineView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                    profileBar
                     weekStrip
                     dayCard
                     heatmap
@@ -28,8 +32,30 @@ struct MineView: View {
                 .padding(16)
             }
             .navigationTitle("我的")
+            .sheet(isPresented: $showingProfiles) {
+                ProfilesView(profiles: profiles, switchTo: switchProfile)
+            }
             .navigationDestination(for: ComicRoute.self) { ComicDetailView(route: $0) }
         }
+    }
+
+    /// Which account everything below belongs to, and the way to another one.
+    private var profileBar: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(.ultraThinMaterial)
+                .frame(width: 38, height: 38)
+                .overlay(Image(systemName: "person.crop.circle").foregroundStyle(.secondary))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(profiles.active.name).font(.subheadline.weight(.semibold))
+                Text("源、登录、书架与下载都只属于这个环境").font(.caption2).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("切换") { showingProfiles = true }
+                .buttonStyle(Pill())
+                .accessibilityIdentifier("profile.switch")
+        }
+        .glassCard()
     }
 
     /// One week, ending today: the strip Rex puts above the day's card.
