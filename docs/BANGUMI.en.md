@@ -24,12 +24,14 @@ Bangumi (bgm.tv) is the *account* side of watching shows on this device: collect
 | `POST /v0/search/subjects` | Keyword search, `filter.type` in the body | no |
 | `GET /search/subject/{keyword}` | The older search, **the one that finds Chinese**; its `id`/`type` are strings and its date is `air_date` | no |
 | `GET /v0/subjects/{id}` | Subject detail | no |
-| `GET /v0/episodes?subject_id=` | Episode list, 100 per page, 500 at most | no |
+| `GET /v0/episodes?subject_id=` | Episode list, 100 per page, **paged to the `total` the server reports** (ONE PIECE measured at 1155 episodes), capped at 2000 | no |
 | `GET /calendar` | Weekly broadcast calendar | no |
 | `GET /v0/users/-/collections` | This account's collections, filterable by state and subject type | yes |
 | `GET /v0/users/-/collections/{id}` | One subject's state; 404 means not collected | yes |
 | `POST /v0/users/-/collections/{id}` | Change state, rating, progress | yes |
 | `PATCH /v0/users/-/collections/{id}/episodes` | Mark one episode watched; answers 202 (queued) | yes |
+
+The collection endpoint answers **404 rather than 401 when there is no token** (measured), so a 404 there is reported as "the account was not recognised" rather than "no such entry".
 
 The same date has two names: `/v0/subjects` calls it `date`, while the calendar and the older search call it `air_date`. Both are decoded, the former first — otherwise a subject opened from the calendar arrives with no date at all.
 

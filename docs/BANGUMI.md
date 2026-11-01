@@ -24,12 +24,14 @@ Bangumi(bgm.tv)在这台设备上是「追番的账号」:收藏状态、评分�
 | `POST /v0/search/subjects` | 关键词搜索,body 里带 `filter.type` | 否 |
 | `GET /search/subject/{关键词}` | 老接口搜索,**中文关键词靠它**,`id`/`type` 是字符串、日期叫 `air_date` | 否 |
 | `GET /v0/subjects/{id}` | 条目详情 | 否 |
-| `GET /v0/episodes?subject_id=` | 话数表,每页 100,最多 500 | 否 |
+| `GET /v0/episodes?subject_id=` | 话数表,每页 100,**按服务器报的 `total` 翻页**(《ONE PIECE》实测 1155 集),上限 2000 | 否 |
 | `GET /calendar` | 每日放送 | 否 |
 | `GET /v0/users/-/collections` | 本账号的收藏,可按状态与条目类型过滤 | 是 |
 | `GET /v0/users/-/collections/{id}` | 单条收藏状态,404 表示没收藏 | 是 |
 | `POST /v0/users/-/collections/{id}` | 改状态、评分、进度 | 是 |
 | `PATCH /v0/users/-/collections/{id}/episodes` | 标记某话看过,返回 202(已排队) | 是 |
+
+收藏接口在**没有令牌时返回 404 而不是 401**(实测),所以那里的 404 被解释成「账号没认出来」,而不是「没有这个条目」。
 
 同一个日期在两个接口里有两个名字:`/v0/subjects` 叫 `date`,每日放送与老搜索叫 `air_date`。两个都解码,前者优先——否则从日历点进去的条目会没有日期。
 

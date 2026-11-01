@@ -194,6 +194,67 @@ struct BangumiClientTests {
         #expect(info.name == "测试条目")
     }
 
+    // Measured 2026-11-01: ONE PIECE has 1155 episodes, so a fixed cap truncates a
+    // real show silently. The walk follows the total the server reports.
+    @Test("episodes are walked to the total the server reports")
+    func pagesToTotal() async throws {
+        func page(_ from: Int, _ count: Int, total: Int) -> String {
+            var items: [String] = []
+            for number in from..<(from + count) {
+                items.append("{\"id\":\(number),\"type\":0,\"sort\":\(number),\"name\":\"e\(number)\"}")
+            }
+            return "{\"data\":[" + items.joined(separator: ",") + "],\"total\":\(total)}"
+        }
+        let first = page(0, 100, total: 150)
+        let second = page(100, 50, total: 150)
+
+        // Two pages of one endpoint differ only by offset, which a path-keyed table
+        // cannot say; the transport answers by looking at the query.
+        let log = FakeBangumi.Log()
+        let client = BangumiClient(token: "t") { request in
+            log.append(request)
+            let body = request.url.contains("offset=100") ? second : first
+            return BangumiClient.Response(status: 200, body: Data(body.utf8))
+        }
+
+        let episodes = try await client.episodes(subjectID: 975)
+        #expect(episodes.count == 150)
+        #expect(log.all.count == 2)
+        #expect(episodes.last?.sort == 149)
+    }
+
+    // Measured 2026-11-01: without a token this endpoint answers 404, not 401, so
+    // "找不到这个条目" would send the reader looking for a missing subject.
+    @Test("a 404 on collections names the account, not a missing entry")
+    func collectionsNotFoundIsAboutTheAccount() async throws {
+        let anonymous = FakeBangumi().client(token: nil)
+        await #expect(throws: BangumiError.self) {
+            _ = try await anonymous.collections()
+        }
+        do {
+            _ = try await anonymous.collections()
+        } catch let error as BangumiError {
+            #expect(error.message.contains("连接 Bangumi 账号"))
+        }
+
+        // With a token the same 404 is a rejected credential, not a missing one.
+        let signedIn = FakeBangumi().client(token: "old")
+        do {
+            _ = try await signedIn.collections()
+            Issue.record("expected an error")
+        } catch let error as BangumiError {
+            #expect(error.message.contains("令牌"))
+        }
+    }
+
+    @Test("without a token a subject is not reported as uncollected")
+    func missingCollectionNeedsAnAccount() async throws {
+        let anonymous = FakeBangumi().client(token: nil)
+        await #expect(throws: BangumiError.self) {
+            _ = try await anonymous.collection(subjectID: 12)
+        }
+    }
+
     @Test("calendar decodes a weekday with its entries")
     func calendar() async throws {
         var fake = FakeBangumi()

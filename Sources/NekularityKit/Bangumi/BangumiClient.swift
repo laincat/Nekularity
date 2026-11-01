@@ -156,13 +156,22 @@ public struct BangumiClient: Sendable {
         return try decode(BangumiSubject.self, from: response, what: "条目")
     }
 
-    /// Every episode of a subject. Paged at 100 because that is Bangumi's maximum
-    /// and long-running shows pass it.
+    /// How many episodes this reader will walk. Twenty requests: enough for a
+    /// thousand-episode show, bounded so a wrong `total` cannot become an endless
+    /// loop.
+    public static let episodeLimit = 2000
+
+    /// Every episode of a subject. Paged at 100 because that is Bangumi's maximum.
+    ///
+    /// The walk ends at the total the server reports rather than at a fixed number:
+    /// measured 2026-11-01, ONE PIECE has 1155 episodes, so any cap below that
+    /// truncates a real show without saying so.
     public func episodes(subjectID: Int, type: Int = 0) async throws -> [BangumiEpisode] {
-        struct Answer: Decodable { var data: [BangumiEpisode] }
+        struct Answer: Decodable { var data: [BangumiEpisode]; var total: Int? }
         var all: [BangumiEpisode] = []
         var offset = 0
-        while true {
+        var total: Int?
+        while all.count < Self.episodeLimit {
             let response = try await send(request("/v0/episodes", query: [
                 "subject_id": "\(subjectID)",
                 "type": "\(type)",
@@ -170,10 +179,12 @@ public struct BangumiClient: Sendable {
                 "offset": "\(offset)",
             ]))
             try expectOK(response, what: "读取剧集")
-            let page = try decode(Answer.self, from: response, what: "剧集").data
-            all.append(contentsOf: page)
-            if page.count < 100 || all.count >= 500 { break }
-            offset += page.count
+            let answer = try decode(Answer.self, from: response, what: "剧集")
+            total = total ?? answer.total
+            all.append(contentsOf: answer.data)
+            if answer.data.isEmpty || answer.data.count < 100 { break }
+            if let total, all.count >= total { break }
+            offset += answer.data.count
         }
         return all
     }
@@ -193,7 +204,13 @@ public struct BangumiClient: Sendable {
         var query = ["subject_type": "\(subjectType)", "limit": "\(limit)"]
         if let type { query["type"] = "\(type.rawValue)" }
         let response = try await send(request("/v0/users/-/collections", query: query))
-        try expectOK(response, what: "读取收藏")
+        // Measured 2026-11-01: this endpoint answers 404, not 401, when the request
+        // carries no token. "找不到这个条目" would send a reader looking for a
+        // missing subject when the account is what is missing.
+        try expectOK(response, what: "读取收藏",
+                     notFound: (token ?? "").isEmpty
+                        ? "读取收藏失败:先连接 Bangumi 账号"
+                        : "读取收藏失败:Bangumi 没有认出这个账号,令牌可能已失效")
         struct Answer: Decodable { var data: [BangumiCollection] }
         return try decode(Answer.self, from: response, what: "收藏").data
     }
@@ -201,7 +218,14 @@ public struct BangumiClient: Sendable {
     /// One subject's place in this account's collections, if it has one.
     public func collection(subjectID: Int) async throws -> BangumiCollection? {
         let response = try await send(request("/v0/users/-/collections/\(subjectID)"))
-        if response.status == 404 { return nil }
+        if response.status == 404 {
+            // Without a token the same 404 means "signed out", and answering nil
+            // would show every subject as not collected.
+            guard (token ?? "").isEmpty == false else {
+                throw BangumiError("读取收藏状态失败:先连接 Bangumi 账号")
+            }
+            return nil
+        }
         try expectOK(response, what: "读取收藏状态")
         return try decode(BangumiCollection.self, from: response, what: "收藏状态")
     }
@@ -240,12 +264,13 @@ public struct BangumiClient: Sendable {
 
     // MARK: - Plumbing
 
-    private func expectOK(_ response: Response, what: String, extraSuccess: Set<Int> = []) throws {
+    private func expectOK(_ response: Response, what: String, extraSuccess: Set<Int> = [],
+                          notFound: String? = nil) throws {
         if (200...299).contains(response.status) || extraSuccess.contains(response.status) { return }
         switch response.status {
         case 401: throw BangumiError("\(what)失败:Bangumi 令牌无效或已过期")
         case 403: throw BangumiError("\(what)失败:Bangumi 拒绝了这次请求")
-        case 404: throw BangumiError("\(what)失败:找不到这个条目")
+        case 404: throw BangumiError(notFound ?? "\(what)失败:找不到这个条目")
         case 429: throw BangumiError("\(what)失败:请求太频繁,稍后再试")
         default: throw BangumiError("\(what)失败(HTTP \(response.status))")
         }
