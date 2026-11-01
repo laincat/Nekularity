@@ -60,6 +60,16 @@ struct LibraryView: View {
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("library.downloads")
 
+                            NavigationLink { MediaHubView() } label: {
+                                tile("媒体库",
+                                     detail: media.items.isEmpty && servers.servers.isEmpty
+                                        ? "本机与服务器,一起搜"
+                                        : "\(media.items.count) 本机 · \(servers.servers.count) 台服务器",
+                                     symbol: "square.stack")
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("library.mediaHub")
+
                             NavigationLink { MediaServersView() } label: {
                                 tile("媒体服务器",
                                      detail: servers.servers.isEmpty

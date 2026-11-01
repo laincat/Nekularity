@@ -204,3 +204,58 @@ struct MediaServerStoreTests {
         #expect(try tokens.load(id: added.id) == nil)
     }
 }
+
+@Suite("Media hub")
+struct MediaHubTests {
+    private func local(_ id: String, _ title: String, progress: Double = 0) -> (id: String, title: String, poster: String?, progress: Double) {
+        (id, title, nil, progress)
+    }
+
+    private func item(_ id: String, _ title: String, series: String = "", position: Int = 0, runtime: Int = 100) -> MediaItem {
+        MediaItem(id: id, title: title, series: series, runtime: runtime, position: position)
+    }
+
+    @Test("local files and server items come out as one list, local first")
+    func merges() {
+        let rows = MediaHub.entries(local: [local("f1", "本机影片")],
+                                    servers: [("家", "s1", [item("v1", "服务器影片")])])
+        #expect(rows.count == 2)
+        #expect(rows.first?.title == "本机影片")
+        #expect(rows.last?.sourceName == "家")
+        #expect(rows.last?.id == "server/s1/v1")
+    }
+
+    @Test("two servers with the same item id stay apart")
+    func keepsIdentities() {
+        let rows = MediaHub.entries(local: [], servers: [
+            ("甲", "s1", [item("v1", "同一集")]),
+            ("乙", "s2", [item("v1", "同一集")]),
+        ])
+        #expect(Set(rows.map(\.id)).count == 2)
+    }
+
+    @Test("search matches the series as well as the title, ignoring case")
+    func searchesSeries() {
+        let rows = MediaHub.entries(local: [], servers: [("家", "s1", [item("v1", "第一集", series: "Silent Hill")])])
+        #expect(MediaHub.search(rows, query: "silent").count == 1)
+        #expect(MediaHub.search(rows, query: "第一").count == 1)
+        #expect(MediaHub.search(rows, query: "   ").count == 1)
+        #expect(MediaHub.search(rows, query: "无关").isEmpty)
+    }
+
+    @Test("continue watching keeps only what is in progress, furthest first")
+    func continues() {
+        let rows = MediaHub.entries(local: [local("f1", "未看"), local("f2", "一半", progress: 0.5)],
+                                    servers: [("家", "s1", [item("v1", "快完", position: 90, runtime: 100),
+                                                            item("v2", "看完", position: 100, runtime: 100)])])
+        let resume = MediaHub.continueWatching(rows)
+        #expect(resume.map(\.title) == ["快完", "一半"])
+    }
+
+    @Test("grouping keeps the order the sources were given in")
+    func groups() {
+        let rows = MediaHub.entries(local: [local("f1", "本机影片")],
+                                    servers: [("甲", "s1", [item("v1", "甲片")]), ("乙", "s2", [item("v2", "乙片")])])
+        #expect(MediaHub.grouped(rows).map(\.name) == ["本机", "甲", "乙"])
+    }
+}

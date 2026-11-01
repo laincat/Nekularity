@@ -27,7 +27,7 @@ Updated 2026-11-01. This file keeps **what is to be done and what counts as done
 | G3 Try the Pixiv login for real | Bookmark and following sections cannot be verified without an account | After signing in, 关注的新作 and 我的收藏 both show content, and still do after a relaunch |
 | G4 One history for reading and watching | ~~The calendar only knew about reading~~ Written, awaiting a compile | Watching a video writes the same history, and the calendar and statistics include it |
 | G5 Media servers (Jellyfin/Emby/Plex) | ~~None of it~~ Jellyfin and Emby connect, browse, play and write progress back; Plex is not wired | Add a server → browse a library → play an item → progress written back (needs a real server to try) |
-| G6 One entry for servers and local files | 资源库 is a placeholder today | Servers and local video appear in one list, searchable |
+| G6 One entry for servers and local files | ~~资源库 was a placeholder~~ One searchable list, grouped by origin | Servers and local video appear in one list, searchable |
 | G7 Playback experience | AetherEngine already supports it; the screen does not use it yet | Speed, subtitle track choice, remembered position, picture in picture |
 | G8 Airing calendar and reminders | The reference app's signature | Items with air dates appear in the calendar and can carry a reminder |
 | G9 Trakt and TMDB metadata | Needs an account and an API key | Once connected, history syncs and posters and synopses appear |
