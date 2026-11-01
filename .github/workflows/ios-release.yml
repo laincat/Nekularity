@@ -39,14 +39,22 @@ jobs:
               fail=1
             fi
           }
-          # Without these the parse check silently degrades to its regex rules, and a
-          # green run would mean less than it looks.
-          python3 -m pip install --quiet --disable-pip-version-check tree-sitter tree-sitter-swift
+          # tree-sitter makes the parse check a real parse; without it the check
+          # silently degrades to its regex rules and a green run means less than it
+          # looks. Homebrew's python refuses a system install, so it goes in a venv —
+          # and if even that fails the run says so instead of pretending.
+          parse_python=python3
+          if python3 -m venv "$RUNNER_TEMP/parse-venv" >/dev/null 2>&1 &&
+             "$RUNNER_TEMP/parse-venv/bin/python" -m pip install --quiet --disable-pip-version-check                tree-sitter tree-sitter-swift; then
+            parse_python="$RUNNER_TEMP/parse-venv/bin/python"
+          else
+            echo "NOTE: tree-sitter unavailable; the parse check will run its rules only"
+          fi
           run_check sh scripts/check-docs.sh
           run_check sh scripts/check-partitions.sh
           run_check sh scripts/check-core-pin.sh
           run_check python3 scripts/check-kit-core-calls.py
-          run_check python3 scripts/check-swift.py
+          run_check "$parse_python" scripts/check-swift.py
           exit $fail
       - name: Generate project
         run: xcodegen generate
