@@ -44,14 +44,29 @@ struct VideoModelsTests {
     }
 
     @Test func playDecode() throws {
+        // Core sends `http.Header`, which is a map of lists. The string form below
+        // is what the source fixture writes; Core normalises it, and decoding the
+        // normalised shape as a map of strings failed the whole answer — the detail
+        // page then said the source gave no playable address.
         let json = """
         {"url":"http://127.0.0.1:18731/clip.mp4","format":"mp4",
-         "headers":{"Referer":"http://127.0.0.1:18731/"}}
+         "headers":{"Referer":["http://127.0.0.1:18731/"]}}
         """
         let play = try JSONDecoder().decode(VideoPlay.self, from: Data(json.utf8))
         #expect(play.isPlayable)
         // The headers are the reason a source that checks Referer can play at all.
-        #expect(play.headers?["Referer"] == "http://127.0.0.1:18731/")
+        #expect(play.headers?["Referer"] == ["http://127.0.0.1:18731/"])
+        #expect(play.requestHeaders["Referer"] == "http://127.0.0.1:18731/")
+    }
+
+    @Test func repeatedHeaderTakesTheFirstValue() throws {
+        let json = """
+        {"url":"http://x/y","headers":{"Accept":["a","b"],"Empty":[]}}
+        """
+        let play = try JSONDecoder().decode(VideoPlay.self, from: Data(json.utf8))
+        #expect(play.requestHeaders["Accept"] == "a")
+        // A header with no values is left out rather than sent empty.
+        #expect(play.requestHeaders["Empty"] == nil)
     }
 
     @Test func encryptedAndSniffOnlyAreNotPlayable() throws {

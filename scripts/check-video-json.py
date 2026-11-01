@@ -50,7 +50,10 @@ IGNORED: dict[tuple[str, str], str] = {
     ("VideoPlay.Sniff", "match"): "read by the play answer, not by the sniffer description",
 }
 
-GO_TAG = re.compile(r'json:"([^",]+)')
+GO_FIELD = re.compile(r'^\s*([A-Z]\w*)\s+([^\s`]+)\s+`json:"([^"]+)"', re.MULTILINE)
+SWIFT_FIELD = re.compile(r"^[ \t]*(?:public\s+|internal\s+|private\s+)?var\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^={}\n]+)$", re.MULTILINE)
+
+GO_TAG = re.compile(r'json:"([^"]+)"')
 SWIFT_DECL = re.compile(r"\b(?:public\s+)?struct\s+([A-Za-z_][A-Za-z0-9_]*)")
 # Newlines are excluded on purpose: without that the character class spans lines
 # and one match swallows a whole struct, which is how this check first reported
@@ -95,7 +98,7 @@ def go_keys(core: pathlib.Path, name: str) -> set[str] | None:
     body = brace_body(text, match.start())
     if body is None:
         return None
-    return {tag for tag in GO_TAG.findall(body) if tag != "-"}
+    return {tag.split(",")[0] for tag in GO_TAG.findall(body) if tag != "-"}
 
 
 def swift_body(path: list[str]) -> str | None:
@@ -127,6 +130,35 @@ def top_level(body: str) -> str:
             kept.append(line)
         depth += line.count("{") - line.count("}")
     return chr(10).join(kept)
+
+
+# `http.Header` is `map[string][]string` with a name on it, so counting brackets in
+# the Go type text — which is the cheap shape test everywhere else — says zero.
+GO_LIST_DEPTH = {"http.Header": 2}
+
+
+def list_depth(go_type: str) -> int:
+    return GO_LIST_DEPTH.get(go_type, go_type.count("["))
+
+
+def go_shapes(core: pathlib.Path, name: str) -> dict[str, str]:
+    """Wire key -> the Go type, for the fields of one struct."""
+    text = (core / "video" / "video.go").read_text(encoding="utf-8")
+    match = re.search(r"type " + re.escape(name) + r" struct", text)
+    if not match:
+        return {}
+    body = brace_body(text, match.start())
+    if body is None:
+        return {}
+    shapes: dict[str, str] = {}
+    for _, kind, tag in GO_FIELD.findall(body):
+        shapes[tag.split(",")[0]] = kind
+    return shapes
+
+
+def swift_shapes(body: str) -> dict[str, str]:
+    """Wire key → the Swift type, for the type's own fields."""
+    return {name: kind.strip() for name, kind in SWIFT_FIELD.findall(top_level(body))}
 
 
 def swift_keys(body: str) -> set[str]:
@@ -179,6 +211,18 @@ def main() -> int:
             continue
         have = swift_keys(body)
         missing = sorted(wanted - have - {key for (path_key, key) in IGNORED if path_key == ".".join(path)})
+        shapes = go_shapes(core, go_name)
+        swift_types = swift_shapes(body)
+        for key, go_type in sorted(shapes.items()):
+            if key in IGNORED and ((".".join(path)), key) in IGNORED:
+                continue
+            swift_type = swift_types.get(key)
+            if swift_type is None:
+                continue
+            if list_depth(go_type) > swift_type.count("["):
+                problems += 1
+                print(f"check-video-json: {'.'.join(path)}.{key} is {swift_type} but Core sends "
+                      f"{go_type} — the payload will not decode")
         if missing:
             problems += 1
             print(f"check-video-json: {'.'.join(path)} does not read "

@@ -59,7 +59,7 @@ final class VideoPlayerModel {
             let made = try AetherEngine()
             engine = made
             try await made.load(url: url, startPosition: startPosition,
-                                options: LoadOptions(httpHeaders: play.headers ?? [:]))
+                                options: LoadOptions(httpHeaders: play.requestHeaders))
             made.play()
             watch = made.objectWillChange.sink { [weak self] _ in
                 Task { @MainActor [weak self] in self?.sync(made) }

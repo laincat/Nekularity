@@ -64,14 +64,26 @@ public struct VideoPlay: Decodable, Sendable {
 
     public var url: String?
     public var format: String?
-    public var headers: [String: String]?
+    /// Core's `http.Header` is a map of **lists** — `{"Referer": ["…"]}` — not a
+    /// map of strings. Decoding it as `[String: String]` failed the whole answer,
+    /// and the detail page then said the source gave no playable address.
+    public var headers: [String: [String]]?
     public var encrypted: Bool?
     public var sniff: Sniff?
 
     public var isPlayable: Bool { (url?.isEmpty == false) && encrypted != true }
 
+    /// The headers as one value each, which is what a request takes. A list is
+    /// what Core sends because `http.Header` allows repeats; the first value is
+    /// the one a client sends, and a header with no values is left out rather than
+    /// sent empty.
+    public var requestHeaders: [String: String] {
+        guard let headers else { return [:] }
+        return headers.compactMapValues { $0.first }
+    }
+
     /// A play answer the client builds itself, for a file on this device.
-    public init(url: String?, format: String? = nil, headers: [String: String]? = nil,
+    public init(url: String?, format: String? = nil, headers: [String: [String]]? = nil,
                 encrypted: Bool? = nil, sniff: Sniff? = nil) {
         self.url = url
         self.format = format
