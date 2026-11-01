@@ -98,7 +98,56 @@ public struct BangumiClient: Sendable {
                                              method: "POST", body: body))
         try expectOK(response, what: "搜索条目")
         struct Answer: Decodable { var data: [BangumiSubject] }
-        return try decode(Answer.self, from: response, what: "搜索条目").data
+        let found = try decode(Answer.self, from: response, what: "搜索条目").data
+        if !found.isEmpty { return found }
+        // Measured on 2026-11-01: this endpoint answers 200 with an empty list for
+        // Chinese keywords when it is not signed in — "进击的巨人" returned 0 while
+        // the older endpoint below returned 128. A search box that silently finds
+        // nothing for the language the app is written in is worse than an older
+        // endpoint, so an empty answer falls back to it.
+        return try await searchLegacy(keyword: trimmed, type: type, limit: limit)
+    }
+
+    /// The endpoint from before v0. It answers Chinese keywords without an
+    /// account, and spells its fields differently: `id` and `type` are strings and
+    /// the air date is `air_date`.
+    public func searchLegacy(keyword: String, type: Int = 2, limit: Int = 20) async throws -> [BangumiSubject] {
+        let escaped = keyword.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? keyword
+        let response = try await send(request("/search/subject/\(escaped)", query: [
+            "type": "\(type)",
+            "responseGroup": "small",
+            "max_results": "\(limit)",
+        ]))
+        try expectOK(response, what: "搜索条目")
+        struct Answer: Decodable {
+            struct Item: Decodable {
+                var id: String
+                var type: String?
+                var name: String?
+                var nameCN: String?
+                var summary: String?
+                var airDate: String?
+                var images: BangumiSubject.Images?
+
+                enum CodingKeys: String, CodingKey {
+                    case id, type, name, summary, images
+                    case nameCN = "name_cn"
+                    case airDate = "air_date"
+                }
+            }
+            var list: [Item]
+        }
+        let answer = try decode(Answer.self, from: response, what: "搜索条目")
+        return answer.list.compactMap { item in
+            guard let id = Int(item.id) else { return nil }
+            return BangumiSubject(id: id,
+                                  type: item.type.flatMap(Int.init),
+                                  name: item.name ?? "",
+                                  nameCN: item.nameCN,
+                                  summary: item.summary,
+                                  date: item.airDate,
+                                  images: item.images)
+        }
     }
 
     public func subject(id: Int) async throws -> BangumiSubject {

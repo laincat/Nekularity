@@ -21,8 +21,8 @@ The first real compile found four errors that no static check of mine could see,
 
 | Commit | What changed | Where it stands | What is left |
 |---|---|---|---|
-| Truncation notice | Reads `outcome` from Core's events and shows "hit the length limit" in the chat screen | Added this round; neither build nor tests have run | Make a model answer to its max_tokens and check the notice; `swift test --filter Magpie` |
-| Bangumi support | Account, five collection states, episodes, weekly calendar, reminder join | Added this round; neither the build nor the tests have run yet | Connect a token on a device; `swift test --filter Bangumi` |
+| Truncation notice | Reads `outcome` from Core's events and shows "hit the length limit" in the chat screen | **Compiled and tested** (build `381f2a6` is green) | Make a model answer to its max_tokens and see the notice appear |
+| Bangumi support | Account, five collection states, episodes, weekly calendar, reminder join | **Compiled and tested** (`v0.2.0` build is green, 359 tests) | Connect a real token on a device |
 | `33c5c7a` | `seed-simulator.sh` writes into the environment actually in use | Script-level, not compiled | Whether a seeded run really shows the five sources |
 | cue overlay | Text cues drawn from `$subtitleCues`, following `clock.$sourceTime` | Compiles | One subtitle-bearing source played, cues appearing in time |
 | software-route PiP | `AVPictureInPictureSampleBufferPlaybackDelegate` | Compiles; the content source is now built from a layer, and the two synchronous answers live in a lock-guarded snapshot | One software-decoded title (VP9/AV1) going into PiP on a device |

@@ -12,7 +12,7 @@ Bangumi (bgm.tv) is the *account* side of watching shows on this device: collect
 | See collections | same screen | Wish / done / watching / on hold / dropped, read one state at a time |
 | Change state and rating | subject detail | A segmented picker for the state, a 0–10 rating |
 | Mark an episode watched | the episode list | One check per episode, through Bangumi's progress endpoint |
-| Search subjects | below the collections | Anime only (type=2), a POST search by keyword |
+| Search subjects | below the collections | Anime only (type=2). The v0 search **returns nothing for Chinese keywords while anonymous**, so an empty answer falls back to the older endpoint |
 | Weekly calendar | below the collections | Public data, shown without signing in |
 | Airing reminders | Settings → reminders | Watching entries join `AiringPlan` by their next episode date, in the same notifications as TMDB's |
 
@@ -22,6 +22,7 @@ Bangumi (bgm.tv) is the *account* side of watching shows on this device: collect
 |---|---|---|
 | `GET /v0/me` | Validate the token, read nickname and avatar | yes |
 | `POST /v0/search/subjects` | Keyword search, `filter.type` in the body | no |
+| `GET /search/subject/{keyword}` | The older search, **the one that finds Chinese**; its `id`/`type` are strings and its date is `air_date` | no |
 | `GET /v0/subjects/{id}` | Subject detail | no |
 | `GET /v0/episodes?subject_id=` | Episode list, 100 per page, 500 at most | no |
 | `GET /calendar` | Weekly broadcast calendar | no |
@@ -30,7 +31,7 @@ Bangumi (bgm.tv) is the *account* side of watching shows on this device: collect
 | `POST /v0/users/-/collections/{id}` | Change state, rating, progress | yes |
 | `PATCH /v0/users/-/collections/{id}/episodes` | Mark one episode watched; answers 202 (queued) | yes |
 
-Every request carries `User-Agent: laincat/Nekularity (...)`. That is not decoration: Bangumi answers 403 to the default URLSession agent and throttles anonymous traffic hard.
+Every request carries `User-Agent: laincat/Nekularity (...)` because Bangumi's documentation asks callers to identify themselves. Measured on 2026-11-01: a request without a UA answered 200 too, so the claim that "the default agent gets a 403" **did not reproduce** and is recorded here rather than repeated as fact.
 
 ## Credentials
 
@@ -51,6 +52,8 @@ There is no OAuth: OAuth would put a client secret in an app bundle anyone can u
 ## How to check it
 
 The unit tests do not touch the network: request shape, field decoding, error wording and the watching → reminder-plan join are covered in `Tests/NekularityKitTests/BangumiTests.swift` against a fake transport.
+
+Every endpoint shape was checked once against the **live responses** of 2026-11-01 (`/v0/subjects/12`, `/v0/episodes`, `/calendar`, and the older search). One finding came out of that: while anonymous, the v0 search **returns nothing for Chinese keywords** — "进击的巨人" gave 0 results and the older endpoint gave 128. Search therefore falls back to the older endpoint instead of showing "nothing found".
 
 ```sh
 swift test --filter Bangumi

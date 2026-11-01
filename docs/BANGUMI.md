@@ -12,7 +12,7 @@ Bangumi(bgm.tv)在这台设备上是「追番的账号」:收藏状态、评分�
 | 看收藏 | 同上 | 在看/想看/看过/搁置/抛弃五档,分档读取 |
 | 改状态与评分 | 条目详情 | 状态用分段选择器,评分 0–10 |
 | 标记看过 | 条目详情的话数表 | 每话一个勾,调 Bangumi 的进度接口 |
-| 搜索条目 | 收藏页下方 | 只搜动画(type=2),按关键词 POST 搜索 |
+| 搜索条目 | 收藏页下方 | 只搜动画(type=2)。v0 搜索**匿名时对中文关键词返回空**,此时自动回退到老接口 |
 | 每日放送 | 收藏页下方 | 公开数据,不登录也能看 |
 | 追番提醒 | 设置 → 追剧提醒 | 「在看」里的条目按下一话日期并入 `AiringPlan`,与 TMDB 的条目同一套通知 |
 
@@ -22,6 +22,7 @@ Bangumi(bgm.tv)在这台设备上是「追番的账号」:收藏状态、评分�
 |---|---|---|
 | `GET /v0/me` | 验证令牌,取昵称与头像 | 是 |
 | `POST /v0/search/subjects` | 关键词搜索,body 里带 `filter.type` | 否 |
+| `GET /search/subject/{关键词}` | 老接口搜索,**中文关键词靠它**,`id`/`type` 是字符串、日期叫 `air_date` | 否 |
 | `GET /v0/subjects/{id}` | 条目详情 | 否 |
 | `GET /v0/episodes?subject_id=` | 话数表,每页 100,最多 500 | 否 |
 | `GET /calendar` | 每日放送 | 否 |
@@ -30,7 +31,7 @@ Bangumi(bgm.tv)在这台设备上是「追番的账号」:收藏状态、评分�
 | `POST /v0/users/-/collections/{id}` | 改状态、评分、进度 | 是 |
 | `PATCH /v0/users/-/collections/{id}/episodes` | 标记某话看过,返回 202(已排队) | 是 |
 
-每个请求都带 `User-Agent: laincat/Nekularity (...)`。这不是装饰:Bangumi 对默认的 URLSession 标识返回 403,匿名流量限得很紧。
+每个请求都带 `User-Agent: laincat/Nekularity (...)`,因为 Bangumi 的接口文档要求标明调用方。2026-11-01 实测:不带 UA 的请求同样返回 200,所以「默认 UA 会被 403」这个说法**没有复现**,写在这里以免当成事实。
 
 ## 凭据
 
@@ -51,6 +52,8 @@ Bangumi(bgm.tv)在这台设备上是「追番的账号」:收藏状态、评分�
 ## 怎么验证
 
 单测不联网:请求形状、字段解码、错误文案、以及「在看 → 追番计划」这条连接,都在 `Tests/NekularityKitTests/BangumiTests.swift` 里用假 transport 覆盖。
+
+接口形状全部对着 2026-11-01 的**真实返回**核过一遍(`/v0/subjects/12`、`/v0/episodes`、`/calendar`、老接口搜索)。其中一条是实测出来的坑:v0 搜索匿名时对**中文关键词返回空**——「进击的巨人」给 0 条,老接口给 128 条。所以搜索在空结果时会回退到老接口,而不是显示「没有找到」。
 
 ```sh
 swift test --filter Bangumi

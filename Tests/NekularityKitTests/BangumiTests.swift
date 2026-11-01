@@ -91,6 +91,50 @@ struct BangumiClientTests {
         #expect((filter["type"] as? [Any])?.compactMap { $0 as? Int } == [2])
     }
 
+    // Measured against the live API on 2026-11-01: the v0 search answers 200 with
+    // an empty list for Chinese keywords when it is not signed in, while the older
+    // endpoint finds them. A search box that silently finds nothing in the
+    // language the app is written in is the bug this covers.
+    @Test("an empty v0 answer falls back to the endpoint that finds Chinese")
+    func fallsBackForChinese() async throws {
+        var fake = FakeBangumi()
+        fake.replies["POST /v0/search/subjects"] = (200, #"{"data":[],"total":0}"#)
+        fake.replies["GET /search/subject/%E8%BF%9B%E5%87%BB%E7%9A%84%E5%B7%A8%E4%BA%BA"] = (200, """
+        {"results":128,"list":[
+          {"id":"55770","type":"2","name":"進撃の巨人","name_cn":"进击的巨人",
+           "summary":"","air_date":"2013-04-07",
+           "images":{"large":"https://lain.bgm.tv/pic/cover/l/1.jpg"},"collection":null}
+        ]}
+        """)
+        let client = fake.client()
+
+        let found = try await client.search(keyword: "进击的巨人")
+        #expect(found.count == 1)
+        // The older endpoint spells the id as a string; it has to become a number.
+        #expect(found.first?.id == 55770)
+        #expect(found.first?.title == "进击的巨人")
+        #expect(found.first?.date == "2013-04-07")
+
+        // The keyword travels percent-encoded: a raw search path with a slash in it
+        // would be a different request entirely.
+        let legacy = try #require(fake.log.all.last)
+        #expect(legacy.url.contains("%E8%BF%9B"))
+        #expect(legacy.url.contains("max_results=20"))
+        #expect(legacy.url.contains("type=2"))
+    }
+
+    @Test("a v0 answer with results does not fall back")
+    func noFallbackWhenV0Answers() async throws {
+        var fake = FakeBangumi()
+        fake.replies["POST /v0/search/subjects"] = (200, #"{"data":[\#(subjectJSON)]}"#)
+        let client = fake.client()
+
+        let found = try await client.search(keyword: "CLANNAD")
+        #expect(found.count == 1)
+        #expect(fake.log.all.count == 1)
+        #expect(fake.log.all.first?.method == "POST")
+    }
+
     @Test("an empty keyword never reaches the network")
     func emptySearch() async throws {
         var fake = FakeBangumi()
