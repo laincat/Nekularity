@@ -11,10 +11,21 @@ import UniformTypeIdentifiers
 struct LocalComicsView: View {
     @Environment(LocalComicStore.self) private var comics
     @State private var importing = false
+    /// Separate from `note`: an alert that appears with "importing" and is then
+    /// rewritten is a progress report the user cannot read.
+    @State private var busy = false
     @State private var note: String?
 
     var body: some View {
         List {
+            if busy {
+                Section {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("正在导入…").font(.callout).foregroundStyle(.secondary)
+                    }
+                }
+            }
             if comics.comics.isEmpty {
                 Section {
                     ContentUnavailableView {
@@ -53,12 +64,19 @@ struct LocalComicsView: View {
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder, .zip, UTType(filenameExtension: "cbz") ?? .data],
                       allowsMultipleSelection: false) { result in
-            do {
-                guard let url = try result.get().first else { return }
-                let comic = try comics.importComic(at: url)
-                note = "已导入《\(comic.title)》\(comic.pageCount) 页"
-            } catch {
-                note = error.localizedDescription
+            guard let url = try? result.get().first else { return }
+            // Unpacking happens off the main actor, so this is started rather than
+            // awaited here: the picker's completion is not an async context.
+            importing = false
+            busy = true
+            Task {
+                defer { busy = false }
+                do {
+                    let comic = try await comics.importComic(at: url)
+                    note = "已导入《\(comic.title)》\(comic.pageCount) 页"
+                } catch {
+                    note = error.localizedDescription
+                }
             }
         }
         .alert(note ?? "", isPresented: Binding(get: { note != nil }, set: { if !$0 { note = nil } })) {

@@ -66,11 +66,29 @@ public final class LocalComicStore {
     }
 
     /// Imports a folder of images, or an archive of them.
+    ///
+    /// The reading and writing happen off the main actor: a comic archive is
+    /// hundreds of megabytes, and unpacking one on the main actor freezes the
+    /// interface for as long as it takes — which a user reads as a crash.
     @discardableResult
-    public func importComic(at url: URL) throws -> LocalComic {
+    public func importComic(at url: URL) async throws -> LocalComic {
+        let directory = self.directory
+        let id = UUID().uuidString
+        let names = try await Task.detached(priority: .userInitiated) {
+            try Self.unpack(from: url, id: id, into: directory)
+        }.value
+
+        let title = url.deletingPathExtension().lastPathComponent
+        let comic = LocalComic(id: id, title: title.isEmpty ? "未命名" : title, pages: names)
+        comics.append(comic)
+        save()
+        return comic
+    }
+
+    /// The part that touches the file system, kept off the main actor.
+    private nonisolated static func unpack(from url: URL, id: String, into directory: URL) throws -> [String] {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        let id = UUID().uuidString
         let destination = directory.appending(path: id, directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
 
@@ -78,7 +96,7 @@ public final class LocalComicStore {
         if (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
             let contents = try FileManager.default.contentsOfDirectory(at: url,
                                                                       includingPropertiesForKeys: nil)
-            for source in contents where isPage(source.lastPathComponent) {
+            for source in contents where isPageName(source.lastPathComponent) {
                 let name = source.lastPathComponent
                 try FileManager.default.copyItem(at: source, to: destination.appending(path: name))
                 names.append(name)
@@ -109,16 +127,12 @@ public final class LocalComicStore {
             }
         }
 
-        names = Self.ordered(names)
-        guard !names.isEmpty else {
+        let ordered = ordered(names)
+        guard !ordered.isEmpty else {
             try? FileManager.default.removeItem(at: destination)
             throw ZipReader.Failure.unsupported("这个位置没有图片")
         }
-        let title = url.deletingPathExtension().lastPathComponent
-        let comic = LocalComic(id: id, title: title.isEmpty ? "未命名" : title, pages: names)
-        comics.append(comic)
-        save()
-        return comic
+        return ordered
     }
 
     /// Remembers where the reader stopped.
@@ -142,7 +156,7 @@ public final class LocalComicStore {
         return parts.suffix(2).joined(separator: "-")
     }
 
-    private func isPage(_ name: String) -> Bool {
+    private nonisolated static func isPageName(_ name: String) -> Bool {
         ZipReader.Entry.pageExtensions.contains((name as NSString).pathExtension.lowercased())
     }
 
@@ -150,7 +164,7 @@ public final class LocalComicStore {
     ///
     /// Plain string sorting puts ten before two, which is the single most common
     /// way an imported comic reads out of order.
-    public static func ordered(_ names: [String]) -> [String] {
+    public nonisolated static func ordered(_ names: [String]) -> [String] {
         names.sorted { left, right in
             left.compare(right, options: [.numeric, .caseInsensitive]) == .orderedAscending
         }

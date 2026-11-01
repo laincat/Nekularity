@@ -198,7 +198,7 @@ struct LocalComicStoreTests {
     }
 
     @Test("a folder import keeps its pages and survives a relaunch")
-    func importsFolder() throws {
+    func importsFolder() async throws {
         let root = try root()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appending(path: "source", directoryHint: .isDirectory)
@@ -207,7 +207,7 @@ struct LocalComicStoreTests {
             try Data([0x89, 0x50]).write(to: source.appending(path: name))
         }
         let store = LocalComicStore(directory: root)
-        let comic = try store.importComic(at: source)
+        let comic = try await store.importComic(at: source)
         #expect(comic.title == "source")
         #expect(comic.pages == ["1.png", "2.png", "10.png"])
         #expect(FileManager.default.fileExists(atPath: store.pageURL(comic, index: 0).path))
@@ -217,7 +217,7 @@ struct LocalComicStoreTests {
     }
 
     @Test("a cbz import reads the pages out of the archive")
-    func importsArchive() throws {
+    func importsArchive() async throws {
         let root = try root()
         defer { try? FileManager.default.removeItem(at: root) }
         let zip = ZipBuilder.make([
@@ -228,14 +228,14 @@ struct LocalComicStoreTests {
         let file = root.appending(path: "某漫画.cbz")
         try zip.write(to: file)
         let store = LocalComicStore(directory: root)
-        let comic = try store.importComic(at: file)
+        let comic = try await store.importComic(at: file)
         #expect(comic.title == "某漫画")
         // Nested paths are flattened, and the macOS sibling is not a page.
         #expect(comic.pages == ["01.png", "02.png"])
     }
 
     @Test("two folders holding the same file name keep both pages")
-    func doesNotFlattenTwoPagesIntoOne() throws {
+    func doesNotFlattenTwoPagesIntoOne() async throws {
         let root = try root()
         defer { try? FileManager.default.removeItem(at: root) }
         let zip = ZipBuilder.make([
@@ -245,7 +245,7 @@ struct LocalComicStoreTests {
         let file = root.appending(path: "两章.cbz")
         try zip.write(to: file)
         let store = LocalComicStore(directory: root)
-        let comic = try store.importComic(at: file)
+        let comic = try await store.importComic(at: file)
         // Flattening both to "01.png" would leave one page and lose the other.
         #expect(comic.pages.count == 2)
         #expect(Set(comic.pages).count == 2)
@@ -254,14 +254,14 @@ struct LocalComicStoreTests {
     }
 
     @Test("removing a comic removes its files too")
-    func removal() throws {
+    func removal() async throws {
         let root = try root()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appending(path: "src", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
         try Data([1]).write(to: source.appending(path: "1.png"))
         let store = LocalComicStore(directory: root)
-        let comic = try store.importComic(at: source)
+        let comic = try await store.importComic(at: source)
         let page = store.pageURL(comic, index: 0)
         store.remove(comic)
         #expect(store.comics.isEmpty)
