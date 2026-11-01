@@ -26,14 +26,20 @@ struct SourcesView: View {
     @State private var showAI = false
     @State private var updatingAll = false
 
+    /// Sorted here rather than inside the `ForEach`: written as one expression the
+    /// row builder was more than the type checker would take in reasonable time.
+    private var restoreFailures: [(key: String, value: String)] {
+        library.restoreFailures.sorted { $0.key < $1.key }
+    }
+
     var body: some View {
         List {
             if !library.restoreFailures.isEmpty {
                 Section("未能恢复") {
-                    ForEach(library.restoreFailures.sorted(by: { $0.key < $1.key }), id: \.key) { key, reason in
+                    ForEach(restoreFailures, id: \.key) { failure in
                         VStack(alignment: .leading) {
-                            Text(key).font(.headline)
-                            Text(reason).font(.footnote).foregroundStyle(.secondary)
+                            Text(failure.key).font(.headline)
+                            Text(failure.value).font(.footnote).foregroundStyle(Color.secondary)
                         }
                     }
                 }
@@ -76,7 +82,7 @@ struct SourcesView: View {
             ToolbarItem(placement: .secondaryAction) {
                 Menu {
                     Button {
-                        Task { await updateAll() }
+                        Task { await library.updateAll() }
                     } label: {
                         Label(updatingAll ? "正在更新…" : "更新全部源", systemImage: "arrow.triangle.2.circlepath")
                     }

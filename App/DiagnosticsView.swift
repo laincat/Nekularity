@@ -70,7 +70,7 @@ struct DiagnosticsView: View {
             Section {
                 Text(report.failures == 0 ? "全部检查通过。" : "有 \(report.failures) 项需要看。")
                     .font(.callout)
-                    .foregroundStyle(report.failures == 0 ? .secondary : .orange)
+                    .foregroundStyle(report.failures == 0 ? Color.secondary : Color.orange)
                 Button {
                     UIPasteboard.general.string = report.text()
                     copied = true

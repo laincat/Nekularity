@@ -278,7 +278,7 @@ struct SettingsView: View {
     /// Plans from what the metadata store already knows, so this needs no network
     /// round-trip of its own.
     private func syncReminders() async {
-        let plan = AiringPlan.plan(metadata.upcoming(within: 30, from: Date()))
+        let plan = AiringPlan.plan(metadata.upcoming(within: 30, from: Date()).map(\.info))
         await reminders.sync(plan: plan)
     }
 

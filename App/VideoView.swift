@@ -362,9 +362,9 @@ struct VideoDetailView: View {
                     : "这个源给出的地址无法直接播放"
                 return
             }
-            playing = PendingPlay(provider: route.key, videoID: details?.id ?? route.id,
-                                  title: details?.title ?? episode.title, episode: episode.title,
-                                  cover: details?.cover, play: play)
+            playing = PendingPlay(provider: route.key, videoID: details.id,
+                                  title: details.title, episode: episode.title,
+                                  cover: details.cover, play: play)
         } catch {
             failure = CoreError.readable(error.localizedDescription)
         }

@@ -166,15 +166,15 @@ final class AppModel {
                 downloads: downloads,
                 themes: ThemeStore(directory: support.appending(path: "Themes", directoryHint: .isDirectory)),
                 media: VideoLibraryStore(directory: root.appending(path: "Media", directoryHint: .isDirectory)),
-                intros: IntroStore(directory: root),
-                local: LocalComicStore(directory: root),
-                glossary: TagGlossaryStore(directory: root),
-                metadata: MetadataStore(
-                    directory: root,
-                    keys: KeychainMetadataKeyStore(service: profiles.keychainService(for: profiles.activeID) + ".tmdb")),
                 servers: MediaServerStore(
                     directory: root,
                     tokens: KeychainMediaTokenStore(service: profiles.keychainService(for: profiles.activeID) + ".media")),
+                metadata: MetadataStore(
+                    directory: root,
+                    keys: KeychainMetadataKeyStore(service: profiles.keychainService(for: profiles.activeID) + ".tmdb")),
+                intros: IntroStore(directory: root),
+                local: LocalComicStore(directory: root),
+                glossary: TagGlossaryStore(directory: root),
                 home: HomeLayout(),
                 profiles: profiles,
                 switchProfile: { [weak self] id in await self?.switchProfile(to: id) }))

@@ -478,11 +478,15 @@ final class PiPController: NSObject, AVPictureInPictureControllerDelegate {
     @ObservationIgnored private var controller: AVPictureInPictureController?
     @ObservationIgnored private var attached: AVPlayer?
     @ObservationIgnored private var software: SoftwarePiPSource?
-    /// The window asks these synchronously from whatever thread AVKit is on, so
-    /// they are snapshots taken on the main actor rather than computed there:
-    /// `assumeIsolated` would trap if the assumption were ever wrong.
-    @ObservationIgnored private var range: CMTimeRange = CMTimeRange(start: .zero, duration: .indefinite)
-    @ObservationIgnored private var paused = true
+    /// The PiP window asks these synchronously, from whatever thread AVKit is on.
+    /// A stored property of this class is out of reach there, and `assumeIsolated`
+    /// would trap if the assumption were ever wrong, so the two answers live in a
+    /// box that can be read from any thread. The main actor writes it on every
+    /// engine publish; the window reads whatever was last written.
+    nonisolated let transport = TransportSnapshot()
+
+    /// Would tear down a running window if it were recreated per publish.
+    @ObservationIgnored private var nativeLayer: AVPlayerLayer?
 
     /// The native route hands out an `AVPlayer`; the software route decodes into its
     /// own layer. Both can show a window, through two different content sources.
@@ -511,8 +515,7 @@ final class PiPController: NSObject, AVPictureInPictureControllerDelegate {
     /// window's scrubber follows playback.
     func refresh() {
         guard let software else { return }
-        range = software.timeRange()
-        paused = software.isPaused
+        transport.store(range: software.timeRange(), paused: software.isPaused)
     }
 
     private func updateNative(_ player: AVPlayer) {
@@ -524,7 +527,11 @@ final class PiPController: NSObject, AVPictureInPictureControllerDelegate {
             isPossible = false
             return
         }
-        let made = AVPictureInPictureController(contentSource: .init(player: player))
+        // The content source takes a layer, not a player: a player has to be given
+        // to a layer before it has anything to show in the window.
+        let layer = AVPlayerLayer(player: player)
+        nativeLayer = layer
+        let made = AVPictureInPictureController(contentSource: .init(playerLayer: layer))
         made.delegate = self
         controller = made
         isPossible = true
@@ -553,6 +560,31 @@ final class PiPController: NSObject, AVPictureInPictureControllerDelegate {
     }
 }
 
+/// The two answers AVKit asks synchronously from its own thread.
+///
+/// A lock rather than an actor because the question is synchronous: waiting for a
+/// main-actor hop to answer `pictureInPictureControllerTimeRangeForPlayback` is not
+/// possible, and answering with a value read without one would be a data race on a
+/// 48-byte struct.
+final class TransportSnapshot: @unchecked Sendable {
+    private let lock = NSLock()
+    private var range = CMTimeRange(start: .zero, duration: .indefinite)
+    private var paused = true
+
+    var current: (range: CMTimeRange, paused: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (range, paused)
+    }
+
+    func store(range: CMTimeRange, paused: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.range = range
+        self.paused = paused
+    }
+}
+
 /// The four transport answers a sample-buffer PiP window asks for.
 ///
 /// The engine keeps the frame timeline, so these are forwarded rather than
@@ -568,12 +600,12 @@ extension PiPController: AVPictureInPictureSampleBufferPlaybackDelegate {
         _ controller: AVPictureInPictureController) -> CMTimeRange {
         // Read on the calling thread: the source answers from the engine, and
         // hopping would answer a stale range to a synchronous question.
-        range
+        transport.current.range
     }
 
     nonisolated func pictureInPictureControllerIsPlaybackPaused(
         _ controller: AVPictureInPictureController) -> Bool {
-        paused
+        transport.current.paused
     }
 
     nonisolated func pictureInPictureController(_ controller: AVPictureInPictureController,
