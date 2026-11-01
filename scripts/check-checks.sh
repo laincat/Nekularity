@@ -68,7 +68,37 @@ printf '[中文](lonely.md)\n\n# a\n' >"$tmp/docs/docs/lonely.en.md"
 expect_pass "the documentation pair rule" \
 	env CHECK_DOCS_ROOT="$tmp/docs" sh scripts/check-docs.sh
 
-# 3. A pair that links but says a different amount: one side gained a row.
+# 3. The video shape rule. This is the one that mattered: Core sends http.Header
+#    (a map of lists) and the client read a map of strings, so every play answer
+#    failed to decode and the screen said "no playable address".
+# The Core checkout, in the order the other checks look for it.
+core_src=${NK_CORE_SRC:-}
+if [ -z "$core_src" ] && [ -f "../VeneraCat Core/video/video.go" ]; then
+	core_src="../VeneraCat Core"
+fi
+if [ -z "$core_src" ] && [ -f "build/core/video/video.go" ]; then
+	core_src="build/core"
+fi
+if [ -n "$core_src" ]; then
+	mkdir -p "$tmp/video/Sources/NekularityKit/Video"
+	video="$tmp/video/Sources/NekularityKit/Video/VideoModels.swift"
+	cp Sources/NekularityKit/Video/VideoModels.swift "$video"
+	python3 - "$video" <<'BROKEN'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1])
+text = p.read_text(encoding="utf-8")
+assert "[String: [String]]?" in text
+p.write_text(text.replace("[String: [String]]?", "[String: String]?", 1), encoding="utf-8")
+BROKEN
+	expect_failure "the video shape rule" "headers" 		env NK_CLIENT_ROOT="$tmp/video" NK_CORE_SRC="$core_src" python3 scripts/check-video-json.py
+	cp Sources/NekularityKit/Video/VideoModels.swift "$video"
+	expect_pass "the video shape rule" 		env NK_CLIENT_ROOT="$tmp/video" NK_CORE_SRC="$core_src" python3 scripts/check-video-json.py
+else
+	printf 'check-checks: the video shape rule SKIPPED (no Core checkout at %s)
+' "$core_src"
+fi
+
+# 4. A pair that links but says a different amount: one side gained a row.
 printf '[en](lonely.en.md)\n\n# a\n\n| x |\n| - |\n' >"$tmp/docs/docs/lonely.md"
 expect_failure "the pair-content rule" \
 	"table rows" \

@@ -25,7 +25,10 @@ import pathlib
 import re
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+# NK_CLIENT_ROOT points the comparison at a tree that is not this repository, so
+# scripts/check-checks.sh can break the client on purpose and watch this report it.
+ROOT = pathlib.Path(os.environ.get("NK_CLIENT_ROOT") or
+                    pathlib.Path(__file__).resolve().parent.parent)
 SWIFT = ROOT / "Sources" / "NekularityKit" / "Video" / "VideoModels.swift"
 
 # Core type → the Swift declaration it is decoded into, by full path.
