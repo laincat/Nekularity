@@ -16,6 +16,16 @@ struct ImageConfigTests {
         #expect(!request.has("modifyImage"))
     }
 
+    // A source may write a header as a list; Core passes it through as it found
+    // it. Reading only strings dropped those, and a source that checks Referer
+    // then never got its image.
+    @Test func aListFormHeaderIsRead() throws {
+        let json = #"{"url":"https://img.example/2.jpg","headers":{"Referer":["https://e/","https://f/"],"User-Agent":"UA"}}"#
+        let request = try ImageRequest(json: json, fallbackURL: "https://old/2.jpg")
+        #expect(request.headers["Referer"] == "https://e/")
+        #expect(request.headers["User-Agent"] == "UA")
+    }
+
     @Test func aPlainConfigHasNoHandle() throws {
         let json = #"{"url":"https://thumb.example/1.jpg"}"#
         let request = try ImageRequest(json: json, fallbackURL: "https://old/1.jpg")

@@ -825,7 +825,17 @@ public struct ImageRequest: Sendable, Hashable {
         if let u = o["url"]?.stringValue, !u.isEmpty { url = u }
         if let m = o["method"]?.stringValue, !m.isEmpty { method = m.uppercased() }
         if case .object(let h)? = o["headers"] {
-            for (k, v) in h.entries { if let s = v.stringValue { headers[k] = s } }
+            for (k, v) in h.entries {
+                if let s = v.stringValue {
+                    headers[k] = s
+                } else if case .array(let list) = v, let first = list.first?.stringValue {
+                    // Core hands a source's headers through as it found them, and
+                    // `{"Referer": ["…"]}` is a legal way to write one. Reading
+                    // only strings dropped those silently, which for a source that
+                    // checks Referer means images that never load.
+                    headers[k] = first
+                }
+            }
         }
         if let d = o["data"]?.stringValue { body = d }
         if let h = o["handle"]?.stringValue { handle = h }
