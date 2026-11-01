@@ -155,6 +155,13 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.importTheme")
                 }
 
+                Section {
+                    NavigationLink { DiagnosticsView() } label: {
+                        Label("自检", systemImage: "stethoscope")
+                    }
+                    .accessibilityIdentifier("settings.diagnostics")
+                }
+
                 Section("关于") {
                     LabeledContent("版本", value: Self.version)
                     LabeledContent("Core", value: CoreVersion.short)

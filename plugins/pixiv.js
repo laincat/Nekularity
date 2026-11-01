@@ -100,7 +100,15 @@ class Pixiv extends ComicSource {
                 // 登录成功后站方会把人送回登录前一页；还停在 /login 就是没成。
                 return url.indexOf("/login") < 0
             },
-            onLoginSuccess: async () => {},
+            // /ajax/user/self 匿名也回 200、userData 为 null，所以「离开登录页」
+            // 只是必要条件。真正的完成条件是接口认得出人；在这里确认一次，
+            // 免得用户以为登录成功、随后每个分区都报「请先登录」。
+            onLoginSuccess: async () => {
+                let data = await this.json("/ajax/user/self")
+                if (!data || !data.userData || !data.userData.id) {
+                    throw "网页里还没登录成功,再试一次"
+                }
+            },
         },
         logout: () => {
             Network.deleteCookies("https://www.pixiv.net")

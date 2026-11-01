@@ -35,7 +35,7 @@ Updated 2026-11-01. This file keeps **what is to be done and what counts as done
 | G11 Batch source update | ~~One at a time~~ A batch updates and reports the three outcomes separately | One action updates every source with a URL and lists updated, current and failed |
 | G12 Local comics | ~~None~~ Folder and cbz/zip import, paging, remembered page and removal are done | Import a folder or a zip/cbz and read it |
 | G13 Tag translation and rating | ~~Translation~~ Translation is done; rating is blocked on a Core capability | Tags show a translation (done); rating where the source supports it (Core has no such capability) |
-| G14 Real device and real account | Only simulator evidence exists | A device install, a real sign-in, and lock-screen and background behaviour all recorded |
+| G14 Real device and real account | Only simulator evidence exists; a diagnostics page now makes the evidence copyable | A device install, a real sign-in, and lock-screen and background behaviour all recorded (**needs you to install and sign in**) |
 
 ## Not doing, or needs a decision first
 
