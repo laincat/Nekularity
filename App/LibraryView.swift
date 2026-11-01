@@ -11,6 +11,7 @@ import SwiftUI
 struct LibraryView: View {
     @Environment(SourceLibrary.self) private var library
     @Environment(MediaServerStore.self) private var servers
+    @Environment(LocalComicStore.self) private var local
     @Environment(VideoLibraryStore.self) private var media
     @Environment(DownloadStore.self) private var downloads
     @Environment(ShelfStore.self) private var shelf
@@ -59,6 +60,16 @@ struct LibraryView: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("library.downloads")
+
+                            NavigationLink { LocalComicsView() } label: {
+                                tile("本地漫画",
+                                     detail: local.comics.isEmpty
+                                        ? "文件夹或 .cbz"
+                                        : "\(local.comics.count) 本",
+                                     symbol: "folder")
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("library.localComics")
 
                             NavigationLink { MediaHubView() } label: {
                                 tile("媒体库",
