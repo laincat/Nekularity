@@ -224,6 +224,12 @@ struct MineView: View {
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
             }
             .buttonStyle(.plain)
+            Divider()
+            NavigationLink { BangumiView() } label: {
+                Label("Bangumi 追番", systemImage: "tv")
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .glassCard()

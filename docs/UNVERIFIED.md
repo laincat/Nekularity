@@ -21,6 +21,7 @@
 
 | 提交 | 改了什么 | 现在的状态 | 还剩什么 |
 |---|---|---|---|
+| Bangumi 支持 | 账号、收藏五档、话数、每日放送、与追番提醒的合并 | 本轮新增,编译与单测都还没跑过 | 真机连一次令牌;`swift test --filter Bangumi` |
 | `33c5c7a` | `seed-simulator.sh` 写入真正在用的环境目录 | 脚本级改动,不参与编译 | 一次 seeded 运行是否真的出现 5 个源 |
 | 字幕叠层 | 用 `$subtitleCues` 画文字字幕,跟随 `clock.$sourceTime` | 编译通过 | 播放一次带字幕的源,确认文字按时间出现 |
 | 软件通路画中画 | `AVPictureInPictureSampleBufferPlaybackDelegate` | 编译通过;内容源改为按图层构造,两个同步问题的答案放进带锁的快照 | 真机软解一次(VP9/AV1)并转画中画 |

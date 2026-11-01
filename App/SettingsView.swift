@@ -30,6 +30,7 @@ struct SettingsView: View {
     @Environment(VideoLibraryStore.self) private var media
     @Environment(ProfileStore.self) private var profiles
     @Environment(MetadataStore.self) private var metadata
+    @Environment(BangumiStore.self) private var bangumi
     @State private var tmdbKey = ""
     @State private var reminders = AiringReminders()
     @State private var remindersOn = false
@@ -275,10 +276,17 @@ struct SettingsView: View {
         await syncReminders()
     }
 
-    /// Plans from what the metadata store already knows, so this needs no network
-    /// round-trip of its own.
+    /// Plans from what the metadata store already knows, plus the Bangumi shows in
+    /// 「在看」. TMDB and Bangumi answer different questions — one knows broadcast
+    /// dates for western shows, the other has the Chinese title and the episode
+    /// list — and a reminder is a date either way, so the two lists are merged
+    /// before planning.
     private func syncReminders() async {
-        let plan = AiringPlan.plan(metadata.upcoming(within: 30, from: Date()).map(\.info))
+        var shows = metadata.upcoming(within: 30, from: Date()).map(\.info)
+        if bangumi.hasToken {
+            shows += await bangumi.airingShows()
+        }
+        let plan = AiringPlan.plan(shows, days: 30)
         await reminders.sync(plan: plan)
     }
 

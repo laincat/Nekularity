@@ -37,6 +37,7 @@ struct NekularityApp: App {
                         .environment(env.glossary)
                         .environment(env.home)
                         .environment(env.profiles)
+                        .environment(env.bangumi)
                         .environment(\.switchProfile, env.switchProfile)
                         .environment(\.imageLoader, env.images)
                         .sourcePrompts(env.prompts)
@@ -88,6 +89,9 @@ final class AppModel {
         /// Opens another environment. A closure because opening one means
         /// replacing the object graph, which only the app model can do.
         let switchProfile: @MainActor (String) async -> Void
+        /// Bangumi: the account's collections, and the air dates the reminder
+        /// planner reads. The token is per environment, like every other account.
+        let bangumi: BangumiStore
     }
 
     var state: State = .starting
@@ -177,7 +181,10 @@ final class AppModel {
                 glossary: TagGlossaryStore(directory: root),
                 home: HomeLayout(),
                 profiles: profiles,
-                switchProfile: { [weak self] id in await self?.switchProfile(to: id) }))
+                switchProfile: { [weak self] id in await self?.switchProfile(to: id) },
+                bangumi: BangumiStore(
+                    tokens: KeychainBangumiTokenStore(
+                        service: profiles.keychainService(for: profiles.activeID) + ".bangumi"))))
         } catch {
             started = false
             state = .failed(error.localizedDescription)

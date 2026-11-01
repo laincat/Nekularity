@@ -21,6 +21,7 @@ The first real compile found four errors that no static check of mine could see,
 
 | Commit | What changed | Where it stands | What is left |
 |---|---|---|---|
+| Bangumi support | Account, five collection states, episodes, weekly calendar, reminder join | Added this round; neither the build nor the tests have run yet | Connect a token on a device; `swift test --filter Bangumi` |
 | `33c5c7a` | `seed-simulator.sh` writes into the environment actually in use | Script-level, not compiled | Whether a seeded run really shows the five sources |
 | cue overlay | Text cues drawn from `$subtitleCues`, following `clock.$sourceTime` | Compiles | One subtitle-bearing source played, cues appearing in time |
 | software-route PiP | `AVPictureInPictureSampleBufferPlaybackDelegate` | Compiles; the content source is now built from a layer, and the two synchronous answers live in a lock-guarded snapshot | One software-decoded title (VP9/AV1) going into PiP on a device |
