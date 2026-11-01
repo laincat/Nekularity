@@ -39,6 +39,9 @@ public struct Challenge: Decodable, Sendable {
     public var partition: String
     public var absentMarkers: [String]?
     public var requiredCookies: [String]?
+    /// Parameters that must be in the page's own query. A challenge that solves
+    /// itself in page script records its result here instead of in a cookie.
+    public var requiredQueryParams: [String]?
 }
 
 /// The client side of Core: implements `MobileHostProtocol`.

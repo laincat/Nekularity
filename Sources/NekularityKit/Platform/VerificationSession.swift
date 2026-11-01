@@ -5,8 +5,9 @@ import WebKit
 /// Drives a WKWebView through a human-verification page.
 ///
 /// The view shows `challenge.url`; after each navigation it checks Core's
-/// done rule: none of `absentMarkers` in the page HTML and every
-/// `requiredCookies` present. Then it copies the WebView's cookies for the
+/// done rule: none of `absentMarkers` in the page HTML, every
+/// `requiredCookies` present, and every `requiredQueryParams` in the URL —
+/// whichever of those the rule actually lists. Then it copies the WebView's cookies for the
 /// challenge host into the partition's jar and reports the WebView's
 /// User-Agent, which Cloudflare binds clearance to.
 ///
@@ -77,14 +78,17 @@ public final class VerificationSession: NSObject, WKNavigationDelegate {
     private func passed() async -> Bool {
         guard let url = webView.url, let host = url.host()?.lowercased() else { return false }
         let html = (try? await webView.evaluateJavaScript("document.documentElement.outerHTML") as? String) ?? ""
-        for marker in challenge.absentMarkers ?? [] where html.contains(marker) { return false }
         let all = await webView.configuration.websiteDataStore.httpCookieStore.allCookies()
         let relevant = all.filter { c in
             let d = c.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
             return host == d || host.hasSuffix("." + d)
         }
-        let names = Set(relevant.map(\.name))
-        for required in challenge.requiredCookies ?? [] where !names.contains(required) { return false }
+        let conditions = ChallengeRule.Conditions(html: html, url: url,
+                                                  cookieNames: Set(relevant.map(\.name)))
+        guard conditions.satisfied(absentMarkers: challenge.absentMarkers ?? [],
+                                   requiredCookies: challenge.requiredCookies ?? [],
+                                   requiredQueryParams: challenge.requiredQueryParams ?? [])
+        else { return false }
         cookies.importCookies(partition: challenge.partition, relevant)
         let ua = webView.customUserAgent?.isEmpty == false ? webView.customUserAgent
             : (try? await webView.evaluateJavaScript("navigator.userAgent") as? String)
