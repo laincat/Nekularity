@@ -4,7 +4,7 @@ import Foundation
 /// `1.0`, and `"1.5"`. Episode sort in particular arrives as a fraction for
 /// specials, so decoding it as `Int` would throw on exactly the entries that need
 /// care.
-struct FlexNumber: Decodable, Hashable, Sendable {
+struct FlexNumber: Codable, Hashable, Sendable {
     var value: Double?
 
     init(_ value: Double?) { self.value = value }
@@ -19,6 +19,18 @@ struct FlexNumber: Decodable, Hashable, Sendable {
             value = Double(text)
         } else {
             value = nil
+        }
+    }
+
+    /// Only ever written back as a number: nothing here posts an episode, but a
+    /// decode-only member would keep `BangumiEpisode` from being `Codable` at all,
+    /// and the compiler says so once for every field rather than once for the type.
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        if let value {
+            try container.encode(value)
+        } else {
+            try container.encodeNil()
         }
     }
 }
