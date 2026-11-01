@@ -216,6 +216,8 @@ struct MediaBrowserView: View {
         .sheet(item: $playing) { pending in
             VideoPlayerView(title: pending.item.title,
                             play: VideoPlay(url: pending.url, format: "mp4"),
+                            provider: server.displayName,
+                            showTitle: pending.item.series.isEmpty ? pending.item.title : pending.item.series,
                             startPosition: Double(pending.item.position)) { position, seconds in
                 // Watching from a server is watching: it belongs in the same
                 // history as everything else.

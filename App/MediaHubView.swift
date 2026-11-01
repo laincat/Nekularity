@@ -98,6 +98,7 @@ struct MediaHubView: View {
         .refreshable { await loadServers() }
         .sheet(item: $playing) { pending in
             VideoPlayerView(title: pending.title, play: VideoPlay(url: pending.url, format: "mp4"),
+                            provider: pending.server, showTitle: pending.title,
                             startPosition: pending.start) { position, seconds in
                 // One history again: a film played from a server and one played
                 // from a file both have a position worth remembering.

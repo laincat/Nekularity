@@ -156,3 +156,18 @@ struct StatValue: View {
         }
     }
 }
+
+extension Color {
+    /// A danmaku colour, as the files carry it: one integer, 0xRRGGBB.
+    ///
+    /// White rather than clear for an unreadable value: a comment that vanishes is
+    /// indistinguishable from a comment that never arrived.
+    init(hex: Int) {
+        let value = max(0, min(0xFFFFFF, hex))
+        self.init(.sRGB,
+                  red: Double((value >> 16) & 0xFF) / 255,
+                  green: Double((value >> 8) & 0xFF) / 255,
+                  blue: Double(value & 0xFF) / 255,
+                  opacity: 1)
+    }
+}

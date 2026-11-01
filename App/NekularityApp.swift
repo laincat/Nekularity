@@ -32,6 +32,7 @@ struct NekularityApp: App {
                         .environment(env.media)
                         .environment(env.servers)
                         .environment(env.metadata)
+                        .environment(env.intros)
                         .environment(env.home)
                         .environment(env.profiles)
                         .environment(\.switchProfile, env.switchProfile)
@@ -73,6 +74,8 @@ final class AppModel {
         /// Show metadata (TMDB), cached, so the calendar can say when the next
         /// episode airs instead of guessing.
         let metadata: MetadataStore
+        /// Openings the user marked once per show, so the next episode can skip them.
+        let intros: IntroStore
         let home: HomeLayout
         /// The signed-in environment this whole object graph belongs to.
         let profiles: ProfileStore
@@ -157,6 +160,7 @@ final class AppModel {
                 downloads: downloads,
                 themes: ThemeStore(directory: support.appending(path: "Themes", directoryHint: .isDirectory)),
                 media: VideoLibraryStore(directory: root.appending(path: "Media", directoryHint: .isDirectory)),
+                intros: IntroStore(directory: root),
                 metadata: MetadataStore(
                     directory: root,
                     keys: KeychainMetadataKeyStore(service: profiles.keychainService(for: profiles.activeID) + ".tmdb")),

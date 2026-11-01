@@ -129,10 +129,19 @@ struct VideoPlayerView: View {
     let play: VideoPlay
     /// Where to start, for a file the library already knows.
     var startPosition: Double = 0
+    /// The provider and show this belongs to. Empty means "no show identity", and
+    /// then no opening is offered rather than one guessed from the episode title.
+    var provider: String = ""
+    var showTitle: String = ""
     /// Called when the screen closes, with where playback got to.
     var onClose: ((Double, Double) -> Void)?
     @Environment(\.dismiss) private var dismiss
+    @Environment(IntroStore.self) private var intros
     @State private var model = VideoPlayerModel()
+    @State private var danmaku: [DanmakuComment] = []
+    @State private var showsDanmaku = true
+    @State private var importingDanmaku = false
+    @State private var danmakuNote: String?
 
     var body: some View {
         NavigationStack {
@@ -140,7 +149,8 @@ struct VideoPlayerView: View {
                 if let engine = model.engine {
                     AetherPlayerSurface(engine: engine)
                         .ignoresSafeArea(edges: .bottom)
-                        .overlay(alignment: .bottom) { transport(engine) }
+                        .overlay { danmakuLayer }
+                        .overlay(alignment: .bottom) { bottomBar(engine) }
                 } else if let failure = model.failure {
                     ContentUnavailableView {
                         Label("无法播放", systemImage: "exclamationmark.triangle")
@@ -175,6 +185,14 @@ struct VideoPlayerView: View {
                 }
             }
             .task { await model.start(play, from: startPosition) }
+            .alert(danmakuNote ?? "", isPresented: Binding(get: { danmakuNote != nil },
+                                                          set: { if !$0 { danmakuNote = nil } })) {
+                Button("好") { danmakuNote = nil }
+            }
+            .fileImporter(isPresented: $importingDanmaku,
+                          allowedContentTypes: [.xml, .json, .plainText]) { result in
+                loadDanmaku(result)
+            }
             .onDisappear { model.stop() }
         }
     }
@@ -190,6 +208,7 @@ struct VideoPlayerView: View {
             .accessibilityIdentifier("video.playPause")
             speedMenu(engine)
             subtitleMenu(engine)
+            danmakuMenu
             if let duration = model.duration, duration > 0 {
                 Text(Self.clock(duration)).font(.caption.monospacedDigit())
                     .accessibilityIdentifier("video.duration")
@@ -202,6 +221,109 @@ struct VideoPlayerView: View {
         .padding(.vertical, 12)
         .background(.ultraThinMaterial, in: Capsule())
         .padding(.bottom, 24)
+    }
+
+    /// The transport, with the skip-the-opening button on top of it when there is
+    /// an opening to skip.
+    @ViewBuilder
+    private func bottomBar(_ engine: AetherEngine) -> some View {
+        VStack(spacing: 10) {
+            if let mark = introMark, mark.contains(model.position) {
+                Button {
+                    Task { await engine.seek(to: mark.end) }
+                } label: {
+                    Label("跳过片头", systemImage: "forward.fill")
+                        .font(.callout)
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("video.skipIntro")
+            }
+            transport(engine)
+        }
+    }
+
+    private var danmakuMenu: some View {
+        Menu {
+            Toggle("显示弹幕", isOn: $showsDanmaku)
+            Button("加载弹幕文件…") { importingDanmaku = true }
+            if !danmaku.isEmpty {
+                Button("清除弹幕", role: .destructive) { danmaku = [] }
+            }
+            Divider()
+            if !provider.isEmpty, !showTitle.isEmpty {
+                Button("把当前位置标为片头起点") {
+                    intros.mark(provider: provider, title: showTitle,
+                                start: model.position, end: model.position + 90)
+                }
+                if introMark != nil {
+                    Button("清除片头标记", role: .destructive) {
+                        intros.forget(provider: provider, title: showTitle)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: danmaku.isEmpty ? "text.bubble" : "text.bubble.fill")
+        }
+        .accessibilityIdentifier("video.danmaku")
+        .accessibilityValue(danmaku.isEmpty ? "无弹幕" : "\(danmaku.count) 条")
+    }
+
+    private var introMark: IntroMark? {
+        guard !provider.isEmpty, !showTitle.isEmpty else { return nil }
+        return intros.mark(provider: provider, title: showTitle)
+    }
+
+    /// Only the recent window is drawn, and only when the toggle is on. Drawing
+    /// thousands of lines over a video is how playback stutters.
+    @ViewBuilder
+    private var danmakuLayer: some View {
+        if showsDanmaku, !danmaku.isEmpty {
+            let active = DanmakuParser.active(danmaku, at: model.position)
+            VStack {
+                ForEach(active.filter { $0.placement == .top }, id: \.id) { comment in
+                    danmakuLine(comment)
+                }
+                Spacer()
+                ForEach(active.filter { $0.placement != .top }.suffix(6), id: \.id) { comment in
+                    danmakuLine(comment)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 40)
+            .allowsHitTesting(false)
+        }
+    }
+
+    private func danmakuLine(_ comment: DanmakuComment) -> some View {
+        Text(comment.text)
+            .font(.callout.weight(.medium))
+            .foregroundStyle(Color(hex: comment.color))
+            .shadow(color: .black.opacity(0.8), radius: 2)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Reads a file the user picked. Both formats are accepted because both are
+    /// what downloaders produce, and asking which one it is would be a question
+    /// with no good answer.
+    private func loadDanmaku(_ result: Result<URL, any Error>) {
+        do {
+            let url = try result.get()
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            let text = try String(contentsOf: url, encoding: .utf8)
+            let parsed = url.pathExtension.lowercased() == "json"
+                ? DanmakuParser.parse(json: text)
+                : DanmakuParser.parse(xml: text)
+            if parsed.isEmpty {
+                danmakuNote = "这个文件里没有读到弹幕"
+            } else {
+                danmaku = parsed
+                danmakuNote = "已加载 \(parsed.count) 条"
+            }
+        } catch {
+            danmakuNote = error.localizedDescription
+        }
     }
 
     /// Speeds the engine can actually hold. 2× is its cap for video, so offering

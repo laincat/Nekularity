@@ -109,7 +109,9 @@ struct VideoView: View {
             }
         }
         .sheet(item: $playing) { item in
-            VideoPlayerView(title: item.title, play: item.play, startPosition: item.start) { position, seconds in
+            VideoPlayerView(title: item.title, play: item.play,
+                            provider: item.provider, showTitle: item.title,
+                            startPosition: item.start) { position, seconds in
                 if let local = item.local {
                     media.update(local, position: position, seconds: seconds)
                 }
@@ -327,6 +329,7 @@ struct VideoDetailView: View {
         .task { await load() }
         .sheet(item: $playing) { pending in
             VideoPlayerView(title: pending.episode ?? pending.title, play: pending.play,
+                            provider: pending.provider, showTitle: pending.title,
                             startPosition: shelf.playbackStart(provider: pending.provider,
                                                               videoID: pending.videoID) ?? 0) { position, seconds in
                 shelf.recordVideo(provider: pending.provider, videoID: pending.videoID, title: pending.title,
