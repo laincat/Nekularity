@@ -829,8 +829,11 @@ final class NekularityUITests: XCTestCase {
         keep.tap()
 
         app.tabBars.buttons["书架"].tap()
-        let entry = element(app, "shelf.downloads")
-        XCTAssertTrue(entry.waitForExistence(timeout: 15), "the shelf has no downloads entry")
+        let more = element(app, "shelf.more")
+        XCTAssertTrue(more.waitForExistence(timeout: 15), "the shelf has no more menu")
+        more.tap()
+        let entry = app.buttons["下载"].firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 10), "the shelf menu has no downloads entry")
         entry.tap()
         XCTAssertTrue(firstElement(app, containing: "Probe Comic").waitForExistence(timeout: 90),
                       "the chapter never appeared in downloads")

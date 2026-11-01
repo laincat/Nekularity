@@ -5,6 +5,7 @@ struct RootView: View {
     /// Magpie accounts are a plain class, not an Observable one, so they are
     /// passed down rather than put in the SwiftUI environment.
     let magpie: MagpieAccounts
+    @Environment(ThemeStore.self) private var themes
 
     var body: some View {
         // Five tabs, because the bar holds five: a sixth pushes the last ones
@@ -18,6 +19,11 @@ struct RootView: View {
             Tab("视频", systemImage: "play.rectangle") { VideoView() }
             Tab("漫画源", systemImage: "puzzlepiece.extension") { SourcesView(magpie: magpie) }
         }
+        // The theme is applied once, here, so every screen inherits it: an
+        // accent colour that only some views used would look like a bug.
+        .tint(Color(hex: themes.active.accent) ?? .accentColor)
+        .preferredColorScheme(themes.active.dark == nil ? nil : (themes.active.dark! ? .dark : .light))
+        .background(Color(hex: themes.active.background ?? "") ?? Color(.systemBackground))
     }
 }
 

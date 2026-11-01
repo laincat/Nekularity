@@ -75,10 +75,17 @@ struct ShelfView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    NavigationLink { DownloadsView() } label: {
-                        Label("下载", systemImage: "arrow.down.circle")
+                    Menu {
+                        NavigationLink { DownloadsView() } label: {
+                            Label("下载", systemImage: "arrow.down.circle")
+                        }
+                        NavigationLink { SettingsView() } label: {
+                            Label("设置", systemImage: "gearshape")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
-                    .accessibilityIdentifier("shelf.downloads")
+                    .accessibilityIdentifier("shelf.more")
                 }
                 if let error = shelf.lastError {
                     Text(error).font(.footnote).foregroundStyle(.secondary)

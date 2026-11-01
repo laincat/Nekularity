@@ -28,6 +28,7 @@ struct NekularityApp: App {
                         .environment(env.shelf)
                         .environment(env.searches)
                         .environment(env.downloads)
+                        .environment(env.themes)
                         .environment(\.imageLoader, env.images)
                         .sourcePrompts(env.prompts)
                 }
@@ -58,6 +59,7 @@ final class AppModel {
         /// comic sources in every way.
         let magpie: MagpieAccounts
         let downloads: DownloadStore
+        let themes: ThemeStore
     }
 
     var state: State = .starting
@@ -121,6 +123,7 @@ final class AppModel {
                     await downloads.bytes(for: key)
                 }),
                 downloads: downloads,
+                themes: ThemeStore(directory: support.appending(path: "Themes", directoryHint: .isDirectory)),
                 prompts: prompts,
                 shelf: ShelfStore(directory: support),
                 searches: SearchHistoryStore(directory: support),
