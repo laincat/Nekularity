@@ -7,7 +7,8 @@ import Testing
 /// Builds a zip in memory, so the reader is tested against the format rather than
 /// against one produced by a tool this machine happens to have.
 private enum ZipBuilder {
-    static func make(_ files: [(name: String, data: Data, deflate: Bool)]) -> Data {
+    static func make(_ files: [(name: String, data: Data, deflate: Bool)],
+                     crcOverride: [String: UInt32] = [:]) -> Data {
         var out = Data()
         var directory = Data()
         for file in files {
@@ -21,14 +22,15 @@ private enum ZipBuilder {
                 method = 0
             }
             let offset = out.count
+            let crc = crcOverride[file.name] ?? ZipReader.crc32(file.data)
             out.append(localHeader(name: file.name, method: method,
-                                   compressed: payload.count, uncompressed: file.data.count))
+                                   compressed: payload.count, uncompressed: file.data.count, crc: crc))
             out.append(Data(file.name.utf8))
             out.append(payload)
 
             directory.append(centralHeader(name: file.name, method: method,
                                            compressed: payload.count, uncompressed: file.data.count,
-                                           offset: offset))
+                                           offset: offset, crc: crc))
             directory.append(Data(file.name.utf8))
         }
         let directoryOffset = out.count
@@ -60,14 +62,15 @@ private enum ZipBuilder {
               UInt8((value >> 16) & 0xFF), UInt8((value >> 24) & 0xFF)])
     }
 
-    private static func localHeader(name: String, method: UInt16, compressed: Int, uncompressed: Int) -> Data {
+    private static func localHeader(name: String, method: UInt16, compressed: Int, uncompressed: Int,
+                                    crc: UInt32) -> Data {
         var data = u32(0x0403_4b50)
         data.append(u16(20)) // version
         data.append(u16(0)) // flags
         data.append(u16(Int(method)))
         data.append(u16(0)) // time
         data.append(u16(0)) // date
-        data.append(u32(0)) // crc, not checked by the reader
+        data.append(u32(Int(crc)))
         data.append(u32(compressed))
         data.append(u32(uncompressed))
         data.append(u16(name.utf8.count))
@@ -76,7 +79,7 @@ private enum ZipBuilder {
     }
 
     private static func centralHeader(name: String, method: UInt16, compressed: Int,
-                                      uncompressed: Int, offset: Int) -> Data {
+                                      uncompressed: Int, offset: Int, crc: UInt32) -> Data {
         var data = u32(0x0201_4b50)
         data.append(u16(20)) // version made by
         data.append(u16(20)) // version needed
@@ -84,7 +87,7 @@ private enum ZipBuilder {
         data.append(u16(Int(method)))
         data.append(u16(0))
         data.append(u16(0))
-        data.append(u32(0)) // crc
+        data.append(u32(Int(crc)))
         data.append(u32(compressed))
         data.append(u32(uncompressed))
         data.append(u16(name.utf8.count))
@@ -137,6 +140,37 @@ struct ZipReaderTests {
         ])
         let pages = try ZipReader.entries(zip).filter(\.isPageCandidate)
         #expect(pages.map(\.name) == ["folder/03.png"])
+    }
+
+    @Test("the checksum is the one zip has always used")
+    func crcVector() {
+        // The canonical test vector: a wrong table or a wrong final XOR both fail
+        // here rather than silently accepting every archive.
+        #expect(ZipReader.crc32(Data("123456789".utf8)) == 0xCBF4_3926)
+        #expect(ZipReader.crc32(Data()) == 0)
+    }
+
+    @Test("a damaged page is refused instead of decoded into garbage")
+    func detectsCorruption() throws {
+        var zip = ZipBuilder.make([
+            (name: "01.png", data: Data("real page bytes".utf8), deflate: false),
+        ], crcOverride: ["01.png": 0xDEAD_BEEF])
+        let entries = try ZipReader.entries(zip)
+        #expect(throws: ZipReader.Failure.self) {
+            _ = try ZipReader.contents(of: entries[0], in: zip)
+        }
+        // Corrupting the payload instead of the checksum must also be caught.
+        zip = ZipBuilder.make([
+            (name: "01.png", data: Data("real page bytes".utf8), deflate: false),
+        ])
+        let good = try ZipReader.entries(zip)
+        var broken = zip
+        if let index = broken.range(of: Data("real".utf8))?.lowerBound {
+            broken[index] = 0x00
+            #expect(throws: ZipReader.Failure.self) {
+                _ = try ZipReader.contents(of: good[0], in: broken)
+            }
+        }
     }
 
     @Test("something that is not a zip says so instead of reading nonsense")
