@@ -55,7 +55,10 @@ struct DanmakuTests {
         // thousands of lines.
         let crowded = (0..<200).map { DanmakuComment(time: 50, text: "\($0)") }
         #expect(DanmakuParser.active(crowded, at: 50, limit: 10).count == 10)
-        #expect(DanmakuParser.active(comments, at: 0).isEmpty)
+        // At 0 the comment at 0 is current; a second before it, nothing has
+        // happened yet and nothing is drawn.
+        #expect(DanmakuParser.active(comments, at: 0).map(\.text) == ["0"])
+        #expect(DanmakuParser.active(comments, at: -1).isEmpty)
     }
 
     @Test("a broken file yields nothing instead of failing the player")

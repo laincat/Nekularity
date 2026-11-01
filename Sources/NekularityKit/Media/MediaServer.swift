@@ -296,11 +296,16 @@ public struct MediaServerClient: Sendable {
         var collected: [MediaItem] = []
         var start = 0
         while collected.count < max {
+            let limit = min(pageSize, max - collected.count)
             let page = try await itemPage(server: server, token: token, library: library,
-                                         startIndex: start, limit: min(pageSize, max - collected.count))
+                                         startIndex: start, limit: limit)
             collected += page.items
-            // A short page, or a total we have reached, is the end.
-            if page.items.isEmpty || collected.count >= page.total { break }
+            // A short page ends the walk: the server said there were more than it
+            // sent, and believing the total rather than the page means asking again
+            // for the same nothing until the cap. An empty page, or a total we have
+            // reached, are the other two ends.
+            if page.items.isEmpty || page.items.count < limit { break }
+            if collected.count >= page.total { break }
             start += page.items.count
         }
         return collected

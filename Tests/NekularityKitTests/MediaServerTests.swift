@@ -67,7 +67,7 @@ struct MediaServerClientTests {
         fake.replies["http://192.168.1.9:8096/Users/user-7/Views"] = (200, """
         {"Items":[{"Id":"lib-1","Name":"电影","CollectionType":"movies"}]}
         """)
-        fake.replies["http://192.168.1.9:8096/Users/user-7/Items?Recursive=true&IncludeItemTypes=Movie,Episode&Fields=Overview,RunTimeTicks,PrimaryImageTag&ParentId=lib-1"] = (200, """
+        fake.replies["http://192.168.1.9:8096/Users/user-7/Items?Recursive=true&IncludeItemTypes=Movie,Episode&Fields=Overview,RunTimeTicks,PrimaryImageTag&StartIndex=0&Limit=200&ParentId=lib-1"] = (200, """
         {"Items":[{"Id":"v-1","Name":"第一集","SeriesName":"某剧","ProductionYear":2024,
                    "Overview":"简介","RunTimeTicks":6000000000,"PrimaryImageTag":"tag-1",
                    "UserData":{"PlaybackPositionTicks":1500000000}}]}

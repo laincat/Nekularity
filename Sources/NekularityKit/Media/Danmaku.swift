@@ -153,7 +153,10 @@ public struct IntroMark: Codable, Hashable, Sendable {
     /// Whether a position is inside the opening, with a second of slack at the end
     /// so pressing skip at 89.7 s of a 90 s opening still works.
     public func contains(_ position: Double) -> Bool {
-        position >= start - 1 && position < end - 1
+        // A second early still counts (players drift), the ending itself does
+        // not. Subtracting from `end` instead took the last second of the opening
+        // out of range, so skip did nothing at 97.5 s of a 98 s mark.
+        position >= start - 1 && position < end
     }
 }
 

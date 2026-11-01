@@ -73,7 +73,10 @@ struct ProfileUpgradeTests {
         #expect(second.activeDirectory == firstDirectory)
         let shelf = try String(contentsOf: second.activeDirectory.appending(path: "shelf.json"), encoding: .utf8)
         #expect(shelf.contains("history"))
-        #expect(shelf.contains("[1]") == false)
+        // The file written after the upgrade is still the one there: a second open
+        // must not run the migration again and copy the old shelf back over it.
+        #expect(shelf.contains("[1]"))
+        #expect(shelf.contains("\"history\":[]") == false)
 
         let extra = try second.create(name: "小号")
         #expect(!FileManager.default.fileExists(atPath: second.directory(for: extra.id)

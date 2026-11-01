@@ -117,8 +117,12 @@ public final class LocalComicStore {
                 // folders can hold the same file name, though — flattening them
                 // onto one another silently drops a page, so a clash keeps its
                 // parent as a prefix.
-                let flat = entry.name.split(separator: "/").last.map(String.init) ?? entry.name
-                let name = taken.contains(flat) ? Self.prefixed(entry.name, fallback: flat) : flat
+                let parts = entry.name.split(separator: "/")
+                let flat = parts.last.map(String.init) ?? entry.name
+                // Nested pages keep their folder as a prefix whether or not the
+                // name clashes: renaming only the loser of a clash left the first
+                // page unattributed, and the sort then mixed chapters together.
+                let name = parts.count >= 2 ? Self.prefixed(entry.name, fallback: flat) : flat
                 if taken.contains(name) {
                     throw ZipReader.Failure.unsupported("压缩包里有重名图片:\(entry.name)")
                 }
