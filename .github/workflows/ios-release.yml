@@ -22,11 +22,15 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_26.6.app
       - name: Install XcodeGen
         run: brew install xcodegen
+      - name: Build pinned Core
+        run: sh scripts/fetch-core.sh
       - name: Check the tree before building it
         run: |
-          # Each check reports its own name on failure. A single failing line in a
-          # chained step says "something was wrong" and nothing else, and this step
-          # has already failed once without saying which one it was.
+          # After the Core fetch on purpose: one of these checks compares the kit's
+          # Core calls against Core's own sources, and run before the fetch it can
+          # only report "no checkout" — which is what failed here the first time.
+          # Each check names itself on failure; a chained step that aborts says
+          # "something was wrong" and nothing else.
           fail=0
           run_check() {
             echo "=== $*"
@@ -35,14 +39,15 @@ jobs:
               fail=1
             fi
           }
+          # Without these the parse check silently degrades to its regex rules, and a
+          # green run would mean less than it looks.
+          python3 -m pip install --quiet --disable-pip-version-check tree-sitter tree-sitter-swift
           run_check sh scripts/check-docs.sh
           run_check sh scripts/check-partitions.sh
           run_check sh scripts/check-core-pin.sh
           run_check python3 scripts/check-kit-core-calls.py
           run_check python3 scripts/check-swift.py
           exit $fail
-      - name: Build pinned Core
-        run: sh scripts/fetch-core.sh
       - name: Generate project
         run: xcodegen generate
       - name: Build unsigned device app
