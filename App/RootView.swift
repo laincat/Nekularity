@@ -93,6 +93,9 @@ struct RootView: View {
             }
             .padding(4)
             .background(.ultraThinMaterial, in: Capsule())
+            // Clip the whole strip: a selected capsule is drawn wider than its
+            // slot at the edge and would otherwise slide under the search button.
+            .clipShape(Capsule())
 
             Button {
                 searching = true

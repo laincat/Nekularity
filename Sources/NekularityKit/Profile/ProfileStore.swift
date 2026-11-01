@@ -38,8 +38,11 @@ public final class ProfileStore {
 
     /// Files that used to live directly under the support directory, before
     /// there were environments. They belong to the first one.
-    private static let legacyItems = ["sources.json", "cookies.json", "shelf.json", "searches.json",
-                                      "sources", "Magpie", "Downloads", "Media"]
+    /// `plugins.json` is the one that matters: `SourceStore` writes the records
+    /// there, so a migration list without it moves everything *except* the
+    /// sources — which looks exactly like "the upgrade deleted my sources".
+    private static let legacyItems = ["plugins.json", "sources.json", "cookies.json", "shelf.json",
+                                      "searches.json", "Magpie", "Downloads", "Media"]
 
     public init(support: URL, defaults: UserDefaults = .standard) {
         self.support = support

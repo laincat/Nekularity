@@ -95,10 +95,21 @@ final class LocalImageServer: @unchecked Sendable {
         }
     }
 
-    func stop() {
-        listener.stateUpdateHandler = nil
+    /// Stops listening and **waits for the port to be free**.
+    ///
+    /// `cancel()` returns before the socket is released, so a case that stops the
+    /// server and a later case that starts one were racing over 18731: the next
+    /// three cases failed with "address already in use". Waiting for the listener
+    /// to reach `.cancelled` is the only signal the framework gives.
+    func stop(timeout: TimeInterval = 5) {
+        let signal = Signal()
+        listener.stateUpdateHandler = { state in
+            if case .cancelled = state { signal.finish() }
+        }
         listener.newConnectionHandler = nil
         listener.cancel()
+        _ = signal.semaphore.wait(timeout: .now() + timeout)
+        listener.stateUpdateHandler = nil
     }
 
     private func serve(_ connection: NWConnection) {

@@ -131,6 +131,9 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("设置")
+            // The bar floats over the content, so the last row needs room or it
+            // is unreadable underneath it.
+            .contentMargins(.bottom, 76, for: .scrollContent)
             .sheet(isPresented: $showingProfiles) {
                 ProfilesView(profiles: profiles, switchTo: switchProfile)
             }

@@ -42,6 +42,9 @@ struct ProfilesView: View {
                                 }
                                 Spacer()
                             }
+                            // Without this the row only answers where it has
+                            // text, which reads as "the list ignores my taps".
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("profile.\(profile.name)")

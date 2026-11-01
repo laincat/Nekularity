@@ -27,7 +27,11 @@ final class NekularityUITests: XCTestCase {
         // the sections keep identifiers instead of labels.
         let ids = ["发现": "tab.discover", "我的": "tab.mine", "资源库": "tab.library", "设置": "tab.settings"]
         let identifier = ids[name] ?? name
-        let button = element(app, identifier)
+        // Any descendant, and wait: `element()` checks `.exists` synchronously
+        // and hands back a fallback query that never matches, which is how all
+        // thirteen cases reported "no 发现 section" while the button was there.
+        let button = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@", identifier)).firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 30), "no \(name) section")
         button.tap()
     }
@@ -153,7 +157,9 @@ final class NekularityUITests: XCTestCase {
         // The four the user asked for: a home they arrange, their calendar, the
         // sources, and settings, in a floating bar of their own.
         for id in ["tab.discover", "tab.mine", "tab.library", "tab.settings", "tab.search"] {
-            XCTAssertTrue(element(app, id).waitForExistence(timeout: 30), "no \(id)")
+            let button = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier == %@", id)).firstMatch
+            XCTAssertTrue(button.waitForExistence(timeout: 30), "no \(id)")
         }
     }
 

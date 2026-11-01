@@ -32,6 +32,7 @@ struct MineView: View {
                 .padding(16)
             }
             .navigationTitle("我的")
+            .contentMargins(.bottom, 76, for: .scrollContent)
             .sheet(isPresented: $showingProfiles) {
                 ProfilesView(profiles: profiles, switchTo: switchProfile)
             }

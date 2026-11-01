@@ -18,6 +18,7 @@ struct DiscoverView: View {
     @State private var editing = false
     @State private var searching = false
     @State private var browsing = false
+    @State private var adding = false
     @State private var watching = false
 
     var body: some View {
@@ -38,6 +39,7 @@ struct DiscoverView: View {
                 }
             }
             .navigationTitle("发现")
+            .contentMargins(.bottom, 76, for: .scrollContent)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button(editing ? "完成" : "编辑") {
