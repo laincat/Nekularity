@@ -12,6 +12,7 @@ import SwiftUI
 struct SourceFavoritesView: View {
     let source: PluginRecord
     @Environment(SourceLibrary.self) private var library
+    @Environment(ThemeStore.self) private var themes
     @State private var model = FavoritesModel()
 
     var body: some View {
@@ -58,7 +59,7 @@ struct SourceFavoritesView: View {
                             .background(model.folder == folder.id
                                         ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary),
                                         in: Capsule())
-                            .foregroundStyle(model.folder == folder.id ? Color.white : Color.primary)
+                            .foregroundStyle(model.folder == folder.id ? themes.active.onAccent : Color.primary)
                     }
                     .buttonStyle(.plain)
                 }

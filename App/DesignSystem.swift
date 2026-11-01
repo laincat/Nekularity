@@ -49,6 +49,7 @@ extension View {
 
 /// The rounded capsule button the reference app puts in its bars.
 struct Pill: ButtonStyle {
+    @Environment(ThemeStore.self) private var themes
     var filled = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -62,7 +63,7 @@ struct Pill: ButtonStyle {
                     Capsule().fill(.ultraThinMaterial)
                 }
             }
-            .foregroundStyle(filled ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+            .foregroundStyle(filled ? AnyShapeStyle(themes.active.onAccent) : AnyShapeStyle(.primary))
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }

@@ -61,4 +61,23 @@ struct ThemeTests {
             try store.install(data: Data(##"{"id":"","name":"x","accent":"#000000","radius":8}"##.utf8))
         }
     }
+
+    // A theme's accent is a hex string from a file, so white text is only right
+    // when the accent is dark. Every shipped accent is; a pale one is not, and
+    // white on it is invisible.
+    @Test("text on an accent follows its lightness")
+    func accentTextFollowsTheAccent() {
+        #expect(!Theme(id: "a", name: "a", accent: "#0A84FF").accentTextIsDark)
+        #expect(!Theme(id: "b", name: "b", accent: "#3482FF").accentTextIsDark)
+        #expect(Theme(id: "c", name: "c", accent: "#FFF59D").accentTextIsDark)
+        #expect(Theme(id: "d", name: "d", accent: "#FFFFFF").accentTextIsDark)
+        #expect(Theme(id: "e", name: "e", accent: "FFFF00").accentTextIsDark)
+        #expect(!Theme(id: "f", name: "f", accent: "#000000").accentTextIsDark)
+    }
+
+    @Test("an unreadable accent falls back to white text")
+    func anUnreadableAccentFallsBack() {
+        #expect(!Theme(id: "g", name: "g", accent: "not a colour").accentTextIsDark)
+        #expect(!Theme(id: "h", name: "h", accent: "#12345").accentTextIsDark)
+    }
 }

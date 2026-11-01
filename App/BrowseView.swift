@@ -9,6 +9,7 @@ import SwiftUI
 /// screen shows sections and rows and lets the model do the rest.
 struct BrowseView: View {
     @Environment(SourceLibrary.self) private var library
+    @Environment(ThemeStore.self) private var themes
     @AppStorage("searchSource") private var sourceKey = ""
     @State private var model = BrowseModel()
 
@@ -91,7 +92,7 @@ struct BrowseView: View {
             .font(.callout)
             .padding(.horizontal, 12).padding(.vertical, 6)
             .background(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary), in: Capsule())
-            .foregroundStyle(selected ? Color.white : Color.primary)
+            .foregroundStyle(selected ? themes.active.onAccent : Color.primary)
     }
 
     @ViewBuilder private func browseBody(_ model: BrowseModel) -> some View {

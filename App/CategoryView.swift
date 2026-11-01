@@ -11,6 +11,7 @@ import SwiftUI
 struct CategoryBrowser: View {
     let source: String
     @Environment(SourceLibrary.self) private var library
+    @Environment(ThemeStore.self) private var themes
     /// A category parameter to open on, from a tapped tag.
     var initialParam: String = ""
     @State private var model = CategoryModel()
@@ -115,7 +116,7 @@ struct CategoryBrowser: View {
                 .font(.callout)
                 .padding(.horizontal, 10).padding(.vertical, 5)
                 .background(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary), in: Capsule())
-                .foregroundStyle(selected ? Color.white : Color.primary)
+                .foregroundStyle(selected ? themes.active.onAccent : Color.primary)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])

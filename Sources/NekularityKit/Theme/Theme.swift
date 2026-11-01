@@ -36,6 +36,40 @@ public struct Theme: Codable, Sendable, Hashable, Identifiable {
     }
 }
 
+extension Theme {
+    /// Whether text drawn on `accent` should be black rather than white.
+    ///
+    /// A theme's accent is a hex string from a file, so it can be anything: the
+    /// shipped ones are all dark enough for white text, and a pale one is not.
+    /// White on a pale accent is unreadable and no screenshot catches it because
+    /// it only happens with a theme nobody installed yet.
+    public var accentTextIsDark: Bool {
+        guard let rgb = Self.components(of: accent) else { return false }
+        // WCAG contrast against black and against white; the larger one wins.
+        let onBlack = (Self.luminance(rgb) + 0.05) / 0.05
+        let onWhite = 1.05 / (Self.luminance(rgb) + 0.05)
+        return onBlack > onWhite
+    }
+
+    /// Parses `#RRGGBB`, with or without the hash.
+    static func components(of hex: String) -> (Double, Double, Double)? {
+        var text = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.hasPrefix("#") { text.removeFirst() }
+        guard text.count == 6, let value = UInt32(text, radix: 16) else { return nil }
+        return (Double((value >> 16) & 0xFF) / 255,
+                Double((value >> 8) & 0xFF) / 255,
+                Double(value & 0xFF) / 255)
+    }
+
+    /// Relative luminance, as WCAG defines it.
+    static func luminance(_ rgb: (Double, Double, Double)) -> Double {
+        func linear(_ channel: Double) -> Double {
+            channel <= 0.03928 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * linear(rgb.0) + 0.7152 * linear(rgb.1) + 0.0722 * linear(rgb.2)
+    }
+}
+
 /// Themes that ship with the app.
 public enum BuiltinThemes {
     /// The system's own colours: no accent override, no forced scheme.
