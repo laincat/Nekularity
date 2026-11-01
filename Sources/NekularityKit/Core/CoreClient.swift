@@ -9,7 +9,14 @@ public struct CoreError: Error, LocalizedError, Sendable {
     public var errorDescription: String? { CoreError.readable(message) }
 
     /// The call was cancelled (task cancellation or Core.Cancel).
-    public var isCancelled: Bool { message.contains("context canceled") }
+    ///
+    /// Go, Foundation and Core each word this differently — "context canceled",
+    /// "operation canceled", "cancelled" — and matching only Go's phrasing meant a
+    /// cancellation could surface as an error the interface showed.
+    public var isCancelled: Bool {
+        let lower = message.lowercased()
+        return lower.contains("canceled") || lower.contains("cancelled") || lower.contains("已取消")
+    }
 
     /// The source declared no such image callback; the caller should carry on
     /// with what it already has rather than treat this as a failure.
@@ -23,7 +30,7 @@ public struct CoreError: Error, LocalizedError, Sendable {
     public static func readable(_ message: String) -> String {
         let lower = message.lowercased()
         func has(_ needle: String) -> Bool { lower.contains(needle) }
-        if has("context canceled") || has("cancelled") {
+        if has("canceled") || has("cancelled") || has("已取消") {
             return "操作已取消"
         }
         if has("no such source") || has("source not found") || has("unknown source") {

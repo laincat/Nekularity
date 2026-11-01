@@ -39,4 +39,18 @@ import Testing
         #expect(error.isCancelled == false)
         #expect(CoreError("context canceled").isCancelled)
     }
+
+    /// Cancellation arrives in several spellings. One of them was not recognised,
+    /// so a cancelled request could be shown to the user as a failure.
+    @Test("cancellation is recognised however it is worded")
+    func cancellationBySpelling() {
+        for text in ["context canceled", "operation canceled", "request cancelled",
+                     "rpc error: code = Canceled desc = context canceled", "已取消"] {
+            let error = CoreError(text)
+            #expect(error.isCancelled)
+            #expect(CoreError.readable(text) == "操作已取消")
+        }
+        #expect(!CoreError("network is unreachable").isCancelled)
+        #expect(CoreError.readable("network is unreachable") != "操作已取消")
+    }
 }
