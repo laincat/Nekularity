@@ -45,8 +45,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.laincat.nekularity
         PRODUCT_NAME: Nekularity
-        MARKETING_VERSION: "0.2.0"
-        CURRENT_PROJECT_VERSION: "2"
+        MARKETING_VERSION: "0.2.1"
+        CURRENT_PROJECT_VERSION: "3"
         # An explicit Info.plist because ATS is a nested dictionary, and the
         # INFOPLIST_KEY_* settings only carry flat values.
         GENERATE_INFOPLIST_FILE: NO
