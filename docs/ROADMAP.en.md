@@ -25,7 +25,7 @@ Updated 2026-11-01. This file keeps **what is to be done and what counts as done
 | G1 Compile the current tree and run every interface case | Six changes have never been compiled on a Mac (themes, downloads, the four-section rebuild, the look, environments) | Build succeeds, all 16 cases pass, `swift test` passes |
 | G2 Settle the look | It is glass cards and a floating bar now, but nobody has seen it render | Four screenshots each in light and dark, no overlap, clipping or unreadable contrast |
 | G3 Try the Pixiv login for real | Bookmark and following sections cannot be verified without an account | After signing in, 关注的新作 and 我的收藏 both show content, and still do after a relaunch |
-| G4 One history for reading and watching | The calendar currently only knows about reading | Watching a video writes the same history, and the calendar and statistics include it |
+| G4 One history for reading and watching | ~~The calendar only knew about reading~~ Written, awaiting a compile | Watching a video writes the same history, and the calendar and statistics include it |
 | G5 Media servers (Jellyfin/Emby/Plex) | This is the reference app's core, and we have none of it | Add a server → browse a library → play an item → progress written back |
 | G6 One entry for servers and local files | 资源库 is a placeholder today | Servers and local video appear in one list, searchable |
 | G7 Playback experience | AetherEngine already supports it; the screen does not use it yet | Speed, subtitle track choice, remembered position, picture in picture |

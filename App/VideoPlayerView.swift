@@ -24,6 +24,10 @@ final class VideoPlayerModel {
     @ObservationIgnored private var started = false
     @ObservationIgnored private var watch: AnyCancellable?
 
+    /// Called when playback starts and when the screen closes, so an episode
+    /// that was opened and abandoned still lands in history.
+    @ObservationIgnored var onProgress: ((Double, Double) -> Void)?
+
     func start(_ play: VideoPlay, from startPosition: Double) async {
         guard !started else { return }
         started = true
@@ -41,6 +45,7 @@ final class VideoPlayerModel {
                 Task { @MainActor [weak self] in self?.sync(made) }
             }
             sync(made)
+            onProgress?(made.currentTime, made.duration ?? 0)
         } catch {
             failure = error.localizedDescription
         }
@@ -48,6 +53,11 @@ final class VideoPlayerModel {
 
     /// AetherEngine publishes its own state; mirroring it into observed
     /// properties is what lets this screen redraw.
+    /// The last word on where this playback got to.
+    func reportProgress() {
+        onProgress?(position, duration ?? 0)
+    }
+
     private func sync(_ engine: AetherEngine) {
         duration = engine.duration
         if engine.currentTime > 0 { position = engine.currentTime }

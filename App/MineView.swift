@@ -83,6 +83,8 @@ struct MineView: View {
     private var dayCard: some View {
         let entries = shelf.history.filter { calendar.isDate(Date(timeIntervalSince1970: TimeInterval($0.time)),
                                                              inSameDayAs: selected) }
+        let readings = entries.filter { !$0.isVideo }
+        let watching = entries.filter(\.isVideo)
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(calendar.isDateInToday(selected) ? "今天" : title(selected)).font(.headline)
@@ -90,25 +92,41 @@ struct MineView: View {
                 Text(title(selected)).font(.caption).foregroundStyle(.secondary)
             }
             if entries.isEmpty {
-                Text("这天没有阅读记录").font(.callout).foregroundStyle(.secondary)
+                Text("这天没有阅读或观看记录").font(.callout).foregroundStyle(.secondary)
             } else {
                 HStack(spacing: 22) {
-                    StatValue(value: "\(entries.count)", unit: "部", label: "漫画")
-                    StatValue(value: "\(Set(entries.map(\.chapter)).count)", unit: "话", label: "章节")
+                    StatValue(value: "\(readings.count)", unit: "部", label: "漫画")
+                    StatValue(value: "\(Set(readings.map(\.chapter)).count)", unit: "话", label: "章节")
+                    if !watching.isEmpty {
+                        StatValue(value: "\(watching.count)", unit: "集", label: "视频")
+                    }
                 }
                 ForEach(entries.prefix(5), id: \.key) { entry in
-                    NavigationLink(value: ComicRoute(source: entry.source,
-                                                     comic: Comic(id: entry.id, title: entry.title,
-                                                                  subtitle: entry.author, cover: entry.cover))) {
+                    if entry.isVideo {
+                        // No route to a comic screen: a video is watched here or
+                        // in 资源库, and a link to a comic would open nothing.
                         HStack {
-                            Text(entry.comic.title).font(.callout).lineLimit(1)
+                            Image(systemName: "play.rectangle").foregroundStyle(.secondary)
+                            Text(entry.title).font(.callout).lineLimit(1)
                             Spacer()
-                            if let chapter = entry.chapter {
-                                Text(chapter).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                            if let percent = entry.videoPercent {
+                                Text("\(percent)%").font(.caption2).foregroundStyle(.secondary)
                             }
                         }
+                    } else {
+                        NavigationLink(value: ComicRoute(source: entry.source,
+                                                         comic: Comic(id: entry.id, title: entry.title,
+                                                                      subtitle: entry.author, cover: entry.cover))) {
+                            HStack {
+                                Text(entry.comic.title).font(.callout).lineLimit(1)
+                                Spacer()
+                                if let chapter = entry.chapter {
+                                    Text(chapter).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
@@ -123,7 +141,7 @@ struct MineView: View {
         let counts = dayCounts()
         let peak = max(1, counts.values.max() ?? 1)
         return VStack(alignment: .leading, spacing: 8) {
-            Text("历史阅读").font(.headline)
+            Text("阅读与观看").font(.headline)
             LazyHGrid(rows: Array(repeating: GridItem(.fixed(10), spacing: 3), count: 7), spacing: 3) {
                 ForEach(0..<105, id: \.self) { index in
                     let day = calendar.date(byAdding: .day, value: index - 104, to: calendar.startOfDay(for: Date()))!

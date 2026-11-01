@@ -251,3 +251,45 @@ import Testing
         #expect(ShelfStore(directory: dir).keptPages().isEmpty)
     }
 }
+
+@Suite("Watching counts as history")
+@MainActor
+struct VideoHistoryTests {
+    private func store() throws -> ShelfStore {
+        let root = FileManager.default.temporaryDirectory.appending(path: "shelf-video-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return ShelfStore(directory: root)
+    }
+
+    @Test("a video lands in the same history list a chapter does")
+    func recordsVideo() throws {
+        let shelf = try store()
+        shelf.recordVideo(provider: "probe", videoID: "1", title: "示例剧", episode: "第 1 集",
+                          seconds: 60, duration: 240)
+        let entry = try #require(shelf.history.first)
+        #expect(entry.isVideo)
+        #expect(entry.chapter == "第 1 集")
+        #expect(entry.seconds == 60)
+        // A quarter in: the same 0–100 the reader's progress bar uses.
+        #expect(entry.videoPercent == 25)
+        #expect(shelf.recentHistory().count == 1)
+    }
+
+    @Test("watching the same episode again moves it to the top instead of duplicating it")
+    func replacesRatherThanAppends() throws {
+        let shelf = try store()
+        shelf.recordVideo(provider: "probe", videoID: "1", title: "示例剧", seconds: 10, duration: 100)
+        shelf.recordVideo(provider: "probe", videoID: "2", title: "另一部", seconds: 5, duration: 100)
+        shelf.recordVideo(provider: "probe", videoID: "1", title: "示例剧", seconds: 90, duration: 100)
+        #expect(shelf.history.count == 2)
+        #expect(shelf.history.first?.id == "1")
+        #expect(shelf.history.first?.videoPercent == 90)
+    }
+
+    @Test("an unknown length leaves the percentage unknown rather than inventing one")
+    func unknownDuration() throws {
+        let shelf = try store()
+        shelf.recordVideo(provider: "probe", videoID: "1", title: "示例剧", seconds: 30, duration: 0)
+        #expect(shelf.history.first?.videoPercent == nil)
+    }
+}

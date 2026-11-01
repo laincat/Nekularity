@@ -18,6 +18,7 @@
 | Pixiv 源插件 | `sources/pixiv.js` 是一个**普通 JS 漫画源插件**,用 pixiv 匿名可读的接口:排行(`ranking.php?format=json`,日/周/月/新人/原创五档)、搜索(`/ajax/search/artworks`)、作品详情(`/ajax/illust/{id}`)、图片列表(`/ajax/illust/{id}/pages`)。**不碰需要 OAuth 的 `app-api`**——插件不该持有客户端凭据,所以收藏/关注这类要登录的功能没有做。两条实测教训写在注释里:手机 UA 下 `ranking.php` **即使带 `Accept: application/json` 也只回 HTML**,必须用桌面 UA;`i.pximg.net` 不带 `Referer: https://www.pixiv.net/` 一律 403,所以 `onImageLoad` 必带该头。已在桌面端用真实站点验证:搜索 60 条、详情、18 页图片 164ms、五个榜单 250 条、标签点击可搜。 |
 | 视觉 | 按参考 App 的观感做了一套共享面:`DesignSystem`(渐变画布、`.glassCard()` 玻璃卡片、`Pill` 胶囊按钮、`SectionHeader` 带箭头、`PosterTile` 带「看到 mm:ss」与进度条、`StatValue` 大数字),并换成**悬浮胶囊 tab 栏 + 独立圆形搜索按钮**(标准 `TabView` 画不出这个形状)。卡片圆角与强调色取自已选主题,所以自定义主题会同时改变这套观感。**尚未在 Mac 上编译验证。** |
 | 多账号（环境） | `ProfileStore`:每个环境有自己的 `sources.json`、`cookies.json`、`shelf.json`、`searches.json`、`Magpie/`、`Downloads/`、`Media/`,目录是 `Profiles/<id>`;主题保持全局(外观不是账号)。切换环境会**重建 Core**——因为 Core 就是按该环境的源记录与 Cookie 建起来的,不重建就只是换皮。AI 授权在 Keychain 里按环境分服务名,首个环境沿用原服务名,避免升级后静默掉登录。从旧版升级时根目录的旧文件会搬进「默认环境」。入口:「我的」顶部环境条 +「设置 → 环境」,**尚未在 Mac 上编译验证**。 |
+| 观看历史 | 看视频和读漫画写进同一份历史,日历、热力图与当天统计都算上;视频行不伪装成漫画(不给可点的详情路由),片长未知时百分比留空而不是编一个。同一集再看一次只是把它挪到最前。 | 单测(编译待验证) |
 
 ## Mac 上已经跑过的检查
 

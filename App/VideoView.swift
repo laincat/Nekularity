@@ -55,6 +55,7 @@ struct VideoView: View {
 
     @Environment(SourceLibrary.self) private var library
     @Environment(VideoLibraryStore.self) private var media
+    @Environment(ShelfStore.self) private var shelf
     @State private var mode: Mode = .library
     @State private var model = VideoSearchModel()
     @State private var importing = false
@@ -67,7 +68,12 @@ struct VideoView: View {
 
     struct Playing: Identifiable {
         let id = UUID()
+        /// Where the episode came from: the provider key, or 本地 for a file.
+        let provider: String
+        let videoID: String
         let title: String
+        let episode: String?
+        let cover: String?
         let play: VideoPlay
         let start: Double
         let local: VideoLibraryStore.Item?
@@ -107,8 +113,14 @@ struct VideoView: View {
         }
         .sheet(item: $playing) { item in
             VideoPlayerView(title: item.title, play: item.play, startPosition: item.start) { position, seconds in
-                guard let local = item.local else { return }
-                media.update(local, position: position, seconds: seconds)
+                if let local = item.local {
+                    media.update(local, position: position, seconds: seconds)
+                }
+                // Watching belongs in the same history as reading: the calendar
+                // asks one question, so it needs one list.
+                shelf.recordVideo(provider: item.provider, videoID: item.videoID, title: item.title,
+                                  cover: item.cover, episode: item.episode,
+                                  seconds: position, duration: seconds)
             }
         }
         .alert(note ?? "", isPresented: Binding(get: { note != nil }, set: { if !$0 { note = nil } })) {
@@ -160,7 +172,8 @@ struct VideoView: View {
     private func row(_ item: VideoLibraryStore.Item, prominent: Bool) -> some View {
         Button {
             let url = media.url(for: item)
-            playing = Playing(title: item.title, play: VideoPlay(url: url.absoluteString, format: "mp4"),
+            playing = Playing(provider: "本地", videoID: item.id, title: item.title, episode: nil,
+                              cover: nil, play: VideoPlay(url: url.absoluteString, format: "mp4"),
                               start: item.position, local: item)
         } label: {
             VStack(alignment: .leading, spacing: 6) {
@@ -313,14 +326,22 @@ struct VideoDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
         .sheet(item: $playing) { pending in
-            VideoPlayerView(title: pending.title, play: pending.play)
+            VideoPlayerView(title: pending.episode ?? pending.title, play: pending.play) { position, seconds in
+                shelf.recordVideo(provider: pending.provider, videoID: pending.videoID, title: pending.title,
+                                  cover: pending.cover, episode: pending.episode,
+                                  seconds: position, duration: seconds)
+            }
         }
     }
 
     private struct PendingPlay: Identifiable {
+        let id = UUID()
+        let provider: String
+        let videoID: String
         let title: String
+        let episode: String?
+        let cover: String?
         let play: VideoPlay
-        var id: String { title + (play.url ?? "") }
     }
 
     private func load() async {
@@ -342,7 +363,9 @@ struct VideoDetailView: View {
                     : "这个源给出的地址无法直接播放"
                 return
             }
-            playing = PendingPlay(title: episode.title, play: play)
+            playing = PendingPlay(provider: route.key, videoID: details?.id ?? route.id,
+                                  title: details?.title ?? episode.title, episode: episode.title,
+                                  cover: details?.cover, play: play)
         } catch {
             failure = CoreError.readable(error.localizedDescription)
         }

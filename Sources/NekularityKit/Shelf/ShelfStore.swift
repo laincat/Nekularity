@@ -38,6 +38,13 @@ public struct ShelfHistory: Codable, Hashable, Sendable {
     public var percent: Int?
     /// When the chapter was last opened, in seconds.
     public var time: Int
+    /// `nil` and "comic" mean reading; "video" means watching. Optional so that
+    /// shelves written before the field existed still decode.
+    public var kind: String?
+    /// Playback position in seconds, for a video.
+    public var seconds: Int?
+    /// The video's length, for a progress bar. Zero when the source never said.
+    public var duration: Int?
 
     /// The comic's identity, source included: two sources may hand out the
     /// same comic id for different comics.
@@ -65,6 +72,41 @@ public struct ShelfHistory: Codable, Hashable, Sendable {
 
     public var comic: ShelfComic {
         ShelfComic(source: source, id: id, title: title, author: author, cover: cover)
+    }
+
+    /// Watching counts as history: one list answers "what did I do on this day",
+    /// and a second list for video would make the calendar lie.
+    public var isVideo: Bool { kind == "video" }
+
+    /// How far through the video, 0–100, for the same bar a chapter gets.
+    public var videoPercent: Int? {
+        guard let seconds, let duration, duration > 0 else { return percent }
+        return min(100, max(0, seconds * 100 / duration))
+    }
+
+    public init(
+        provider: String,
+        videoID: String,
+        title: String,
+        cover: String? = nil,
+        episode: String? = nil,
+        seconds: Int = 0,
+        duration: Int = 0,
+        time: Int = Int(Date().timeIntervalSince1970)
+    ) {
+        self.source = provider
+        self.id = videoID
+        self.title = title
+        self.author = nil
+        self.cover = cover
+        self.chapter = episode
+        self.chapterIndex = 0
+        self.page = nil
+        self.percent = duration > 0 ? min(100, max(0, seconds * 100 / duration)) : nil
+        self.time = time
+        self.kind = "video"
+        self.seconds = seconds
+        self.duration = duration
     }
 }
 
@@ -236,6 +278,17 @@ public final class ShelfStore {
 
     /// Records a position, moving the comic to the front; one comic appears
     /// once, at its latest chapter.
+    /// Records where watching stopped. Called when playback starts and when the
+    /// player closes, so an episode opened and abandoned still shows up.
+    public func recordVideo(provider: String, videoID: String, title: String, cover: String? = nil,
+                            episode: String? = nil, seconds: Double, duration: Double) {
+        guard !provider.isEmpty, !videoID.isEmpty else { return }
+        record(ShelfHistory(provider: provider, videoID: videoID, title: title, cover: cover,
+                            episode: episode,
+                            seconds: Int(seconds.rounded()),
+                            duration: Int(duration.rounded())))
+    }
+
     public func record(_ entry: ShelfHistory) {
         guard !entry.source.isEmpty, !entry.id.isEmpty else {
             lastError = "a reading position needs a source and an id"
