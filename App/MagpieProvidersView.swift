@@ -9,6 +9,9 @@ import NekularityKit
 /// source's settings.
 struct MagpieProvidersView: View {
     let accounts: MagpieAccounts
+    /// Shown from 漫画源 as a sheet rather than as a tab, so it needs a way out.
+    var showsClose = false
+    @Environment(\.dismiss) private var dismiss
 
     @State private var rows: [MagpieProviderRow] = []
     @State private var picking = false
@@ -126,6 +129,11 @@ struct MagpieProvidersView: View {
             }
         }
         .navigationTitle("AI 供应商")
+        .toolbar {
+            if showsClose {
+                ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } }
+            }
+        }
         .overlay { if busy { ProgressView() } }
         .sheet(item: $signingIn) { row in
             MagpieSignInView(

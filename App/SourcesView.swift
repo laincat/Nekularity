@@ -19,6 +19,8 @@ struct SourcesView: View {
     /// The exported archive, waiting for the share sheet to take it.
     @State private var exported: ExportFile?
     @State private var showLogs = false
+    @State private var showAI = false
+    @Environment(MagpieAccounts.self) private var magpie
 
     var body: some View {
         NavigationStack {
@@ -77,6 +79,10 @@ struct SourcesView: View {
                         Button { showLogs = true } label: {
                             Label("源日志", systemImage: "text.alignleft")
                         }
+                        Divider()
+                        Button { showAI = true } label: {
+                            Label("AI 供应商", systemImage: "sparkles")
+                        }
                     } label: {
                         Label("导入备份", systemImage: "square.and.arrow.down")
                     }
@@ -91,6 +97,9 @@ struct SourcesView: View {
                 }
             }
             .sheet(isPresented: $showLogs) { SourceLogView() }
+            .sheet(isPresented: $showAI) {
+                MagpieProvidersView(accounts: magpie, showsClose: true)
+            }
             .sheet(item: $exported) { file in
                 // The share sheet saves it to Files, mails it, or anything else
                 // the user has: an export is a document, not a private format.

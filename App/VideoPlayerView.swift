@@ -1,5 +1,6 @@
 import AetherEngine
 import Combine
+import NekularityKit
 import Observation
 import SwiftUI
 
@@ -32,7 +33,7 @@ final class VideoPlayerModel {
             let made = try AetherEngine()
             engine = made
             try await made.load(url: url,
-                                options: AetherEngine.LoadOptions(httpHeaders: play.headers ?? [:]))
+                                options: LoadOptions(httpHeaders: play.headers ?? [:]))
             made.play()
             watch = made.objectWillChange.sink { [weak self] _ in
                 Task { @MainActor [weak self] in self?.sync(made) }

@@ -852,7 +852,7 @@ extension CoreClient {
     public func videoDetails(key: String, id videoID: String) async throws -> VideoDetails {
         let json = try await run { core, callID in
             try Self.call {
-                core.videoDetails(callID, key: key, id: videoID, error: $0)
+                core.videoDetails(callID, key: key, id_: videoID, error: $0)
             }
         }
         return try Self.decode(VideoDetails.self, json)
