@@ -5,6 +5,7 @@ struct ComicDetailView: View {
     let route: ComicRoute
     @Environment(SourceLibrary.self) private var library
     @Environment(ShelfStore.self) private var shelf
+    @Environment(TagGlossaryStore.self) private var glossary
     @Environment(DownloadStore.self) private var downloads
     @Environment(\.imageLoader) private var images
     @State private var details: ComicDetails?
@@ -186,14 +187,20 @@ struct ComicDetailView: View {
                         // it as text rather than pretending otherwise.
                         VStack(alignment: .trailing, spacing: 4) {
                             ForEach(Array(tag.values.enumerated()), id: \.offset) { _, value in
+                                let label = glossary.label(for: value)
                                 if tagSupport {
                                     // .link is macOS-only; a plain button with
                                     // the accent colour reads the same on iOS.
-                                    Button(value) { Task { await tapTag(tag.group, value) } }
+                                    // The source's own spelling is what a tag tap
+                                    // sends: the translation is for this reader, and
+                                    // the source has never heard of it.
+                                    Button(label.text) { Task { await tapTag(tag.group, value) } }
                                         .buttonStyle(.plain)
                                         .foregroundStyle(.tint)
+                                        .accessibilityValue(value)
                                 } else {
-                                    Text(value).multilineTextAlignment(.trailing)
+                                    Text(label.text).multilineTextAlignment(.trailing)
+                                        .accessibilityValue(value)
                                 }
                             }
                         }

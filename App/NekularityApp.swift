@@ -34,6 +34,7 @@ struct NekularityApp: App {
                         .environment(env.metadata)
                         .environment(env.intros)
                         .environment(env.local)
+                        .environment(env.glossary)
                         .environment(env.home)
                         .environment(env.profiles)
                         .environment(\.switchProfile, env.switchProfile)
@@ -79,6 +80,8 @@ final class AppModel {
         let intros: IntroStore
         /// Comics imported from this device.
         let local: LocalComicStore
+        /// Chinese names for the English tags sources report.
+        let glossary: TagGlossaryStore
         let home: HomeLayout
         /// The signed-in environment this whole object graph belongs to.
         let profiles: ProfileStore
@@ -165,6 +168,7 @@ final class AppModel {
                 media: VideoLibraryStore(directory: root.appending(path: "Media", directoryHint: .isDirectory)),
                 intros: IntroStore(directory: root),
                 local: LocalComicStore(directory: root),
+                glossary: TagGlossaryStore(directory: root),
                 metadata: MetadataStore(
                     directory: root,
                     keys: KeychainMetadataKeyStore(service: profiles.keychainService(for: profiles.activeID) + ".tmdb")),
