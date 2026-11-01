@@ -1,4 +1,5 @@
 import SwiftUI
+import NekularityKit
 
 /// The shared look: glass cards on a soft gradient, pill buttons, floating bar.
 ///
@@ -49,7 +50,10 @@ extension View {
 
 /// The rounded capsule button the reference app puts in its bars.
 struct Pill: ButtonStyle {
-    @Environment(ThemeStore.self) private var themes
+    // Optional on purpose: a ButtonStyle that traps when the theme is absent turns a
+    // preview or a sheet built outside the root into a crash, and white is the same
+    // fallback the kit picks when an accent cannot be read.
+    @Environment(ThemeStore.self) private var themes: ThemeStore?
     var filled = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -63,7 +67,7 @@ struct Pill: ButtonStyle {
                     Capsule().fill(.ultraThinMaterial)
                 }
             }
-            .foregroundStyle(filled ? AnyShapeStyle(themes.active.onAccent) : AnyShapeStyle(.primary))
+            .foregroundStyle(filled ? AnyShapeStyle(themes?.active.onAccent ?? .white) : AnyShapeStyle(.primary))
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }

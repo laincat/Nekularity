@@ -50,16 +50,17 @@ struct SourceFavoritesView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 ForEach(model.folderList, id: \.id) { folder in
+                    let selected = model.folder == folder.id
+                    let chipFill = selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary)
+                    let chipText = selected ? themes.active.onAccent : Color.primary
                     Button {
                         Task { await model.selectFolder(library.core, folder: folder.id) }
                     } label: {
                         Text(folder.name)
                             .font(.callout)
                             .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(model.folder == folder.id
-                                        ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary),
-                                        in: Capsule())
-                            .foregroundStyle(model.folder == folder.id ? themes.active.onAccent : Color.primary)
+                            .background(chipFill, in: Capsule())
+                            .foregroundStyle(chipText)
                     }
                     .buttonStyle(.plain)
                 }
