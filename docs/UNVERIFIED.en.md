@@ -2,7 +2,7 @@
 
 [简体中文](UNVERIFIED.md) | English
 
-Updated 2026-11-01. **The last tree fully run on a Mac is `9b48b56`**: `swift test` 371 tests / 71 suites / 0 failures, and **all 16 interface cases pass**.
+Updated 2026-11-01. **The last tree fully run on a Mac is `9b48b56`**: `swift test` 371 tests / 71 suites / 0 failures, and **all 16 interface cases pass**. Later commits (the accent contrast work, the self-tests for the checks) have only been through CI — unit tests and a device build succeed and the IPA is packaged, but **the interface cases were not rerun**. A green CI build is not a verified screen.
 
 Earlier evidence: **this tree compiles.** GitHub Actions run `41316459367` (commit `71c8c97`) built the pinned Core, ran the four repository checks, generated the project, compiled the app with `xcodebuild` on macOS, and produced an unsigned IPA (18.9 MB). The worry that the commits after `b9fdf3c` had never seen a compiler is now settled.
 
