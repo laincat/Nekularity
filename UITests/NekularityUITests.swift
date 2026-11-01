@@ -23,8 +23,12 @@ final class NekularityUITests: XCTestCase {
     /// its own tab is now behind one of them. These helpers keep the cases about
     /// what they test rather than about the shape of the bar.
     private func tab(_ app: XCUIApplication, _ name: String) {
-        let button = app.tabBars.buttons[name]
-        XCTAssertTrue(button.waitForExistence(timeout: 30), "no \(name) tab")
+        // The bar is a floating custom one, so it is not `app.tabBars` any more;
+        // the sections keep identifiers instead of labels.
+        let ids = ["发现": "tab.discover", "我的": "tab.mine", "资源库": "tab.library", "设置": "tab.settings"]
+        let identifier = ids[name] ?? name
+        let button = element(app, identifier)
+        XCTAssertTrue(button.waitForExistence(timeout: 30), "no \(name) section")
         button.tap()
     }
 
@@ -147,11 +151,10 @@ final class NekularityUITests: XCTestCase {
     func testTabsExist() {
         let app = launch()
         // The four the user asked for: a home they arrange, their calendar, the
-        // sources, and settings.
-        for name in ["发现", "我的", "资源库", "设置"] {
-            XCTAssertTrue(app.tabBars.buttons[name].waitForExistence(timeout: 30), "no \(name) tab")
+        // sources, and settings, in a floating bar of their own.
+        for id in ["tab.discover", "tab.mine", "tab.library", "tab.settings", "tab.search"] {
+            XCTAssertTrue(element(app, id).waitForExistence(timeout: 30), "no \(id)")
         }
-        XCTAssertFalse(app.tabBars.buttons["更多"].exists, "a fifth tab should not fold anything into 更多")
     }
 
     /// Seeded sources appear, which is the precondition for every other check.

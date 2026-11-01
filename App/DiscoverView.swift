@@ -43,6 +43,7 @@ struct DiscoverView: View {
                     Button(editing ? "完成" : "编辑") {
                         if editing { editing = false } else { editing = true }
                     }
+                    .buttonStyle(Pill(filled: editing))
                     .accessibilityIdentifier("discover.edit")
                 }
                 if editing {
@@ -108,20 +109,11 @@ struct DiscoverView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .glassCard()
     }
 
     private func header(_ block: HomeBlock) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: block.symbol).font(.caption).foregroundStyle(.secondary)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(block.title).font(.subheadline.weight(.semibold))
-                if let subtitle = block.subtitle {
-                    Text(subtitle).font(.caption2).foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-        }
+        SectionHeader(title: block.title, subtitle: block.subtitle)
     }
 
     // MARK: - Blocks the app builds itself

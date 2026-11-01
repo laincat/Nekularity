@@ -88,7 +88,7 @@ struct LibraryView: View {
         content()
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .glassCard()
     }
 
     private func entry(_ title: String, detail: String, symbol: String, id: String,
@@ -106,6 +106,6 @@ struct LibraryView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .glassCard()
     }
 }

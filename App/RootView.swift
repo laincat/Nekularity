@@ -1,28 +1,112 @@
-import SwiftUI
 import NekularityKit
+import SwiftUI
 
+/// The shell: four sections over one shared canvas, with a floating bar.
+///
+/// The reference app floats a pill-shaped bar with a round search button beside
+/// it, and blurs a two-tone gradient behind everything. A stock `TabView` cannot
+/// draw that, so the bar is here and the sections are plain views. The section
+/// buttons keep identifiers because the interface tests tap them.
 struct RootView: View {
     /// Magpie accounts are a plain class, not an Observable one, so they are
     /// passed down rather than put in the SwiftUI environment.
     let magpie: MagpieAccounts
     @Environment(ThemeStore.self) private var themes
+    @Environment(\.colorScheme) private var scheme
+
+    @State private var section = Section.discover
+    @State private var searching = false
+
+    enum Section: String, CaseIterable, Identifiable {
+        case discover, mine, library, settings
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .discover: "发现"
+            case .mine: "我的"
+            case .library: "资源库"
+            case .settings: "设置"
+            }
+        }
+        var symbol: String {
+            switch self {
+            case .discover: "sparkles"
+            case .mine: "person.crop.circle"
+            case .library: "archivebox"
+            case .settings: "gearshape"
+            }
+        }
+    }
+
+    private var accent: Color { Color(hex: themes.active.accent) ?? .accentColor }
 
     var body: some View {
-        // Four tabs, matching the shape the user asked for: a home they arrange,
-        // their own calendar, the sources, and settings. Search, reading and
-        // video are reached from the home screen rather than taking tabs — a
-        // sixth tab is how the bar folds entries into 更多.
-        TabView {
-            Tab("发现", systemImage: "sparkles") { DiscoverView() }
-            Tab("我的", systemImage: "person.crop.circle") { MineView() }
-            Tab("资源库", systemImage: "archivebox") { LibraryView() }
-            Tab("设置", systemImage: "gearshape") { SettingsView(magpie: magpie) }
+        ZStack {
+            Color.canvas(accent, dark: themeIsDark).ignoresSafeArea()
+
+            Group {
+                switch section {
+                case .discover: DiscoverView()
+                case .mine: MineView()
+                case .library: LibraryView()
+                case .settings: SettingsView(magpie: magpie)
+                }
+            }
+            .safeAreaInset(edge: .bottom) { bar }
         }
-        // The theme is applied once, here, so every screen inherits it: an
-        // accent colour that only some views used would look like a bug.
-        .tint(Color(hex: themes.active.accent) ?? .accentColor)
+        .tint(accent)
         .preferredColorScheme(themes.active.dark == nil ? nil : (themes.active.dark! ? .dark : .light))
-        .background(Color(hex: themes.active.background ?? "") ?? Color(.systemBackground))
+        // Presented, not pushed: the sections own their own navigation stacks,
+        // and a destination registered here would sit outside all of them.
+        .sheet(isPresented: $searching) { SearchView() }
+    }
+
+    private var themeIsDark: Bool {
+        if let forced = themes.active.dark { return forced }
+        return scheme == .dark
+    }
+
+    /// The floating bar: four sections in one capsule, and search in its own.
+    private var bar: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 2) {
+                ForEach(Section.allCases) { item in
+                    Button {
+                        section = item
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: item.symbol).font(.system(size: 17, weight: .medium))
+                            Text(item.title).font(.system(size: 10, weight: .medium))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .foregroundStyle(section == item ? AnyShapeStyle(accent) : AnyShapeStyle(.secondary))
+                        .background {
+                            if section == item {
+                                Capsule().fill(accent.opacity(0.16))
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("tab.\(item.rawValue)")
+                }
+            }
+            .padding(4)
+            .background(.ultraThinMaterial, in: Capsule())
+
+            Button {
+                searching = true
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 46, height: 46)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("tab.search")
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 6)
     }
 }
 

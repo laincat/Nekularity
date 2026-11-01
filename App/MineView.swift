@@ -65,9 +65,9 @@ struct MineView: View {
             if entries.isEmpty {
                 Text("这天没有阅读记录").font(.callout).foregroundStyle(.secondary)
             } else {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("\(entries.count)").font(.system(size: 34, weight: .bold, design: .rounded))
-                    Text("部漫画").font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 22) {
+                    StatValue(value: "\(entries.count)", unit: "部", label: "漫画")
+                    StatValue(value: "\(Set(entries.map(\.chapter)).count)", unit: "话", label: "章节")
                 }
                 ForEach(entries.prefix(5), id: \.key) { entry in
                     NavigationLink(value: ComicRoute(source: entry.source,
@@ -87,7 +87,7 @@ struct MineView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .glassCard()
     }
 
     /// The last fifteen weeks, one square a day: the same question the day card
@@ -112,7 +112,7 @@ struct MineView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .glassCard()
     }
 
     private var watchlist: some View {
@@ -150,7 +150,7 @@ struct MineView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .glassCard()
     }
 
     private var shelfLinks: some View {
@@ -168,7 +168,7 @@ struct MineView: View {
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .glassCard()
     }
 
     // MARK: - Dates
