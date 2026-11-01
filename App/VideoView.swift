@@ -326,7 +326,9 @@ struct VideoDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
         .sheet(item: $playing) { pending in
-            VideoPlayerView(title: pending.episode ?? pending.title, play: pending.play) { position, seconds in
+            VideoPlayerView(title: pending.episode ?? pending.title, play: pending.play,
+                            startPosition: shelf.playbackStart(provider: pending.provider,
+                                                              videoID: pending.videoID) ?? 0) { position, seconds in
                 shelf.recordVideo(provider: pending.provider, videoID: pending.videoID, title: pending.title,
                                   cover: pending.cover, episode: pending.episode,
                                   seconds: position, duration: seconds)

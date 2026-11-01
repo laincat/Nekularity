@@ -154,7 +154,9 @@ struct MediaHubView: View {
             guard let item = media.items.first(where: { $0.id == fileID }) else { return }
             playing = Playing(title: item.title, server: "本机", itemID: item.id,
                               url: media.url(for: item).absoluteString,
-                              start: item.position, poster: nil)
+                              start: max(item.position,
+                                         shelf.playbackStart(provider: "本机", videoID: item.id) ?? 0),
+                              poster: nil)
         case .server(let serverID, let itemID):
             guard let server = servers.servers.first(where: { $0.id == serverID }),
                   let token = servers.token(for: server),
@@ -163,8 +165,12 @@ struct MediaHubView: View {
             let client = MediaServerClient.live(deviceID: identifier)
             guard let url = try? client.playURL(server: server, token: token,
                                                 item: MediaItem(id: itemID, title: entry.title)) else { return }
+            // The server knows where its own account stopped; this environment
+            // knows where *this* device stopped. The further one wins, so
+            // watching on the phone is not undone by a stale server position.
+            let remembered = shelf.playbackStart(provider: server.displayName, videoID: itemID) ?? 0
             playing = Playing(title: entry.title, server: server.displayName, itemID: itemID,
-                              url: url, start: Double(item.position), poster: item.poster)
+                              url: url, start: max(Double(item.position), remembered), poster: item.poster)
         }
     }
 

@@ -293,3 +293,27 @@ struct VideoHistoryTests {
         #expect(shelf.history.first?.videoPercent == nil)
     }
 }
+
+@Suite("Resuming a video")
+@MainActor
+struct VideoResumeTests {
+    private func store() throws -> ShelfStore {
+        let root = FileManager.default.temporaryDirectory.appending(path: "shelf-resume-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return ShelfStore(directory: root)
+    }
+
+    @Test("a watched position is offered, a finished one is not")
+    func resumes() throws {
+        let shelf = try store()
+        shelf.recordVideo(provider: "p", videoID: "a", title: "甲", seconds: 120, duration: 600)
+        shelf.recordVideo(provider: "p", videoID: "b", title: "乙", seconds: 595, duration: 600)
+        shelf.recordVideo(provider: "p", videoID: "c", title: "丙", seconds: 2, duration: 600)
+        #expect(shelf.playbackStart(provider: "p", videoID: "a") == 120)
+        // Two minutes before the credits is not a favour.
+        #expect(shelf.playbackStart(provider: "p", videoID: "b") == nil)
+        // Two seconds in is not a position worth keeping.
+        #expect(shelf.playbackStart(provider: "p", videoID: "c") == nil)
+        #expect(shelf.playbackStart(provider: "p", videoID: "missing") == nil)
+    }
+}

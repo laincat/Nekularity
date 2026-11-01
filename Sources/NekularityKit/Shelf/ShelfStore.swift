@@ -227,6 +227,19 @@ public final class ShelfStore {
         history.first { $0.source == source && $0.id == id }
     }
 
+    /// Where to start a video this environment has watched before.
+    ///
+    /// A finished episode starts from the beginning: resuming two minutes before
+    /// the credits is not a favour. nil means "no opinion", so a caller that
+    /// knows better (a server's own position) can keep its own guess.
+    public func playbackStart(provider: String, videoID: String) -> Double? {
+        guard let entry = entry(source: provider, id: videoID), entry.isVideo,
+              let seconds = entry.seconds, seconds > 5 else { return nil }
+        if let duration = entry.duration, duration > 0,
+           Double(seconds) / Double(duration) >= 0.95 { return nil }
+        return Double(seconds)
+    }
+
     /// The folder holding a comic, if any.
     public func folderHolding(source: String, id: String) -> String? {
         for folder in folders where folder.items.contains(where: { $0.source == source && $0.id == id }) {
