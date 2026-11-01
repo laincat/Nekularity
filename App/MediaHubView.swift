@@ -108,6 +108,16 @@ struct MediaHubView: View {
                 if pending.server == "本机",
                    let local = media.items.first(where: { $0.id == pending.itemID }) {
                     media.update(local, position: position, seconds: seconds)
+                } else if let server = servers.servers.first(where: { $0.displayName == pending.server }),
+                          let token = servers.token(for: server) {
+                    // The server is what the user's other clients read: a position
+                    // kept only on this phone makes "continue watching" wrong
+                    // everywhere else.
+                    Task {
+                        try? await MediaServerClient.live(deviceID: identifier)
+                            .reportProgress(server: server, token: token,
+                                            itemID: pending.itemID, seconds: position)
+                    }
                 }
             }
         }

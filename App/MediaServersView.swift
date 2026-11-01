@@ -225,6 +225,12 @@ struct MediaBrowserView: View {
                                   title: pending.item.title, cover: pending.item.poster,
                                   episode: pending.item.series.isEmpty ? nil : pending.item.title,
                                   seconds: position, duration: seconds)
+                Task {
+                    guard let token = servers.token(for: server) else { return }
+                    try? await MediaServerClient.live(deviceID: deviceID)
+                        .reportProgress(server: server, token: token,
+                                        itemID: pending.item.id, seconds: position)
+                }
             }
         }
     }

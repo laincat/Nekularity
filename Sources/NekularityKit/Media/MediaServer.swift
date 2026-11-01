@@ -275,6 +275,32 @@ public struct MediaServerClient: Sendable {
             + (token.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? token)
     }
 
+    /// Tells the server where playback stopped.
+    ///
+    /// Local history alone is not enough: the server is what the user's other
+    /// clients read, so a position that exists only on this phone makes "continue
+    /// watching" wrong everywhere else. Jellyfin/Emby take this as user data on the
+    /// item, in 100 ns ticks.
+    public func reportProgress(server: MediaServer, token: String, itemID: String, seconds: Double) async throws {
+        guard server.kind.speaksEmbyAPI else {
+            throw MediaServerError("\(server.kind.title) 用的是另一套接口,客户端还没有接上")
+        }
+        guard !server.userID.isEmpty else { throw MediaServerError("服务器没有给出用户 id") }
+        guard seconds >= 0 else { throw MediaServerError("播放位置不能是负数") }
+        let base = try normalizedBase(server.baseURL)
+        let ticks = Int64((seconds * 10_000_000).rounded())
+        var request = Request(url: base + "/Users/" + server.userID + "/Items/" + itemID + "/UserData",
+                              method: "POST")
+        request.headers["Content-Type"] = "application/json"
+        request.headers["X-Emby-Authorization"] = authorization(device: deviceID, token: token)
+        request.body = try JSONSerialization.data(withJSONObject: ["PlaybackPositionTicks": ticks])
+        let response = try await send(request)
+        // 204 is the documented success; some servers answer 200 with no body.
+        guard (200...299).contains(response.status) else {
+            throw MediaServerError("回写进度失败(HTTP \(response.status))")
+        }
+    }
+
     public func imageURL(base: String, id: String, token: String) -> String {
         base + "/Items/" + id + "/Images/Primary?maxHeight=480&api_key="
             + (token.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? token)

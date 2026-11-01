@@ -109,6 +109,43 @@ struct MediaServerClientTests {
         #expect(url == "http://192.168.1.9:8096/Videos/v-1/stream?static=true&api_key=tok-1")
     }
 
+    @Test("progress goes back to the server in ticks, with the token in the header")
+    func reportsProgress() async throws {
+        var fake = FakeServer()
+        fake.replies["http://192.168.1.9:8096/Users/user-7/Items/v-1/UserData"] = (204, "")
+        let server = MediaServer(kind: .jellyfin, baseURL: "192.168.1.9:8096", userID: "user-7")
+        let client = fake.client()
+        try await client.reportProgress(server: server, token: "tok-1", itemID: "v-1", seconds: 125.5)
+
+        let sent = try #require(fake.log.all.last)
+        #expect(sent.method == "POST")
+        let body = try #require(sent.body)
+        let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+        // 125.5 s in 100 ns ticks; getting the multiplier wrong puts the position
+        // days away instead of seconds.
+        #expect(json["PlaybackPositionTicks"] as? Int64 == 1_255_000_000)
+        #expect(sent.headers["X-Emby-Authorization"]?.contains("Token=\"tok-1\"") == true)
+    }
+
+    @Test("a server without a user id is not asked to store progress")
+    func refusesWithoutUser() async {
+        let client = MediaServerClient(deviceID: "d") { _ in .init(status: 204) }
+        await #expect(throws: MediaServerError.self) {
+            try await client.reportProgress(server: MediaServer(kind: .jellyfin, baseURL: "192.168.1.9:8096"),
+                                            token: "t", itemID: "v-1", seconds: 10)
+        }
+    }
+
+    @Test("a rejected write is reported rather than swallowed")
+    func reportsFailure() async {
+        var fake = FakeServer()
+        fake.replies["http://192.168.1.9:8096/Users/user-7/Items/v-1/UserData"] = (403, "{}")
+        let server = MediaServer(kind: .jellyfin, baseURL: "192.168.1.9:8096", userID: "user-7")
+        await #expect(throws: MediaServerError.self) {
+            try await fake.client().reportProgress(server: server, token: "t", itemID: "v-1", seconds: 5)
+        }
+    }
+
     @Test("an empty address is refused before a request is made")
     func emptyAddress() async throws {
         let client = MediaServerClient(deviceID: "d") { _ in .init(status: 200) }
