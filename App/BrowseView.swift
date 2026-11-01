@@ -24,7 +24,6 @@ struct BrowseView: View {
             }
         }
         .navigationTitle("浏览")
-        .navigationDestination(for: ComicRoute.self) { ComicDetailView(route: $0) }
         .toolbar {
             if !sources.isEmpty {
                 ToolbarItem(placement: .primaryAction) {
@@ -114,7 +113,9 @@ struct BrowseView: View {
                     ForEach(Array(result.sections.enumerated()), id: \.offset) { _, section in
                         Section {
                             ForEach(section.comics) { comic in
-                                NavigationLink(value: ComicRoute(source: model.source, comic: comic)) {
+                                NavigationLink {
+                                    ComicDetailView(route: ComicRoute(source: model.source, comic: comic))
+                                } label: {
                                     BrowseRow(source: model.source, comic: comic)
                                 }
                                 .buttonStyle(.plain)

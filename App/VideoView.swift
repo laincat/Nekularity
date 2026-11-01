@@ -96,9 +96,6 @@ struct VideoView: View {
             .padding(.bottom, 6)
             .accessibilityIdentifier("video.mode")
         }
-        .navigationDestination(for: VideoRoute.self) { route in
-            VideoDetailView(route: route)
-        }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.movie, .video]) { result in
             switch result {
             case .success(let url):
@@ -257,7 +254,9 @@ struct VideoView: View {
         } else {
             List {
                 ForEach(model.items) { item in
-                    NavigationLink(value: VideoRoute(key: model.sourceKey, id: item.id, title: item.title)) {
+                    NavigationLink {
+                        VideoDetailView(route: VideoRoute(key: model.sourceKey, id: item.id, title: item.title))
+                    } label: {
                         HStack(alignment: .top, spacing: 12) {
                             if let cover = item.cover, let url = URL(string: cover) {
                                 SourceImage(key: .init(source: model.sourceKey, url: url.absoluteString, isThumbnail: true), maxPixel: 200)
@@ -286,6 +285,7 @@ struct VideoView: View {
 struct VideoDetailView: View {
     let route: VideoRoute
     @Environment(SourceLibrary.self) private var library
+    @Environment(ShelfStore.self) private var shelf
     @State private var details: VideoDetails?
     @State private var failure: String?
     @State private var playing: PendingPlay?

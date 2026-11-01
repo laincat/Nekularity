@@ -29,7 +29,7 @@ final class LocalImageServer: @unchecked Sendable {
     /// The value the video route demands; the fixture sends it as `Referer`.
     static let clipReferer = "http://127.0.0.1:18731/"
 
-    private var listener: NWListener
+    private var listener: NWListener?
     private let queue = DispatchQueue(label: "local-image-server")
     private let png: Data
     /// nil when the fixture is missing from the bundle; the route then answers 404

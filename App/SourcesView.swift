@@ -39,7 +39,11 @@ struct SourcesView: View {
             }
             Section {
                 ForEach(library.comicSources) { source in
-                    NavigationLink(value: source) { SourceRow(source: source) }
+                    NavigationLink {
+                        SourceDetailView(source: source)
+                    } label: {
+                        SourceRow(source: source)
+                    }
                         // A stable handle for the interface tests: a label is
                         // localized and a source renames itself.
                         .accessibilityIdentifier("source.\(source.key)")
@@ -61,7 +65,6 @@ struct SourcesView: View {
             }
         }
         .navigationTitle("漫画源")
-        .navigationDestination(for: PluginRecord.self) { SourceDetailView(source: $0) }
         .toolbar {
             if showsClose {
                 ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } }

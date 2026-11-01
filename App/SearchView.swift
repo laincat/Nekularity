@@ -9,7 +9,16 @@ struct SearchView: View {
     var startsInAllSources = false
     @Environment(SourceLibrary.self) private var library
     @AppStorage("searchSource") private var sourceKey = ""
-    @AppStorage("searchScope") private var scope: SearchModel.Scope = .current
+    /// The remembered range, written only when the user picks one.
+    @AppStorage("searchScope") private var storedScope: SearchModel.Scope = .current
+    /// Set by the 全源搜索 entry: that entry promised every source *this time*, and
+    /// honouring it by overwriting the remembered preference would quietly move a
+    /// user who always searches one source into the all-sources view for good.
+    @State private var allSourcesThisVisit = false
+    private var scope: SearchModel.Scope { allSourcesThisVisit ? .all : storedScope }
+    private var scopeSelection: Binding<SearchModel.Scope> {
+        Binding(get: { scope }, set: { allSourcesThisVisit = false; storedScope = $0 })
+    }
     @State private var query = ""
     @Environment(SearchHistoryStore.self) private var searches
     @State private var model = SearchModel()
@@ -32,8 +41,7 @@ struct SearchView: View {
             }
         }
         .navigationTitle("搜索")
-        .onAppear { if startsInAllSources { scope = .all } }
-        .navigationDestination(for: ComicRoute.self) { ComicDetailView(route: $0) }
+        .onAppear { allSourcesThisVisit = startsInAllSources }
         .navigationDestination(item: $opened) { ComicDetailView(route: $0) }
         // A field of our own rather than `.searchable`: on iOS 27 the
         // modifier drew no field at all on this screen (the interface test
@@ -47,7 +55,7 @@ struct SearchView: View {
                     // Segmented, not a menu: 全部源 is the promise of the 全源搜索
                     // entry, and a promise you have to open a menu to read is
                     // one the entry did not keep.
-                    Picker("范围", selection: $scope) {
+                    Picker("范围", selection: scopeSelection) {
                         ForEach(SearchModel.Scope.allCases) { Text($0.title).tag($0) }
                     }
                     .pickerStyle(.segmented)
@@ -179,7 +187,9 @@ struct SearchView: View {
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 110, maximum: 180), spacing: 12)], spacing: 16) {
                     ForEach(model.hits) { hit in
-                        NavigationLink(value: ComicRoute(source: hit.source, comic: hit.comic)) {
+                        NavigationLink {
+                            ComicDetailView(route: ComicRoute(source: hit.source, comic: hit.comic))
+                        } label: {
                             ComicCard(source: hit.source, comic: hit.comic, showsSource: model.scope == .all)
                         }
                         .buttonStyle(.plain)

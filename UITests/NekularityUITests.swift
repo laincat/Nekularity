@@ -121,6 +121,10 @@ final class NekularityUITests: XCTestCase {
     /// left behind — that is how the browse case started skipping once another case
     /// had switched to a source with no categories.
     private func chooseSource(_ app: XCUIApplication, _ name: String) throws {
+        // 全部源 has no single-source picker to open, so a case that needs one
+        // source asks for the range that has it instead of skipping.
+        let one = app.buttons["当前源"]
+        if one.waitForExistence(timeout: 5), one.isSelected == false { one.tap() }
         let picker = app.navigationBars.buttons
             .matching(NSPredicate(format: "label BEGINSWITH '漫画源'")).firstMatch
         guard picker.waitForExistence(timeout: 15) else {

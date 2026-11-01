@@ -31,7 +31,9 @@ struct ShelfView: View {
             if !shelf.keptPages().isEmpty {
                 Section {
                     ForEach(shelf.keptPages(), id: \.id) { page in
-                        NavigationLink(value: page.route) {
+                        NavigationLink {
+                            ComicDetailView(route: page.route)
+                        } label: {
                             KeptPageRow(page: page)
                         }
                         .swipeActions {
@@ -69,9 +71,6 @@ struct ShelfView: View {
             }
             Button("取消", role: .cancel) { renaming = nil }
         }
-        .navigationDestination(for: ComicRoute.self) { route in
-            ComicDetailView(route: route)
-        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
@@ -92,7 +91,9 @@ struct ShelfView: View {
     }
     @ViewBuilder
     private func historyRow(_ entry: ShelfHistory) -> some View {
-        NavigationLink(value: entry.comic.route) {
+        NavigationLink {
+            ComicDetailView(route: entry.comic.route)
+        } label: {
             HistoryRow(entry: entry)
         }
         .swipeActions {
@@ -120,7 +121,9 @@ struct ShelfView: View {
 
     @ViewBuilder
     private func comicRow(_ comic: ShelfComic, in folder: ShelfFolder) -> some View {
-        NavigationLink(value: comic.route) {
+        NavigationLink {
+            ComicDetailView(route: comic.route)
+        } label: {
             ComicRow(comic: comic)
         }
         .swipeActions {

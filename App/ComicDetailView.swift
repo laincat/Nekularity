@@ -52,7 +52,6 @@ struct ComicDetailView: View {
         .sheet(isPresented: $showingComments) {
             ComicCommentsView(source: route.source, comicID: route.comic.id, subID: details?.subId ?? "")
         }
-        .navigationDestination(for: ReaderRoute.self) { ReaderView(route: $0) }
         .task { if details == nil { await load() } }
         .toolbar {
             if let details {
@@ -206,34 +205,40 @@ struct ComicDetailView: View {
             if d.chapters.isEmpty {
                 // Single-chapter comics have no chapter list; loadEp gets nil.
                 Section {
-                    NavigationLink("开始阅读", value: ReaderRoute(source: route.source, comicID: route.comic.id,
-                                                       comicTitle: d.title.isEmpty ? route.comic.title : d.title,
-                                                       author: route.comic.subtitle,
-                                                       cover: route.comic.cover,
-                                                       chapters: [], index: 0))
+                    NavigationLink("开始阅读") {
+                        ReaderView(route: ReaderRoute(source: route.source, comicID: route.comic.id,
+                                                      comicTitle: d.title.isEmpty ? route.comic.title : d.title,
+                                                      author: route.comic.subtitle,
+                                                      cover: route.comic.cover,
+                                                      chapters: [], index: 0))
+                    }
                 }
             } else {
                 // A kept page remembers its chapter; offer that chapter first.
                 if let wanted = route.chapterID,
                    let index = d.chapters.firstIndex(where: { $0.id == wanted }) {
                     Section {
-                        NavigationLink(value: ReaderRoute(source: route.source, comicID: route.comic.id,
+                        NavigationLink {
+                            ReaderView(route: ReaderRoute(source: route.source, comicID: route.comic.id,
                                                           comicTitle: d.title.isEmpty ? route.comic.title : d.title,
                                                           author: route.comic.subtitle,
                                                           cover: route.comic.cover,
-                                                          chapters: d.chapters, index: index)) {
+                                                          chapters: d.chapters, index: index))
+                        } label: {
                             Label("打开收藏页所在的那一话 · \(d.chapters[index].title)", systemImage: "bookmark")
                         }
                     }
                 }
                 if let resume = shelf.entry(source: route.source, id: route.comic.id) {
                     Section {
-                        NavigationLink(value: ReaderRoute(source: route.source, comicID: route.comic.id,
+                        NavigationLink {
+                            ReaderView(route: ReaderRoute(source: route.source, comicID: route.comic.id,
                                                           comicTitle: d.title.isEmpty ? route.comic.title : d.title,
                                                           author: route.comic.subtitle,
                                                           cover: route.comic.cover,
                                                           chapters: d.chapters,
-                                                          index: min(max(0, resume.chapterIndex), d.chapters.count - 1))) {
+                                                          index: min(max(0, resume.chapterIndex), d.chapters.count - 1)))
+                        } label: {
                             Label("继续阅读 · \(resumePosition(resume))", systemImage: "book.pages")
                         }
                     }
@@ -241,11 +246,13 @@ struct ComicDetailView: View {
                 ForEach(groups(d.chapters), id: \.name) { group in
                     Section(group.name ?? "章节") {
                         ForEach(group.items, id: \.offset) { i, chapter in
-                            NavigationLink(value: ReaderRoute(source: route.source, comicID: route.comic.id,
+                            NavigationLink {
+                                ReaderView(route: ReaderRoute(source: route.source, comicID: route.comic.id,
                                                               comicTitle: d.title.isEmpty ? route.comic.title : d.title,
                                                               author: route.comic.subtitle,
                                                               cover: route.comic.cover,
-                                                              chapters: d.chapters, index: i)) {
+                                                              chapters: d.chapters, index: i))
+                            } label: {
                                 chapterRow(chapter, index: i)
                             }
                         }
