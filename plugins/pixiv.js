@@ -82,6 +82,79 @@ class Pixiv extends ComicSource {
         })
     }
 
+    /**
+     * 账号：用网页登录，不碰 OAuth。
+     *
+     * 为什么不是 app-api：那边每条请求都要 `Authorization: Bearer`，而拿到它
+     * 需要在插件里放一份客户端凭据 —— 插件是别人也能读的脚本，凭据放进去等于公开。
+     * 网页会话（Cookie）是同一个账号的另一种形式，登录一次，收藏和关注就都读得到；
+     * 写操作还要 CSRF token，所以这里只做**读**。
+     *
+     * `/ajax/user/self` 是登录态的唯一判据：**匿名也回 200**，只是 `userData` 为 null。
+     * 所以"能不能读"不能看状态码，要看 userData。
+     */
+    account = {
+        loginWithWebview: {
+            url: "https://www.pixiv.net/login",
+            checkStatus: (url, title) => {
+                // 登录成功后站方会把人送回登录前一页；还停在 /login 就是没成。
+                return url.indexOf("/login") < 0
+            },
+            onLoginSuccess: async () => {},
+        },
+        logout: () => {
+            Network.deleteCookies("https://www.pixiv.net")
+        },
+    }
+
+    /// The signed-in user, or a sentence saying there is none.
+    async selfUser() {
+        let data = await this.json("/ajax/user/self")
+        let user = data.userData
+        if (!user || !user.id) {
+            throw "请先在「源设置 → 账号」里登录 Pixiv"
+        }
+        return user
+    }
+
+    /// pixiv answers `{body: {illusts: {id: {...}}}` or a `thumbnails` list
+    /// depending on the endpoint, so both shapes are read here rather than
+    /// assuming one and showing an empty list when the other arrives.
+    worksFromBody(body) {
+        let out = []
+        if (!body) return out
+        if (body.illusts) {
+            for (let id in body.illusts) {
+                out.push(this.fromWork(id, body.illusts[id]))
+            }
+        }
+        let list = body.page && body.page.ids ? body.page.ids : null
+        if (out.length === 0 && list) {
+            for (let id of list) {
+                let work = body.illusts ? body.illusts[id] : null
+                if (work) out.push(this.fromWork(id, work))
+            }
+        }
+        if (body.thumbnails && body.thumbnails.illust) {
+            for (let item of body.thumbnails.illust) {
+                out.push(this.fromWork(item.id, item))
+            }
+        }
+        return out
+    }
+
+    fromWork(id, work) {
+        let url = work.url || (work.urls && (work.urls.small || work.urls.regular)) || ""
+        return new Comic({
+            id: String(id),
+            title: work.title || String(id),
+            subtitle: work.userName || "",
+            cover: url,
+            tags: work.tags || [],
+            description: "",
+        })
+    }
+
     search = {
         /**
          * `order=date_d` is newest first, `order=popular_d` is popularity.
@@ -125,12 +198,47 @@ class Pixiv extends ComicSource {
      * The R-18 rankings answer 403 to an anonymous request, so they are not
      * offered: a switch that can only fail is not a switch.
      */
+    /**
+     * 登录后才读得到的两个分区。
+     *
+     * 匿名打开时它们会报「请先登录」而不是空列表 —— 空列表会让人以为关注了一个空账号。
+     * 这两个端点的返回形状没有在没有账号的情况下核实过，所以解析写得宽松：
+     * 认 `illusts` 映射、`page.ids` 列表和 `thumbnails.illust` 三种，任一命中即可。
+     */
+    followPage() {
+        return {
+            title: "关注的新作",
+            type: "multiPageComicList",
+            load: async (page) => {
+                await this.selfUser()
+                let data = await this.json(`/ajax/follow_latest/illust?p=${page}&mode=all&lang=zh`)
+                return { comics: this.worksFromBody(data.body), maxPage: 10 }
+            },
+        }
+    }
+
+    bookmarkPage() {
+        return {
+            title: "我的收藏",
+            type: "multiPageComicList",
+            load: async (page) => {
+                let user = await this.selfUser()
+                let data = await this.json(
+                    `/ajax/user/${user.id}/illusts/bookmarks?tag=&offset=${(page - 1) * 48}&limit=48&rest=show&lang=zh`
+                )
+                return { comics: this.worksFromBody(data.body), maxPage: 10 }
+            },
+        }
+    }
+
     explore = [
         this.rankingPage("日榜", "daily"),
         this.rankingPage("周榜", "weekly"),
         this.rankingPage("月榜", "monthly"),
         this.rankingPage("新人榜", "rookie"),
         this.rankingPage("原创榜", "original"),
+        this.followPage(),
+        this.bookmarkPage(),
     ]
 
     rankingPage(title, mode) {
