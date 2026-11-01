@@ -555,6 +555,15 @@ public struct ComicDetails: Decodable, Sendable {
         public var id: String
         public var title: String
         public var group: String?
+
+        /// Chapters arrive decoded, but a caller sometimes has to build one: a
+        /// downloaded chapter opened from the downloads screen has no comic page
+        /// around it to take the list from.
+        public init(id: String, title: String, group: String? = nil) {
+            self.id = id
+            self.title = title
+            self.group = group
+        }
     }
 
     enum CodingKeys: String, CodingKey {

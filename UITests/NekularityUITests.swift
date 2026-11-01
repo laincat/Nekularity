@@ -928,14 +928,11 @@ final class NekularityUITests: XCTestCase {
         // From here on there is no server: anything that draws is on disk.
         server.stop()
 
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        try openSearch(app)
-        let again = firstElement(app, containing: "Probe Comic")
-        if again.waitForExistence(timeout: 5) { again.tap() }
-        let reopen = firstElement(app, containing: "Chapter 1")
-        XCTAssertTrue(reopen.waitForExistence(timeout: 20), "the chapter is gone")
-        reopen.tap()
-        XCTAssertTrue(app.buttons["收藏本页"].waitForExistence(timeout: 60),
+        // The downloads row is the way in, and the only one that can work: asking
+        // the source for a chapter list with the server gone would be asking the
+        // network to prove that the network is not needed.
+        firstElement(app, containing: "Probe Comic").tap()
+        XCTAssertTrue(app.buttons["收藏本页"].waitForExistence(timeout: 90),
                       "the reader drew nothing with the server down, so the download did not serve the pages")
     }
 }

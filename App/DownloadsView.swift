@@ -28,7 +28,14 @@ struct DownloadsView: View {
                     Section {
                         ForEach(groups, id: \.comic) { group in
                             ForEach(group.chapters) { chapter in
-                                row(chapter)
+                                // A downloaded chapter is readable with no network,
+                                // but until now the only way in was back through a
+                                // source that needs one. The row is the entry.
+                                NavigationLink {
+                                    ReaderRouteView(chapter: chapter)
+                                } label: {
+                                    row(chapter)
+                                }
                             }
                         }
                     } footer: {
@@ -79,5 +86,23 @@ struct DownloadsView: View {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         return formatter.string(fromByteCount: bytes)
+    }
+}
+
+/// A downloaded chapter opened on its own.
+///
+/// The route carries one chapter, so the reader's "next chapter" has nothing to
+/// go to — which is honest: the others are not on this device.
+private struct ReaderRouteView: View {
+    let chapter: DownloadStore.Chapter
+
+    var body: some View {
+        ReaderView(route: ReaderRoute(source: chapter.sourceKey,
+                                     comicID: chapter.comicID,
+                                     comicTitle: chapter.comicTitle,
+                                     chapters: [ComicDetails.Chapter(id: chapter.chapterID,
+                                                                     title: chapter.chapterTitle,
+                                                                     group: nil)],
+                                     index: 0))
     }
 }

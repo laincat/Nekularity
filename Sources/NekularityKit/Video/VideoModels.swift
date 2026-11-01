@@ -30,8 +30,16 @@ public struct VideoDetails: Decodable, Sendable {
         }
 
         public var id: String
+        /// Core calls a line's label `name`, not `title`. Expecting `title` made
+        /// every detail payload fail to decode, which reads in the app as a screen
+        /// that spins for ever rather than as a contract mismatch.
         public var title: String
         public var episodes: [Episode]
+
+        enum CodingKeys: String, CodingKey {
+            case id, episodes
+            case title = "name"
+        }
     }
 
     public var id: String
