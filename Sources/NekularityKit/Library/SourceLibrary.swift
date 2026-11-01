@@ -86,6 +86,63 @@ public final class SourceLibrary {
         return rec
     }
 
+    /// What one source's update attempt did.
+    ///
+    /// A batch update has three outcomes worth telling apart: the version moved,
+    /// it did not, or the attempt failed. Folding "unchanged" into "failed" is how
+    /// a working batch looks broken.
+    public struct SourceUpdate: Sendable, Identifiable {
+        public var key: String
+        public var name: String
+        public var from: String
+        public var to: String
+        public var error: String?
+
+        public var id: String { key }
+        public var changed: Bool { error == nil && !to.isEmpty && to != from }
+
+        /// One sentence for the alert, because a batch result that needs scrolling
+        /// to be understood is a batch result nobody reads.
+        public static func summary(_ results: [SourceUpdate]) -> String {
+            let updated = results.filter(\.changed)
+            let failed = results.filter { $0.error != nil }
+            if results.isEmpty { return "没有可从网址更新的源。" }
+            var lines: [String] = []
+            if !updated.isEmpty {
+                lines.append("已更新 \(updated.count) 个:" + updated.map { "\($0.name) \($0.from) → \($0.to)" }.joined(separator: "、"))
+            }
+            let same = results.count - updated.count - failed.count
+            if same > 0 { lines.append("\(same) 个已是最新。") }
+            if !failed.isEmpty {
+                lines.append("失败 \(failed.count) 个:" + failed.map { "\($0.name):\($0.error ?? "")" }.joined(separator: ";"))
+            }
+            return lines.joined(separator: "\n")
+        }
+    }
+
+    /// Updates every source that came from a URL, and reports each outcome.
+    ///
+    /// Sources installed from pasted text have nowhere to update *from*, so they
+    /// are skipped rather than reported as failures — that would be the app
+    /// blaming a source for a fact about how it was installed.
+    public func updateAll() async -> [SourceUpdate] {
+        var results: [SourceUpdate] = []
+        for source in sources {
+            guard let origin = source.origin, let url = URL(string: origin),
+                  url.scheme?.hasPrefix("http") == true else { continue }
+            let before = source.version
+            do {
+                let rec = try await install(from: url, indexURL: source.indexUrl.flatMap(URL.init(string:)))
+                results.append(SourceUpdate(key: rec.key, name: rec.name, from: before, to: rec.version))
+            } catch {
+                results.append(SourceUpdate(key: source.key, name: source.name, from: before, to: before,
+                                            error: CoreError.readable(error.localizedDescription)))
+            }
+        }
+        await refresh()
+        return results
+    }
+
     public func remove(_ key: String) async throws {
         try await core.remove(key: key)
         try core.host.store.removeSource(key: key)

@@ -68,3 +68,31 @@ struct SourceLibraryTests {
         #expect(lib.sources.isEmpty)
     }
 }
+
+@Suite("Batch source update")
+struct SourceUpdateSummaryTests {
+    private typealias Update = SourceLibrary.SourceUpdate
+
+    @Test("an updated source says which version moved to which")
+    func reportsVersions() {
+        let text = Update.summary([Update(key: "a", name: "甲", from: "1.0", to: "1.1")])
+        #expect(text.contains("已更新 1 个"))
+        #expect(text.contains("甲 1.0 → 1.1"))
+    }
+
+    @Test("unchanged is not failure, and the two are counted apart")
+    func separatesUnchangedFromFailed() {
+        let text = Update.summary([
+            Update(key: "a", name: "甲", from: "1.0", to: "1.0"),
+            Update(key: "b", name: "乙", from: "1.0", to: "1.0", error: "网络不通"),
+        ])
+        #expect(text.contains("1 个已是最新"))
+        #expect(text.contains("失败 1 个:乙:网络不通"))
+        #expect(!text.contains("已更新"))
+    }
+
+    @Test("nothing to update is said plainly rather than shown as an empty alert")
+    func emptyIsSaid() {
+        #expect(Update.summary([]) == "没有可从网址更新的源。")
+    }
+}

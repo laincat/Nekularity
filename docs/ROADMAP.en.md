@@ -32,7 +32,7 @@ Updated 2026-11-01. This file keeps **what is to be done and what counts as done
 | G8 Airing calendar and reminders | The reference app's signature | Items with air dates appear in the calendar and can carry a reminder |
 | G9 Trakt and TMDB metadata | Needs an account and an API key | Once connected, history syncs and posters and synopses appear |
 | G10 Danmaku and intro skipping | Depends on a danmaku source; the largest piece | A chosen source plays with a danmaku track, and an intro range can be skipped |
-| G11 Batch source update | Today only one source at a time | One action checks every source and lists what can be updated |
+| G11 Batch source update | ~~One at a time~~ A batch updates and reports the three outcomes separately | One action updates every source with a URL and lists updated, current and failed |
 | G12 Local comics | The original Venera has it; we do not | Import a folder or a zip/cbz and read it |
 | G13 Tag translation and rating | Present upstream, missing here | Tags show a translation for the language, and rating works where the source supports it |
 | G14 Real device and real account | Only simulator evidence exists | A device install, a real sign-in, and lock-screen and background behaviour all recorded |

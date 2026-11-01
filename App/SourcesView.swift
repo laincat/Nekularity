@@ -24,6 +24,7 @@ struct SourcesView: View {
     @State private var exported: ExportFile?
     @State private var showLogs = false
     @State private var showAI = false
+    @State private var updatingAll = false
 
     var body: some View {
         List {
@@ -74,6 +75,14 @@ struct SourcesView: View {
             }
             ToolbarItem(placement: .secondaryAction) {
                 Menu {
+                    Button {
+                        Task { await updateAll() }
+                    } label: {
+                        Label(updatingAll ? "正在更新…" : "更新全部源", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(updatingAll)
+                    .accessibilityIdentifier("sources.updateAll")
+                    Divider()
                     Button { restoreCookies = false; pickingBackup = true } label: {
                         Label("导入备份", systemImage: "square.and.arrow.down")
                     }
