@@ -199,12 +199,19 @@ struct BangumiClientTests {
         var fake = FakeBangumi()
         fake.replies["GET /calendar"] = (200, """
         [{"weekday":{"id":1,"cn":"星期一","ja":"月耀日","en":"Mon"},
-          "items":[\(subjectJSON)]}]
+          "items":[{"id":55770,"type":2,"name":"進撃の巨人","name_cn":"进击的巨人",
+                    "air_date":"2013-04-07","air_weekday":7,
+                    "images":{"large":"https://lain.bgm.tv/pic/cover/l/1.jpg"},
+                    "rating":{"score":8.4},"collection":{"doing":100}}]}]
         """)
         let days = try await fake.client().calendar()
         #expect(days.count == 1)
         #expect(days.first?.label == "星期一")
-        #expect(days.first?.items.first?.id == 12)
+        #expect(days.first?.items.first?.id == 55770)
+        // The calendar spells the date as air_date; the detail endpoint spells it
+        // date. A subject that loses its date in one of the two places is a subject
+        // with no date at all.
+        #expect(days.first?.items.first?.date == "2013-04-07")
     }
 
     @Test("collections carry the subject and a progress string")

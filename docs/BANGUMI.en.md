@@ -31,6 +31,8 @@ Bangumi (bgm.tv) is the *account* side of watching shows on this device: collect
 | `POST /v0/users/-/collections/{id}` | Change state, rating, progress | yes |
 | `PATCH /v0/users/-/collections/{id}/episodes` | Mark one episode watched; answers 202 (queued) | yes |
 
+The same date has two names: `/v0/subjects` calls it `date`, while the calendar and the older search call it `air_date`. Both are decoded, the former first — otherwise a subject opened from the calendar arrives with no date at all.
+
 Every request carries `User-Agent: laincat/Nekularity (...)` because Bangumi's documentation asks callers to identify themselves. Measured on 2026-11-01: a request without a UA answered 200 too, so the claim that "the default agent gets a 403" **did not reproduce** and is recorded here rather than repeated as fact.
 
 ## Credentials

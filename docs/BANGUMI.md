@@ -31,6 +31,8 @@ Bangumi(bgm.tv)在这台设备上是「追番的账号」:收藏状态、评分�
 | `POST /v0/users/-/collections/{id}` | 改状态、评分、进度 | 是 |
 | `PATCH /v0/users/-/collections/{id}/episodes` | 标记某话看过,返回 202(已排队) | 是 |
 
+同一个日期在两个接口里有两个名字:`/v0/subjects` 叫 `date`,每日放送与老搜索叫 `air_date`。两个都解码,前者优先——否则从日历点进去的条目会没有日期。
+
 每个请求都带 `User-Agent: laincat/Nekularity (...)`,因为 Bangumi 的接口文档要求标明调用方。2026-11-01 实测:不带 UA 的请求同样返回 200,所以「默认 UA 会被 403」这个说法**没有复现**,写在这里以免当成事实。
 
 ## 凭据

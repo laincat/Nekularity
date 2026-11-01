@@ -161,7 +161,15 @@ struct BangumiView: View {
                         NavigationLink {
                             BangumiDetailView(subjectID: subject.id)
                         } label: {
-                            Text(subject.title).font(.footnote)
+                            HStack {
+                                Text(subject.title).font(.footnote).lineLimit(1)
+                                Spacer()
+                                // The calendar answers "what airs", and the date is
+                                // the part that changes week to week.
+                                if let date = subject.date, !date.isEmpty {
+                                    Text(date).font(.caption2).foregroundStyle(Color.secondary)
+                                }
+                            }
                         }
                     }
                 }

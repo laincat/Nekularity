@@ -44,7 +44,17 @@ public struct BangumiSubject: Codable, Hashable, Sendable, Identifiable {
     public var nameCN: String?
     public var summary: String?
     /// `yyyy-MM-dd`, possibly with only a year or a month.
-    public var date: String?
+    ///
+    /// A subject endpoint calls this `date`; the calendar and the older search
+    /// call it `air_date`, so both are decoded and the first one wins.
+    public var date: String? {
+        releaseDate ?? airDate
+    }
+
+    /// What the subject endpoint wrote.
+    private var releaseDate: String?
+    /// What the calendar and the older search wrote.
+    private var airDate: String?
     public var platform: String?
     /// Aired so far, as Bangumi counts it.
     public var eps: Int?
@@ -89,7 +99,8 @@ public struct BangumiSubject: Codable, Hashable, Sendable, Identifiable {
         self.name = name
         self.nameCN = nameCN
         self.summary = summary
-        self.date = date
+        self.releaseDate = date
+        self.airDate = nil
         self.platform = platform
         self.eps = eps
         self.totalEpisodes = totalEpisodes
@@ -99,8 +110,10 @@ public struct BangumiSubject: Codable, Hashable, Sendable, Identifiable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, type, name, summary, date, platform, eps, images, rating
+        case id, type, name, summary, platform, eps, images, rating
         case nameCN = "name_cn"
+        case releaseDate = "date"
+        case airDate = "air_date"
         case totalEpisodes = "total_episodes"
         case counts = "collection"
     }
