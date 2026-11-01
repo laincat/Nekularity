@@ -616,9 +616,14 @@ extension PiPController: AVPictureInPictureSampleBufferPlaybackDelegate {
     nonisolated func pictureInPictureController(_ controller: AVPictureInPictureController,
                                                 skipByInterval skipInterval: CMTime,
                                                 completion completionHandler: @escaping () -> Void) {
+        let seconds = skipInterval.seconds
         Task { @MainActor in
-            self.software?.skip(by: skipInterval.seconds.isFinite ? skipInterval.seconds : 0)
-            completionHandler()
+            self.software?.skip(by: seconds.isFinite ? seconds : 0)
         }
+        // Answered here rather than inside the hop: carrying the completion handler
+        // across an isolation boundary is what the compiler objected to, and the
+        // window does not need it to mean "the skip landed" — it asks for the new
+        // time range next, which is refreshed from the engine.
+        completionHandler()
     }
 }
