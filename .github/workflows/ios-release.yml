@@ -24,11 +24,23 @@ jobs:
         run: brew install xcodegen
       - name: Check the tree before building it
         run: |
-          sh scripts/check-docs.sh
-          sh scripts/check-partitions.sh
-          sh scripts/check-core-pin.sh
-          python3 scripts/check-kit-core-calls.py
-          python3 scripts/check-swift.py
+          # Each check reports its own name on failure. A single failing line in a
+          # chained step says "something was wrong" and nothing else, and this step
+          # has already failed once without saying which one it was.
+          fail=0
+          run_check() {
+            echo "=== $*"
+            if ! "$@"; then
+              echo "FAILED: $*"
+              fail=1
+            fi
+          }
+          run_check sh scripts/check-docs.sh
+          run_check sh scripts/check-partitions.sh
+          run_check sh scripts/check-core-pin.sh
+          run_check python3 scripts/check-kit-core-calls.py
+          run_check python3 scripts/check-swift.py
+          exit $fail
       - name: Build pinned Core
         run: sh scripts/fetch-core.sh
       - name: Generate project
