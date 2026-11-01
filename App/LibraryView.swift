@@ -10,6 +10,7 @@ import SwiftUI
 /// fold the last one into 更多.
 struct LibraryView: View {
     @Environment(SourceLibrary.self) private var library
+    @Environment(MediaServerStore.self) private var servers
     @Environment(VideoLibraryStore.self) private var media
     @Environment(DownloadStore.self) private var downloads
     @Environment(ShelfStore.self) private var shelf
@@ -58,6 +59,16 @@ struct LibraryView: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("library.downloads")
+
+                            NavigationLink { MediaServersView() } label: {
+                                tile("媒体服务器",
+                                     detail: servers.servers.isEmpty
+                                        ? "Jellyfin / Emby"
+                                        : "\(servers.servers.count) 台已连接",
+                                     symbol: "externaldrive.badge.wifi")
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("library.servers")
                         }
                     }
 

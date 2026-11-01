@@ -30,6 +30,7 @@ struct NekularityApp: App {
                         .environment(env.downloads)
                         .environment(env.themes)
                         .environment(env.media)
+                        .environment(env.servers)
                         .environment(env.home)
                         .environment(env.profiles)
                         .environment(\.switchProfile, env.switchProfile)
@@ -65,6 +66,9 @@ final class AppModel {
         let downloads: DownloadStore
         let themes: ThemeStore
         let media: VideoLibraryStore
+        /// Media servers (Jellyfin/Emby): an account with a library, kept apart
+        /// from comic sources and from each other per environment.
+        let servers: MediaServerStore
         let home: HomeLayout
         /// The signed-in environment this whole object graph belongs to.
         let profiles: ProfileStore
@@ -149,6 +153,9 @@ final class AppModel {
                 downloads: downloads,
                 themes: ThemeStore(directory: support.appending(path: "Themes", directoryHint: .isDirectory)),
                 media: VideoLibraryStore(directory: root.appending(path: "Media", directoryHint: .isDirectory)),
+                servers: MediaServerStore(
+                    directory: root,
+                    tokens: KeychainMediaTokenStore(service: profiles.keychainService(for: profiles.activeID) + ".media")),
                 home: HomeLayout(),
                 profiles: profiles,
                 switchProfile: { [weak self] id in await self?.switchProfile(to: id) }))
