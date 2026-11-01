@@ -35,6 +35,25 @@ final class LocalImageServer: @unchecked Sendable {
     /// nil when the fixture is missing from the bundle; the route then answers 404
     /// rather than pretending the file is there.
     private let video: Data?
+    /// Every answer the clip route gave, in order. A player that never asks and a
+    /// player that asks and draws nothing look identical from the assertion alone.
+    private var clipLog: [String] = []
+    private let clipLock = NSLock()
+
+    /// For a failure message: how many times the clip was asked for, and how each
+    /// answer went.
+    func clipSummary() -> String {
+        clipLock.lock()
+        defer { clipLock.unlock() }
+        if clipLog.isEmpty { return "the clip was never requested" }
+        return "the clip was requested " + "\(clipLog.count)x: " + clipLog.joined(separator: ", ")
+    }
+
+    private func recordClip(_ answer: String) {
+        clipLock.lock()
+        clipLog.append(answer)
+        clipLock.unlock()
+    }
 
     init() throws {
         // Drawn rather than pasted as base64: a hand-typed blob is exactly the kind
@@ -186,13 +205,18 @@ final class LocalImageServer: @unchecked Sendable {
             // The header the source declared. Without it the request fails, which is
             // the whole point of the case.
             guard headers["referer"] == Self.clipReferer else {
+                // Naming the header it saw turns "403" into "the Referer never left
+                // the client", which are different bugs.
+                recordClip("403 (referer=\(headers["referer"] ?? "none"))")
                 reply(connection, status: "403 Forbidden", body: Data())
                 return
             }
             guard let video else {
+                recordClip("404 (no fixture in the test bundle)")
                 reply(connection, status: "404 Not Found", body: Data())
                 return
             }
+            recordClip(headers["range"] == nil ? "200" : "206")
             reply(connection, status: "200 OK", body: video, type: "video/mp4",
                   range: headers["range"], extra: ["Accept-Ranges": "bytes"])
         default:
