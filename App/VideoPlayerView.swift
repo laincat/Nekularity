@@ -118,6 +118,7 @@ struct VideoPlayerView: View {
             .accessibilityIdentifier("video.playPause")
             if let duration = model.duration, duration > 0 {
                 Text(Self.clock(duration)).font(.caption.monospacedDigit())
+                    .accessibilityIdentifier("video.duration")
             }
             if !model.format.isEmpty {
                 Text(model.format).font(.caption2).foregroundStyle(.secondary)

@@ -741,3 +741,53 @@ final class NekularityUITests: XCTestCase {
         add(shot)
     }
 }
+
+    /// The video path end to end: a provider answers, the client asks where the
+    /// episode plays, and the engine decodes the bytes.
+    ///
+    /// The clip comes from the runner on loopback, and that server refuses the
+    /// request unless it carries the `Referer` the source declared. So a passing
+    /// case is evidence for three things at once: `video.loadPlay` reached the
+    /// client, the headers travelled to the engine, and the picture decoded. A
+    /// duration only exists once frames are being produced, which is why the
+    /// assertion waits for it rather than for the player screen opening.
+    func testVideoPlaysTheSourcesClip() throws {
+        let server = try LocalImageServer()
+        try server.start()
+        defer { server.stop() }
+
+        let app = launch()
+        app.tabBars.buttons["视频"].tap()
+
+        let picker = element(app, "video.source")
+        guard picker.waitForExistence(timeout: 20) else {
+            throw XCTSkip("the 视频 tab has no source picker")
+        }
+        picker.tap()
+        let provider = app.buttons["Video Probe"].firstMatch
+        guard provider.waitForExistence(timeout: 10) else {
+            throw XCTSkip("the video fixture is not seeded: run scripts/seed-simulator.sh")
+        }
+        provider.tap()
+
+        let field = element(app, "video.query")
+        XCTAssertTrue(field.waitForExistence(timeout: 20), "the 视频 tab has no field")
+        field.tap()
+        field.typeText("probe")
+        app.typeText("\n")
+
+        let card = firstElement(app, containing: "Probe Clip")
+        guard card.waitForExistence(timeout: 60) else {
+            throw XCTSkip("the video fixture did not answer search")
+        }
+        card.tap()
+
+        let episode = firstElement(app, containing: "Episode 1")
+        XCTAssertTrue(episode.waitForExistence(timeout: 30), "the detail page lists no episode")
+        episode.tap()
+
+        XCTAssertFalse(firstElement(app, containing: "无法播放").waitForExistence(timeout: 15),
+                       "the player reported a failure instead of playing")
+        XCTAssertTrue(element(app, "video.duration").waitForExistence(timeout: 90),
+                      "the clip produced no duration, so nothing decoded")
+    }
