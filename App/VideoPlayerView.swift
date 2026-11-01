@@ -280,11 +280,14 @@ struct VideoPlayerView: View {
         if showsDanmaku, !danmaku.isEmpty {
             let active = DanmakuParser.active(danmaku, at: model.position)
             VStack {
-                ForEach(active.filter { $0.placement == .top }, id: \.id) { comment in
+                // Position, not the comment's own id: the same words can be sent
+                // twice at the same second, and duplicate ids make SwiftUI drop
+                // one of them.
+                ForEach(Array(active.filter { $0.placement == .top }.enumerated()), id: \.offset) { _, comment in
                     danmakuLine(comment)
                 }
                 Spacer()
-                ForEach(active.filter { $0.placement != .top }.suffix(6), id: \.id) { comment in
+                ForEach(Array(active.filter { $0.placement != .top }.suffix(6).enumerated()), id: \.offset) { _, comment in
                     danmakuLine(comment)
                 }
             }

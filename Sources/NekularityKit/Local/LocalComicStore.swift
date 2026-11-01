@@ -90,11 +90,20 @@ public final class LocalComicStore {
                 try? FileManager.default.removeItem(at: destination)
                 throw ZipReader.Failure.unsupported("里面没有图片")
             }
+            var taken = Set<String>()
             for entry in entries {
                 let bytes = try ZipReader.contents(of: entry, in: data)
                 // Only the last path component is kept: an archive may nest pages
-                // two directories deep and the reader wants a flat list.
-                let name = entry.name.split(separator: "/").last.map(String.init) ?? entry.name
+                // two directories deep and the reader wants a flat list. Two
+                // folders can hold the same file name, though — flattening them
+                // onto one another silently drops a page, so a clash keeps its
+                // parent as a prefix.
+                let flat = entry.name.split(separator: "/").last.map(String.init) ?? entry.name
+                let name = taken.contains(flat) ? Self.prefixed(entry.name, fallback: flat) : flat
+                if taken.contains(name) {
+                    throw ZipReader.Failure.unsupported("压缩包里有重名图片:\(entry.name)")
+                }
+                taken.insert(name)
                 try bytes.write(to: destination.appending(path: name), options: [.atomic])
                 names.append(name)
             }
@@ -123,6 +132,14 @@ public final class LocalComicStore {
         comics.removeAll { $0.id == comic.id }
         try? FileManager.default.removeItem(at: directory.appending(path: comic.id, directoryHint: .isDirectory))
         save()
+    }
+
+    /// `chapter2/01.png` → `chapter2-01.png`, which keeps reading order intact
+    /// because the sort is natural and the prefix comes first.
+    private static func prefixed(_ path: String, fallback: String) -> String {
+        let parts = path.split(separator: "/").map(String.init)
+        guard parts.count >= 2 else { return fallback }
+        return parts.suffix(2).joined(separator: "-")
     }
 
     private func isPage(_ name: String) -> Bool {

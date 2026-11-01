@@ -200,6 +200,25 @@ struct LocalComicStoreTests {
         #expect(comic.pages == ["01.png", "02.png"])
     }
 
+    @Test("two folders holding the same file name keep both pages")
+    func doesNotFlattenTwoPagesIntoOne() throws {
+        let root = try root()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let zip = ZipBuilder.make([
+            (name: "chapter1/01.png", data: Data([1]), deflate: false),
+            (name: "chapter2/01.png", data: Data([2]), deflate: false),
+        ])
+        let file = root.appending(path: "两章.cbz")
+        try zip.write(to: file)
+        let store = LocalComicStore(directory: root)
+        let comic = try store.importComic(at: file)
+        // Flattening both to "01.png" would leave one page and lose the other.
+        #expect(comic.pages.count == 2)
+        #expect(Set(comic.pages).count == 2)
+        #expect(comic.pages == ["chapter1-01.png", "chapter2-01.png"])
+        #expect(try Data(contentsOf: store.pageURL(comic, index: 1)) == Data([2]))
+    }
+
     @Test("removing a comic removes its files too")
     func removal() throws {
         let root = try root()
