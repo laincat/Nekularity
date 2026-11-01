@@ -122,12 +122,12 @@ final class AppModel {
                 images: ImageLoader(core: core, offline: { key in
                     await downloads.bytes(for: key)
                 }),
-                downloads: downloads,
-                themes: ThemeStore(directory: support.appending(path: "Themes", directoryHint: .isDirectory)),
                 prompts: prompts,
                 shelf: ShelfStore(directory: support),
                 searches: SearchHistoryStore(directory: support),
-                magpie: magpie))
+                magpie: magpie,
+                downloads: downloads,
+                themes: ThemeStore(directory: support.appending(path: "Themes", directoryHint: .isDirectory))))
         } catch {
             started = false
             state = .failed(error.localizedDescription)

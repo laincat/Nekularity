@@ -169,7 +169,7 @@ final class LocalImageServer: @unchecked Sendable {
             let end = spec.count > 1 ? (Int(spec[1]) ?? body.count - 1) : body.count - 1
             if start < body.count {
                 let last = min(end, body.count - 1)
-                payload = body.subdata(in: start...(last))
+                payload = body.subdata(in: start..<(last + 1))
                 status = "206 Partial Content"
                 resume = "Content-Range: bytes \(start)-\(last)/\(body.count)\r\n"
             }

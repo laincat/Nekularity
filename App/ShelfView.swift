@@ -88,7 +88,9 @@ struct ShelfView: View {
                     .accessibilityIdentifier("shelf.more")
                 }
                 if let error = shelf.lastError {
-                    Text(error).font(.footnote).foregroundStyle(.secondary)
+                    ToolbarItem(placement: .bottomBar) {
+                        Text(error).font(.footnote).foregroundStyle(.secondary)
+                    }
                 }
             }
         }

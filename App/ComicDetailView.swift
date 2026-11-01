@@ -259,10 +259,10 @@ struct ComicDetailView: View {
     private func download(_ chapter: ComicDetails.Chapter) async {
         guard let images, let comicInfo = details else { return }
         do {
-            let pages = try await library.core.chapterImages(key: route.source, comicID: comicInfo.id,
+            let pages = try await library.core.chapterImages(key: route.source, comicID: route.comic.id,
                                                              chapterID: chapter.id)
             guard !pages.isEmpty else { downloadNote = "这一章没有图片"; return }
-            downloads.download(.init(sourceKey: route.source, comicID: comicInfo.id,
+            downloads.download(.init(sourceKey: route.source, comicID: route.comic.id,
                                      comicTitle: comicInfo.title, chapterID: chapter.id,
                                      chapterTitle: chapter.title, pages: pages), loader: images)
             downloadNote = "已加入下载"
