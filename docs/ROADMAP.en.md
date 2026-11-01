@@ -8,7 +8,7 @@ Updated 2026-11-01. This file keeps **what is to be done and what counts as done
 
 | Item | Acceptance | State |
 |---|---|---|
-| Core and its two clients | A Core release pins both clients, and the three-platform plus Apple CI all pass | Done, Core `b5b483b` |
+| Core and its two clients | A Core release pins both clients, and the three-platform plus Apple CI all pass | Done, Core `53cf0fc` |
 | The reading path | Multi-source search, browse, details with grouped chapters, two reader layouts, progress written back | 13 simulator cases passed |
 | Source abilities | Install/update/enable/remove, settings, callbacks, logs, web login, source favourites | Simulator cases plus desktop probes |
 | Backup | `.venera` import and export, including per-source cookies | Unit tests and real backup files |
