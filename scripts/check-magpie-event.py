@@ -20,7 +20,10 @@ import pathlib
 import re
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+# NK_CLIENT_ROOT points the comparison at a copy of the kit, so
+# scripts/check-checks.sh can change a key the kit reads and watch this report it.
+ROOT = pathlib.Path(os.environ.get("NK_CLIENT_ROOT") or
+                    pathlib.Path(__file__).resolve().parent.parent)
 SWIFT = ROOT / "Sources" / "NekularityKit" / "Magpie" / "MagpieChat.swift"
 
 # Fields the client may ignore on purpose, with the reason.

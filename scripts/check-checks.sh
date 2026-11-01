@@ -115,7 +115,24 @@ else
 	printf 'check-checks: the JSON key rule SKIPPED (no Core checkout)\n'
 fi
 
-# 5. A pair that links but says a different amount: one side gained a row.
+# 5. The Magpie event rule: the keys the kit reads from a chat event, and the
+#    kinds it names, against what Core sends.
+if [ -n "$core_src" ]; then
+	mkdir -p "$tmp/event/Sources/NekularityKit/Magpie"
+	_event="$tmp/event/Sources/NekularityKit/Magpie/MagpieChat.swift"
+	cp Sources/NekularityKit/Magpie/MagpieChat.swift "$_event"
+	python3 scripts/check-checks-rename-key.py "$_event" 'object["kind"]' 'object["kinds"]'
+	# It reports the key Core sends that nothing reads, which names the break.
+	expect_failure "the Magpie event rule" 'never reads it' \
+		env NK_CLIENT_ROOT="$tmp/event" NK_CORE_SRC="$core_src" python3 scripts/check-magpie-event.py
+	cp Sources/NekularityKit/Magpie/MagpieChat.swift "$_event"
+	expect_pass "the Magpie event rule" \
+		env NK_CLIENT_ROOT="$tmp/event" NK_CORE_SRC="$core_src" python3 scripts/check-magpie-event.py
+else
+	printf 'check-checks: the Magpie event rule SKIPPED (no Core checkout)\n'
+fi
+
+# 6. A pair that links but says a different amount: one side gained a row.
 printf '[en](lonely.en.md)\n\n# a\n\n| x |\n| - |\n' >"$tmp/docs/docs/lonely.md"
 expect_failure "the pair-content rule" \
 	"table rows" \
