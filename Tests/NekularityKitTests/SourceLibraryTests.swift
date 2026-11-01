@@ -69,6 +69,12 @@ struct SourceLibraryTests {
     }
 
 
+/// A failure the feeder can throw. `CoreError.readable` returns a display string, not
+/// an `Error`, so it cannot be used here.
+struct FeederError: Error {
+    let message: String
+}
+
 /// Serves a script per call, so one test can install from a URL and then have the
 /// next fetch answer differently — which is what an update is.
 final class ScriptFeeder: @unchecked Sendable {
@@ -79,7 +85,7 @@ final class ScriptFeeder: @unchecked Sendable {
 
     func next(_ url: URL) throws -> Data {
         lock.lock(); defer { lock.unlock() }
-        guard !replies.isEmpty else { throw CoreError.readable("no reply left") }
+        guard !replies.isEmpty else { throw FeederError(message: "no reply left") }
         return try replies.removeFirst().get()
     }
 }
@@ -137,7 +143,7 @@ struct SourceLibraryUpdateAllTests {
     @MainActor
     @Test func aFailedUpdateIsReportedAndKeepsTheSource() async throws {
         let feeder = ScriptFeeder([.success(Data(script.utf8)),
-                                   .failure(CoreError.readable("网络不通"))])
+                                   .failure(FeederError(message: "网络不通"))])
         let lib = try library(feeder)
         _ = try await lib.install(from: URL(string: "https://index.test/mini.js")!)
         let results = await lib.updateAll()
