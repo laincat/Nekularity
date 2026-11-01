@@ -10,6 +10,8 @@ struct SearchView: View {
     @State private var query = ""
     @Environment(SearchHistoryStore.self) private var searches
     @State private var model = SearchModel()
+    /// A pasted link one of the sources recognised: the comic to open.
+    @State private var opened: ComicRoute?
 
     private var sources: [PluginRecord] { library.comicSources.filter(\.enabled) }
 
@@ -21,6 +23,7 @@ struct SearchView: View {
                                            description: Text("先在“漫画源”里添加并启用一个源。"))
                 } else {
                     VStack(spacing: 0) {
+                        field
                         filters
                         results
                     }
@@ -28,8 +31,13 @@ struct SearchView: View {
             }
             .navigationTitle("搜索")
             .navigationDestination(for: ComicRoute.self) { ComicDetailView(route: $0) }
-            .searchable(text: $query, prompt: "关键词")
-            .onSubmit(of: .search) { start() }
+            .navigationDestination(item: $opened) { ComicDetailView(route: $0) }
+            // A field of our own rather than `.searchable`: on iOS 27 the
+            // modifier drew no field at all on this screen (the interface test
+            // found a navigation bar with the two pickers and no way to type),
+            // and a search tab nobody can type into is not a search tab. An
+            // explicit field is visible, hittable and has one stable identifier.
+
             .toolbar {
                 if !sources.isEmpty {
                     ToolbarItem(placement: .primaryAction) {
@@ -58,6 +66,40 @@ struct SearchView: View {
             }
             .task(id: sourceKey) { prepare() }
         }
+    }
+
+    /// The failed sources by name, for the footer and for the empty state.
+    private var failedSourceNames: String {
+        model.failedSources
+            .map { key in library.sources.first { $0.key == key }?.name ?? key }
+            .joined(separator: "、")
+    }
+
+    /// Where the keyword is typed.
+    @ViewBuilder private var field: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("关键词", text: $query)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .onSubmit { start() }
+                .accessibilityIdentifier("search.field")
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("search.clear")
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color(.secondarySystemBackground)))
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
     }
 
     /// The source's own search filters, one choice per group. A merged search
@@ -108,7 +150,21 @@ struct SearchView: View {
             } description: { Text(error) } actions: { Button("重试") { start() } }
         } else if model.hits.isEmpty {
             if model.loading { ProgressView() }
-            else if model.searched { ContentUnavailableView.search(text: model.keyword) }
+            else if model.searched {
+                // A source that failed is not a source that found nothing. With an
+                // empty screen the generic "no results" reads as "the sites have
+                // nothing", so the ones that did not answer are named here — the
+                // desktop client makes the same distinction.
+                if model.failedSources.isEmpty {
+                    ContentUnavailableView.search(text: model.keyword)
+                } else {
+                    ContentUnavailableView {
+                        Label("没有结果", systemImage: "magnifyingglass")
+                    } description: {
+                        Text("这些源没有返回:" + failedSourceNames + ";其余源没有匹配「\(model.keyword)」")
+                    }
+                }
+            }
             else if searches.queries.isEmpty {
                 ContentUnavailableView("输入关键词开始搜索", systemImage: "magnifyingglass")
             } else {
@@ -135,9 +191,7 @@ struct SearchView: View {
                 .padding()
                 if model.loading { ProgressView().padding() }
                 if !model.failedSources.isEmpty {
-                    Text("这些源没有返回:" + model.failedSources.map { key in
-                        library.sources.first { $0.key == key }?.name ?? key
-                    }.joined(separator: "、"))
+                    Text("这些源没有返回:" + failedSourceNames)
                         .font(.footnote).foregroundStyle(.secondary).padding(.horizontal)
                 }
                 if let error = model.error { Text(error).font(.footnote).foregroundStyle(.secondary).padding() }
@@ -186,15 +240,30 @@ struct SearchView: View {
     private func start() {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return }
+        // A pasted address is not a keyword: the source that owns the link can
+        // name the comic, and searching for the URL finds nothing. Anything that
+        // is not a link — or that no source claims — is searched as before.
+        guard !LinkDetection.looksLikeLink(q) else {
+            Task {
+                if let target = try? await library.core.openLink(q), !target.isEmpty {
+                    opened = ComicRoute(source: target.key, comic: Comic(id: target.id, title: ""))
+                    return
+                }
+                await search(q)
+            }
+            return
+        }
+        Task { await search(q) }
+    }
+
+    private func search(_ q: String) async {
         let keys = scope == .current ? [sourceKey].filter { !$0.isEmpty } : sources.map(\.key)
         guard !keys.isEmpty else { return }
         searches.add(q)
         let chosen = scope
         let only = keys.first ?? ""
-        Task {
-            if chosen == .current { await model.prepare(library.core, source: only) }
-            await model.search(library.core, sources: keys, keyword: q, scope: chosen)
-        }
+        if chosen == .current { await model.prepare(library.core, source: only) }
+        await model.search(library.core, sources: keys, keyword: q, scope: chosen)
     }
 }
 
@@ -360,13 +429,9 @@ final class SearchModel {
                         do {
                             let options = try await core.searchOptions(key: key).map(\.defaultSearchValue)
                             let result: ComicPage
-                            // Same rule as one source's own search: page
-                            // numbers when the source offers them.
-                            if await core.hasComic(key: key, path: "search.load") {
-                                result = try await core.search(key: key, keyword: keyword, page: 1, options: options)
-                            } else {
-                                result = try await core.searchNext(key: key, keyword: keyword, cursor: nil, options: options)
-                            }
+                            // The kit decides which entry point the source
+                            // declares, so a screen cannot forget the rule.
+                            result = try await core.searchPage(key: key, keyword: keyword, page: 1, options: options)
                             return (index, result.comics.map { Hit(source: key, comic: $0) }, false)
                         } catch {
                             return (index, [], true)

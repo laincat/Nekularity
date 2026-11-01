@@ -89,6 +89,39 @@ else
 	fail "sh scripts/check-partitions.sh" "$out/partitions.log"
 fi
 
+# 0b. Every capability a source declares still has a path in the client.
+if sh scripts/check-capabilities.sh >"$out/capabilities.log" 2>&1; then
+	pass "sh scripts/check-capabilities.sh" "$out/capabilities.log"
+else
+	fail "sh scripts/check-capabilities.sh" "$out/capabilities.log"
+fi
+
+# 0c. Every Core method the kit calls still exists. Names only, not signatures:
+# this is what can be checked before the compiler runs, and it catches a call to
+# a method that was never added or was renamed.
+python3 scripts/check-kit-core-calls.py >"$out/core-calls.log" 2>&1 && calls=$? || calls=$?
+if [ "$calls" -eq 0 ]; then
+	pass "python3 scripts/check-kit-core-calls.py" "$out/core-calls.log"
+elif [ "$calls" -eq 3 ]; then
+	# No Core checkout on this machine: the step after this one builds one from
+	# the pin, and a real mismatch then fails the compile instead.
+	say "SKIP  python3 scripts/check-kit-core-calls.py  (no Core checkout; see $out/core-calls.log)"
+else
+	fail "python3 scripts/check-kit-core-calls.py" "$out/core-calls.log"
+fi
+
+# 0d. The JSON keys the kit decodes are keys Core actually sends. A field that is
+# always nil shows up as a screen with less on it than it should have, and
+# nothing else reports it.
+python3 scripts/check-json-keys.py >"$out/json-keys.log" 2>&1 && jsonkeys=$? || jsonkeys=$?
+if [ "$jsonkeys" -eq 0 ]; then
+	pass "python3 scripts/check-json-keys.py" "$out/json-keys.log"
+elif [ "$jsonkeys" -eq 2 ]; then
+	say "SKIP  python3 scripts/check-json-keys.py  (no Core checkout; see $out/json-keys.log)"
+else
+	fail "python3 scripts/check-json-keys.py" "$out/json-keys.log"
+fi
+
 # 1. Documentation pairs and root cleanliness.
 if sh scripts/check-docs.sh >"$out/docs.log" 2>&1; then
 	pass "sh scripts/check-docs.sh" "$out/docs.log"
@@ -99,7 +132,13 @@ fi
 # 2. Swift syntax, which needs no macOS at all.
 python3 scripts/check-swift.py >"$out/syntax.log" 2>&1 && syntax=$? || syntax=$?
 if [ "$syntax" -eq 0 ]; then
-	pass "python3 scripts/check-swift.py" "$out/syntax.log"
+	# Without a parser the rules still ran and found nothing; saying only "PASS"
+	# would hide that the files were not parsed on this machine.
+	if grep -q 'the rule checks still run' "$out/syntax.log" 2>/dev/null; then
+		pass "python3 scripts/check-swift.py (rules only: no parser here)" "$out/syntax.log"
+	else
+		pass "python3 scripts/check-swift.py" "$out/syntax.log"
+	fi
 elif [ "$syntax" -eq 2 ] || [ "$syntax" -eq 3 ]; then
 	# 2: tree-sitter is not installed. 3: it is installed but cannot load this
 	# machine's grammar version. Both are limits of the machine, not of the tree, and
@@ -138,8 +177,7 @@ if command -v xcodegen >/dev/null 2>&1; then
 	else
 		fail "xcodebuild ... build (iOS, no signing)" "$out/app-build.log"
 	fi
-	exit 0
-fi
+else
 
 # 4b. No XcodeGen: build the Kit for iOS, then type check the screens against
 # it. SwiftPM names its scheme "<Package>-Package" when the package has no
@@ -180,5 +218,88 @@ if swiftc -typecheck -swift-version 6 -sdk "$sdk" -target arm64-apple-ios26.0 \
 else
 	fail "swiftc -typecheck App/*.swift (iOS)" "$out/app-typecheck.log"
 fi
-
 say "note  XcodeGen is not installed, so no app bundle was built; the screens were type checked only"
+fi
+
+# 6. The interface itself, when a simulator is available.
+#
+# The Windows machine cannot draw a window, so "the button works" was checked by
+# hand on the Mac until these tests existed. The app has to be installed before it
+# can be seeded, and xcodebuild installs it as part of `test`, so the order is:
+# build for testing, install, seed the client's own store, then test without
+# building. Without NK_UI_SEED the tests still run and skip the checks that need a
+# source, which is enough to catch a missing tab.
+#
+# NK_UI_SEED_REPLACE=1 lets a run replace a device store that holds other sources;
+# without it a differing seed is refused, which is the safe default.
+#
+# Off by default: a simulator run takes ten minutes and can hang, while the checks
+# above are the ones that answer "does it build and does it pass". Ask for it with
+# NK_UI_TESTS=1.
+if [ "${NK_UI_TESTS:-0}" != "1" ]; then
+	say "SKIP  xcodebuild test (set NK_UI_TESTS=1 to drive the interface)"
+elif command -v xcodegen >/dev/null 2>&1; then
+	device=$(xcrun simctl list devices available --json 2>/dev/null | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    devices = [d for group in data.get("devices", {}).values() for d in group
+               if d.get("isAvailable") and d.get("name", "").startswith("iPhone")]
+    devices.sort(key=lambda d: d.get("state") != "Booted")
+    print(devices[0]["udid"] if devices else "")
+except (ValueError, KeyError):
+    print("")
+')
+	if [ -z "${device:-}" ]; then
+		fail "xcodebuild test (no iPhone simulator available)" "$out/ui-tests.log"
+	elif ! xcodegen generate >"$out/xcodegen.log" 2>&1; then
+		fail "xcodegen generate" "$out/xcodegen.log"
+	else
+		ui="$out/ui"
+		mkdir -p "$ui"
+		if xcodebuild build-for-testing -scheme Nekularity \
+			-destination "platform=iOS Simulator,id=$device" \
+			-derivedDataPath "$ui/dd" >"$ui/build-for-testing.log" 2>&1; then
+			pass "xcodebuild build-for-testing -scheme Nekularity" "$ui/build-for-testing.log"
+			app=$(find "$ui/dd/Build/Products" -maxdepth 2 -name 'Nekularity.app' -print -quit 2>/dev/null || true)
+			xcrun simctl boot "$device" >"$ui/sim-boot.log" 2>&1 || true
+			xcrun simctl bootstatus "$device" -b >>"$ui/sim-boot.log" 2>&1 || true
+			if [ -n "${app:-}" ] && xcrun simctl install "$device" "$app" >>"$ui/sim-boot.log" 2>&1; then
+				pass "xcrun simctl install ($device)" "$ui/sim-boot.log"
+				if [ -n "${NK_UI_SEED:-}" ]; then
+					# The store is the client's own file, written before launch. A device
+					# that already holds an older seed refuses a different one on
+					# purpose; NK_UI_SEED_REPLACE=1 says this run may overwrite it, which
+					# is what changing the seed content needs.
+					seedArgs=""
+					if [ "${NK_UI_SEED_REPLACE:-0}" = "1" ]; then seedArgs="--replace"; fi
+					if sh scripts/seed-simulator.sh "$NK_UI_SEED" com.laincat.nekularity "$device" $seedArgs >"$ui/seed.log" 2>&1; then
+						pass "scripts/seed-simulator.sh" "$ui/seed.log"
+					else
+						fail "scripts/seed-simulator.sh" "$ui/seed.log"
+					fi
+				fi
+				# NK_UI_ONLY=testSomething runs one case. Twelve cases take minutes; when one
+				# of them fails, re-running the other eleven spends the round on cases that
+				# already passed.
+				only=""
+				if [ -n "${NK_UI_ONLY:-}" ]; then
+					only="-only-testing:NekularityUITests/NekularityUITests/${NK_UI_ONLY}"
+				fi
+				if xcodebuild test-without-building -scheme Nekularity $only \
+					-destination "platform=iOS Simulator,id=$device" \
+					-derivedDataPath "$ui/dd" >"$ui/tests.log" 2>&1; then
+					pass "xcodebuild test-without-building ($device${NK_UI_ONLY:+ only $NK_UI_ONLY})" "$ui/tests.log"
+				else
+					fail "xcodebuild test-without-building ($device${NK_UI_ONLY:+ only $NK_UI_ONLY})" "$ui/tests.log"
+				fi
+			else
+				fail "xcrun simctl install ($device)" "$ui/sim-boot.log"
+			fi
+		else
+			fail "xcodebuild build-for-testing -scheme Nekularity" "$ui/build-for-testing.log"
+		fi
+	fi
+else
+	fail "xcodebuild test (XcodeGen is not on PATH)" "$out/xcodegen.log"
+fi

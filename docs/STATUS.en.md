@@ -12,6 +12,25 @@ Every Kit member the UI calls was checked the same way: `library.comicSources / 
 
 ## What a Mac has already run
 
+**Newest round (2026-11-01, tree `67c501a`, Core pin `d81445f`)**: `scripts/verify-ios.sh` **EXIT=0**, **all thirteen UI cases PASS (0 FAIL / 0 SKIP)**; `swift test` **229 tests / 43 suites passed**, `check-seed.sh` confirmed the seed matches the repository fixture, and the unsigned app build, build-for-testing and install all passed. This round added **the category page**: it asserts the choices, the results, and that switching a value really changes the **selected** state; the shelf case now asserts the 书架 header first — both so an assertion cannot pass because the element was already on the previous screen.
+
+**The accessibility tree found two real defects (2026-11-01, tree `9e8f84c`)**: after several rounds of failing interface cases, the tree the test exports on SKIP/FAIL is what located the problems — in the client, not in the test.
+- **The search tab had no input field on iOS 27.** The tree shows a navigation bar with the two pickers and the title, a content area with 最近搜索, and nothing that accepts typing, so `.searchable` was drawing no field on this layout and a person could not enter a keyword at all. The screen now carries its own `TextField` (`search.field`) and submits through `onSubmit`.
+- **The callback button could be seen but not pressed.** The tree shows `setting.callback.run` present and enabled, yet no busy state, dialog or answer ever followed; `LabeledContent` was giving the button a hit area that does not take a press. It is a plain `HStack` with `contentShape` now, and the identifier is unchanged.
+
+Both are a reminder to fetch the tree before deciding whether a failing case is the client or the test — I read the first few rounds as test bugs and paid three extra runs for it.
+
+**The simulator UI tests ran for the first time (2026-11-01, tree `177f69e`)**: all four seeded sources reached the device (`Callback Probe` appeared in the app's source list and the test opened its settings), `swift test` reported **229 tests / 43 suites passed**, the unsigned iOS build and `xcodebuild build-for-testing` both succeeded, and the UI cases came out **4 PASS / 1 FAIL / 1 SKIP**. The passes were the tabs, the seeded sources, the in-page login sheet and the browse screen; the callback case failed because **my assertion was wrong**: that fixture's callback shows its dialog immediately, and presenting a sheet takes the settings screen out of the accessibility tree, so waiting specifically for the busy marker could never succeed — it did not mean the press failed to arrive. It now counts the busy marker, the source's dialog or the inline answer as proof, and attaches the whole tree when none appears. The skip is search: on iOS 27 `.searchable` is not exposed as `searchFields`, so it is looked for by placeholder and by toolbar button, and the tree is attached when it still cannot be found.
+
+**The UI tests no longer depend on an outside site (2026-11-01, tree `6a1df9f`)**: the callback case used to press `wnacg`'s refresh button, but `wnacg`'s `init` fetches its domain list over the network first, so on a machine that cannot reach that host the button never got to run and the test measured the site rather than the client. It now presses a button on a source in the repository, `UITests/Fixtures/callback_probe.js`, which has no network at all: its callback shows its own dialog and returns a string, so a failure can only be the client's. That source was first checked against the desktop Core (`cbprobe` answered `ANSWER callback_probe.run 0s "ran"`), and the same round moved the search field lookup from "must be a `searchFields` element" to finding it by its placeholder, `关键词`. One more real trap was the seed: `verify-ios.sh` called the seeding script without `--replace`, so a device that already held an older seed answered "existing source store preserved" and exited 2 while the tests went on running against the **old** seed. `NK_UI_SEED_REPLACE=1` now allows the overwrite, and the default stays conservative.
+
+`check-swift.py` also gained a local rule: an `NSPredicate` stored in a variable and then passed to `matching` is reported. That is exactly the shape that broke `build-for-testing` on the Mac (`NSPredicate` is not `Sendable`, so handing it across isolation is a data-race diagnostic under Swift 6), and the interface tests are the only files the Windows machine never type-checks. The rule was checked the other way round: putting the stored predicate back makes it report `stores NSPredicate probe and passes it to matching`. Two more rules watch the interface tests: one requires every identifier a test asks for to exist in `App`/`Sources` (a typo is not a compile error — it makes a case wait out its timeout and report "missing", which reads like a broken client), and one refuses the `label.length` predicate that XCTest rejects. that runs past its line — the same kind of Mac-only surprise, produced by writing a real newline where `
+` was meant; putting one back makes it report `line 186 ends inside a string literal`.
+
+Before that, the same verifier **FAILED** on tree `1d41c57`: `swift test` force-unwrapped `nil` at `WebviewLoginCookieTests.swift:17` and died of signal 5, which took the whole bundle down before the app build was reached. The fixture built cookies with `HTTPCookie(properties:)!`, an initializer that returns `nil` when the properties are incomplete, so one case that should have failed crashed everything instead. The fix adds `.originURL`, replaces the force unwrap with `#require`, and drops the cookie-with-no-domain case from the Swift suite — Apple gives no way to build one there, and the desktop Go test covers that branch.
+
+**Evidence boundary**: these two rounds prove compilation, unit tests and the app build; simulator interaction, devices and real accounts are still unverified.
+
 On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no global tools installed:
 
 - Core was built from GitHub into `VeneraCatCore.xcframework` (96M, slices for ios-arm64, the simulator and macOS); `gofmt`, `go vet`, `go test -race` and `gomobile bind` all passed.
@@ -45,11 +64,153 @@ On 2026-10-30 one real run happened on macOS 27 / Xcode 27 / Swift 6.4, with no 
 | Static check (test doubles) | `check-swift.py` checks that `Tests/` doubles conforming to `MagpieRunner.Core` have every method. When the protocol gains one, the gap is silent on Windows and a `swift test` compile error on the Mac — a whole validation round. Verified against a copy with the stub removed: it reports `RefusingCore lacks readPackageArchive` |
 | Browsing | `CoreClient.explorePages` and `explore` cover the four browse kinds (single page with parts, multi-page list, mixed, multi-part page); `BrowseView` switches between browses with chips, pins section headers, pages, and refreshes by pulling |
 
+## All eight cases pass (2026-11-01, tree `38d3822`, Core `d81445f`)
+
+Stage 13: **exit code 0, eight interface cases all PASS, nothing failed and nothing skipped**. This is the first run where the suite passed as a whole, including the two added this round — **two-section browse** (the chip row, the first section's comics, and that switching really changes the list) and **the comment thread** (the entry appears only when the source declares it, and the thread carries its author and body).
+
+```
+check-core-pin: ok (d81445fbcf04)
+swift test: 229 tests / 43 suites passed
+unsigned app build, build-for-testing, simctl install, seed write, test-without-building  all passed
+UI: 8 PASS / 0 FAIL / 0 SKIP
+```
+
+Interface evidence: five captures — browse, the callback dialog, the comment thread, comic details, the web login sheet.
+
+**The line is unchanged**: browse, comments and callback pass against the repository's own test source; the login case only proves the sheet opens, and **no real account was ever submitted**. A device, a real account and background playback still have no evidence.
+
+## The first loopback server was stopped by Swift 6 concurrency (2026-11-01)
+
+The reader case's first version **failed to compile** on the verification machine, and not in the test logic: `SWIFT_STRICT_CONCURRENCY: complete` is a **global** setting in this project, so the test target inherits it, and that meant
+
+- mutating a captured local `var failure` inside `NWListener`'s `@Sendable` handler — a concurrent mutation;
+- capturing a non-`Sendable` `self` across the handler — a non-Sendable escape.
+
+The fix puts the responsibility on the class: `@unchecked Sendable` (every stored property is a `let`) plus a locked `Signal` that carries the start result, with no weak self captured across a handler.
+
+**Why this is worth writing down**: "strict concurrency on the verification machine" is not theoretical — the first attempt was stopped by it, at compile time rather than at runtime. I had changed it locally while self-reviewing after dispatch, but the machine ran the tree it had already received, so the failure really happened.
+
+## The downgrade was measured on the verification machine (2026-11-01, tree `b5ec30b`)
+
+The section above was only simulated locally with `--no-parser`. This round ran it on the Mac itself:
+
+```text
+check-swift: tree-sitter is not installed, so files are not parsed for syntax; the rule checks still run.
+  python3 -m pip install tree-sitter tree-sitter-swift
+check-swift: 95 files checked by the rules only
+exit 0
+
+check-docs: ok
+exit 0
+
+python3 -c 'import tree_sitter, tree_sitter_swift'
+exit 1 (ModuleNotFoundError: No module named 'tree_sitter')
+```
+
+**The boundary still needs saying**: on that machine **the rules ran and the syntax parse did not**. Syntax errors are caught there by the real compiler (`swift build` / `xcodebuild`), so nothing is left uncovered; to parse as well, install tree-sitter on that machine — an environment choice, not a code problem.
+
+From the next round `verify-ios.sh` shows `PASS python3 scripts/check-swift.py (rules only: no parser here)` for that row instead of a SKIP.
+
+## `check-swift.py` no longer skips on the Mac (2026-11-01)
+
+Every gate run on the Mac carried one SKIP: `check-swift.py` exited 3 because that machine has no Python tree-sitter. That left the check not running on **the one machine that can actually compile the tree**.
+
+Only the syntax parse needs tree-sitter; the rules (must import `VeneraCatCore` / `NekularityKit`, duplicate test names, unterminated strings, unknown identifiers, predicate shapes) are all plain text. So a missing parser now downgrades to the rules and says so, rather than exiting:
+
+```
+check-swift.py --quiet --no-parser     → exit 0 (rules run, parsing skipped)
+```
+
+Negative validation: a temporary file naming `MobileCore` without the import made `--no-parser` report `names MobileCore but does not import VeneraCatCore` and exit 1; removing it returned to 0.
+
+### Every assertion has to be asked: is it also true on the previous screen?
+
+Auditing my own cases turned up two assertions that would **pass for the wrong reason**:
+
+- After switching a category value, the case only asserted "the comic is still there" — it was already on screen, so `waitForExistence` returned at once. It now waits for **the tapped chip to become the selected one**.
+- After switching to the shelf tab, the case only asserted "the comic's title is there" — but **the detail page's title is the same string**, so a tab switch that did nothing would still pass. It now asserts `navigationBars["书架"]` first, then the shelf's own progress line (`Chapter 1 … 第 1 页`).
+
+The rule: **if the asserted element is also on the screen before the action, the assertion cannot show the action happened.** Checked case by case, the rest only hold on the target screen — comment body, favourites list, section chips, the `callback_probe · probe` title.
+
+## What each of the thirteen interface cases proves (2026-11-01)
+
+With this many cases, "it ran" is easy to hear as "it is all verified". This table says what each one rests on, and whether it proves the client or a site.
+
+| Case | What it proves | Depends on |
+|---|---|---|
+| `testTabsExist` | the four tabs are there | nothing |
+| `testSeededSourcesAppear` | the seed reached the device and parsed; includes the test source, without which the callback and tag cases skip for no good reason | the seed |
+| `testSourceOffersInPageLogin` | a source that declares web login opens its login sheet | the seed (no login is submitted) |
+| `testCallbackSettingRuns` | a source's own button can be pressed and its answer reaches the screen | the test source |
+| `testSearchReachesDetailWithTags` | search → results → detail, with tags and chapters drawn | the test source |
+| `testTagTapOpensTheSourcesRule` | a tag tap follows the source's rule rather than a guess by the client | the test source |
+| `testBrowseLoadsSections` | the section chips, the first section's comics, and that switching changes the list | the test source (two sections) |
+| `testCommentsShowTheSourcesThread` | the comments entry appears only when the source declares it, and the thread shows its author and body | the test source |
+| `testSearchHistorySurvivesRelaunch` | a searched word is still there after the app is closed and opened again (writing and reading that file back is the app's job, and a unit test cannot show it) | the test source |
+| `testSourceFavoritesShowWhatTheSourceKeeps` | the favourites a source keeps are listed (they live in a **top-level** `favorites` block, not inside `comic`; putting them in the wrong place yields an empty page rather than an error) | the test source |
+| `testReaderDrawsTheChaptersPage` | the chapter's image really decodes into a page (the criterion is 收藏本页 going from disabled to enabled, not "the reader opened") | the test source plus the loopback server in the test runner |
+| `testReadingPutsTheComicOnTheShelf` | after reading, the shelf remembers the comic (the reader writes progress and the shelf reads it back; a unit test cannot show that) | the same |
+| `testCategoryPageListsItsPartsAndComics` | the category page offers both the choices and the results, and switching a value really changes the **selected** state (`category` and `categoryComics` are two halves of one contract; doing only the first draws choosers that never load anything) | the test source (declares `category`) |
+
+**Not one of them uses a real site.** They prove the client presents what a source declares; whether real sites search, log in and browse is what the desktop's live sweep and live tests are for. A device, a real account and background playback still have no evidence at all.
+
+That line is not modesty: stage 12 is the example. The browse case failed and looked like the client drawing no sections; tracing it showed the test demanded an element the client deliberately does not draw for a single-section source. **A wrong assertion and a wrong implementation look identical on a screen**, so every case has to name the design decision it rests on.
+
+## Core's Apple CI is now third-party evidence (2026-11-01, commit `d81445f`)
+
+"the xcframework builds and the Swift smoke tests pass" used to rest on this machine and on the Mac worker. GitHub has now run it on its own macOS 26 / Xcode 26.6 runner: four jobs green, and the log was read rather than the colour:
+
+```
+RESULT gofmt=ok / vet=ok / test=ok / bind=ok
+RESULT bind_seconds=347
+RESULT xcframework_total=101M
+RESULT slice_ios-arm64_x86_64-simulator= 40M / slice_ios-arm64= 21M / slice_macos-arm64_x86_64= 40M
+RESULT device_binary_stripped= 21M / device_binary_gzip=7.5M
+Swift smoke (macOS) 8 passed; Swift smoke (iOS simulator) 8 passed, ** TEST SUCCEEDED **
+```
+
+So Core's Apple surface is not "it compiles on my machine": an environment I do not control reproduces it.
+
+## The whole gate exited 0 for the first time (2026-11-01, tree `848d748`, Core `d81445f`)
+
+`sh scripts/verify-ios.sh` passed as a whole: seven interface cases **6 PASS / 1 SKIP / 0 FAIL**, `check-core-pin: ok (d81445fbcf04)`, Core re-fetched at the new pin and the framework rebuilt, `swift test` 229 / 43.
+
+The six passes cover the source-capability line: tabs, seeded sources, the in-page login sheet, **a setting callback** (dialog plus the inline answer `ran`), **search to detail** (with tags and chapters) and **a tag tap** (`callback_probe · probe`).
+
+**The evidence boundary matters**: search-to-detail and the tag case both use the repository's own Probe source and touch no network. So this round proves the client *presents* those capabilities, and says nothing about whether a real site's search, login or browse work — that is what the desktop's live sweep and live tests are for.
+
+The browse case skipped for a reason in the tests rather than the app: the app remembers the selected source, the tag case had switched to the Probe source, and the browse case inherited it while that source had no category entry. Fixed in the same round: `chooseSource` makes each case state the source it needs, the Probe source gained an `explore` section, and the browse case now asserts a section and its comic.
+
+## How far the interface tests have got (2026-11-01, tree `79a5dbb`)
+
+Seven cases, **6 PASS / 1 FAIL**, and for the first time the source capabilities themselves are proven on a simulator: tabs, seeded sources, the in-page login sheet, **a setting callback** (the `Probe Result` dialog and the inline answer `ran`), the browse screen, and **a tag tap** (the `callback_probe · probe` sheet).
+
+What did not pass is search-to-detail: the tree exported at failure clearly holds `detail.comments`, the tags and chapters, yet the assertion said the controls never appeared. The cause is `element()` walking every descendant of the app, where a single evaluation can take longer than the timeout it was given — so an element on screen is reported missing. It now asks the cheap, type-scoped queries first (buttons, staticTexts, cells), waits for `detail.comments` or one cell, and attaches `detail-tree` when neither appears.
+
+The same round published Core as the single commit `d81445f` and moved both pins; a distinguishing experiment also corrected a claim: **`mobile.CallSettingCallback` serves iOS only**, the desktop goes through its own `internal/core`, so "Core is fixed, both clients are fine" was wrong and is withdrawn.
+
+## What each claim rests on (2026-11-01)
+
+"Passing" means different things at different levels, so the current claims are listed by the evidence behind them. The point is to keep a compile from being read as a run.
+
+| Claim | Level of evidence | Note |
+|---|---|---|
+| Core surface and Kit calls agree | Static, plus a Mac compile | `check-kit-core-calls.py`, `check-core-surface.sh`, and `swift build`/`swift test` actually running on the Mac |
+| Unit tests pass | A Mac run | `swift test` 229 tests / 43 suites, executed inside `verify-ios.sh` |
+| The app builds | A Mac run | Unsigned `xcodebuild build` and `build-for-testing` both succeeded |
+| The seed reaches the device | A Mac run | 127,249 bytes written, the device file md5 matches the seed, four records parse |
+| Tabs, seeded sources, login sheet, browse screen | Simulator interaction | UI cases passed, with captures and a recording |
+| The search field works | **Verified (simulator)** | `.searchable` drew no field here at all, which the tree proved; the screen's own field takes a query and the case walks through to a detail page |
+| The callback button can be pressed | **Verified (simulator)** | The button was visible with a hit area that took no press; after the `HStack` row both the dialog and the inline answer `ran` were observed |
+| Tags can be tapped | **Verified (simulator)** | The other place the same container swallowed presses; tapping `probe` produced `callback_probe · probe` |
+| Browse sections | **Fixed, awaiting a run** | The case used to skip because it inherited a source with no categories; each case now names its source and the Probe source has an `explore` section |
+| Devices, real accounts, background lock | Nothing | No evidence at all |
+
 ## Not verified
 
 **This change has been through a real Xcode build** (2026-10-31, the same Mac): XcodeGen came from the release page binary (2.46.0, in `/tmp/xcg`, **no Homebrew and not on the system PATH**), `xcodegen generate` → `xcodebuild -scheme Nekularity build` reported `BUILD SUCCEEDED`, and the built `Nekularity.app/Info.plist` carries `NSAllowsArbitraryLoads = true`; `-showBuildSettings` echoes `INFOPLIST_FILE = App/Info.plist` and `GENERATE_INFOPLIST_FILE = NO`, with zero `Copy Bundle Resources` complaints, so `excludes: [Info.plist]` works. `scripts/verify-ats.sh` runs this chain and is part of `verify-ios.sh`, so every whole-tree run now really builds the app instead of falling back to type checking.
-- **A real iPhone**: nothing has run on one. **The simulator does run** (2026-11-01, first time): it installs, launches, draws its interface, does not crash, reports zero Core framework load failures, and reaches the interface in about 0.7 s — see "Running on a simulator for the first time" above. That was an empty container, though, so the main path (install a source, search, details, read, shelf) has not been walked on a device yet.
-- **Signing and archiving**: `xcodebuild -scheme Nekularity` uses generic/platform=iOS and does not sign; `** BUILD SUCCEEDED **` proves it compiles, not that it installs. XcodeGen is absent, so there is no `.xcodeproj` and no app bundle either.
+- **A real iPhone**: nothing has run on one. On the simulator the whole main path works — tabs, an installed source, search to detail, tags, browse sections, comments, favourites, a callback, search history across a relaunch, and **reading plus the shelf afterwards**, twelve cases. A device, a real account and background playback still have no evidence.
+- **Signing and archiving**: XcodeGen is part of the gate now (`xcodegen generate` runs every time) and `xcodebuild` produces an **unsigned `Nekularity.app`** on generic/platform=iOS; `build-for-testing` passes too. Signing, archiving and installing on a device have not been done: `** BUILD SUCCEEDED **` proves it compiles and packages, not that it installs.
 - **A real vendor account**: Magpie's sign-in, model list, usage, streaming and cancellation have only been exercised against local fake services and canned answers; no real vendor account has completed authorization on a device.
 - **Real comic sources**: the desktop's `TestLiveSource` covers these outside the repository (see Nekophage); the iOS side has no equivalent.
 
@@ -289,3 +450,266 @@ cookies from the global jar into per-source partitions, the video playback archi
 reference provider packages ship with Core, and one end-to-end run with a real account. Each is on
 Core's [docs/OPEN-QUESTIONS.en.md](https://github.com/laincat/VeneraCat-Core/blob/main/docs/OPEN-QUESTIONS.en.md) with the current
 state, the options and what staying open costs — not copied here, so the two cannot drift apart.
+
+## iOS can read one level of replies too (2026-11-01, pin `cf9eb9b`)
+
+After the desktop turned "N replies" into a button, iOS follows: tapping the count re-reads that level with `replyTo`, with 回复 X 的评论 and 返回全部评论 above it; going back passes an empty string, which the kit sends as `null` because a source tests for null.
+
+**Not verified**: a reply level usually needs a login on a real source, so this is still syntax and key checks rather than live evidence.
+
+## Voting on a comment works on iOS too (2026-11-01, pin `cf9eb9b`)
+
+The desktop gained the vote and iOS did not. This round adds it:
+
+- **Core**: `LikeComicComment(callID, key, comicID, subID, commentID, isLike)` — the same contract as the desktop, and **`false` takes the vote back** rather than being a second function.
+- **Kit**: `likeComment(...)`, with `CommentSupport.like` deciding whether the control appears at all.
+- **Interface**: each comment carries 赞 / 取消赞; the page is read again afterwards because a source may only report the new score on the next read, and the button is disabled while the vote is in flight.
+
+**What the live check covers**: `ccc` and `zaimanhua` do declare `likeComment`, but their threads need a login, so the iOS side is still syntax, call-name and key checks — voting end to end needs a real account and a device.
+
+## iOS opens a pasted link too (2026-11-01, pin `c414709`)
+
+The previous round was the desktop only. This one brings the same ability to the phone:
+
+- **Core**: `LinkDomains`, `LinkToID` and `OpenLink`. `comic.link` is an object, so it is read with `Runtime.Value` — calling it only answers "source does not define this function". When no source claims the address the target comes back empty, **which is not an error**, and the client falls back to a keyword search.
+- **Kit**: `openLink(_:)`, `linkDomains(key:)` and `LinkTarget`; `looksLikeLink` lives in the kit's `LinkDetection` because it is pure logic worth testing, and a copy inside the app target is invisible to the tests.
+- **Interface**: a search submission checks for an address first: recognised by a source, it **opens the comic**; otherwise it searches as before. Keywords with a dot — `12.5`, `v1.2` — are not mistaken for addresses, or every search would spend a round of source calls.
+
+The key gate now compares `LinkTarget` (fourteen payloads).
+
+**Not verified**: iOS is still syntax, call-name and key checks; no Mac build, no device.
+
+## Tags are tappable on iOS now (2026-11-01, pin `0c721f3`)
+
+The gap recorded above is closed: a tag in the details view is no longer plain text.
+
+- **Kit**: `clickTag(key:namespace:tag:)` returns a `TagAction` (action / keyword / param); an empty action means the source has no opinion, **not a failure**.
+- **Interface**: a tag is a button when the source declares `onClickTag`, and stays text when it does not. "search" opens `SourceSearchSheet` (one source's results, with numbered and cursor paging, each row opening the comic); "category" opens the category page **with the parameter the source named selected**; anything else says plainly that the source did not say what the tag means.
+- **Parameter lookup**: `CategoryPart.param(forValueAt:)` and `CategoryModel.paramTarget` repeat the loader's own rule (per-value parameter, then `groupParam`, then the value).
+
+**A silent hole found while checking**: `ComicDetails.subId` was declared but **never in `CodingKeys` and never decoded**, so every comment thread looked its comic up by an empty string. The decode is in place, with a test that a numeric sub id still travels as text.
+
+**Not verified**: still syntax, call-name and key checks; no Mac build, no device.
+
+## Pin `0c721f3`: Core answers what a tapped tag means; iOS does not ask yet (2026-11-01)
+
+Core gained `ClickTag`, which hands a client the source's own meaning for a tag — a search keyword, a category parameter, or an empty action for "no opinion". **iOS only moves its pin this round**: tags are still plain text there and a tap does nothing. The desktop now opens the category tab on the parameter the source names.
+
+## iOS has a comment thread too (2026-11-01, pin `8c5d0de`)
+
+The desktop gained comments and iOS did not. This round adds it:
+
+- **Core**: `CommentSupport(key)` reports which of load/send/like the source declares; `ComicComments(...)` normalises the thread into `{comments, maxPage}` — a numeric id or score stays readable text, a string reply count becomes a number, and a comment without an id is still a comment; `SendComicComment(...)`. The shapes are named types so the key gate can compare them.
+- **Kit**: `commentSupport` / `comments` / `sendComment`, and `ComicComment` gives an id-less comment a stable `identity`, which a list needs to tell two rows apart.
+- **Interface**: `ComicCommentsView` — list, pages, reply, send, refresh; `ComicDetailView` shows 评论 only when the source declares comments (`commentSupport` is read with the details, not in the view body). `ComicDetails` carries `subId`.
+
+The key gate now compares `ComicComment`, `CommentSupport` and `TagAction` (thirteen payloads), verified negatively: renaming `replyCount` to `replyTotal` in Swift makes it name the key and exit 1.
+
+**Not verified**: the iOS side is still syntax, call-name and key checks; no Mac build, no device.
+
+## The iOS browse page uses Core's shared implementation now (2026-11-01, pin `c855fd3`)
+
+The gap recorded in the previous section is closed: browse **shape normalisation** (the four types and the `load`/`loadNext` fallback) moved into Core's `comic/js`, and both the desktop and iOS call it instead of building `explore[i].load` themselves.
+
+- **Core**: `js.Runtime.Explore` normalises the four shapes and handles cursors; `mobile.ComicExplore(callID, key, index, page, cursor)` hands it to the phone. Both have tests (shapes, cursor fallback, an index past the end).
+- **Kit**: `explore(key:index:page:cursor:)` goes through `comicExplore` rather than building the path; `ExploreResult.next` carries the cursor back.
+- **Interface**: a cursor browse shows 第 N 批 instead of inventing a page count, and 上一页 is hidden there — the source only hands out the next token, and going back would need history this does not keep.
+
+**Not verified**: the iOS side is still syntax and key checks only; no Mac build, no device.
+
+## On iOS the browse page is still broken for cursor sources (2026-11-01, pin `110b0d8`)
+
+The desktop sweep found all three of `ehentai`'s browses unusable — it declares only `loadNext(next)` and the client only called `load`. Core's part is fixed (a UI call with no result no longer fails without a handler).
+
+**iOS only moves its pin this round**: `CoreClient.explore` builds `explore[i].load` itself and never goes through Core's cursor fallback, so a source like `ehentai` still fails there. That is a known gap, not something fixed.
+
+## The iOS panel would have been empty in the same situation (2026-11-01, pin `7019844`)
+
+After the desktop started recording Core's own failures, the same check on iOS found that mobile's `CallComic` **recorded nothing either**. The most ordinary failure — a site answering 403 — would have left the iOS panel as empty as the desktop one was before the fix.
+
+- `CallComic` now records the source key, the call path and the cause when the source is unknown or the call fails, the same shape the desktop writes.
+- Verified negatively: turning that `if err != nil` into `if false` makes the test fail immediately, and restoring it passes.
+
+## iOS has a source log panel too (2026-11-01, pin `02edab3`)
+
+The previous section said iOS's log panel was not written; this round adds it:
+
+- **Core**: `LogLines()` returns the last 400 lines as JSON (source key and a millisecond timestamp), `ClearLogLines()` empties them. An empty buffer is `[]` rather than `null`, because the client decodes an array and `null` is not one. The host still receives every line, so existing console output loses nothing.
+- **Kit**: `logLines()` / `clearLogLines()`, plus `SourceLogEntry`.
+- **Interface**: 源日志 in the sources menu opens a list (time, source key, title, text; errors red, warnings orange) with 复制全部 for a report, 清空, and pull to refresh.
+
+Two capability paths were added to the gate, and `mobile.LogEntry ↔ SourceLogEntry` joined the key check (ten payloads now); the negative run renames `time` to `when` in Swift and the gate names the key and exits 1.
+
+## Pin `ab719fb`: Core tags a source's log lines with the source (2026-11-01)
+
+Core gains an optional `Services.LogSource` (with the source key) and keeps the last 400 lines for a client to show; the desktop has a 源日志 panel. **iOS only moves its pin this round — its log panel is not written**, so the same lines still go to the console there.
+
+## Pin `a93ac09`: base64 tolerates transport artefacts (2026-11-01)
+
+Core now drops a UTF-8 BOM and ASCII whitespace before decoding base64. It was triggered by a real source's domain-list endpoint starting to answer with a BOM, which crashed its init on `null.length` before its own fallback list could run. iOS only moves its pin.
+
+## The key check now covers the restore plan (2026-11-01)
+
+The importer only started reading `entry.data` this round: if Core spelled a key differently from Swift, the result would be the same bug being fixed — writing nothing, silently. `check-json-keys.py` gains `backup.Plan ↔ BackupPlan` and `backup.SourceRestore ↔ BackupSource`, and now compares 9 payloads.
+
+The negative check was run: renaming `data` in the Swift model makes the gate report "BackupSource reads \"sourceDataRenamed\", which Core's SourceRestore never sends" and exit 1; restoring the name returns it to ok.
+
+## Pin `9013ca5`: an export can no longer be written into something unreadable (2026-11-01)
+
+Core's writer checked the script's size and not `comic_source/<key>.data`, while the reader caps every `comic_source/` file at 16 MiB. The writer now holds the same cap and refuses, naming the source. iOS only moves its pin here; no interface change.
+
+## The iOS import never wrote a source's data at all (2026-11-01)
+
+After fixing `.data` on the desktop, checking iOS turned up something worse: **`BackupImporter` never read `entry.data`** — an imported source got its script and lost its data and settings, with no notice. The desktop, at least, wrote the data.
+
+Now:
+
+- **Import**: once a source installs, `restoreValues` splits its values by the keys the source declares under `settings` — declared ones go to the settings bucket, the rest to data. **A source that fails to install writes nothing**: guessing a bucket means putting a token in the settings panel.
+- **Export**: `SourceStore.allValues(key:)` merges both buckets into the single object the archive asks for, with data winning a name clash.
+- The import summary gained 源数据 N 项 so success is not reported as nothing.
+
+A test pins `allValues`: settings keys appear, and a data key overrides a settings key of the same name.
+
+## The export carries each source's own data (2026-11-01, pin `e46c8f9`)
+
+The first version exported only the script, so a restored source came back logged out and unsure which domain it was on. The format also holds `comic_source/<key>.data`.
+
+- Core cannot enumerate the host's store, so `ExportBackup` takes a `sourceDataJSON` shaped `{"<key>": {"<name>": <value>}}`.
+- The kit's `exportBackup(searchHistory:sourceKeys:)` collects it per source through `SourceStore.allData(key:)`, which returns that source's whole data object as JSON text (`{}` when it stored nothing).
+- The screen passes `library.comicSources.map(\.key)`.
+
+A test pins `allData`'s shape: key order, the big integer `12345678901234567890` kept exact, and `{}` for a source with no data.
+
+**Per-source settings still do not travel** — a separate bucket here, and merging it would make the importer file settings as data.
+
+## iOS exports backups too (2026-11-01, pin `36707d5`)
+
+The previous section said iOS's export screen was not written; this round adds it:
+
+- **Core**: `ExportBackup(historyJSON)`, which returns **base64 rather than `[]byte`** — every method here crosses the bridge as a string, so the Swift binding shape is known, while a `[]byte` return would be a shape nothing on this machine can confirm. The client decodes it back to `Data`.
+- **Kit**: `exportBackup(searchHistory:)` takes any `Sequence<String>` and turns Core's base64 into `Data`; anything that is not base64 is an error rather than an empty file.
+- **Interface**: the sources screen's import menu gains 导出备份: it takes the installed sources plus this device's search history (**reversed**, to match the archive's oldest-first order), writes `nekularity-<timestamp>.venera` to the temporary directory, and offers the share sheet (Files, mail, whatever is installed).
+
+Core's tests cover the round trip: read the export back with Core's own reader, check the source key and script text arrive, the history keeps its order, the archive holds **no** `cookie.db`, and history that is not an array is an error.
+
+## Core can write a .venera backup now; the pin follows (2026-11-01, pin `ffdfbe7`)
+
+Core gained `backup.Write` (sources plus `appdata.json`, fixed key order, two exports byte-identical), and the desktop has an export button. **iOS only moved its pin this round — its export screen is not written yet**, and that is the whole of the iOS side here.
+
+## Checking that the keys the kit decodes are keys Core sends (2026-11-01)
+
+The same failure kept returning: Core renames or drops a field, the client decodes the payload without complaint, the field is always `nil`, and the screen simply shows less. Nothing reports it.
+
+`scripts/check-json-keys.py` covers that: it compares, per type, a Go struct's `json` tags in Core against the `CodingKeys` of the matching Swift type (or, without one, its **own** stored properties). It checks the dangerous direction only — a key the kit reads that Core never sends.
+
+Writing the check hit three traps, all fixed:
+
+- The first version scanned files for `CodingKeys` and picked up a **nested** type's keys, reporting a comic's `id`/`tags` as category-page keys: 41 false problems.
+- The second fell back to property names and counted **computed** properties (`id`, `isRandom`, `isMultiSelect`).
+- The third still counted **nested struct** members (`SourceSetting.Option.value`); it now takes only depth-one stored properties.
+
+All 7 payloads agree now. Checked negatively: renaming `groupParam` to `groupParamRenamed` made it report `CategoryPart reads "groupParamRenamed", which Core's CategoryPart never sends` and exit 1; restoring returned `ok`. It runs from `verify-ios.sh`, skipping when Core is unavailable.
+
+**Boundary**: it compares only the 7 pairs in its table, and only names — not types. A comic's own `tags`/`chapters` come from the source script, not from Core, so they are out of scope.
+
+## Arity audit: 34 sources compared one by one (2026-11-01)
+
+The `favoriteId` bug last round was "the source declares four arguments and we passed three", failing silently, so this round compared the same thing everywhere: every method we call was extracted from the 34 official sources and matched against what the client passes.
+
+| Method | What the sources declare | The client |
+| --- | --- | --- |
+| `comic.loadEp` | all 34: `(comicId, epId)` | 2 |
+| `comic.loadInfo` | `(id)` | 1 |
+| `search.load` | `(keyword, options, page)` ×30, `(keyword, _, page)` ×2 | 3 |
+| `categoryComics.load` | `(category, param, options, page)` ×26, `(category, params, options, page)` ×4 | 4 |
+| `explore[i].load` | `(page)` or `()` | 1 |
+| `favorites.loadComics` | `(page, folder)` ×13, `(page)` ×1 | 2 |
+| `favorites.addOrDelFavorite` | 3 or 4 arguments | 4 (fixed last round) |
+
+Two that looked suspicious and are **not** problems:
+
+- `categoryComics.load(category, params, …)` only **spells it in the plural**: the source does `params.split('@')`, so a single string is right (`baihehui`, `goda`, `mh1234`, `mh18`).
+- `ehentai`'s `onImageLoad(image, comicId, epId, nl)` — the fourth argument is a token the **source generates and passes back only through its own retry closure**; `undefined` on the first call is correct, and the retry runs through the source's own `onLoadFailed`.
+
+The iOS category options also gained **multi-select** now (values travel as a JSON array string, as in search). To be clear: **no** official source uses `multi-select` in `categoryComics.optionList` — both occurrences are in `search.optionList`, which both clients already handled. So this is defensive, not a fix, and is recorded as such.
+
+## Removal needs the source's own handle (2026-11-01)
+
+The same fix as the desktop: iOS carries `favoriteId` now. Both `Comic` and `ComicDetails` decode it, and `setFavorite` always passes the fourth argument — the handle when there is one, `null` otherwise.
+
+Worth recording why: wnacg's delete URL is `users-fav_del-id-${favoriteId}.html`, so without the handle the request went to `del-id-undefined` and **answered 200 with the source reporting success** — it looked removed and was not. That class of failure is much harder to notice than an error.
+
+## Favorite to the source: the details page can add and remove (2026-11-01)
+
+Matching the desktop: the details page carries 收藏到源 beside the local shelf. A source with several folders gets a picker, the button reads 已在源收藏 when the comic is already in the chosen one and removes it when pressed again, and whatever the source throws is shown as written. Two lists, two controls.
+
+A source with only a folder toggle and no list (`ehentai`) does not appear here — there would be nowhere to see the comic afterwards. A single-folder source is passed `nil`, not an empty string.
+
+The kit gained `setFavorite(key:comicID:folder:adding:)`, and `scripts/check-capabilities.sh` now guards that path too.
+
+## Checking off-machine that every Core method the kit calls exists (2026-11-01)
+
+There is no Mac here, and the `MobileCore` bridge only exists once `fetch-core.sh` has built it there — so a Swift file naming `core.categoryComics(...)` when no such method exists gives **no feedback at all** until the Mac.
+
+`scripts/check-kit-core-calls.py` closes that gap: it parses the method names gomobile exports from Core's `mobile/*.go` (`func (c *Core)` and `func (m *Magpie)`), parses the methods this kit declares (since `core` may also be a `CoreClient`), and checks every `core.xxx(` call against that set. Exit code 3 when no Core checkout is available, which `verify-ios.sh` treats as a skip.
+
+It compares **names, not signatures**, so argument types still need the Mac. It does catch what actually happens: a method that was never added, or was renamed. Checked negatively: renaming `hasComic` to `hasComicGone` and `categoryComics` to `categoryComicsTypo` each made the script name the file, line and call and exit 1; restoring returned `ok (69 calls against 277 known names)`.
+
+## "The source declares it, the client ignores it" is a gate now (2026-11-01)
+
+The same kind of problem kept coming up: a source declares a capability in its script (`category`, `ranking`, `account`, `favorites`, `translation`) and the client cannot read it, with **an empty screen or an English key** as the only symptom. Each one had to be found by reading the contracts again by eye.
+
+Both repositories now have `scripts/check-capabilities.sh`, which lists — per capability — the Core/Kit entry point and the interface entry point, matched as **fixed strings** (so a rename cannot keep passing on a shared prefix), and fails when any one of those paths disappears. On iOS it runs from `scripts/verify-ios.sh` (the Mac step); on the desktop from `scripts/check.sh`.
+
+Checked negatively: renaming `favoritesView`, renaming `"favorites.loadComics"` and renaming `accountSection` each made the script name the missing capability and exit non-zero; restoring them returned `ok`.
+
+It only guarantees the **path still exists**, not that the behaviour is right — that still needs the live tests and captures.
+
+## A source's own favorites: both clients now (2026-11-01, pin `f8ec81a`)
+
+A `favorites` block holds the favorites the source keeps **on its own side**, which is a different thing from the local shelf. The three measured shapes differ: `nhentai` has one folder, a list and no folder list; `ehentai` has folders and a folder list but **no list function**; `wnacg` has all three.
+
+- **Core**: a new `Value` reads **data** (`favorites.multiFolder` is data, while `Call` invokes functions), and gomobile gains `ComicValue`.
+- **Kit**: `FavoritesSupport{supported,multiFolder,folders,canLoad}` follows from the declared paths plus `multiFolder`; `favoriteFolders` / `favoriteComics` pass what the source expects (a single-folder source gets **no** folder id).
+- **Interface**: the source's detail page grows a 源收藏 entry. A source that can list shows its folders and list; one like `ehentai` that only has folders says "这个源没有提供收藏列表" and **never calls a function that does not exist**; a missing session shows the **source's own words** and a retry.
+
+## Interface text follows the source's own table (2026-11-01, pin `239221b`)
+
+A source may keep its interface text in a `translation` table and write only a key in a setting (`title: "domain"`). iOS reads that table too now: `CoreClient.translations(key:)` returns the mapping for the device's locale, and the settings screen resolves titles through `model.title(setting)`, falling back to the key. Cookie field names are not translated — those are cookie names.
+
+## Source accounts: both clients now (2026-11-01, pin `8d2e9db`)
+
+Fifteen official sources declare an `account`, in **three** different styles: password, in-page login, and cookie fields. The desktop draws a panel per declaration (the table and measurements are in that repository's `docs/STATUS.md`); iOS has it now too:
+
+- **Kit**: `AccountStyles{password,webview,cookies,logout}` comes from `accountStyles(key:)`, which asks Core once per style with `hasComic` instead of guessing; `accountCookieFields` uses a new Core bridge entry, because the cookie names are **data** that `CallComic` cannot reach; `loginAccount` / `loginWithCookies` / `logoutAccount` run through the existing `CallComic`.
+- **Interface**: the source settings screen grows an 账号 section — account, password, 登录 and 登出 for the password style; one field per declared cookie name plus 校验并保存, letting the source's own `validate` decide; the source's error text is shown as written; a source that only offered in-page login (`nhentai`) could only say iOS 端暂不支持 at the time — **that was fixed later**, see the in-page login section below. A source that needs no account grows no section at all.
+
+Core published `8d2e9db` (the `AccountCookieFields` bridge entry) and the pin follows — Core keeps a single-commit history, so an old pin is replaced rather than kept.
+
+## The ranking page is wired up too (2026-11-01, pin `c22a944`)
+
+A source's `enableRankingPage` with `categoryComics.ranking` is **a separate entry** — nine official sources declare one, and neither client read it. The kit's `CategoryPage.ranking` now carries a flat option list (`RankingOption{value,label}`), `CoreClient.rankingComics` calls `categoryComics.ranking.load`, and the category screen grows a 排行 row that reuses the same list and pager (`rankOption` records whether the list came from the ranking, a dimension or a random search).
+
+Core published `c22a944` this round and the pin moved off `26dc9a7` — **Core keeps a single-commit history, so an old pin is replaced rather than kept**, and leaving it behind points at a commit that no longer exists.
+
+## Category browsing: wired up, not yet run on a Mac (2026-11-01, pin `26dc9a7`)
+
+The desktop could read a source's category page for a while; iOS could not, because the bridge had no entry for it. Three layers were added:
+
+- **Core**: `mobile.Core.Category` returns `{"title","parts":[...],"options":[...]}` — the same shape as `SearchOptions`, so a client reuses its filter code — and `mobile.Core.CategoryComics` loads one page, cancellable by `callID`. A source without a category page answers `{}` rather than failing. Core is published and both clients' pins moved with it.
+- **Kit**: `CategoryPage`/`CategoryPart` and `CoreClient.categoryPage` / `categoryComics`. What a value maps to is decided here, in the order per-value parameter, then the dimension's `groupParam`, then the value itself.
+- **App**: in the 浏览 tab a source that declares a category page grows a 分类 chip; inside, each dimension is a row of values, an option reloads the list, and pages work. A `random` dimension is a 随机一个标签 button that searches for **one** value — **it is never loaded as a category, and never joins several tags**: the source's `randomNumber` is "how many comics to show at the same time", while a comic search reads several tags as all of them, which on the live `nhentai` answered nothing at ten tags and was refused at twenty.
+
+`scripts/check-swift.py` parses all 79 files, and that round also fixed a gate that had been **failing on main all along**: `MagpieUsage` has a property named `each`, which tree-sitter reads as the parameter-pack keyword, so `each = try …` looked like a syntax error. The checker now treats `each` as an identifier (parameter packs do not appear in this codebase), taking the gate from "1 problem" back to "79 files parse".
+
+**Boundary**: `swift build`, the unit tests and an App build have not run on a Mac yet, so this shows the syntax parses and the logic follows Core's contract — not that it compiles. The category page and the random search on a device are unverified.
+
+**In-page login and the source API level: the app could install no official source, and its login buttons did nothing (2026-11-01, pin `9701b58`)**: both were fixed this round, and both were reproduced before being changed.
+
+1. **Source API level**: the client reported its **own** version `0.1.0` as the source API level, while every official source declares `minAppVersion = "1.0.0"` or higher, so Core refused all of them — `js: invalid source: minAppVersion 1.0.0 is required` — and the source list was permanently empty. The desktop client had already separated the two (`internal/sourceapi.Level = 1.6.3`); iOS now does too, with the level in the kit as `SourceAPI.level` and three tests pinning the behaviour: the reported level installs an official source, the app's own version does not, and a source that asks for `9.0.0` is still refused, so the level is a bounded claim rather than a bypass.
+
+2. **In-page login**: `nhentai`, `ehentai`, `ccc`, `mycomic` and `manga_dex` declare `account.loginWithWebview`, whose two callbacks are functions and cannot cross the language boundary, so Core names them with a handle. iOS gains `WebviewLoginSession` (a non-persistent WKWebView, so it cannot see another source's session) and `WebviewLoginView`: after every navigation it asks the source's own `checkStatus(url, title)`, and once that agrees it imports only the **login site's** cookies (starting and finishing host alike) into the source's partition and runs `onLoginSuccess`.
+
+The same round fixed two things beside it: the logout button sat inside the password branch, so a source that only logs in on its page could not log out; and a `type: "callback"` setting said "a source-side action the client does not support", where it now draws the source's own `buttonText` and runs it.
+
+Verification boundary: this Swift code has no compiler on the machine it was written on, so only syntax, Core call names and JSON keys were checked offline; compiling, unit tests and simulator runs happen on the Mac and are recorded separately.

@@ -8,7 +8,7 @@ set -eu
 cd "$(dirname "$0")/.."
 
 ROOT_ALLOWED=".git .github .gitattributes .gitignore AGENTS.md AGENTS.en.md LICENSE README.md README.en.md Package.swift project.yml
-App Sources Tests docs scripts build Vendor .build .swiftpm Nekularity.xcodeproj"
+App Sources Tests UITests docs scripts build Vendor .build .swiftpm Nekularity.xcodeproj"
 
 fail=0
 err() { printf 'check-docs: %s\n' "$*" >&2; fail=1; }

@@ -7,6 +7,17 @@ struct ComicDetailView: View {
     @Environment(ShelfStore.self) private var shelf
     @State private var details: ComicDetails?
     @State private var error: String?
+    /// The source's own favorites: whether it keeps them, its folders, and
+    /// whether this comic is in one. A separate list from the local shelf.
+    @State private var sourceFavorites = SourceFavoriteState()
+    /// What the source declares about comments, read once with the details.
+    @State private var commentSupport: CommentSupport?
+    @State private var showingComments = false
+    /// Whether the source answers `onClickTag`; read once with the details.
+    @State private var tagSupport = false
+    @State private var tagSearch: TagSearchRequest?
+    @State private var tagCategory: TagCategoryRequest?
+    @State private var tagNotice: String?
 
     var body: some View {
         Group {
@@ -22,14 +33,99 @@ struct ComicDetailView: View {
         }
         .navigationTitle(route.comic.title)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $tagSearch) { request in
+            SourceSearchSheet(source: route.source, keyword: request.keyword)
+        }
+        .sheet(item: $tagCategory) { request in
+            NavigationStack {
+                CategoryBrowser(source: route.source, initialParam: request.param)
+                    .navigationTitle(route.source)
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+        }
+        .alert("标签", isPresented: Binding(get: { tagNotice != nil }, set: { if !$0 { tagNotice = nil } })) {
+            Button("好") { tagNotice = nil }
+        } message: { Text(tagNotice ?? "") }
+        .sheet(isPresented: $showingComments) {
+            ComicCommentsView(source: route.source, comicID: route.comic.id, subID: details?.subId ?? "")
+        }
         .navigationDestination(for: ReaderRoute.self) { ReaderView(route: $0) }
         .task { if details == nil { await load() } }
     }
 
     private func load() async {
         error = nil
-        do { details = try await library.core.details(key: route.source, comicID: route.comic.id) } catch {
+        do {
+            details = try await library.core.details(key: route.source, comicID: route.comic.id)
+        } catch {
             if (error as? CoreError)?.isCancelled != true { self.error = error.localizedDescription }
+        }
+        await sourceFavorites.load(library.core, source: route.source, comicID: route.comic.id)
+        commentSupport = try? await library.core.commentSupport(key: route.source)
+        tagSupport = await library.core.hasComic(key: route.source, path: "comic.onClickTag")
+    }
+
+    /// Asks the source what its tag means and does that.
+    ///
+    /// The meaning belongs to the source: one says "search 作者:<name>", another
+    /// names a category parameter. A source that throws has its own words shown,
+    /// because that is the only honest answer to "why did nothing happen".
+    private func tapTag(_ namespace: String, _ tag: String) async {
+        tagNotice = nil
+        do {
+            let action = try await library.core.clickTag(key: route.source, namespace: namespace, tag: tag)
+            switch action.action {
+            case "search":
+                guard !action.keyword.isEmpty else {
+                    tagNotice = "这个源没有给出「\(tag)」的搜索词"
+                    return
+                }
+                tagSearch = TagSearchRequest(keyword: action.keyword)
+            case "category":
+                tagCategory = TagCategoryRequest(param: action.param)
+            default:
+                tagNotice = "这个源没有说明「\(tag)」该做什么"
+            }
+        } catch {
+            tagNotice = error.localizedDescription
+        }
+    }
+
+    /// The source's own favorites, drawn only when the source keeps them.
+    @ViewBuilder private var sourceFavoriteRow: some View {
+        if sourceFavorites.support.supported {
+            VStack(alignment: .leading, spacing: 6) {
+                if sourceFavorites.support.folders, sourceFavorites.folders.count > 1 {
+                    Picker("收藏夹", selection: Binding(
+                        get: { sourceFavorites.folder ?? "" },
+                        set: { value in Task { await sourceFavorites.choose(value) } })) {
+                            ForEach(sourceFavorites.folderList, id: \.id) { Text($0.name).tag($0.id) }
+                        }
+                        .pickerStyle(.menu)
+                }
+                Button(sourceFavorites.isHeld ? "已在源收藏" : "收藏到源") {
+                    let handle = details?.favoriteId ?? route.comic.favoriteId
+                    Task { await sourceFavorites.toggle(library.core, source: route.source,
+                                                        comicID: route.comic.id, favoriteID: handle) }
+                }
+                .disabled(sourceFavorites.busy)
+                if let message = sourceFavorites.message {
+                    Text(message).font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    /// A way into the thread, only when the source keeps one. Asking Core once
+    /// per comic keeps a source call out of the view body.
+    @ViewBuilder private var commentRow: some View {
+        if let support = commentSupport, support.load {
+            Button {
+                showingComments = true
+            } label: {
+                Label("评论", systemImage: "text.bubble")
+            }
+            .accessibilityIdentifier("detail.comments")
         }
     }
 
@@ -50,9 +146,33 @@ struct ComicDetailView: View {
                 if let desc = d.description, !desc.isEmpty {
                     Text(desc).font(.callout).textSelection(.enabled)
                 }
+                commentRow
+                sourceFavoriteRow
                 ForEach(Array(d.tags.enumerated()), id: \.offset) { _, tag in
-                    LabeledContent(tag.group) {
-                        Text(tag.values.joined(separator: "、")).multilineTextAlignment(.trailing)
+                    // A plain row, not `LabeledContent`: that container gives its
+                    // content a hit area that does not take a press, which is how a
+                    // callback button in the settings screen ended up visible but
+                    // unpressable. A tag has to be tappable — that is the whole point
+                    // of a source declaring what the tap means.
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        Text(tag.group).foregroundStyle(.secondary)
+                        Spacer(minLength: 8)
+                        // A tag is a way out of the comic when the source says
+                        // what tapping it means; a source with no opinion leaves
+                        // it as text rather than pretending otherwise.
+                        VStack(alignment: .trailing, spacing: 4) {
+                            ForEach(Array(tag.values.enumerated()), id: \.offset) { _, value in
+                                if tagSupport {
+                                    // .link is macOS-only; a plain button with
+                                    // the accent colour reads the same on iOS.
+                                    Button(value) { Task { await tapTag(tag.group, value) } }
+                                        .buttonStyle(.plain)
+                                        .foregroundStyle(.tint)
+                                } else {
+                                    Text(value).multilineTextAlignment(.trailing)
+                                }
+                            }
+                        }
                     }
                     .font(.callout)
                 }
@@ -157,4 +277,81 @@ struct ReaderRoute: Hashable {
 
     var chapterID: String? { chapters.indices.contains(index) ? chapters[index].id : nil }
     var title: String { chapters.indices.contains(index) ? chapters[index].title : "阅读" }
+}
+
+/// The source's own favorites for the comic on screen: whether it keeps them,
+/// which folders it has, and whether this comic is already in one.
+///
+/// A separate list from the local shelf, so it gets its own control rather than
+/// sharing the shelf's bookmark.
+@MainActor @Observable
+final class SourceFavoriteState {
+    private(set) var support = FavoritesSupport(supported: false, multiFolder: false, folders: false, canLoad: false)
+    private(set) var folders: [String: String] = [:]
+    private(set) var folder: String?
+    private(set) var held: [String] = []
+    private(set) var busy = false
+    private(set) var message: String?
+
+    var isHeld: Bool { !held.isEmpty }
+    var folderList: [(id: String, name: String)] {
+        folders.keys.sorted().map { ($0, folders[$0] ?? $0) }
+    }
+
+    /// Reads what the source offers for this comic. A source that keeps no
+    /// favorites stays silent, and no control appears.
+    func load(_ core: CoreClient, source: String, comicID: String) async {
+        support = await core.favoritesSupport(key: source)
+        guard support.supported else { return }
+        guard support.folders else { return }
+        // A source that needs a session refuses here, and its own words are the
+        // reason worth showing.
+        if let (folders, favorited) = try? await core.favoriteFolders(key: source, comicID: comicID) {
+            self.folders = folders
+            held = favorited
+            folder = favorited.first ?? folderList.first?.id
+        }
+    }
+
+    func choose(_ value: String) async {
+        folder = value.isEmpty ? nil : value
+    }
+
+    /// Adds the comic to the chosen folder, or removes it when the source
+    /// already reports it there.
+    func toggle(_ core: CoreClient, source: String, comicID: String, favoriteID: String?) async {
+        guard !busy else { return }
+        busy = true
+        message = nil
+        defer { busy = false }
+        let adding = held.isEmpty
+        do {
+            // A single-folder source takes no folder id at all.
+            let target = support.multiFolder ? folder : nil
+            try await core.setFavorite(key: source, comicID: comicID, folder: target,
+                                       favoriteID: favoriteID, adding: adding)
+            if adding {
+                held = [target ?? ""]
+                message = "已加入源收藏"
+            } else {
+                held = []
+                message = "已从源收藏移除"
+            }
+        } catch {
+            // The source's own words: "Login expired", or whatever it chose.
+            message = error.localizedDescription
+        }
+    }
+}
+
+/// One tap on a tag, resolved by the source into something to open.
+struct TagSearchRequest: Identifiable, Hashable {
+    let id = UUID()
+    let keyword: String
+}
+
+/// One tap on a tag the source mapped to a category parameter.
+struct TagCategoryRequest: Identifiable, Hashable {
+    let id = UUID()
+    let param: String
 }

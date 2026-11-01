@@ -1,5 +1,6 @@
 import NekularityKit
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 /// Installed sources, install from URL or index, and source details.
@@ -15,6 +16,9 @@ struct SourcesView: View {
     /// One notice at a time: a view shows one alert, so failures and the
     /// import summary share it.
     @State private var notice: Notice?
+    /// The exported archive, waiting for the share sheet to take it.
+    @State private var exported: ExportFile?
+    @State private var showLogs = false
 
     var body: some View {
         NavigationStack {
@@ -32,6 +36,9 @@ struct SourcesView: View {
                 Section {
                     ForEach(library.comicSources) { source in
                         NavigationLink(value: source) { SourceRow(source: source) }
+                            // A stable handle for the interface tests: a label is
+                            // localized and a source renames itself.
+                            .accessibilityIdentifier("source.\(source.key)")
                     }
                     .onDelete { offsets in
                         let keys = offsets.map { library.comicSources[$0].key }
@@ -63,6 +70,13 @@ struct SourcesView: View {
                         Button { restoreCookies = true; pickingBackup = true } label: {
                             Label("导入备份并恢复登录状态", systemImage: "key")
                         }
+                        Divider()
+                        Button { Task { await exportBackup() } } label: {
+                            Label("导出备份", systemImage: "square.and.arrow.up")
+                        }
+                        Button { showLogs = true } label: {
+                            Label("源日志", systemImage: "text.alignleft")
+                        }
                     } label: {
                         Label("导入备份", systemImage: "square.and.arrow.down")
                     }
@@ -75,6 +89,12 @@ struct SourcesView: View {
                 case .failure(let failure):
                     notice = Notice(title: "导入失败", text: failure.localizedDescription)
                 }
+            }
+            .sheet(isPresented: $showLogs) { SourceLogView() }
+            .sheet(item: $exported) { file in
+                // The share sheet saves it to Files, mails it, or anything else
+                // the user has: an export is a document, not a private format.
+                ShareSheet(url: file.url)
             }
             .alert(notice?.title ?? "", isPresented: Binding(
                 get: { notice != nil },
@@ -115,6 +135,9 @@ struct SourcesView: View {
                 "收藏 \(result.favouritesAdded) 部",
                 "搜索 \(result.searchesAdded) 条",
             ]
+            if result.valuesRestored > 0 {
+                parts.append("源数据 \(result.valuesRestored) 项")
+            }
             if result.pagesAdded > 0 {
                 parts.append("图片 \(result.pagesAdded) 张")
             }
@@ -145,6 +168,57 @@ struct SourcesView: View {
 }
 
 /// A message shown in the single alert this screen owns.
+/// One exported archive, so the share sheet can write it wherever the user says.
+/// The file is written to the temporary directory: an export is a document, not
+/// something this app keeps.
+struct ExportFile: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
+extension SourcesView {
+    /// Builds a .venera archive from the installed sources and this device's
+    /// search history, then offers it to the share sheet.
+    ///
+    /// Cookies are not in it: Core leaves them out, because they are per-source
+    /// credentials and an export is a file people mail to themselves.
+    func exportBackup() async {
+        do {
+            // The store keeps the newest first; the archive expects oldest first.
+            let data = try await library.core.exportBackup(
+                searchHistory: searches.queries.reversed(),
+                sourceKeys: library.comicSources.map(\.key))
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("nekularity-\(Self.stamp()).venera")
+            try data.write(to: url, options: .atomic)
+            exported = ExportFile(url: url)
+        } catch {
+            notice = Notice(title: "导出失败", text: error.localizedDescription)
+        }
+    }
+
+    /// A file name that sorts by time and carries no spaces: 20261101-010203.
+    static func stamp(_ now: Date = Date()) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyyMMdd-HHmmss"
+        return f.string(from: now)
+    }
+}
+
+/// A share sheet for one file. SwiftUI's ShareLink needs a value known when the
+/// view is built; here the file is made in response to a tap, so the controller
+/// is presented directly.
+struct ShareSheet: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
 private struct Notice: Identifiable {
     let id = UUID()
     let title: String
@@ -196,6 +270,13 @@ struct SourceDetailView: View {
                 } label: {
                     Label("设置", systemImage: "slider.horizontal.3")
                 }
+                .accessibilityIdentifier("source.settings")
+                NavigationLink {
+                    SourceFavoritesView(source: current)
+                } label: {
+                    Label("源收藏", systemImage: "heart")
+                }
+                .accessibilityIdentifier("source.favorites")
                 Toggle("启用", isOn: Binding(get: { current.enabled }, set: { on in
                     Task { await run { try await library.setEnabled(current.key, on) } }
                 }))

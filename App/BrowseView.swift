@@ -47,11 +47,17 @@ struct BrowseView: View {
 
     @ViewBuilder private var content: some View {
         VStack(spacing: 0) {
-            if model.pages.count > 1 {
+            if model.pages.count > 1 || model.hasCategory {
                 browseTabs
                 Divider()
             }
-            browseBody(model)
+            // A source's category page is its own thing next to its browses:
+            // the same value pickers and pages, but chosen rather than listed.
+            if model.showCategory {
+                CategoryBrowser(source: sourceKey)
+            } else {
+                browseBody(model)
+            }
         }
     }
 
@@ -59,23 +65,36 @@ struct BrowseView: View {
     private var browseTabs: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
+                if model.hasCategory {
+                    Button {
+                        Task { await model.showCategoryPage(library.core) }
+                    } label: {
+                        tabLabel("分类", selected: model.showCategory)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(model.showCategory ? .isSelected : [])
+                }
                 ForEach(Array(model.pages.enumerated()), id: \.offset) { i, page in
                     Button {
                         Task { await model.select(library.core, index: i) }
                     } label: {
-                        Text(page.title.isEmpty ? "分类 \(i + 1)" : page.title)
-                            .font(.callout)
-                            .padding(.horizontal, 12).padding(.vertical, 6)
-                            .background(i == model.index ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary),
-                                        in: Capsule())
-                            .foregroundStyle(i == model.index ? Color.white : Color.primary)
+                        tabLabel(page.title.isEmpty ? "浏览 \(i + 1)" : page.title,
+                                 selected: !model.showCategory && i == model.index)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityAddTraits(i == model.index ? .isSelected : [])
+                    .accessibilityAddTraits(!model.showCategory && i == model.index ? .isSelected : [])
                 }
             }
             .padding(.horizontal).padding(.vertical, 8)
         }
+    }
+
+    private func tabLabel(_ title: String, selected: Bool) -> some View {
+        Text(title)
+            .font(.callout)
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .background(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary), in: Capsule())
+            .foregroundStyle(selected ? Color.white : Color.primary)
     }
 
     @ViewBuilder private func browseBody(_ model: BrowseModel) -> some View {
@@ -113,29 +132,44 @@ struct BrowseView: View {
                             }
                         }
                     }
-                    if result.maxPage > 0 { pager(result) }
+                    if result.maxPage > 0 || !result.next.isEmpty { pager(result) }
                 }
                 .padding(.bottom, 24)
             }
         }
     }
 
-    /// Pages, for a browse that pages instead of listing everything.
+    /// Pages, for a browse that pages instead of listing everything. A browse
+    /// that pages by cursor has no total to show, so it says how many pages have
+    /// been read instead of inventing one.
     private func pager(_ result: ExploreResult) -> some View {
         HStack {
-            Text("第 \(model.page) / \(result.maxPage) 页").font(.footnote).foregroundStyle(.secondary)
+            if result.next.isEmpty {
+                Text("第 \(model.page) / \(result.maxPage) 页").font(.footnote).foregroundStyle(.secondary)
+            } else {
+                Text("第 \(model.page) 批").font(.footnote).foregroundStyle(.secondary)
+            }
             Spacer()
-            Button("上一页") { Task { await model.loadPage(library.core, page: model.page - 1) } }
-                .disabled(model.page <= 1 || model.loading)
-            Button("下一页") { Task { await model.loadPage(library.core, page: model.page + 1) } }
-                .disabled(model.page >= result.maxPage || model.loading)
+            // A cursor browse cannot go back: the tokens are not kept, and the
+            // source only ever hands out the next one.
+            if result.next.isEmpty {
+                Button("上一页") { Task { await model.loadPage(library.core, page: model.page - 1) } }
+                    .disabled(model.page <= 1 || model.loading)
+            }
+            if result.next.isEmpty {
+                Button("下一页") { Task { await model.loadPage(library.core, page: model.page + 1) } }
+                    .disabled(model.page >= result.maxPage || model.loading)
+            } else {
+                Button("下一页") { Task { await model.nextPage(library.core) } }
+                    .disabled(model.loading)
+            }
         }
         .padding(.horizontal).padding(.vertical, 12)
     }
 }
 
 /// One comic in a browse list.
-private struct BrowseRow: View {
+struct BrowseRow: View {
     let source: String
     let comic: Comic
 
@@ -165,6 +199,10 @@ final class BrowseModel {
     private(set) var pages: [ExplorePage] = []
     private(set) var index = 0
     private(set) var result: ExploreResult?
+    /// Whether the source declares a category page at all.
+    private(set) var hasCategory = false
+    /// True while the category page is showing instead of a browse.
+    private(set) var showCategory = false
     private(set) var page = 1
     var loading = false
     var error: String?
@@ -175,11 +213,12 @@ final class BrowseModel {
 
     /// Opens a source: reads its browses, then the first one.
     func open(_ core: CoreClient, source: String) async {
+        generation += 1
         guard !source.isEmpty else {
-            pages = []; result = nil; error = nil
+            self.source = ""; pages = []; result = nil; error = nil
+            hasCategory = false; showCategory = false; loading = false
             return
         }
-        generation += 1
         let gen = generation
         self.source = source
         pages = []
@@ -187,13 +226,20 @@ final class BrowseModel {
         result = nil
         page = 1
         error = nil
+        hasCategory = false
+        showCategory = false
         loading = true
         do {
             let pages = try await core.explorePages(key: source)
             guard gen == generation else { return }
             self.pages = pages
+            self.hasCategory = (try? await core.categoryPage(key: source)) != nil
+            guard gen == generation else { return }
             loading = false
-            guard !pages.isEmpty else { return }
+            guard !pages.isEmpty else {
+                showCategory = hasCategory
+                return
+            }
             await load(core, index: 0, page: 1, generation: gen)
         } catch {
             guard gen == generation else { return }
@@ -202,18 +248,31 @@ final class BrowseModel {
         }
     }
 
+    /// Switches to the category page; a browse tab switches back.
+    func showCategoryPage(_ core: CoreClient) async {
+        showCategory = true
+    }
+
     /// Chooses another browse of the same source.
     func select(_ core: CoreClient, index: Int) async {
+        showCategory = false
         guard pages.indices.contains(index), index != self.index || result == nil else { return }
         generation += 1
         await load(core, index: index, page: 1, generation: generation)
     }
 
-    /// Moves to another page of a paging browse.
+    /// Moves to another page of a numbered browse.
     func loadPage(_ core: CoreClient, page: Int) async {
         guard let result, result.maxPage > 0, (1...result.maxPage).contains(page), page != self.page else { return }
         generation += 1
-        await load(core, index: index, page: page, generation: generation)
+        await load(core, index: index, page: page, generation: generation, cursor: "")
+    }
+
+    /// Asks a cursor browse for the page after this one.
+    func nextPage(_ core: CoreClient) async {
+        guard let result, !result.next.isEmpty else { return }
+        generation += 1
+        await load(core, index: index, page: page + 1, generation: generation, cursor: result.next)
     }
 
     /// Reads the chosen browse again, as pull-to-refresh asks.
@@ -223,12 +282,12 @@ final class BrowseModel {
         await load(core, index: index, page: page, generation: generation)
     }
 
-    private func load(_ core: CoreClient, index: Int, page: Int, generation gen: Int) async {
+    private func load(_ core: CoreClient, index: Int, page: Int, generation gen: Int, cursor: String = "") async {
         loading = true
         error = nil
         self.index = index
         do {
-            let result = try await core.explore(key: source, index: index, page: page)
+            let result = try await core.explore(key: source, index: index, page: page, cursor: cursor)
             guard gen == generation else { return }
             self.result = result
             self.page = page

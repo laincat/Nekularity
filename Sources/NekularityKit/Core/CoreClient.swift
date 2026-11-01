@@ -277,6 +277,387 @@ public final class CoreClient: @unchecked Sendable {
         return try Self.decode(ComicPage.self, out)
     }
 
+    /// Searches whichever way the source declares.
+    ///
+    /// A source offers `search.load(keyword, options, page)` or
+    /// `search.loadNext(keyword, options, next)`, and ehentai offers only the
+    /// second. Deciding that here means a screen cannot forget it — the browse
+    /// tab and the category random search each forgot it once, in different
+    /// places.
+    public func searchPage(key: String, keyword: String, page: Int, options: [String]) async throws -> ComicPage {
+        if await hasComic(key: key, path: "search.load") {
+            return try await search(key: key, keyword: keyword, page: page, options: options)
+        }
+        guard page <= 1 else {
+            // The caller has to keep the cursor: only it knows which page it is
+            // on, and the source only hands out the next one.
+            throw CoreError("这个源用游标翻页,请用 searchNext 继续")
+        }
+        return try await searchNext(key: key, keyword: keyword, cursor: nil, options: options)
+    }
+
+    /// The source's category page; nil when it declares none.
+    public func categoryPage(key: String) async throws -> CategoryPage? {
+        let out = try await run(cancellable: false) { core, _ in try Self.call { core.category(key, error: $0) } }
+        if out.isEmpty || out == "{}" { return nil }
+        do {
+            return try Self.decode(CategoryPage.self, out)
+        } catch {
+            // A page with a title but no parts behaves as none.
+            if out.contains("\"parts\":[]") { return nil }
+            throw error
+        }
+    }
+
+    /// Loads one page of a category. `category` is the chosen value itself;
+    /// `param` is what that value maps to.
+    public func categoryComics(key: String, category: String, param: String,
+                               options: [String], page: Int) async throws -> ComicPage {
+        let optionsJSON = JSONValue.array(options.map(JSONValue.string)).jsonText
+        let out = try await run { core, id in
+            try Self.call {
+                core.categoryComics(id, key: key, category: category, param: param,
+                                    optionsJSON: optionsJSON, page: max(1, page), error: $0)
+            }
+        }
+        return try Self.decode(ComicPage.self, out)
+    }
+
+    /// Builds a .venera archive from the installed sources and the given search
+    /// history, and returns its bytes for the user to save.
+    ///
+    /// The client cannot assemble the archive itself — the scripts live in
+    /// Core's registry — and cookies are never part of it: they are per-source
+    /// credentials and an export is a file people mail to themselves.
+    public func exportBackup(searchHistory: some Sequence<String>, sourceKeys: some Sequence<String> = []) async throws -> Data {
+        let historyJSON = JSONValue.array(searchHistory.map(JSONValue.string)).jsonText
+        // Core cannot enumerate the host's store, so each source's stored data is
+        // collected from the keys the caller names: a restore that brings back
+        // code without it leaves the source logged out and pointed at no domain.
+        var perSource: [(String, JSONValue)] = []
+        for key in sourceKeys {
+            perSource.append((key, try JSONValue.parse(host.store.allValues(key: key))))
+        }
+        let dataJSON = JSONValue.object(OrderedObject(perSource)).jsonText
+        // Core answers with base64: every method here crosses the bridge as a
+        // string, and a []byte return would be a binding shape nothing on this
+        // machine can confirm.
+        let encoded = try await run(cancellable: false) { core, _ in
+            try Self.call { core.exportBackup(historyJSON, sourceDataJSON: dataJSON, error: $0) }
+        }
+        guard let data = Data(base64Encoded: encoded, options: []) else {
+            throw CoreError("备份内容不是有效的 base64")
+        }
+        return data
+    }
+
+    /// The hosts a source claims for its own links, e.g. ["nhentai.net"].
+    public func linkDomains(key: String) async throws -> [String] {
+        let json = try await run(cancellable: false) { core, _ in
+            try Self.call { core.linkDomains(key, error: $0) }
+        }
+        return try Self.decode([String].self, json)
+    }
+
+    /// Asks every installed source that claims the address's host whether it is
+    /// one of its own comics. An empty target means none did, and the caller
+    /// should search for the text as a keyword instead.
+    ///
+    /// Pasting a link is what a reader does when an address arrives in a chat,
+    /// and searching for the URL itself finds nothing.
+    public func openLink(_ raw: String) async throws -> LinkTarget {
+        let json = try await run { core, id in
+            try Self.call { core.openLink(id, raw: raw, error: $0) }
+        }
+        return try Self.decode(LinkTarget.self, json)
+    }
+
+    /// What the source means by tapping one of its tags. A source without
+    /// `onClickTag` answers an empty action rather than an error: having no
+    /// opinion is not a failure.
+    public func clickTag(key: String, namespace: String, tag: String) async throws -> TagAction {
+        let json = try await run { core, id in
+            try Self.call { core.clickTag(id, key: key, namespace: namespace, tag: tag, error: $0) }
+        }
+        return try Self.decode(TagAction.self, json)
+    }
+
+    /// Runs a setting the source declares as `type: "callback"`.
+    ///
+    /// The callback is a function inside the source, so it cannot be carried
+    /// across: the client names the setting and reports what the source
+    /// answered, which is what such a button exists for.
+    public func callSettingCallback(key: String, setting: String) async throws -> String {
+        let json = try await run { core, id in
+            try Self.call { core.callSettingCallback(id, key: key, settingKey: setting, error: $0) }
+        }
+        return Self.plainText(json)
+    }
+
+    /// The login a source declares on its own page, or an empty one when it
+    /// logs in another way.
+    ///
+    /// The two callbacks cannot cross the language boundary, so `handle` names
+    /// them inside the source's runtime and is passed back to the two calls
+    /// below. `{}` from Core means this source has no browser login, which is
+    /// how a client tells the three styles apart.
+    public func webviewLogin(key: String) async throws -> WebviewLogin {
+        let json = try await run(cancellable: false) { core, _ in
+            try Self.call { core.accountWebviewLogin(key, error: $0) }
+        }
+        return try Self.decode(WebviewLogin.self, json)
+    }
+
+    /// Asks the source whether the page the browser is showing means "logged
+    /// in". Only the source knows: five of them test the title, and a client
+    /// that guessed would store a half-finished login.
+    public func webviewStatus(key: String, handle: String,
+                              pageURL: String, title: String) async throws -> Bool {
+        let json = try await run { core, id in
+            try Self.call {
+                core.webviewStatus(id, key: key, handle: handle,
+                                   pageURL: pageURL, title: title, error: $0)
+            }
+        }
+        struct Status: Decodable { var done: Bool }
+        return try Self.decode(Status.self, json).done
+    }
+
+    /// Runs the source's onLoginSuccess once the browser's cookies are stored.
+    /// A source without that callback finishes normally: the cookies are what
+    /// matters, the callback only refreshes something else.
+    public func webviewLoginDone(key: String, handle: String) async throws {
+        try await run { core, id in
+            _ = try core.webviewLoginDone(id, key: key, handle: handle)
+            return ""
+        }
+    }
+
+    /// Which comment functions the source declares.
+    public func commentSupport(key: String) async throws -> CommentSupport {
+        let json = try await run(cancellable: false) { core, _ in
+            try Self.call { core.commentSupport(key, error: $0) }
+        }
+        return try Self.decode(CommentSupport.self, json)
+    }
+
+    /// One page of a comic's comment thread. `replyTo` reads the replies to one
+    /// comment; empty reads the thread itself.
+    public func comments(key: String, comicID: String, subID: String,
+                         page: Int = 1, replyTo: String = "") async throws -> CommentPage {
+        let json = try await run { core, id in
+            try Self.call {
+                core.comicComments(id, key: key, comicID: comicID, subID: subID,
+                                   page: max(1, page), replyTo: replyTo, error: $0)
+            }
+        }
+        let page = try Self.decode(CommentPage.self, json)
+        // A source may return comments without ids; give each one a stable
+        // identity so a list can draw it.
+        var fixed = page
+        fixed.comments = page.comments.enumerated().map { index, one in
+            var copy = one
+            copy.fallbackID = "\(index)-\(one.userName)-\(one.time)"
+            return copy
+        }
+        return fixed
+    }
+
+    /// Posts a comment. Any answer from the source counts as success.
+    ///
+    /// Core returns a BOOL with an error, and Swift turns that into a throwing
+    /// call: there is no error pointer to pass, and the failure is the throw.
+    public func sendComment(key: String, comicID: String, subID: String,
+                            content: String, replyTo: String = "") async throws {
+        try await run { core, id in
+            _ = try core.sendComicComment(id, key: key, comicID: comicID, subID: subID,
+                                          content: content, replyTo: replyTo)
+            return ""
+        }
+    }
+
+    /// Votes on a comment. `isLike` false takes the vote back: it is the same
+    /// call with the other flag, not a separate function.
+    public func likeComment(key: String, comicID: String, subID: String,
+                            commentID: String, isLike: Bool) async throws {
+        try await run { core, id in
+            _ = try core.likeComicComment(id, key: key, comicID: comicID, subID: subID,
+                                          commentID: commentID, isLike: isLike)
+            return ""
+        }
+    }
+
+    /// What the sources have printed, oldest first, and the line buffer's size.
+    ///
+    /// Core keeps the last 400 lines tagged with their source; a client that
+    /// shows them can answer "why did this source fail" without a console.
+    public func logLines() async throws -> [SourceLogEntry] {
+        let json = try await run(cancellable: false) { core, _ in
+            try Self.call { core.logLines($0) }
+        }
+        return try CoreClient.decode([SourceLogEntry].self, json)
+    }
+
+    /// Empties the buffer. The lines that already went to the host's log stay
+    /// there: this only forgets what the panel would show.
+    public func clearLogLines() async {
+        _ = try? await run(cancellable: false) { core, _ in core.clearLogLines() }
+    }
+
+    /// How a source keeps favorites. The pieces come from the paths it declares
+    /// and from `favorites.multiFolder`, which is data.
+    public func favoritesSupport(key: String) async -> FavoritesSupport {
+        func has(_ path: String) async -> Bool {
+            await hasComic(key: key, path: path)
+        }
+        let canLoad = await has("favorites.loadComics")
+        let toggle = await has("favorites.addOrDelFavorite")
+        let folders = await has("favorites.loadFolders")
+        guard canLoad || toggle else {
+            return FavoritesSupport(supported: false, multiFolder: false, folders: false, canLoad: false)
+        }
+        var multi = false
+        if let value = try? await comicValue(key: key, path: "favorites.multiFolder"),
+           case .bool(let flag) = value {
+            multi = flag
+        }
+        return FavoritesSupport(supported: true, multiFolder: multi,
+                                folders: folders && multi, canLoad: canLoad)
+    }
+
+    /// The folders a source keeps, and which of them hold a comic when one is
+    /// named.
+    public func favoriteFolders(key: String, comicID: String?) async throws -> (folders: [String: String], favorited: [String]) {
+        let arg: JSONValue = comicID.map { .string($0) } ?? .null
+        let out = try await callComic(key: key, path: "favorites.loadFolders", args: [arg])
+        guard case .object(let o) = try JSONValue.parse(out) else { return ([:], []) }
+        var folders: [String: String] = [:]
+        if case .object(let items)? = o["folders"] {
+            for (id, name) in items.entries {
+                folders[id] = name.stringValue ?? id
+            }
+        }
+        var favorited: [String] = []
+        if case .array(let ids)? = o["favorited"] {
+            favorited = ids.compactMap { $0.stringValue }
+        }
+        return (folders, favorited)
+    }
+
+    /// Loads one page of a folder. A single-folder source takes no folder id, so
+    /// pass nil for it.
+    public func favoriteComics(key: String, folder: String?, page: Int) async throws -> ComicPage {
+        let folderArg: JSONValue = folder.map { .string($0) } ?? .null
+        let out = try await callComic(key: key, path: "favorites.loadComics",
+                                      args: [.number(String(max(1, page))), folderArg])
+        return try Self.decode(ComicPage.self, out)
+    }
+
+    /// Adds a comic to the source's favorites, or removes it.
+    ///
+    /// A single-folder source takes no folder id, so pass nil for it. The fourth
+    /// argument is the source's own handle on the entry: wnacg builds its delete
+    /// URL from it, so a removal without one asks for "del-id-undefined" and
+    /// quietly does nothing. Sources that do not use it ignore the null.
+    public func setFavorite(key: String, comicID: String, folder: String?,
+                            favoriteID: String? = nil, adding: Bool) async throws {
+        let folderArg: JSONValue = folder.map { .string($0) } ?? .null
+        let handle: JSONValue = (favoriteID?.isEmpty == false) ? .string(favoriteID!) : .null
+        _ = try await callComic(key: key, path: "favorites.addOrDelFavorite",
+                                args: [.string(comicID), folderArg, .bool(adding), handle])
+    }
+
+    /// Reads a declaration that is data rather than a function.
+    ///
+    /// `favorites.multiFolder` decides whether a folder id is expected at all,
+    /// and `callComic` invokes functions, so it cannot reach a value.
+    public func comicValue(key: String, path: String) async throws -> JSONValue {
+        let out = try await run(cancellable: false) { core, _ in
+            try Self.call { core.comicValue(key, path: path, error: $0) }
+        }
+        return (try? JSONValue.parse(out)) ?? .null
+    }
+
+    /// The UI strings a source declares for this device's locale.    /// The UI strings a source declares for this device's locale.
+    ///
+    /// A source writes `title: "domain"` in its settings and supplies the
+    /// readable text in a translation table; without this the settings screen
+    /// shows the raw key.
+    public func translations(key: String) async throws -> [String: String] {
+        let out = try await run(cancellable: false) { core, _ in
+            try Self.call { core.translations(key, error: $0) }
+        }
+        if out.isEmpty || out == "{}" { return [:] }
+        return (try? Self.decode([String: String].self, out)) ?? [:]
+    }
+
+    /// Which login styles a source declares.    /// Which login styles a source declares. A source that needs no account
+    /// reports none.
+    public func accountStyles(key: String) async -> AccountStyles {
+        func has(_ path: String) async -> Bool {
+            await hasComic(key: key, path: path)
+        }
+        let password = await has("account.login")
+        let webview = await has("account.loginWithWebview")
+        let cookies = await has("account.loginWithCookies.validate")
+        let logout = await has("account.logout")
+        return AccountStyles(password: password, webview: webview, cookies: cookies, logout: logout)
+    }
+
+    /// The cookie names a source wants for its cookie login; empty otherwise.
+    public func accountCookieFields(key: String) async throws -> [String] {
+        let out = try await run(cancellable: false) { core, _ in
+            try Self.call { core.accountCookieFields(key, error: $0) }
+        }
+        if out.isEmpty { return [] }
+        return (try? Self.decode([String].self, out)) ?? []
+    }
+
+    /// Runs the source's own login. What the source answers is passed on; what
+    /// it throws is kept as its own text, because the reason usually names the
+    /// field it did not like.
+    @discardableResult
+    public func loginAccount(key: String, account: String, password: String) async throws -> String {
+        let out = try await callComic(key: key, path: "account.login",
+                                      args: [.string(account), .string(password)])
+        return Self.plainText(out)
+    }
+
+    /// Hands pasted cookies to the source's own validate, which sets them and
+    /// answers whether they work. A false answer is not an error: the source
+    /// looked and found them unusable.
+    public func loginWithCookies(key: String, values: [String]) async throws -> Bool {
+        let out = try await callComic(key: key, path: "account.loginWithCookies.validate",
+                                      args: [.array(values.map(JSONValue.string))])
+        return Self.plainText(out) == "true"
+    }
+
+    public func logoutAccount(key: String) async throws {
+        _ = try await callComic(key: key, path: "account.logout")
+    }
+
+    /// A source answers "ok" or a short phrase; anything else is passed on as
+    /// JSON text rather than dropped.
+    ///
+    /// `null` means the source answered nothing, which is what a callback written
+    /// without a return value does. Passing the literal through would put the word
+    /// `null` on screen as if the source had said it, so it becomes an empty
+    /// answer — the same rule the desktop client applies.
+    static func plainText(_ json: String) -> String {
+        let trimmed = json.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed == "null" { return "" }
+        if case .string(let text)? = try? JSONValue.parse(trimmed) { return text }
+        return trimmed
+    }
+
+    /// Loads one page of a source's ranking page. The option comes from
+    /// `CategoryPage.ranking`.
+    public func rankingComics(key: String, option: String, page: Int) async throws -> ComicPage {
+        let out = try await callComic(key: key, path: "categoryComics.ranking.load",
+                                      args: [.string(option), .number(String(max(1, page)))])
+        return try Self.decode(ComicPage.self, out)
+    }
+
     /// The browses a source offers (its `explore` list); empty when it has
     /// none.
     public func explorePages(key: String) async throws -> [ExplorePage] {
@@ -284,65 +665,29 @@ public final class CoreClient: @unchecked Sendable {
         return try Self.decode([ExplorePage].self, out)
     }
 
-    /// Loads one browse. `page` is the page number for
-    /// "multiPageComicList" browses and the index for "mixed" ones; the
-    /// other kinds ignore it.
-    public func explore(key: String, index: Int, page: Int = 1) async throws -> ExploreResult {
-        let pages = (try? await explorePages(key: key)) ?? []
-        let type = pages.indices.contains(index) ? pages[index].type : ""
-        let out = try await callComic(key: key, path: "explore[\(index)].load",
-                                      args: [.number(String(max(1, page)))])
-        return try Self.decodeExplore(type: type, out)
-    }
-
-    /// The shapes differ by browse type, so the decoding does too.
-    private static func decodeExplore(type: String, _ json: String) throws -> ExploreResult {
-        switch type {
-        case "multiPageComicList":
-            let page = try Self.decode(ComicPage.self, json)
-            return ExploreResult(sections: [ExploreSection(title: "", comics: page.comics)], maxPage: page.maxPage ?? 0)
-        case "mixed":
-            // {data: [Comic[] | {title, comics}], maxPage}
-            guard case .object(let o) = try JSONValue.parse(json) else { return ExploreResult(sections: [], maxPage: 0) }
-            var sections: [ExploreSection] = []
-            if case .array(let items)? = o["data"] {
-                sections = try exploreSections(items)
-            }
-            var maxPage = 0
-            if let n = o["maxPage"]?.stringValue, let v = Int(n) { maxPage = v }
-            return ExploreResult(sections: sections, maxPage: maxPage)
-        case "multiPartPage":
-            let parts = try JSONValue.parse(json).array ?? []
-            return ExploreResult(sections: try exploreSections(parts), maxPage: 0)
-        default:
-            // singlePageWithMultiPart: {partTitle: [comic, ...]}, in order.
-            guard case .object(let o) = try JSONValue.parse(json) else { return ExploreResult(sections: [], maxPage: 0) }
-            var sections: [ExploreSection] = []
-            for (title, value) in o.entries {
-                guard case .array(let items) = value else { continue }
-                let comics = items.compactMap { try? Comic(json: $0) }
-                if !comics.isEmpty { sections.append(ExploreSection(title: title, comics: comics)) }
-            }
-            return ExploreResult(sections: sections, maxPage: 0)
-        }
-    }
-
-    private static func exploreSections(_ items: [JSONValue]) throws -> [ExploreSection] {
-        var out: [ExploreSection] = []
-        for item in items {
-            switch item {
-            case .array(let comics):
-                let list = comics.compactMap { try? Comic(json: $0) }
-                if !list.isEmpty { out.append(ExploreSection(title: "", comics: list)) }
-            case .object(let o):
-                guard case .array(let comics)? = o["comics"] else { continue }
-                let list = comics.compactMap { try? Comic(json: $0) }
-                if !list.isEmpty { out.append(ExploreSection(title: o["title"]?.stringValue ?? "", comics: list)) }
-            default:
-                continue
+    /// Loads one browse page.
+    ///
+    /// A source pages a browse by number (`load(page)`) or by cursor
+    /// (`loadNext(next)`); Core handles both and this passes the cursor back on
+    /// the next call. Asking a cursor browse for `load` was the reason a source
+    /// like ehentai reported "source does not define this function" here while
+    /// the desktop worked.
+    public func explore(key: String, index: Int, page: Int = 1, cursor: String = "") async throws -> ExploreResult {
+        let out = try await run { core, id in
+            try Self.call {
+                core.comicExplore(id, key: key, index: index, page: max(1, page),
+                                  cursor: cursor, error: $0)
             }
         }
-        return out
+        let wire = try Self.decode(ExplorePageWire.self, out)
+        var sections: [ExploreSection] = []
+        for section in wire.sections {
+            let comics = section.comics.compactMap { try? Comic(json: $0) }
+            if !comics.isEmpty {
+                sections.append(ExploreSection(title: section.title, comics: comics))
+            }
+        }
+        return ExploreResult(sections: sections, maxPage: wire.maxPage, next: wire.next)
     }
 
     /// `comic.loadInfo(id)`. Decoded with key order kept, because chapter

@@ -25,36 +25,47 @@ import pathlib
 import re
 import sys
 
+# The parse needs tree-sitter; every rule below it does not. A machine that
+# compiles the tree (a Mac with Xcode) often has no Python tree-sitter, and
+# skipping the whole check there would lose the rules exactly where they are
+# cheapest to apply — so a missing parser downgrades this to the rule checks and
+# says so, instead of exiting.
+PARSER_NOTE = ""
+
 try:
     import tree_sitter
     import tree_sitter_swift
-    # The grammar is compiled for a specific tree-sitter ABI. A Python too old to
-    # install a new enough tree-sitter cannot load it, and that is an environment
-    # limit, not a broken tree: the Mac has the real compiler, so the runner turns
-    # this into a skip instead of a failure. Exit code 3 is how it says so.
-    # Constructing a Parser is what actually raises for a grammar built against a
-    # newer ABI; the Language object alone does not.
+    # The grammar is compiled for a specific tree-sitter ABI. Constructing a
+    # Parser is what actually raises for a grammar built against a newer ABI; the
+    # Language object alone does not.
     tree_sitter.Parser(tree_sitter.Language(tree_sitter_swift.language()))
-except ImportError:  # pragma: no cover - the message is the point
-    print(
-        "check-swift: tree-sitter is not installed; run\n"
-        "  python3 -m pip install tree-sitter tree-sitter-swift",
-        file=sys.stderr,
+    HAVE_PARSER = True
+except ImportError:
+    HAVE_PARSER = False
+    PARSER_NOTE = (
+        "check-swift: tree-sitter is not installed, so files are not parsed for "
+        "syntax; the rule checks still run.\n"
+        "  python3 -m pip install tree-sitter tree-sitter-swift"
     )
-    sys.exit(2)
-except ValueError as exc:  # pragma: no cover - depends on the machine's Python
-    print(
-        f"check-swift: the Swift grammar cannot load here ({exc});\n"
-        "  a Python 3.10+ with tree-sitter>=0.24 is needed",
-        file=sys.stderr,
+except ValueError as exc:
+    HAVE_PARSER = False
+    PARSER_NOTE = (
+        f"check-swift: the Swift grammar cannot load here ({exc}), so files are not "
+        "parsed for syntax; the rule checks still run.\n"
+        "  a Python 3.10+ with tree-sitter>=0.24 is needed"
     )
-    # 3 means "this machine cannot run the check", which is not the same as
-    # "the tree is broken" — a machine with the real compiler may treat it as a skip.
-    sys.exit(3)
 
 # Tokens newer than the grammar. Each is replaced by nothing, which keeps
 # line numbers right and leaves the surrounding syntax to be checked.
 UNKNOWN_TOKENS = [b"nonisolated(unsafe)"]
+
+# tree-sitter-swift reads `each` as the parameter-pack keyword everywhere, so a
+# property named `each` in an assignment reads as an error — and MagpieUsage
+# has one, decoded from the usage JSON. Renaming it here keeps the columns and
+# the line numbers right while letting the grammar see a plain identifier.
+# Parameter packs do not appear in this codebase; if they ever do, this is the
+# line to revisit.
+IDENTIFIER_ALIASES = [(re.compile(rb"\beach\b"), b"eack")]
 
 SKIP_DIRS = {".build", "Vendor", "build", ".git", "DerivedData"}
 
@@ -98,6 +109,8 @@ def errors_in(parser, source: bytes) -> list[tuple[int, str]]:
     """Returns (line, detail) for every ERROR or missing node."""
     for token in UNKNOWN_TOKENS:
         source = source.replace(token, b"")
+    for pattern, alias in IDENTIFIER_ALIASES:
+        source = pattern.sub(alias, source)
     tree = parser.parse(source)
     found: list[tuple[int, str]] = []
     stack = [tree.root_node]
@@ -233,10 +246,119 @@ def duplicate_test_names(root: pathlib.Path, files: list[pathlib.Path]) -> list[
     return problems
 
 
+
+def stored_predicates(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
+    """An NSPredicate kept in a variable and passed to `matching`.
+
+    That reads fine and fails on a Mac under Swift 6: NSPredicate is not Sendable,
+    so handing a stored one to a main-actor-isolated method is a data-race
+    diagnostic. Building it at the call site has no such problem, and this file
+    cannot see the error any other way — the interface tests are the one part of
+    the tree the Windows machine never type-checks.
+    """
+    stored = re.compile(r"\s*(?:let|var)\s+(\w+)\s*(?::\s*NSPredicate\s*)?=\s*NSPredicate\(")
+    problems: list[tuple[str, str]] = []
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        names = set()
+        for line in text.splitlines():
+            match = stored.match(line)
+            if match:
+                names.add(match.group(1))
+        if not names:
+            continue
+        for name in sorted(names):
+            if re.search(r"matching\(\s*" + name + r"\s*\)", text):
+                problems.append((str(path.relative_to(root)), f"stores NSPredicate {name} and passes it to matching"))
+    return problems
+
+
+def unterminated_strings(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
+    """A "..." literal that continues past the end of its line.
+
+    Swift has no multi-line form with single quotes, so this is a compile error —
+    but the parser used here recovers instead of failing, and the Mac is the only
+    place it would otherwise be noticed. It happens when a newline is written where
+    an escaped \n was meant.
+    """
+    problems: list[tuple[str, str]] = []
+    for path in files:
+        in_block = False
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if '"""' in line:
+                # An odd count opens or closes a multi-line literal.
+                if line.count('"""') % 2 == 1:
+                    in_block = not in_block
+                continue
+            if in_block:
+                continue
+            # Prose in a comment may quote a word; that is not a literal.
+            stripped = line.lstrip()
+            if stripped.startswith("//") or stripped.startswith("*") or stripped.startswith("/*"):
+                continue
+            quotes = 0
+            escaped = False
+            for ch in line:
+                if escaped:
+                    escaped = False
+                    continue
+                if ch == "\\":
+                    escaped = True
+                    continue
+                if ch == '"':
+                    quotes += 1
+            if quotes % 2 == 1:
+                problems.append((str(path.relative_to(root)), f"line {number} ends inside a string literal"))
+    return problems
+
+
+def element_query_predicates(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
+    """An element query predicate that XCTest refuses.
+
+    `label.length > 0` reads like a filter and fails at run time with
+    XCTElementQueryInvalidPredicate, which no compile catches. Asking for a
+    predicate that cannot work is a test that can never pass.
+    """
+    problems: list[tuple[str, str]] = []
+    for path in files:
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if "label.length" not in line:
+                continue
+            problems.append((str(path.relative_to(root)),
+                             f"line {number}: 'label.length' in a query predicate is rejected by XCTest"))
+    return problems
+
+
+def unknown_identifiers(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
+    """An identifier the interface tests ask for that nothing in the app creates.
+
+    The tests reach controls by identifier, so a typo is not a compile error — it is
+    a case that waits out its timeout and reports "missing", which reads like a
+    client fault. Only literals inside a namespace the app actually uses are
+    checked, so an email or a URL in a test is not mistaken for a tag.
+    """
+    app_text = "\n".join(p.read_text(encoding="utf-8") for p in root.rglob("*.swift")
+                         if p.relative_to(root).parts[0] in ("App", "Sources"))
+    namespaces = set(re.findall(r'"([a-z][A-Za-z0-9_]*)\.', app_text))
+    problems: list[tuple[str, str]] = []
+    for path in files:
+        if "UITests" not in path.relative_to(root).parts:
+            continue
+        for literal in sorted(set(re.findall(r'"([a-z][\w.]*\.[\w.]+)"', path.read_text(encoding="utf-8")))):
+            namespace, _, _ = literal.partition(".")
+            if namespace + "." not in {n + "." for n in namespaces}:
+                continue
+            prefix = literal.rsplit(".", 1)[0] + "."
+            if prefix not in app_text and literal not in app_text:
+                problems.append((str(path.relative_to(root)), f"asks for {literal!r}, which no identifier in App or Sources creates"))
+    return problems
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quiet", action="store_true", help="only print the summary")
     ap.add_argument("--root", default=".", help="where to look for .swift files")
+    ap.add_argument("--no-parser", action="store_true",
+                    help="run the rule checks without parsing (no tree-sitter needed)")
     args = ap.parse_args()
 
     root = pathlib.Path(args.root).resolve()
@@ -245,23 +367,27 @@ def main() -> int:
         print("check-swift: no .swift files", file=sys.stderr)
         return 1
 
-    parser = tree_sitter.Parser(tree_sitter.Language(tree_sitter_swift.language()))
     failed = 0
-    for path in files:
-        rel = path.relative_to(root)
-        try:
-            problems = errors_in(parser, path.read_bytes())
-        except Exception as err:  # pragma: no cover - unreadable file
+    parse = HAVE_PARSER and not args.no_parser
+    if parse:
+        parser = tree_sitter.Parser(tree_sitter.Language(tree_sitter_swift.language()))
+        for path in files:
+            rel = path.relative_to(root)
+            try:
+                problems = errors_in(parser, path.read_bytes())
+            except Exception as err:  # pragma: no cover - unreadable file
+                failed += 1
+                print(f"{rel}: {err}")
+                continue
+            if not problems:
+                continue
             failed += 1
-            print(f"{rel}: {err}")
-            continue
-        if not problems:
-            continue
-        failed += 1
-        for line, detail in problems[:10]:
-            print(f"{rel}:{line}: {detail}")
-        if len(problems) > 10:
-            print(f"{rel}: … {len(problems) - 10} more")
+            for line, detail in problems[:10]:
+                print(f"{rel}:{line}: {detail}")
+            if len(problems) > 10:
+                print(f"{rel}: … {len(problems) - 10} more")
+    elif PARSER_NOTE:
+        print(PARSER_NOTE, file=sys.stderr)
 
     for rel, name in missing_core_imports(root, files):
         failed += 1
@@ -279,11 +405,30 @@ def main() -> int:
         failed += 1
         print(f"{rel}: {detail} is declared twice")
 
+    for rel, detail in unterminated_strings(root, files):
+        failed += 1
+        print(f"{rel}: {detail}")
+
+    for rel, detail in unknown_identifiers(root, files):
+        failed += 1
+        print(f"{rel}: {detail}")
+
+    for rel, detail in element_query_predicates(root, files):
+        failed += 1
+        print(f"{rel}: {detail}")
+
+    for rel, detail in stored_predicates(root, files):
+        failed += 1
+        print(f"{rel}: {detail}; build it at the call site")
+
     if failed:
         print(f"check-swift: {failed} problem(s) across {len(files)} files")
         return 1
     if not args.quiet:
-        print(f"check-swift: {len(files)} files parse")
+        if parse:
+            print(f"check-swift: {len(files)} files parse")
+        else:
+            print(f"check-swift: {len(files)} files checked by the rules only")
     return 0
 
 

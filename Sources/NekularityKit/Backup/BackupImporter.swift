@@ -10,6 +10,8 @@ import Foundation
 public struct BackupImporter {
     public struct Result: Sendable {
         public var sourcesInstalled = 0
+        /// Values written back into their bucket (data or settings).
+        public var valuesRestored = 0
         /// "key: reason", so a partial import says what it skipped.
         public var sourcesFailed: [String] = []
         public var historyAdded = 0
@@ -51,6 +53,15 @@ public struct BackupImporter {
                 out.sourcesInstalled += 1
             } catch {
                 out.sourcesFailed.append("\(entry.key): \(error.localizedDescription)")
+                continue
+            }
+            // The archive keeps one object per source; this client has two
+            // buckets. The source says which is which: a key it declares under
+            // settings is a setting, everything else is data.
+            if let data = entry.data {
+                let written = await BackupImporter.restoreValues(
+                    data, key: entry.key, library: library)
+                out.valuesRestored += written
             }
         }
 
@@ -112,6 +123,37 @@ public struct BackupImporter {
     ///
     /// Every cookie goes to every target; a jar only sends one to a matching
     /// domain, so a copy in a partition that never visits the host does nothing.
+    /// Writes one source's values into the bucket each one belongs to.
+    ///
+    /// The declared settings are read from Core after the source is installed, so
+    /// a source that fails to load writes nothing: guessing would put a token in
+    /// the settings panel or a domain where the source never looks.
+    static func restoreValues(
+        _ data: JSONValue, key: String, library: SourceLibrary
+    ) async -> Int {
+        guard case .object(let object) = data else { return 0 }
+        var declared: Set<String> = []
+        if let list = try? await library.core.settings(key: key) {
+            declared = Set(list.map(\.key))
+        }
+        let store = library.core.host.store
+        var written = 0
+        for (name, value) in object.entries {
+            let json = value.jsonText
+            do {
+                if declared.contains(name) {
+                    try store.saveSetting(key: key, settingKey: name, json: json)
+                } else {
+                    try store.saveData(key: key, dataKey: name, json: json)
+                }
+                written += 1
+            } catch {
+                continue
+            }
+        }
+        return written
+    }
+
     /// Without targets nothing is written: a restore must not invent a shared jar.
     public nonisolated static func restoreCookies(_ plan: BackupPlan, jars: CookieJars) -> Int {
         guard let cookies = plan.cookies, !cookies.isEmpty else { return 0 }

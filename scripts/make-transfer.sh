@@ -61,7 +61,9 @@ if [ -z "$archive_md5" ]; then
 	exit 1
 fi
 
-b64_md5=$(md5sum "$out/p.b64" 2>/dev/null | cut -d' ' -f1 || mdg="$out/p.b64")
+# md5sum exists on Linux and in Git Bash but not on macOS, where the fallback
+# below runs; `|| true` keeps a machine without md5sum from aborting the script.
+b64_md5=$(md5sum "$out/p.b64" 2>/dev/null | cut -d' ' -f1 || true)
 if [ -z "$b64_md5" ]; then
 	b64_md5=$(openssl dgst -md5 -r "$out/p.b64" | cut -d' ' -f1)
 fi

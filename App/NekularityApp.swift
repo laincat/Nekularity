@@ -77,7 +77,7 @@ final class AppModel {
                 print("[\(level)] \(title): \(content)")
                 #endif
             })
-            let config = CoreConfig(appVersion: Self.appVersion, locale: Locale.current.identifier, defaultUserAgent: ua,
+            let config = CoreConfig(appVersion: Self.sourceLevel, locale: Locale.current.identifier, defaultUserAgent: ua,
                                     memoryLimitBytes: 256 << 20)
             // Core start-up parses and compiles the prelude; keep it off the
             // main thread.
@@ -123,9 +123,8 @@ final class AppModel {
         }
     }
 
-    static var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
-    }
+    /// The source API level, named once in the kit so a test can check it.
+    static let sourceLevel = SourceAPI.level
 
     /// A Safari-like User-Agent. Sites block unknown agents, and the
     /// verification WebView reports its own.

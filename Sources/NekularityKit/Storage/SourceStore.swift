@@ -54,6 +54,25 @@ public final class SourceStore: @unchecked Sendable {
         try write(key, e)
     }
 
+    /// One source's entire data object as JSON text, for a backup export.
+    /// Empty object when the source never stored anything.
+    public func allData(key: String) throws -> String {
+        lock.lock(); defer { lock.unlock() }
+        let object = try entry(key).data
+        return JSONValue.object(object).jsonText
+    }
+
+    /// One source's data and settings as the single object a .venera archive
+    /// keeps. Data wins a name clash: it is what the source wrote for itself.
+    /// The import splits the object again by the keys the source declares.
+    public func allValues(key: String) throws -> String {
+        lock.lock(); defer { lock.unlock() }
+        let e = try entry(key)
+        var merged = e.settings
+        for (name, value) in e.data.entries { merged.set(name, value) }
+        return JSONValue.object(merged).jsonText
+    }
+
     public func deleteData(key: String, dataKey: String) throws {
         lock.lock(); defer { lock.unlock() }
         var e = try entry(key)

@@ -41,3 +41,26 @@ targets:
         # INFOPLIST_KEY_* settings only carry flat values.
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: App/Info.plist
+  # Drives the app on a simulator, because the Windows machine cannot draw an
+  # interface and "the button works" was otherwise only checked by hand.
+  NekularityUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Nekularity
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.laincat.nekularity.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Nekularity
+schemes:
+  Nekularity:
+    build:
+      targets:
+        Nekularity: all
+        NekularityUITests: [test]
+    test:
+      targets:
+        - NekularityUITests

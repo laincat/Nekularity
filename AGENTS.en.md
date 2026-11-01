@@ -13,6 +13,12 @@ For people and AI assistants working on the code. Read before changing it.
 - JSON keeps key order and number text: decode Core results with `OrderedJSONDecoder` or `JSONValue.parse`, never through `JSONSerialization` or Double.
 - Do not copy code from AGPL projects (Animeko, AnimeFlow) or unlicensed ones (AniCh). Do not add third-party credentials, accounts or site keys.
 
+## Scope problems do not show up locally
+
+`check-swift.py` parses and runs a few textual rules; it **does no scope or type checking**. Using an `@Environment` value like `library` or an `@State` value like `model` inside a different type is perfectly valid syntax and only fails when the Mac compiles it — which happened this round: a helper ended up inside `SearchModel`, which has no `library`.
+
+It was tried as a rule and rejected: the heuristic reported 12 candidates across the repository and **every one was a false positive** (parameters and locals that share the name). The workable substitute is to count by hand after touching a view: wherever `model.` or `library.` is used, does that type declare it?
+
 ## Repository conventions
 
 - The root holds only files that tools or conventions require there.
@@ -72,6 +78,18 @@ fine — the case was confirming a misunderstanding. What catches it:
 - have the regression case assert **the right place has it and the wrong place does not** — a case
   that only asserts presence passes under a different wrong assumption too.
 
+## Interface cases touch no network, images included
+
+The interface cases run against the repository's own test source (`UITests/Fixtures/callback_probe.js`), which answers search, details, chapters, comments and favourites itself. **The reader needs images, and images used to need a site** — they no longer do: the test runner and the app are two processes on the same simulator and **share loopback**, so `UITests/LocalImageServer.swift` starts an HTTP server in the runner that answers with one PNG, and the fixture's chapter points at `http://127.0.0.1:18731/page.png`.
+
+Three things to keep in mind:
+
+- **That port is only alive inside the runner.** Reading the chapter anywhere else yields `images=1 decoded=0` (measured with the desktop `cmd/readercheck`), which is why no desktop probe opens a chapter of this source.
+- The PNG is **drawn at runtime**, not pasted as base64. A hand-typed blob that fails to decode looks exactly like a client bug.
+- The test target inherits `SWIFT_STRICT_CONCURRENCY: complete`, so that server has to deal with Sendable itself: `NWListener`'s handlers are `@Sendable`, and mutating a captured `var` or capturing a non-Sendable `self` inside them is a compile error. It now uses `@unchecked Sendable` (every stored property is a `let`) plus a locked `Signal` to carry the start result.
+
+Pick a criterion that can fail, too: the reader greys out 收藏本页 while it has no pages, so "the button became enabled" is what proves an image arrived; "the reader opened" proves nothing.
+
 ## Clear the build products before verifying
 
 Files unpacked from an archive carry an mtime of 0 (1970), so `swift build` treats them as older than what is in `.build` — and **new tests are never compiled while the run looks green**. `touch` the files and `rm -rf .build` first, or trust only a clean build. This is not hypothetical: the tar is built with zeroed mtimes for reproducibility, and this is the price.
@@ -118,4 +136,21 @@ That machine may be a Mac that **has no credentials for this repository**. In or
 2. When you cannot clone, build a whole payload with `scripts/make-payload.sh` and put it in a **secret gist** for the machine to `curl`. Do not push hundreds of base64 segments through a conversation: equal-length rewrites and shifted segment numbers are hard to notice there;
 3. When both sides have a copy, send only the patch from `scripts/make-patch.sh`.
 
-A payload has **no `.git`**, so on the verification machine `scripts/check-tree.sh` reports `none` for the commit — the four values to compare are `swift`, `tests`, `suites` and `shape`. Check the archive md5 on arrival and stop if it does not match. **A hand-typed md5 in the message is the part that goes wrong** — generate the message with `scripts/make-transfer.sh OUTDIR FILE…`, which reads the archive, base64 and per-file hashes from the files and prints a block that can be pasted as-is (with `GH_CREATE_GIST=1` it also creates the gist and fills in the raw URL). **Delete the gist as soon as the other machine has the code** (`gh gist delete <id>`): a secret gist is unlisted, but anyone holding the link can read it, so it is not a substitute for the repository. The archive is the repository itself (`./App`, `./Sources`, …), so there is no wrapper directory to flatten. macOS `base64` takes no positional argument: `base64 -D -i p.b64 -o p.tar.gz`. With no tree-sitter installed, or with only the system Python 3.9, `check-swift.py` exits **2** or **3** to mean "this machine cannot run it"; `verify-ios.sh` records that as SKIP — an environment limit, not a broken tree. A developer machine running `scripts/check-swift.sh` still fails hard.
+**Ship a whole tree with `scripts/make-tree-transfer.sh`**: `make-transfer.sh` packs only the files it is named, so `make-transfer.sh OUT /tmp/seed.json` sends a package holding a seed and nothing else — and the verification machine then goes looking for a tree that never arrived. The new script always ships the repository, and **before printing anything** it clones the bundle it just built to confirm the HEAD and the file count:
+
+```
+sh scripts/make-tree-transfer.sh /tmp/nk /path/to/seed-ios9.json
+tree <sha> (141 files) / bundle md5 / b64 md5 / and a message block to paste
+```
+
+That comes from a real loss: the machine unpacked the package, found only a seed, and — since a payload has no `.git` — could not fetch the tree itself. **Paste the block the script printed; do not retype it**: of the three transfer failures in this round, two came from me writing hashes or paths by hand, and a block produced by the script cannot disagree with itself. Edit the prose around it, copy the commands and hashes whole.
+
+The script now **uploads the seed too** when one is given, printing its raw URL and both hashes: a message that named a seed and its md5 but no address left the other machine waiting, and `check-seed.sh` compares seed against tree — it cannot fetch the seed for the receiver.
+
+**Run one case**: `NK_UI_ONLY=testReaderDrawsTheChaptersPage` adds `-only-testing:` to `xcodebuild`. A dozen cases take minutes, and when one of them fails there is no reason to re-run the ones that passed — the gate's label says which case ran.
+
+**The device's seed is never overwritten silently**: `scripts/seed-simulator.sh` stops when the device already holds a *different* seed, on purpose — otherwise one verification pass would quietly change someone's data. So either send a seed that matches the device or pass `NK_UI_SEED_REPLACE=1` explicitly. Note that `check-seed.sh` compares "seed against tree"; it cannot say what is on the device. Only the verification machine can see that, so leave that check to it.
+
+**Check the seed before sending it**: `sh scripts/check-seed.sh /tmp/seed.json` compares the seed's `callback_probe` body with `UITests/Fixtures/callback_probe.js` (line endings aside) and verifies the seed's own sha256. The seed is built by the desktop's `cmd/seedgen` but travels as a separate file with a separate md5 — there has been a case where the seed was built before a fixture edit, the case ran against yesterday's script, and the failure pointed at the client.
+
+Ship a whole tree with `scripts/make-tree-transfer.sh` — a git bundle, so the clone **has `.git`** and `check-tree.sh` reports a real commit. `make-transfer.sh` packs only the files it is named, so `make-transfer.sh OUT /tmp/seed.json` ships a seed and nothing else. Both read every hash from the files and print a block that can be pasted as-is (`GH_CREATE_GIST=1` also creates the gist and fills in the raw URL) — **if a message contains a hash, a person should not be typing it**. **Delete the gist as soon as the other machine has the code** (`gh gist delete <id>`): a secret gist is unlisted, but anyone holding the link can read it. macOS `base64` takes no positional argument: `base64 -D -i p.b64 -o p.tar.gz`. With no tree-sitter installed, or only the system Python 3.9, `check-swift.py` **no longer skips as a whole**: the syntax parse needs a parser, but the rules are plain text, so a missing parser downgrades it to the rules and it reports 0/1; `verify-ios.sh` labels that row `PASS python3 scripts/check-swift.py (rules only: no parser here)`. **Do not read that downgrade as a full pass** — nothing was parsed; to parse, install tree-sitter on that machine.

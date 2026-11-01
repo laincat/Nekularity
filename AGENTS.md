@@ -39,6 +39,12 @@ swift test                 # macOS,需先运行 scripts/fetch-core.sh
 或 CI。它用的 tree-sitter 语法比 Swift 6 落后一点,`scripts/check-swift.py` 里
 列出了要先抹掉的记号。
 
+## 作用域问题本地查不出来
+
+`check-swift.py` 只做语法与几条文本规则,**不做作用域/类型检查**。把 `@Environment` 的 `library`、`@State` 的 `model` 用到另一个类型里,语法完全合法,只有 Mac 上编译才会炸——这一轮就发生过一次(辅助方法落进了 `SearchModel`,而它没有 `library`)。
+
+试过把它写成规则,但启发式在整个仓库报出 12 处候选、**全部是误报**(参数与局部变量同名),所以没有加。可行的替代是:改动某个 View 后,自己在改动涉及的类型块里数一遍——用到 `model.` / `library.` 的地方,那个类型里有没有相应的声明。
+
 ## 改一处、通读一遍
 
 改一个字段的可选性、一个方法的访问级别、或者把一段代码搬进另一个 suite 时,**把同一函数、同一类型里所有用到它的地方一次看完**。这几类错误语法上完全合法,`check-swift` 抓不到,只能在 macOS 上炸:
@@ -57,6 +63,18 @@ swift test                 # macOS,需先运行 scripts/fetch-core.sh
 - 去代码以外的**事实源**核对(这里是传输层真正用的 key),而不是相信自己的实现;
 - 让错写不成立(`restore(source:)` 内部加前缀),而不是靠「记得用助手」;
 - 回归用例同时断言**正确位置有、错误位置没有** —— 只断言「有」的用例换个假设也能通过。
+
+## 界面用例不碰网络,包括图片
+
+界面用例跑的都是仓库自带的测试源(`UITests/Fixtures/callback_probe.js`),它自己回答搜索、详情、章节、评论和收藏。**阅读器需要图片,而图片以前必须有站点**——现在不需要了:测试 runner 和 App 是同一个模拟器上的两个进程,**共用 loopback**,所以 `UITests/LocalImageServer.swift` 在 runner 里起一个只回一张 PNG 的 HTTP 服务,夹具的章节指向 `http://127.0.0.1:18731/page.png`。
+
+三条要记住:
+
+- **那个端口只在 runner 里活**。在别处用这个夹具读章节,会得到 `images=1 decoded=0`(用桌面 `cmd/readercheck` 实测过),所以没有桌面探针去读它。
+- PNG 是**运行时画出来的**,不是手敲的 base64。手敲的 blob 解码失败时看起来跟客户端 bug 一模一样。
+- 测试 target 也继承 `SWIFT_STRICT_CONCURRENCY: complete`,所以那个服务必须自己处理 Sendable:`NWListener` 的 handler 是 `@Sendable`,在里面改捕获的 `var` 或捕获非 Sendable 的 `self` 都是编译错误。现在用 `@unchecked Sendable`(所有存储属性是 `let`)+ 一个自带锁的 `Signal` 传递启动结果。
+
+判据也要选得可证伪:阅读器在没页面时会把「收藏本页」置灰,所以「按钮变为可用」才是「图片真的到了」;只是「阅读器打开了」什么都证明不了。
 
 ## 验证前先清构建产物
 
@@ -101,4 +119,23 @@ PATH="$(dirname $(find /tmp/xcg -name xcodegen -type f | head -1)):$PATH" sh scr
 2. 不能 clone 时用 `scripts/make-payload.sh` 打整包,放到一个 **secret gist**,让验证机 `curl` 取回 —— 不要把几百段 base64 塞进对话,那里的等长改写和段错位很难发现;
 3. 两边都在,就只发 `scripts/make-patch.sh` 生成的补丁。
 
-发出去的包里**没有 `.git`**,所以验证机上 `scripts/check-tree.sh` 的 commit 会是 `none`;要对的是 `swift` / `tests` / `suites` / `shape` 四项,不是提交号。取包时先核对 archive md5,不对就停。**发送方用手敲的 md5 会错** —— 用 `scripts/make-transfer.sh OUTDIR FILE…` 生成消息:它把归档、base64 与每个文件的 md5 都从文件本身读出来,再打印成可直接粘贴的块(`GH_CREATE_GIST=1` 时连 gist 和 raw URL 一起给)。**验证一旦拿到代码,gist 立刻删掉**(`gh gist delete <id>`)—— secret gist 不列出,但拿到链接的人就能读,它不是仓库的替代品。包内是仓库本身(`./App`、`./Sources`…),不需要再摊平一层。macOS 的 `base64` 不吃位置参数:`base64 -D -i p.b64 -o p.tar.gz`。若目标机没有 tree-sitter 或只有系统 Python 3.9,`check-swift.py` 分别以 **exit=2 / exit=3** 表示「这台机器跑不了」,`verify-ios.sh` 记为 SKIP —— 环境限制,不是树有问题;开发机直接跑 `scripts/check-swift.sh` 仍然会硬失败。
+**发整棵树用 `scripts/make-tree-transfer.sh`**:`make-transfer.sh` 只打包它被点名的文件——`make-transfer.sh OUT /tmp/seed.json` 会寄出一个只有种子的包,验证机拿到后满机器找代码树。这个新脚本总是寄整棵树,而且在打印消息**之前**先把自己刚建的 bundle clone 一遍,核 HEAD 与文件数:
+
+```
+sh scripts/make-tree-transfer.sh /tmp/nk C:/Temp/seed-ios9.json
+tree <sha> (141 files) / bundle md5 / b64 md5 / 以及可直接粘贴的消息块
+```
+
+这条是从一次真实损失里来的:那轮验证机解包后只看到种子,又因为没有 `.git` 而没法自行补代码。
+
+**直接粘贴脚本打印的块,不要手写**:这一轮三次传输问题里,两次是我在消息里手写了哈希或路径,而脚本打印的块不可能和自己不一致。要改的是说明文字,不是命令与哈希——那部分整段复制。
+
+**种子也一起上传**:给了第二个参数时,脚本会把种子同样打包、上传并打印 raw URL 与两级哈希。之前消息里只写种子名字和 md5、没给地址,那台机器只能干等——`check-seed.sh` 比的是种子与树,它不能替接收方拿到种子。
+
+**只跑一个用例**:`NK_UI_ONLY=testReaderDrawsTheChaptersPage` 会给 `xcodebuild` 加上 `-only-testing:`。十几个用例要跑几分钟,其中一个失败时没必要把已经通过的再跑一遍——门禁的标签里会写明这次只跑了哪个。
+
+**设备上的种子不会自动被覆盖**:`scripts/seed-simulator.sh` 发现设备里已有**不同**的种子会停下来,这是有意的——不然一次验证会悄悄改掉别人设备上的数据。所以两种做法二选一:给出与设备一致的种子,或显式 `NK_UI_SEED_REPLACE=1`。注意 `check-seed.sh` 比的是「种子 ↔ 树」,它证明不了设备上是什么;设备状态只有验证机看得见,所以这一项要让验证机自己核。
+
+**种子先对一遍再发**:`sh scripts/check-seed.sh /tmp/seed.json` 会核对种子里 `callback_probe` 的 `body` 与 `UITests/Fixtures/callback_probe.js` 是否一致(忽略换行差异),并校验种子自己的 sha256。种子由桌面的 `cmd/seedgen` 生成,却和代码分成两个文件、两个 md5 发送——曾经出现过种子基于旧夹具、用例跑在昨天的脚本上、失败却指向客户端的情况。
+
+整棵树用 `scripts/make-tree-transfer.sh` 发(git bundle,clone 下来**有 `.git`**,`check-tree.sh` 能报出真实提交号);`make-transfer.sh` 只打包它点名的文件,`make-transfer.sh OUT /tmp/seed.json` 只会寄出一个种子。两者都把哈希从文件里读出来打印成可直接粘贴的块(`GH_CREATE_GIST=1` 时连 gist 与 raw URL 一起给)——**消息里只要出现哈希,就不该由人敲**。**收到代码后立刻删 gist**(`gh gist delete <id>`):secret gist 不列出,但拿到链接的人就能读,它不是仓库的替代品。macOS 的 `base64` 不吃位置参数:`base64 -D -i p.b64 -o p.tar.gz`。若目标机没有 tree-sitter 或只有系统 Python 3.9,**它不再整套跳过**:语法解析需要 parser,其余规则都是纯文本判断,所以缺 parser 时降级为「只跑规则」并以 exit 0/1 报告,`verify-ios.sh` 会标成 `PASS python3 scripts/check-swift.py (rules only: no parser here)`。**不要把降级当成完整通过**——它没解析语法;要解析就在那台机器上 `python3 -m pip install tree-sitter tree-sitter-swift`。
