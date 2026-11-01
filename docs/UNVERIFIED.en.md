@@ -10,6 +10,8 @@ The point of this file: **do not treat those changes as verified.** The table is
 
 | Commit | What changed | How it could break | Look first at |
 |---|---|---|---|
+| `a4ead24` | Closing the player writes the position back to the server | The write runs in the sheet's dismissal closure; a wrong shape there crashes on close | Play one server item and close it; the three write-back tests |
+| `0031190` `40e0962` | The release workflow is back in the repo; version 0.2.0 | A wrong script path in the job only shows up on CI | Not checkable locally; needs a tag or a manual trigger |
 | `27dd92c` | Three home cards; reading lists filter out videos | A missing case in the home template switch, or a broken layout | Rendering the home screen; the two new `HomeLayout` tests |
 | `467b9c5` `4db8265` | Duplicate zip page names, danmaku row identity, integer timestamps | Unit-test level only, low risk | `LocalComic` and `Danmaku` tests |
 | `017522b` | Server paging and a 30 s timeout | A wrong query build would empty the media library | Whether the media library lists anything (needs a real server) |
@@ -29,6 +31,14 @@ The point of this file: **do not treat those changes as verified.** The table is
 | Pixiv following and bookmarks after signing in | A real Pixiv account |
 | Picture in Picture, lock-screen playback | A real device |
 | Local videos and imported comics | Files on a real device |
+
+## Checking this list itself
+
+```sh
+git log --oneline b9fdf3c..HEAD
+```
+
+Every hash above should appear in the table. Writing this file is how `a4ead24` (progress write-back) was found missing from it — the list drifts, so it has to be checkable in one command.
 
 ## How to run it
 

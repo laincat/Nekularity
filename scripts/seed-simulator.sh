@@ -47,6 +47,29 @@ fi
 
 target="$container/Library/Application Support/Nekularity"
 mkdir -p "$target"
+
+# Where the records actually live depends on whether this install has run the
+# environment migration. Writing to the old root path on a device that has
+# already migrated puts the seed where nothing reads it, and the run then reports
+# "no sources" as if the app were broken.
+if [ -d "$target/Profiles" ]; then
+	active=""
+	# Prefer the environment that already holds sources, then the newest one.
+	for candidate in "$target"/Profiles/*/; do
+		[ -d "$candidate" ] || continue
+		if [ -f "$candidate/plugins.json" ]; then
+			active="${candidate%/}"
+			break
+		fi
+		[ -z "$active" ] && active="${candidate%/}"
+	done
+	if [ -z "$active" ]; then
+		printf 'seed-simulator: %s/Profiles is empty\n' "$target" >&2
+		exit 2
+	fi
+	target="$active"
+fi
+
 if [ -e "$target/plugins.json" ] && [ "$replace" != "--replace" ]; then
 	if cmp -s "$seed" "$target/plugins.json"; then
 		printf 'seed-simulator: matching seed already present: %s\n' "$target/plugins.json"
