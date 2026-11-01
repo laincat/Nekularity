@@ -29,7 +29,7 @@ final class LocalImageServer: @unchecked Sendable {
     /// The value the video route demands; the fixture sends it as `Referer`.
     static let clipReferer = "http://127.0.0.1:18731/"
 
-    private let listener: NWListener
+    private var listener: NWListener
     private let queue = DispatchQueue(label: "local-image-server")
     private let png: Data
     /// nil when the fixture is missing from the bundle; the route then answers 404
@@ -59,40 +59,74 @@ final class LocalImageServer: @unchecked Sendable {
             video = nil
         }
 
+    }
+
+    /// A listener on the fixed port, or a throw if the port cannot be taken.
+    ///
+    /// The port is fixed because the fixtures name it in their URLs, so a case
+    /// that starts right after another one stopped can find it still in TIME_WAIT.
+    /// Waiting for `.cancelled` is not enough — the socket outlives the listener —
+    /// so binding is retried for a few seconds rather than failing the case.
+    private func makeListener() throws -> NWListener {
         let options = NWParameters.tcp
         options.allowLocalEndpointReuse = true
         guard let port = NWEndpoint.Port(rawValue: Self.port) else {
             throw NSError(domain: "LocalImageServer", code: 2,
                           userInfo: [NSLocalizedDescriptionKey: "port \(Self.port) is not usable"])
         }
-        listener = try NWListener(using: options, on: port)
+        var lastError: Error?
+        for attempt in 0..<40 {
+            do {
+                return try NWListener(using: options, on: port)
+            } catch {
+                lastError = error
+                Thread.sleep(forTimeInterval: attempt < 10 ? 0.05 : 0.2)
+            }
+        }
+        throw lastError ?? NSError(domain: "LocalImageServer", code: 4,
+                                   userInfo: [NSLocalizedDescriptionKey: "port \(Self.port) stayed busy"])
     }
 
     /// Starts listening and returns once the port is bound, so the app never
     /// launches against a server that is not there yet.
     func start(timeout: TimeInterval = 10) throws {
-        let signal = Signal()
-        listener.stateUpdateHandler = { state in
-            switch state {
-            case .ready:
-                signal.finish()
-            case .failed(let error):
-                signal.finish(error)
-            default:
-                break
+        var lastFailure: Error?
+        for _ in 0..<5 {
+            let listener = try makeListener()
+            self.listener = listener
+            let signal = Signal()
+            listener.stateUpdateHandler = { state in
+                switch state {
+                case .ready:
+                    signal.finish()
+                case .failed(let error):
+                    signal.finish(error)
+                default:
+                    break
+                }
             }
+            listener.newConnectionHandler = { [self] connection in
+                serve(connection)
+            }
+            listener.start(queue: queue)
+            if signal.semaphore.wait(timeout: .now() + timeout) == .timedOut {
+                listener.cancel()
+                throw NSError(domain: "LocalImageServer", code: 3,
+                              userInfo: [NSLocalizedDescriptionKey: "the listener was not ready in time"])
+            }
+            if let failure = signal.failure {
+                // An address still in use: drop this listener and try again.
+                lastFailure = failure
+                listener.stateUpdateHandler = nil
+                listener.newConnectionHandler = nil
+                listener.cancel()
+                Thread.sleep(forTimeInterval: 0.3)
+                continue
+            }
+            return
         }
-        listener.newConnectionHandler = { [self] connection in
-            serve(connection)
-        }
-        listener.start(queue: queue)
-        if signal.semaphore.wait(timeout: .now() + timeout) == .timedOut {
-            throw NSError(domain: "LocalImageServer", code: 3,
-                          userInfo: [NSLocalizedDescriptionKey: "the listener was not ready in time"])
-        }
-        if let failure = signal.failure {
-            throw failure
-        }
+        throw lastFailure ?? NSError(domain: "LocalImageServer", code: 5,
+                                     userInfo: [NSLocalizedDescriptionKey: "the port never became free"])
     }
 
     /// Stops listening and **waits for the port to be free**.
@@ -102,6 +136,7 @@ final class LocalImageServer: @unchecked Sendable {
     /// three cases failed with "address already in use". Waiting for the listener
     /// to reach `.cancelled` is the only signal the framework gives.
     func stop(timeout: TimeInterval = 5) {
+        guard let listener else { return }
         let signal = Signal()
         listener.stateUpdateHandler = { state in
             if case .cancelled = state { signal.finish() }

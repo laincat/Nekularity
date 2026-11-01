@@ -58,7 +58,7 @@ struct RootView: View {
         .preferredColorScheme(themes.active.dark == nil ? nil : (themes.active.dark! ? .dark : .light))
         // Presented, not pushed: the sections own their own navigation stacks,
         // and a destination registered here would sit outside all of them.
-        .sheet(isPresented: $searching) { SearchView() }
+        .sheet(isPresented: $searching) { NavigationStack { SearchView() } }
     }
 
     private var themeIsDark: Bool {

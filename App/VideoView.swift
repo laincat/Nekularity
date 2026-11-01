@@ -74,47 +74,45 @@ struct VideoView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                switch mode {
-                case .library: libraryTab
-                case .sources: sourcesTab
-                }
+        Group {
+            switch mode {
+            case .library: libraryTab
+            case .sources: sourcesTab
             }
-            .navigationTitle("视频")
-            .safeAreaInset(edge: .top) {
-                Picker("来源", selection: $mode) {
-                    ForEach(Mode.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.bottom, 6)
-                .accessibilityIdentifier("video.mode")
+        }
+        .navigationTitle("视频")
+        .safeAreaInset(edge: .top) {
+            Picker("来源", selection: $mode) {
+                ForEach(Mode.allCases) { Text($0.title).tag($0) }
             }
-            .navigationDestination(for: VideoRoute.self) { route in
-                VideoDetailView(route: route)
-            }
-            .fileImporter(isPresented: $importing, allowedContentTypes: [.movie, .video]) { result in
-                switch result {
-                case .success(let url):
-                    do {
-                        try media.importVideo(from: url)
-                    } catch {
-                        note = error.localizedDescription
-                    }
-                case .failure(let error):
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.bottom, 6)
+            .accessibilityIdentifier("video.mode")
+        }
+        .navigationDestination(for: VideoRoute.self) { route in
+            VideoDetailView(route: route)
+        }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.movie, .video]) { result in
+            switch result {
+            case .success(let url):
+                do {
+                    try media.importVideo(from: url)
+                } catch {
                     note = error.localizedDescription
                 }
+            case .failure(let error):
+                note = error.localizedDescription
             }
-            .sheet(item: $playing) { item in
-                VideoPlayerView(title: item.title, play: item.play, startPosition: item.start) { position, seconds in
-                    guard let local = item.local else { return }
-                    media.update(local, position: position, seconds: seconds)
-                }
+        }
+        .sheet(item: $playing) { item in
+            VideoPlayerView(title: item.title, play: item.play, startPosition: item.start) { position, seconds in
+                guard let local = item.local else { return }
+                media.update(local, position: position, seconds: seconds)
             }
-            .alert(note ?? "", isPresented: Binding(get: { note != nil }, set: { if !$0 { note = nil } })) {
-                Button("好") { note = nil }
-            }
+        }
+        .alert(note ?? "", isPresented: Binding(get: { note != nil }, set: { if !$0 { note = nil } })) {
+            Button("好") { note = nil }
         }
         .task {
             if model.sourceKey.isEmpty || !sources.contains(where: { $0.key == model.sourceKey }) {

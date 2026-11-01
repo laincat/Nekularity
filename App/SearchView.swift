@@ -19,57 +19,58 @@ struct SearchView: View {
     private var sources: [PluginRecord] { library.comicSources.filter(\.enabled) }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if sources.isEmpty {
-                    ContentUnavailableView("没有可用的漫画源", systemImage: "puzzlepiece.extension",
-                                           description: Text("先在“漫画源”里添加并启用一个源。"))
-                } else {
-                    VStack(spacing: 0) {
-                        field
-                        filters
-                        results
-                    }
+        Group {
+            if sources.isEmpty {
+                ContentUnavailableView("没有可用的漫画源", systemImage: "puzzlepiece.extension",
+                                       description: Text("先在“漫画源”里添加并启用一个源。"))
+            } else {
+                VStack(spacing: 0) {
+                    field
+                    filters
+                    results
                 }
             }
-            .navigationTitle("搜索")
-            .onAppear { if startsInAllSources { scope = .all } }
-            .navigationDestination(for: ComicRoute.self) { ComicDetailView(route: $0) }
-            .navigationDestination(item: $opened) { ComicDetailView(route: $0) }
-            // A field of our own rather than `.searchable`: on iOS 27 the
-            // modifier drew no field at all on this screen (the interface test
-            // found a navigation bar with the two pickers and no way to type),
-            // and a search tab nobody can type into is not a search tab. An
-            // explicit field is visible, hittable and has one stable identifier.
+        }
+        .navigationTitle("搜索")
+        .onAppear { if startsInAllSources { scope = .all } }
+        .navigationDestination(for: ComicRoute.self) { ComicDetailView(route: $0) }
+        .navigationDestination(item: $opened) { ComicDetailView(route: $0) }
+        // A field of our own rather than `.searchable`: on iOS 27 the
+        // modifier drew no field at all on this screen (the interface test
+        // found a navigation bar with the two pickers and no way to type),
+        // and a search tab nobody can type into is not a search tab. An
+        // explicit field is visible, hittable and has one stable identifier.
 
-            .toolbar {
-                if !sources.isEmpty {
+        .toolbar {
+            if !sources.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    // Segmented, not a menu: 全部源 is the promise of the 全源搜索
+                    // entry, and a promise you have to open a menu to read is
+                    // one the entry did not keep.
+                    Picker("范围", selection: $scope) {
+                        ForEach(SearchModel.Scope.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                if scope == .current {
                     ToolbarItem(placement: .primaryAction) {
-                        Picker("范围", selection: $scope) {
-                            ForEach(SearchModel.Scope.allCases) { Text($0.title).tag($0) }
+                        Picker("漫画源", selection: $sourceKey) {
+                            ForEach(sources) { Text($0.name).tag($0.key) }
                         }
                         .pickerStyle(.menu)
                     }
-                    if scope == .current {
-                        ToolbarItem(placement: .primaryAction) {
-                            Picker("漫画源", selection: $sourceKey) {
-                                ForEach(sources) { Text($0.name).tag($0.key) }
-                            }
-                            .pickerStyle(.menu)
-                        }
-                    }
                 }
             }
-            .onAppear {
-                if !sources.contains(where: { $0.key == sourceKey }) { sourceKey = sources.first?.key ?? "" }
-                prepare()
-            }
-            .onChange(of: sourceKey) {
-                prepare()
-                if !query.isEmpty { start() }
-            }
-            .task(id: sourceKey) { prepare() }
         }
+        .onAppear {
+            if !sources.contains(where: { $0.key == sourceKey }) { sourceKey = sources.first?.key ?? "" }
+            prepare()
+        }
+        .onChange(of: sourceKey) {
+            prepare()
+            if !query.isEmpty { start() }
+        }
+        .task(id: sourceKey) { prepare() }
     }
 
     /// The failed sources by name, for the footer and for the empty state.

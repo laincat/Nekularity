@@ -15,34 +15,32 @@ struct BrowseView: View {
     private var sources: [PluginRecord] { library.comicSources.filter(\.enabled) }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if sources.isEmpty {
-                    ContentUnavailableView("没有可用的漫画源", systemImage: "puzzlepiece.extension",
-                                           description: Text("先在“漫画源”里添加并启用一个源。"))
-                } else {
-                    content
-                }
+        Group {
+            if sources.isEmpty {
+                ContentUnavailableView("没有可用的漫画源", systemImage: "puzzlepiece.extension",
+                                       description: Text("先在“漫画源”里添加并启用一个源。"))
+            } else {
+                content
             }
-            .navigationTitle("浏览")
-            .navigationDestination(for: ComicRoute.self) { ComicDetailView(route: $0) }
-            .toolbar {
-                if !sources.isEmpty {
-                    ToolbarItem(placement: .primaryAction) {
-                        Picker("漫画源", selection: $sourceKey) {
-                            ForEach(sources) { Text($0.name).tag($0.key) }
-                        }
-                        .pickerStyle(.menu)
-                    }
-                }
-            }
-            .onAppear {
-                if !sources.contains(where: { $0.key == sourceKey }) { sourceKey = sources.first?.key ?? "" }
-                Task { await model.open(library.core, source: sourceKey) }
-            }
-            .onChange(of: sourceKey) { Task { await model.open(library.core, source: sourceKey) } }
-            .refreshable { await model.reload(library.core) }
         }
+        .navigationTitle("浏览")
+        .navigationDestination(for: ComicRoute.self) { ComicDetailView(route: $0) }
+        .toolbar {
+            if !sources.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    Picker("漫画源", selection: $sourceKey) {
+                        ForEach(sources) { Text($0.name).tag($0.key) }
+                    }
+                    .pickerStyle(.menu)
+                }
+            }
+        }
+        .onAppear {
+            if !sources.contains(where: { $0.key == sourceKey }) { sourceKey = sources.first?.key ?? "" }
+            Task { await model.open(library.core, source: sourceKey) }
+        }
+        .onChange(of: sourceKey) { Task { await model.open(library.core, source: sourceKey) } }
+        .refreshable { await model.reload(library.core) }
     }
 
     @ViewBuilder private var content: some View {

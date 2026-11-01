@@ -10,84 +10,82 @@ struct ShelfView: View {
     @State private var renameTo = ""
 
     var body: some View {
-        NavigationStack {
-            List {
-                if shelf.recentHistory().isEmpty && shelf.folders.isEmpty && shelf.pictures.isEmpty {
-                    ContentUnavailableView {
-                        Label("书架还是空的", systemImage: "books.vertical")
-                    } description: {
-                        Text("打开的章节会记在这里,详情页可以收藏漫画。")
+        List {
+            if shelf.recentHistory().isEmpty && shelf.folders.isEmpty && shelf.pictures.isEmpty {
+                ContentUnavailableView {
+                    Label("书架还是空的", systemImage: "books.vertical")
+                } description: {
+                    Text("打开的章节会记在这里,详情页可以收藏漫画。")
+                }
+            }
+            if !shelf.recentHistory().isEmpty {
+                Section("继续阅读") {
+                    ForEach(shelf.recentHistory(), id: \.key) { entry in
+                        historyRow(entry)
                     }
                 }
-                if !shelf.recentHistory().isEmpty {
-                    Section("继续阅读") {
-                        ForEach(shelf.recentHistory(), id: \.key) { entry in
-                            historyRow(entry)
-                        }
-                    }
-                }
-                ForEach(shelf.folders) { folder in
-                    folderSection(folder)
-                }
-                if !shelf.keptPages().isEmpty {
-                    Section {
-                        ForEach(shelf.keptPages(), id: \.id) { page in
-                            NavigationLink(value: page.route) {
-                                KeptPageRow(page: page)
-                            }
-                            .swipeActions {
-                                Button("取消收藏", role: .destructive) {
-                                    shelf.forgetPage(page)
-                                }
-                            }
-                        }
-                    } header: {
-                        Text("图片收藏 · \(shelf.pictures.count) 张")
-                    }
-                }
+            }
+            ForEach(shelf.folders) { folder in
+                folderSection(folder)
+            }
+            if !shelf.keptPages().isEmpty {
                 Section {
-                    HStack {
-                        TextField("新收藏夹的名字", text: $newFolder)
-                        Button("新建") {
-                            shelf.createFolder(newFolder)
-                            newFolder = ""
+                    ForEach(shelf.keptPages(), id: \.id) { page in
+                        NavigationLink(value: page.route) {
+                            KeptPageRow(page: page)
                         }
-                        .disabled(newFolder.trimmingCharacters(in: .whitespaces).isEmpty)
-                    }
-                }
-            }
-            .navigationTitle("书架")
-            .alert("重命名收藏夹", isPresented: Binding(
-                get: { renaming != nil },
-                set: { if !$0 { renaming = nil } }
-            )) {
-                TextField("名字", text: $renameTo)
-                Button("确定") {
-                    if let folder = renaming {
-                        shelf.renameFolder(folder.name, to: renameTo)
-                    }
-                    renaming = nil
-                }
-                Button("取消", role: .cancel) { renaming = nil }
-            }
-            .navigationDestination(for: ComicRoute.self) { route in
-                ComicDetailView(route: route)
-            }
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        NavigationLink { DownloadsView() } label: {
-                            Label("下载", systemImage: "arrow.down.circle")
+                        .swipeActions {
+                            Button("取消收藏", role: .destructive) {
+                                shelf.forgetPage(page)
+                            }
                         }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
                     }
-                    .accessibilityIdentifier("shelf.more")
+                } header: {
+                    Text("图片收藏 · \(shelf.pictures.count) 张")
                 }
-                if let error = shelf.lastError {
-                    ToolbarItem(placement: .bottomBar) {
-                        Text(error).font(.footnote).foregroundStyle(.secondary)
+            }
+            Section {
+                HStack {
+                    TextField("新收藏夹的名字", text: $newFolder)
+                    Button("新建") {
+                        shelf.createFolder(newFolder)
+                        newFolder = ""
                     }
+                    .disabled(newFolder.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+        .navigationTitle("书架")
+        .alert("重命名收藏夹", isPresented: Binding(
+            get: { renaming != nil },
+            set: { if !$0 { renaming = nil } }
+        )) {
+            TextField("名字", text: $renameTo)
+            Button("确定") {
+                if let folder = renaming {
+                    shelf.renameFolder(folder.name, to: renameTo)
+                }
+                renaming = nil
+            }
+            Button("取消", role: .cancel) { renaming = nil }
+        }
+        .navigationDestination(for: ComicRoute.self) { route in
+            ComicDetailView(route: route)
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    NavigationLink { DownloadsView() } label: {
+                        Label("下载", systemImage: "arrow.down.circle")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityIdentifier("shelf.more")
+            }
+            if let error = shelf.lastError {
+                ToolbarItem(placement: .bottomBar) {
+                    Text(error).font(.footnote).foregroundStyle(.secondary)
                 }
             }
         }

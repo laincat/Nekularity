@@ -26,99 +26,97 @@ struct SourcesView: View {
     @State private var showAI = false
 
     var body: some View {
-        NavigationStack {
-            List {
-                if !library.restoreFailures.isEmpty {
-                    Section("未能恢复") {
-                        ForEach(library.restoreFailures.sorted(by: { $0.key < $1.key }), id: \.key) { key, reason in
-                            VStack(alignment: .leading) {
-                                Text(key).font(.headline)
-                                Text(reason).font(.footnote).foregroundStyle(.secondary)
-                            }
+        List {
+            if !library.restoreFailures.isEmpty {
+                Section("未能恢复") {
+                    ForEach(library.restoreFailures.sorted(by: { $0.key < $1.key }), id: \.key) { key, reason in
+                        VStack(alignment: .leading) {
+                            Text(key).font(.headline)
+                            Text(reason).font(.footnote).foregroundStyle(.secondary)
                         }
-                    }
-                }
-                Section {
-                    ForEach(library.comicSources) { source in
-                        NavigationLink(value: source) { SourceRow(source: source) }
-                            // A stable handle for the interface tests: a label is
-                            // localized and a source renames itself.
-                            .accessibilityIdentifier("source.\(source.key)")
-                    }
-                    .onDelete { offsets in
-                        let keys = offsets.map { library.comicSources[$0].key }
-                        Task {
-                            for k in keys {
-                                do { try await library.remove(k) } catch {
-                                    notice = Notice(title: "删除失败", text: error.localizedDescription)
-                                }
-                            }
-                        }
-                    }
-                } footer: {
-                    if library.comicSources.isEmpty {
-                        Text("还没有漫画源。点右上角的 + 从订阅或链接添加。")
                     }
                 }
             }
-            .navigationTitle("漫画源")
-            .navigationDestination(for: PluginRecord.self) { SourceDetailView(source: $0) }
-            .toolbar {
-                if showsClose {
-                    ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } }
+            Section {
+                ForEach(library.comicSources) { source in
+                    NavigationLink(value: source) { SourceRow(source: source) }
+                        // A stable handle for the interface tests: a label is
+                        // localized and a source renames itself.
+                        .accessibilityIdentifier("source.\(source.key)")
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Button { showAdd = true } label: { Label("添加", systemImage: "plus") }
+                .onDelete { offsets in
+                    let keys = offsets.map { library.comicSources[$0].key }
+                    Task {
+                        for k in keys {
+                            do { try await library.remove(k) } catch {
+                                notice = Notice(title: "删除失败", text: error.localizedDescription)
+                            }
+                        }
+                    }
                 }
-                ToolbarItem(placement: .secondaryAction) {
-                    Menu {
-                        Button { restoreCookies = false; pickingBackup = true } label: {
-                            Label("导入备份", systemImage: "square.and.arrow.down")
-                        }
-                        Button { restoreCookies = true; pickingBackup = true } label: {
-                            Label("导入备份并恢复登录状态", systemImage: "key")
-                        }
-                        Divider()
-                        Button { Task { await exportBackup() } } label: {
-                            Label("导出备份", systemImage: "square.and.arrow.up")
-                        }
-                        Button { showLogs = true } label: {
-                            Label("源日志", systemImage: "text.alignleft")
-                        }
-                        Divider()
-                        Button { showAI = true } label: {
-                            Label("AI 供应商", systemImage: "sparkles")
-                        }
-                    } label: {
+            } footer: {
+                if library.comicSources.isEmpty {
+                    Text("还没有漫画源。点右上角的 + 从订阅或链接添加。")
+                }
+            }
+        }
+        .navigationTitle("漫画源")
+        .navigationDestination(for: PluginRecord.self) { SourceDetailView(source: $0) }
+        .toolbar {
+            if showsClose {
+                ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button { showAdd = true } label: { Label("添加", systemImage: "plus") }
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Menu {
+                    Button { restoreCookies = false; pickingBackup = true } label: {
                         Label("导入备份", systemImage: "square.and.arrow.down")
                     }
+                    Button { restoreCookies = true; pickingBackup = true } label: {
+                        Label("导入备份并恢复登录状态", systemImage: "key")
+                    }
+                    Divider()
+                    Button { Task { await exportBackup() } } label: {
+                        Label("导出备份", systemImage: "square.and.arrow.up")
+                    }
+                    Button { showLogs = true } label: {
+                        Label("源日志", systemImage: "text.alignleft")
+                    }
+                    Divider()
+                    Button { showAI = true } label: {
+                        Label("AI 供应商", systemImage: "sparkles")
+                    }
+                } label: {
+                    Label("导入备份", systemImage: "square.and.arrow.down")
                 }
             }
-            .sheet(isPresented: $showAdd) { AddSourceView() }
-            .fileImporter(isPresented: $pickingBackup, allowedContentTypes: [.data]) { result in
-                switch result {
-                case .success(let url): Task { await importBackup(url) }
-                case .failure(let failure):
-                    notice = Notice(title: "导入失败", text: failure.localizedDescription)
-                }
-            }
-            .sheet(isPresented: $showLogs) { SourceLogView() }
-            .sheet(isPresented: $showAI) {
-                MagpieProvidersView(accounts: magpie, showsClose: true)
-            }
-            .sheet(item: $exported) { file in
-                // The share sheet saves it to Files, mails it, or anything else
-                // the user has: an export is a document, not a private format.
-                ShareSheet(url: file.url)
-            }
-            .alert(notice?.title ?? "", isPresented: Binding(
-                get: { notice != nil },
-                set: { if !$0 { notice = nil } }
-            ), presenting: notice) { _ in
-                Button("好") { notice = nil }
-            } message: { Text($0.text) }
-            .refreshable { await library.refresh() }
         }
+        .sheet(isPresented: $showAdd) { AddSourceView() }
+        .fileImporter(isPresented: $pickingBackup, allowedContentTypes: [.data]) { result in
+            switch result {
+            case .success(let url): Task { await importBackup(url) }
+            case .failure(let failure):
+                notice = Notice(title: "导入失败", text: failure.localizedDescription)
+            }
+        }
+        .sheet(isPresented: $showLogs) { SourceLogView() }
+        .sheet(isPresented: $showAI) {
+            MagpieProvidersView(accounts: magpie, showsClose: true)
+        }
+        .sheet(item: $exported) { file in
+            // The share sheet saves it to Files, mails it, or anything else
+            // the user has: an export is a document, not a private format.
+            ShareSheet(url: file.url)
+        }
+        .alert(notice?.title ?? "", isPresented: Binding(
+            get: { notice != nil },
+            set: { if !$0 { notice = nil } }
+        ), presenting: notice) { _ in
+            Button("好") { notice = nil }
+        } message: { Text($0.text) }
+        .refreshable { await library.refresh() }
     }
 
     /// Reads a `.venera` file through Core and lands what it holds here.
