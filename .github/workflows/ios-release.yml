@@ -57,6 +57,9 @@ jobs:
           run_check python3 scripts/check-video-json.py
           run_check python3 scripts/check-magpie-event.py
           run_check "$parse_python" scripts/check-swift.py
+          # Then prove the checks fire at all: each one built a rule that silently
+          # matched nothing, and only a hand-made negative run showed it.
+          run_check sh scripts/check-checks.sh
           exit $fail
       - name: Run the kit's unit tests
         run: |

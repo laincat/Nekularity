@@ -5,7 +5,10 @@
 #   3. the root holds only the files listed in ROOT_ALLOWED.
 # Third-party licence texts (LICENSE-*.txt) are not Markdown and are ignored.
 set -eu
-cd "$(dirname "$0")/.."
+# CHECK_DOCS_ROOT points the same rules at a tree that is not a repository, so
+# scripts/check-checks.sh can prove the rules still fire. Without it this checks
+# the repository it lives in.
+cd "${CHECK_DOCS_ROOT:-$(dirname "$0")/..}"
 
 ROOT_ALLOWED=".git .github .gitattributes .gitignore AGENTS.md AGENTS.en.md LICENSE README.md README.en.md Package.swift project.yml
 App Sources Tests UITests plugins docs scripts build Vendor .build .swiftpm Nekularity.xcodeproj"
@@ -13,7 +16,13 @@ App Sources Tests UITests plugins docs scripts build Vendor .build .swiftpm Neku
 fail=0
 err() { printf 'check-docs: %s\n' "$*" >&2; fail=1; }
 
-for f in $(git ls-files --cached --others --exclude-standard '*.md'); do
+if [ -n "${CHECK_DOCS_ROOT:-}" ]; then
+	markdown=$(find . -name '*.md' -not -path './.git/*' | sed 's|^\./||' | sort)
+else
+	markdown=$(git ls-files --cached --others --exclude-standard '*.md')
+fi
+
+for f in $markdown; do
 	case "$f" in
 	*.en.md)
 		zh="${f%.en.md}.md"
@@ -45,7 +54,7 @@ for f in $(git ls-files --cached --others --exclude-standard '*.md'); do
 	esac
 done
 
-for entry in $(ls -A); do
+[ -n "${CHECK_DOCS_ROOT:-}" ] || for entry in $(ls -A); do
 	case " $(echo $ROOT_ALLOWED) " in
 	*" $entry "*) ;;
 	*) err "unexpected file in the repository root: $entry" ;;

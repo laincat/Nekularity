@@ -173,6 +173,13 @@ else
 	fail "python3 scripts/check-swift.py" "$out/syntax.log"
 fi
 
+# 2b. Whether those checks fire at all. They need no parser and no macOS.
+if sh scripts/check-checks.sh >"$out/checks.log" 2>&1; then
+	pass "sh scripts/check-checks.sh" "$out/checks.log"
+else
+	fail "sh scripts/check-checks.sh" "$out/checks.log"
+fi
+
 # 3. The Kit's unit tests. They exercise Core through the real xcframework.
 if [ "$have_framework" -eq 0 ]; then
 	say "FAIL  swift build  (no xcframework)"
