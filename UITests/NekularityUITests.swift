@@ -792,6 +792,28 @@ final class NekularityUITests: XCTestCase {
     }
 }
 
+
+    /// 资源库 is the hub: 全源搜索, 书库, 视频, 下载 are its entries.
+    ///
+    /// The 全源搜索 entry has to land in 全部源 rather than one source, because
+    /// a search screen that silently searches one source is not what the entry
+    /// promised.
+    func testLibraryHubReachesItsEntries() throws {
+        let app = launch()
+        tab(app, "资源库")
+
+        for id in ["library.searchAll", "library.shelf", "library.video", "library.downloads"] {
+            XCTAssertTrue(element(app, id).waitForExistence(timeout: 20), "资源库 has no \(id)")
+        }
+
+        element(app, "library.searchAll").tap()
+        XCTAssertTrue(element(app, "search.field").waitForExistence(timeout: 20),
+                      "全源搜索 opened nothing to type in")
+        // 全部源 is the scope the entry promises.
+        XCTAssertTrue(app.buttons["全部源"].waitForExistence(timeout: 10),
+                      "全源搜索 did not offer 全部源")
+    }
+
     /// The video path end to end: a provider answers, the client asks where the
     /// episode plays, and the engine decodes the bytes.
     ///

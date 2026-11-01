@@ -4,6 +4,9 @@ import SwiftUI
 
 /// Search one source.
 struct SearchView: View {
+    /// Opened from 资源库's 全源搜索, where searching one source at a time is the
+    /// wrong default.
+    var startsInAllSources = false
     @Environment(SourceLibrary.self) private var library
     @AppStorage("searchSource") private var sourceKey = ""
     @AppStorage("searchScope") private var scope: SearchModel.Scope = .current
@@ -30,6 +33,7 @@ struct SearchView: View {
                 }
             }
             .navigationTitle("搜索")
+            .onAppear { if startsInAllSources { scope = .all } }
             .navigationDestination(for: ComicRoute.self) { ComicDetailView(route: $0) }
             .navigationDestination(item: $opened) { ComicDetailView(route: $0) }
             // A field of our own rather than `.searchable`: on iOS 27 the
