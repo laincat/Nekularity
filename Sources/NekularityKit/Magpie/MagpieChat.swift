@@ -10,16 +10,26 @@ public struct MagpieChatEvent: Sendable, Hashable {
 
     public var kind: Kind
     public var text: String
+    /// The vendor's own word for the ending: "stop", "completed", "end_turn".
     public var finish: String
+    /// The same ending in Core's vocabulary, so a screen can ask "was this reply
+    /// cut short" without a table per vendor.
+    public var outcome: String
     /// The vendor's token count as JSON text, kept as it was written.
     public var usageJSON: String
 
-    public init(kind: Kind, text: String = "", finish: String = "", usageJSON: String = "") {
+    public init(kind: Kind, text: String = "", finish: String = "", outcome: String = "",
+                usageJSON: String = "") {
         self.kind = kind
         self.text = text
         self.finish = finish
+        self.outcome = outcome
         self.usageJSON = usageJSON
     }
+
+    /// True when the reply stopped because it hit the token limit, whichever
+    /// vendor said so.
+    public var truncated: Bool { outcome == "length" }
 }
 
 /// A conversation through one provider package.
@@ -125,6 +135,7 @@ public final class MagpieChat: @unchecked Sendable {
             kind: kind,
             text: object["text"] as? String ?? "",
             finish: object["finish"] as? String ?? "",
+            outcome: object["outcome"] as? String ?? "",
             usageJSON: usage
         )
     }

@@ -947,6 +947,21 @@ final class StubMagpieCore: MagpieRunner.Core, @unchecked Sendable {
         #expect(MagpieChat.handle(from: "{}") == nil)
         #expect(MagpieChat.event(from: "not json").kind == .error)
     }
+
+    @Test func aCutReplyIsRecognisedWhateverTheVendorCalledIt() {
+        // Core normalises the ending, so the screen never carries three tables.
+        let cut = MagpieChat.event(from: #"{"kind":"done","finish":"max_tokens","outcome":"length"}"#)
+        #expect(cut.truncated)
+        #expect(cut.finish == "max_tokens")
+
+        let finished = MagpieChat.event(from: #"{"kind":"done","finish":"stop","outcome":"stop"}"#)
+        #expect(finished.truncated == false)
+
+        // A client older than the field must not read a reply as cut short.
+        let old = MagpieChat.event(from: #"{"kind":"done","finish":"stop"}"#)
+        #expect(old.outcome.isEmpty)
+        #expect(old.truncated == false)
+    }
 }
 
 @Suite struct MagpieUsageTests {

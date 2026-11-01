@@ -13,7 +13,7 @@ Compiling is not behaving. The iPhone interface cases and `swift test` still do 
 | The kit and the app compile against the real iOS SDK | The "Build unsigned device app" step of run `41316459367` succeeded |
 | The IPA packaging path works | "Package unsigned IPA" and the artifact upload succeeded in the same run |
 | The repository checks pass on macOS too | The same run's check step: `check-docs`, `check-partitions`, `check-core-pin`, `check-kit-core-calls`, `check-swift` (152 files really parsed, tree-sitter installed) |
-| The Core pin is reproducible | The same run fetched and built Core at `53cf0fcd8b66` first |
+| The Core pin is reproducible | The same run fetched and built Core at `6e3e761bf245` first |
 
 The first real compile found four errors that no static check of mine could see, all now fixed: `ComicDetails`' rating fields decoded into `Comic` (**which would have failed every details screen**), a static method on a `@MainActor` class called from a nonisolated context, two `status == errSecSuccess || errSecItemNotFound` comparisons that treat `OSStatus` as `Bool`, and then twelve interface errors in the app target (a style ternary, `Environment` argument order, optional chaining, the PiP content source and its cross-thread snapshot).
 
@@ -21,6 +21,7 @@ The first real compile found four errors that no static check of mine could see,
 
 | Commit | What changed | Where it stands | What is left |
 |---|---|---|---|
+| Truncation notice | Reads `outcome` from Core's events and shows "hit the length limit" in the chat screen | Added this round; neither build nor tests have run | Make a model answer to its max_tokens and check the notice; `swift test --filter Magpie` |
 | Bangumi support | Account, five collection states, episodes, weekly calendar, reminder join | Added this round; neither the build nor the tests have run yet | Connect a token on a device; `swift test --filter Bangumi` |
 | `33c5c7a` | `seed-simulator.sh` writes into the environment actually in use | Script-level, not compiled | Whether a seeded run really shows the five sources |
 | cue overlay | Text cues drawn from `$subtitleCues`, following `clock.$sourceTime` | Compiles | One subtitle-bearing source played, cues appearing in time |

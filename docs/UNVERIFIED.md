@@ -13,7 +13,7 @@
 | 整个 kit 与 App 能在真实 iOS SDK 上编译 | 运行 `41316459367` 的「Build unsigned device app」成功 |
 | 打包成 IPA 的路径可用 | 同一次运行的「Package unsigned IPA」与产物上传成功 |
 | 仓库检查在 macOS 上同样通过 | 同一运行的检查步骤:`check-docs`、`check-partitions`、`check-core-pin`、`check-kit-core-calls`、`check-swift`(已装 tree-sitter,真解析 152 个文件) |
-| 内核 pin 可复现 | 同一运行先从 `53cf0fcd8b66` 拉取并构建 Core 成功 |
+| 内核 pin 可复现 | 同一运行先从 `6e3e761bf245` 拉取并构建 Core 成功 |
 
 首次真实编译抓到并已修掉的四个错误,都是静态检查看不见的:`ComicDetails` 的评分字段被误写进 `Comic`(**会让每个详情页整页失败**)、`@MainActor` 类里的静态方法被非隔离调用、两处 `status == errSecSuccess || errSecItemNotFound`(把 `OSStatus` 当 `Bool`),以及随后 App 目标暴露的 12 个界面错误(样式三元、`Environment` 参数顺序、可选链、PiP 内容源与跨线程快照)。
 
@@ -21,6 +21,7 @@
 
 | 提交 | 改了什么 | 现在的状态 | 还剩什么 |
 |---|---|---|---|
+| 回复截断提示 | 读 Core 事件里的 `outcome`,达到长度上限时在聊天页显示「已达长度上限,回复可能不完整」 | 本轮新增,编译与单测还没跑过 | 让模型答满 max_tokens 看提示是否出现;`swift test --filter Magpie` |
 | Bangumi 支持 | 账号、收藏五档、话数、每日放送、与追番提醒的合并 | 本轮新增,编译与单测都还没跑过 | 真机连一次令牌;`swift test --filter Bangumi` |
 | `33c5c7a` | `seed-simulator.sh` 写入真正在用的环境目录 | 脚本级改动,不参与编译 | 一次 seeded 运行是否真的出现 5 个源 |
 | 字幕叠层 | 用 `$subtitleCues` 画文字字幕,跟随 `clock.$sourceTime` | 编译通过 | 播放一次带字幕的源,确认文字按时间出现 |

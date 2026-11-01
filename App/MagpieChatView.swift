@@ -24,6 +24,10 @@ struct MagpieChatView: View {
     @State private var running = false
     @State private var task: Task<Void, Never>?
     @State private var usage = ""
+    /// Set when the vendor stopped at the token limit: the reply on screen is
+    /// complete as far as it goes, and saying so is better than letting someone
+    /// read a cut-off sentence as the whole answer.
+    @State private var truncated = false
 
     var body: some View {
         NavigationStack {
@@ -93,6 +97,11 @@ struct MagpieChatView: View {
                             .buttonStyle(.borderedProminent)
                             .disabled(running || prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isEmpty)
                     }
+                    if truncated {
+                        Label("已达长度上限,回复可能不完整", systemImage: "scissors")
+                            .font(.caption2)
+                            .foregroundStyle(Color.orange)
+                    }
                     if !usage.isEmpty {
                         Text("用量 \(usage)").font(.caption2).foregroundStyle(.secondary)
                     }
@@ -134,6 +143,7 @@ struct MagpieChatView: View {
         reasoning = ""
         error = nil
         usage = ""
+        truncated = false
         messages.append((role: "user", text: text))
         let history = messages.map { MagpieMessage(role: $0.role, content: $0.text) }
         running = true
@@ -146,7 +156,9 @@ struct MagpieChatView: View {
                     case .text: reply += event.text
                     case .reasoning: reasoning += event.text
                     case .error: error = event.text
-                    case .done: usage = event.usageJSON
+                    case .done:
+                        usage = event.usageJSON
+                        truncated = event.truncated
                     case .end, .other: break
                     }
                 }
