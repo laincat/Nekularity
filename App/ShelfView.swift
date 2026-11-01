@@ -11,16 +11,17 @@ struct ShelfView: View {
 
     var body: some View {
         List {
-            if shelf.recentHistory().isEmpty && shelf.folders.isEmpty && shelf.pictures.isEmpty {
+            if shelf.recentHistory().filter({ !$0.isVideo }).isEmpty && shelf.folders.isEmpty && shelf.pictures.isEmpty {
                 ContentUnavailableView {
                     Label("书架还是空的", systemImage: "books.vertical")
                 } description: {
                     Text("打开的章节会记在这里,详情页可以收藏漫画。")
                 }
             }
-            if !shelf.recentHistory().isEmpty {
+            let reading = shelf.recentHistory().filter { !$0.isVideo }
+            if !reading.isEmpty {
                 Section("继续阅读") {
-                    ForEach(shelf.recentHistory(), id: \.key) { entry in
+                    ForEach(reading, id: \.key) { entry in
                         historyRow(entry)
                     }
                 }

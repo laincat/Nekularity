@@ -75,4 +75,27 @@ struct HomeLayoutTests {
         #expect(layout.blocks.count == HomeBlock.Template.allCases.count,
                 "a template missing from the saved order must be appended")
     }
+
+    @Test("a template added in a later version appears, and a hidden one stays hidden")
+    func migratesNewTemplates() {
+        let defaults = UserDefaults(suiteName: "home-\(UUID().uuidString)")!
+        // An arrangement saved before 继续观看、即将播出、本地漫画 existed.
+        let old = [HomeBlock(template: .history), HomeBlock(template: .favorites, enabled: false)]
+        defaults.set(try! JSONEncoder().encode(old), forKey: "homeBlocksV2")
+
+        let layout = HomeLayout(defaults: defaults)
+        #expect(layout.blocks.contains { $0.title == HomeBlock.Template.continueWatching.title })
+        #expect(layout.blocks.contains { $0.title == HomeBlock.Template.upcoming.title })
+        #expect(layout.blocks.contains { $0.title == HomeBlock.Template.localComics.title })
+        // A block the user hid before the upgrade must not come back switched on.
+        #expect(layout.blocks.first { $0.id == "template:favorites" }?.enabled == false)
+        #expect(!layout.visible.contains { $0.id == "template:favorites" })
+    }
+
+    @Test("the new blocks claim the full width, since a strip needs it")
+    func newBlocksAreWide() {
+        for template in [HomeBlock.Template.continueWatching, .upcoming, .localComics] {
+            #expect(HomeBlock(template: template).isWide)
+        }
+    }
 }

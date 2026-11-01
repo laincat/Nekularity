@@ -12,6 +12,9 @@ public struct HomeBlock: Codable, Sendable, Hashable, Identifiable {
     public enum Template: String, Codable, Sendable, CaseIterable, Identifiable {
         case history
         case favorites
+        case continueWatching
+        case upcoming
+        case localComics
         case searches
         case downloads
         case localVideos
@@ -23,6 +26,9 @@ public struct HomeBlock: Codable, Sendable, Hashable, Identifiable {
             switch self {
             case .history: "继续阅读"
             case .favorites: "收藏"
+            case .continueWatching: "继续观看"
+            case .upcoming: "即将播出"
+            case .localComics: "本地漫画"
             case .searches: "最近搜索"
             case .downloads: "已下载"
             case .localVideos: "本机视频"
@@ -34,6 +40,9 @@ public struct HomeBlock: Codable, Sendable, Hashable, Identifiable {
             switch self {
             case .history: "book"
             case .favorites: "heart"
+            case .continueWatching: "play.rectangle.fill"
+            case .upcoming: "calendar.badge.clock"
+            case .localComics: "folder"
             case .searches: "magnifyingglass"
             case .downloads: "arrow.down.circle"
             case .localVideos: "play.rectangle"
@@ -45,7 +54,7 @@ public struct HomeBlock: Codable, Sendable, Hashable, Identifiable {
         /// a phone, so it takes the full width; the small counters pair up.
         public var isWide: Bool {
             switch self {
-            case .history, .searches: true
+            case .history, .searches, .continueWatching, .upcoming, .localComics: true
             case .favorites, .downloads, .localVideos, .videoSources: false
             }
         }

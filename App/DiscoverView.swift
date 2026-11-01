@@ -14,6 +14,8 @@ struct DiscoverView: View {
     @Environment(DownloadStore.self) private var downloads
     @Environment(VideoLibraryStore.self) private var media
     @Environment(SourceLibrary.self) private var library
+    @Environment(MetadataStore.self) private var metadata
+    @Environment(LocalComicStore.self) private var local
 
     @State private var editing = false
     @State private var searching = false
@@ -80,6 +82,9 @@ struct DiscoverView: View {
             case .template(let template):
                 switch template {
                 case .history: historyBlock
+                case .continueWatching: continueWatchingBlock
+                case .upcoming: upcomingBlock
+                case .localComics: localComicsBlock
                 case .favorites: favoritesBlock
                 case .searches: searchesBlock
                 case .downloads: downloadsBlock
@@ -122,7 +127,9 @@ struct DiscoverView: View {
 
     private var historyBlock: some View {
         Group {
-            let recent = Array(shelf.history.prefix(6))
+            // Watching has its own block; a video row here would open a comic
+            // screen that has nothing to show.
+            let recent = Array(shelf.history.filter { !$0.isVideo }.prefix(6))
             if recent.isEmpty {
                 Text("还没有阅读记录").font(.caption).foregroundStyle(.secondary)
             } else {
@@ -138,6 +145,109 @@ struct DiscoverView: View {
                                     if let chapter = entry.chapter {
                                         Text(chapter).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                                     }
+                                }
+                                .frame(width: 96)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// What to watch next, in the same history the reader's own list comes from.
+    ///
+    /// Rows rather than covers: a film's position is the useful fact here, and a
+    /// poster grid says nothing about how far in it is.
+    private var continueWatchingBlock: some View {
+        Group {
+            let rows = shelf.history.filter { entry in
+                guard entry.isVideo, let percent = entry.videoPercent else { return false }
+                return percent > 2 && percent < 95
+            }.prefix(5)
+            if rows.isEmpty {
+                Text("没有看到一半的视频").font(.caption).foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(Array(rows), id: \.key) { entry in
+                        NavigationLink {
+                            MediaHubView()
+                        } label: {
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack {
+                                    Text(entry.title).font(.callout).lineLimit(1)
+                                    Spacer()
+                                    if let percent = entry.videoPercent {
+                                        Text("\(String(percent))%").font(.caption2.monospacedDigit())
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Text(entry.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+                                if let percent = entry.videoPercent {
+                                    ProgressView(value: Double(percent) / 100)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Episodes with a date, which is the only way this screen can say "upcoming"
+    /// without inventing one.
+    private var upcomingBlock: some View {
+        Group {
+            let rows = metadata.upcoming()
+            if rows.isEmpty {
+                Text(metadata.hasKey
+                     ? "还没有对上的剧集:打开一次媒体库,会用剧名去 TMDB 对一次。"
+                     : "在「设置 → 元数据」填 TMDB key,这里才会显示播出日期。")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(rows.prefix(4), id: \.info.key) { row in
+                        HStack(alignment: .top, spacing: 10) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(row.info.name).font(.callout).lineLimit(1)
+                                if let episode = row.info.nextEpisode {
+                                    Text("S\(String(episode.season))E\(String(episode.number)) · \(episode.name)")
+                                        .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                }
+                            }
+                            Spacer()
+                            Text(row.airs.formatted(.dateTime.month().day()))
+                                .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Comics on this device, which work with no network at all.
+    private var localComicsBlock: some View {
+        Group {
+            if local.comics.isEmpty {
+                NavigationLink { LocalComicsView() } label: {
+                    Text("导入一个图片文件夹或 .cbz").font(.caption).foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(local.comics.prefix(8)) { comic in
+                            NavigationLink { LocalComicReaderView(comic: comic) } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Color.secondary.opacity(0.15)
+                                        .frame(width: 96, height: 132)
+                                        .overlay(Image(systemName: "folder").foregroundStyle(.secondary))
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    Text(comic.title).font(.caption).lineLimit(1)
+                                    Text("\(comic.pageCount) 页").font(.caption2).foregroundStyle(.secondary)
                                 }
                                 .frame(width: 96)
                             }
