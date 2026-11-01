@@ -11,6 +11,7 @@ The point of this file: **do not treat those changes as verified.** The table is
 | Commit | What changed | How it could break | Look first at |
 |---|---|---|---|
 | `33c5c7a` | `seed-simulator.sh` writes into the environment actually in use | If the resolution is wrong the seed lands where nothing reads it, which looks like "no sources" | Whether a seeded run really shows the five sources |
+| this commit | Software-route PiP (`AVPictureInPictureSampleBufferPlaybackDelegate`) | Only reached with a software-decoded source (VP9/AV1); a wrong `ContentSource(sampleBufferDisplayLayer:)` or delegate signature shows up at compile time or on a device | The app compiling; one software-decoded title going into PiP on a device |
 | `198d1ad` | Airing reminders: kit planning plus `UNUserNotificationCenter` | The notification API and its permission flow only a device can verify; a `UNCalendarNotificationTrigger` with missing date parts silently never fires | On a device, turn it on and check the count; the seven planning tests |
 | `43decff` | Plex video source and Node fixture tests | Never loaded by Core's runtime; a wrong `VideoSource` contract only shows up once installed | Install `plugins/plex.js` as a source; `node plugins/plex.test.mjs` |
 | `ab1ebbb` | Details read and show `stars`/`likesCount`/`isLiked` | New `ComicDetails` fields and a view row; a decoding mistake fails the whole details screen | The details screen; the three rating tests |

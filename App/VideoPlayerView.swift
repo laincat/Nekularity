@@ -81,7 +81,10 @@ final class VideoPlayerModel {
         // Only the native route publishes an AVPlayer; on the software route the
         // engine decodes into its own layer, and PiP there needs
         // `softwarePiPSource` wiring that this screen does not have yet.
-        pip.update(player: engine.currentAVPlayer)
+        pip.update(player: engine.currentAVPlayer, software: engine.softwarePiPSource)
+        // Same player, same layer, but the position moved: the window's scrubber
+        // reads these snapshots.
+        pip.refresh()
         switch engine.state {
         case .idle: phase = "idle"
         case .loading: phase = "loading"
@@ -418,9 +421,45 @@ final class PiPController: NSObject, AVPictureInPictureControllerDelegate {
     private(set) var isActive = false
     @ObservationIgnored private var controller: AVPictureInPictureController?
     @ObservationIgnored private var attached: AVPlayer?
+    @ObservationIgnored private var software: SoftwarePiPSource?
+    /// The window asks these synchronously from whatever thread AVKit is on, so
+    /// they are snapshots taken on the main actor rather than computed there:
+    /// `assumeIsolated` would trap if the assumption were ever wrong.
+    @ObservationIgnored private var range: CMTimeRange = CMTimeRange(start: .zero, duration: .indefinite)
+    @ObservationIgnored private var paused = true
 
-    func update(player: AVPlayer?) {
-        guard let player else { return }
+    /// The native route hands out an `AVPlayer`; the software route decodes into its
+    /// own layer. Both can show a window, through two different content sources.
+    func update(player: AVPlayer?, software: SoftwarePiPSource?) {
+        if let player {
+            updateNative(player)
+            return
+        }
+        guard let software else { return }
+        // Rebuilding around the same layer would tear down a window that is open.
+        guard software !== self.software else { return }
+        self.software = software
+        guard AVPictureInPictureController.isPictureInPictureSupported() else {
+            isPossible = false
+            return
+        }
+        let made = AVPictureInPictureController(
+            contentSource: .init(sampleBufferDisplayLayer: software.layer, playbackDelegate: self))
+        made.delegate = self
+        controller = made
+        isPossible = true
+        refresh()
+    }
+
+    /// Re-reads the transport answers. Called on every engine publish, so the
+    /// window's scrubber follows playback.
+    func refresh() {
+        guard let software else { return }
+        range = software.timeRange()
+        paused = software.isPaused
+    }
+
+    private func updateNative(_ player: AVPlayer) {
         // The engine re-emits the player on every reload; rebuilding the
         // controller each time would drop an open window.
         guard player !== attached else { return }
@@ -455,5 +494,43 @@ final class PiPController: NSObject, AVPictureInPictureControllerDelegate {
     nonisolated func pictureInPictureController(_ controller: AVPictureInPictureController,
                                                 failedToStartPictureInPictureWithError error: any Error) {
         Task { @MainActor in self.isActive = false }
+    }
+}
+
+/// The four transport answers a sample-buffer PiP window asks for.
+///
+/// The engine keeps the frame timeline, so these are forwarded rather than
+/// computed here: answering from this screen's own clock would drift from what the
+/// window is showing.
+extension PiPController: AVPictureInPictureSampleBufferPlaybackDelegate {
+    nonisolated func pictureInPictureController(_ controller: AVPictureInPictureController,
+                                                setPlaying playing: Bool) {
+        Task { @MainActor in self.software?.setPlaying(playing) }
+    }
+
+    nonisolated func pictureInPictureControllerTimeRangeForPlayback(
+        _ controller: AVPictureInPictureController) -> CMTimeRange {
+        // Read on the calling thread: the source answers from the engine, and
+        // hopping would answer a stale range to a synchronous question.
+        range
+    }
+
+    nonisolated func pictureInPictureControllerIsPlaybackPaused(
+        _ controller: AVPictureInPictureController) -> Bool {
+        paused
+    }
+
+    nonisolated func pictureInPictureController(_ controller: AVPictureInPictureController,
+                                                didTransitionToRenderSize newRenderSize: CMVideoDimensions) {
+        // Nothing to lay out: the layer is the engine's and it sizes itself.
+    }
+
+    nonisolated func pictureInPictureController(_ controller: AVPictureInPictureController,
+                                                skipByInterval skipInterval: CMTime,
+                                                completion completionHandler: @escaping () -> Void) {
+        Task { @MainActor in
+            self.software?.skip(by: skipInterval.seconds.isFinite ? skipInterval.seconds : 0)
+            completionHandler()
+        }
     }
 }

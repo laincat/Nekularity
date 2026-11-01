@@ -11,6 +11,7 @@
 | 提交 | 改了什么 | 可能怎么坏 | 先看哪里 |
 |---|---|---|---|
 | `33c5c7a` | `seed-simulator.sh` 写入真正在用的环境目录 | 路径解析若错,seed 会写进没人读的地方,表现为「没有源」 | 一次 seeded 运行是否真的出现 5 个源 |
+| 本轮 | 软件通路画中画(`AVPictureInPictureSampleBufferPlaybackDelegate`) | 只在软解源(VP9/AV1)下才会走到;`ContentSource(sampleBufferDisplayLayer:)` 签名或委托签名写错只有编译时/真机才暴露 | App 编译;真机软解一次并转画中画 |
 | `198d1ad` | 追剧提醒:kit 规划 + `UNUserNotificationCenter` 接线 | 通知 API 用法与权限流只有真机才验证得了;`UNCalendarNotificationTrigger` 若日期组件缺失会静默不触发 | 真机开通知后看「已安排 N 条」;7 个规划单测 |
 | `43decff` | Plex 视频源 + Node 固件测试 | 未被真实 Core 运行时加载过,`VideoSource` 契约写错只有装进 App 才会暴露 | 把 `plugins/plex.js` 装进源列表;`node plugins/plex.test.mjs` |
 | `ab1ebbb` | 详情读 `stars`/`likesCount`/`isLiked` 并显示评分 | 新增 `ComicDetails` 字段与一个视图行;解码若写错会让详情页整页失败 | 详情页;3 个评分解码测试 |
