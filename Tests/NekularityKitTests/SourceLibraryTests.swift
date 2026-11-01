@@ -67,6 +67,88 @@ struct SourceLibraryTests {
         await lib.refresh()
         #expect(lib.sources.isEmpty)
     }
+
+
+/// Serves a script per call, so one test can install from a URL and then have the
+/// next fetch answer differently — which is what an update is.
+final class ScriptFeeder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var replies: [Result<Data, any Error>]
+
+    init(_ replies: [Result<Data, any Error>]) { self.replies = replies }
+
+    func next(_ url: URL) throws -> Data {
+        lock.lock(); defer { lock.unlock() }
+        guard !replies.isEmpty else { throw CoreError.readable("no reply left") }
+        return try replies.removeFirst().get()
+    }
+}
+
+@Suite("Batch source update (the loop)")
+struct SourceLibraryUpdateAllTests {
+    private let script = """
+    class Mini extends ComicSource {
+        name = "Mini"; key = "mini"; version = "1.0.0"
+        search = { load: async (keyword, options, page) => ({ comics: [], maxPage: 1 }) }
+    }
+    """
+
+    private func newer(_ version: String) -> Data {
+        Data(script.replacingOccurrences(of: #"version = "1.0.0""#,
+                                         with: "version = \"\(version)\"").utf8)
+    }
+
+    @MainActor
+    private func library(_ feeder: ScriptFeeder) throws -> SourceLibrary {
+        let jars = CookieJars(file: nil)
+        let transport = URLSessionTransport(cookies: jars, defaultUserAgent: "nk-test/1")
+        let root = URL(filePath: NSTemporaryDirectory()).appending(path: UUID().uuidString)
+        let host = CoreHost(store: try SourceStore(root: root), cookies: jars, transport: transport)
+        let core = try CoreClient(config: CoreConfig(appVersion: "1.0", locale: "zh_CN",
+                                                     defaultUserAgent: "nk-test/1"), host: host)
+        return SourceLibrary(core: core, fetch: { url in try feeder.next(url) })
+    }
+
+    /// A source pasted as text has no address to update from. Reporting that as a
+    /// failure would blame the source for how it was installed.
+    @MainActor
+    @Test func aSourceWithNoAddressIsSkippedRatherThanFailed() async throws {
+        let feeder = ScriptFeeder([])
+        let lib = try library(feeder)
+        _ = try await lib.install(script: script, origin: "test")
+        let results = await lib.updateAll()
+        #expect(results.isEmpty)
+    }
+
+    @MainActor
+    @Test func anUpdateReportsTheVersionsItMovedBetween() async throws {
+        let feeder = ScriptFeeder([.success(Data(script.utf8)), .success(newer("1.1.0"))])
+        let lib = try library(feeder)
+        _ = try await lib.install(from: URL(string: "https://index.test/mini.js")!)
+        let results = await lib.updateAll()
+        #expect(results.count == 1)
+        #expect(results.first?.from == "1.0.0")
+        #expect(results.first?.to == "1.1.0")
+        #expect(results.first?.error == nil)
+    }
+
+    /// A failed fetch becomes one line in the report. Throwing would abandon the
+    /// rest of the sources, and the caller shows whatever came back.
+    @MainActor
+    @Test func aFailedUpdateIsReportedAndKeepsTheSource() async throws {
+        let feeder = ScriptFeeder([.success(Data(script.utf8)),
+                                   .failure(CoreError.readable("网络不通"))])
+        let lib = try library(feeder)
+        _ = try await lib.install(from: URL(string: "https://index.test/mini.js")!)
+        let results = await lib.updateAll()
+        #expect(results.count == 1)
+        #expect(results.first?.error != nil)
+        #expect(results.first?.from == "1.0.0")
+        #expect(results.first?.to == "1.0.0")
+        await lib.refresh()
+        #expect(lib.sources.map(\.key) == ["mini"])
+    }
+}
 }
 
 @Suite("Batch source update")
