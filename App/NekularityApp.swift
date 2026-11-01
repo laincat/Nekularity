@@ -30,6 +30,7 @@ struct NekularityApp: App {
                         .environment(env.downloads)
                         .environment(env.themes)
                         .environment(env.media)
+                        .environment(env.home)
                         .environment(\.imageLoader, env.images)
                         .sourcePrompts(env.prompts)
                 }
@@ -62,6 +63,7 @@ final class AppModel {
         let downloads: DownloadStore
         let themes: ThemeStore
         let media: VideoLibraryStore
+        let home: HomeLayout
     }
 
     var state: State = .starting
@@ -130,7 +132,8 @@ final class AppModel {
                 magpie: magpie,
                 downloads: downloads,
                 themes: ThemeStore(directory: support.appending(path: "Themes", directoryHint: .isDirectory)),
-                media: VideoLibraryStore(directory: support.appending(path: "Media", directoryHint: .isDirectory))))
+                media: VideoLibraryStore(directory: support.appending(path: "Media", directoryHint: .isDirectory)),
+                home: HomeLayout()))
         } catch {
             started = false
             state = .failed(error.localizedDescription)

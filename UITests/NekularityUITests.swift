@@ -16,6 +16,53 @@ final class NekularityUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+
+    // MARK: - Reaching a screen
+
+    /// The four tabs are 发现 / 我的 / 资源库 / 设置, so a screen that used to be
+    /// its own tab is now behind one of them. These helpers keep the cases about
+    /// what they test rather than about the shape of the bar.
+    private func tab(_ app: XCUIApplication, _ name: String) {
+        let button = app.tabBars.buttons[name]
+        XCTAssertTrue(button.waitForExistence(timeout: 30), "no \(name) tab")
+        button.tap()
+    }
+
+    private func openSearch(_ app: XCUIApplication) throws {
+        tab(app, "发现")
+        let button = element(app, "discover.search")
+        guard button.waitForExistence(timeout: 20) else { throw XCTSkip("发现 has no search button") }
+        button.tap()
+    }
+
+    private func openBrowse(_ app: XCUIApplication) throws {
+        tab(app, "发现")
+        let button = element(app, "discover.browse")
+        guard button.waitForExistence(timeout: 20) else { throw XCTSkip("发现 has no browse button") }
+        button.tap()
+    }
+
+    private func openSources(_ app: XCUIApplication) throws {
+        tab(app, "设置")
+        let button = element(app, "settings.sources")
+        guard button.waitForExistence(timeout: 20) else { throw XCTSkip("设置 has no sources entry") }
+        button.tap()
+    }
+
+    private func openShelf(_ app: XCUIApplication) throws {
+        tab(app, "我的")
+        let link = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '书架与收藏夹'")).firstMatch
+        guard link.waitForExistence(timeout: 20) else { throw XCTSkip("我的 has no shelf link") }
+        link.tap()
+    }
+
+    private func openVideo(_ app: XCUIApplication) throws {
+        tab(app, "资源库")
+        let link = element(app, "library.video")
+        guard link.waitForExistence(timeout: 20) else { throw XCTSkip("资源库 has no video entry") }
+        link.tap()
+    }
+
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launch()
@@ -84,7 +131,7 @@ final class NekularityUITests: XCTestCase {
 
     /// Opens 漫画源 → source → 设置 and hands back the settings screen.
     private func openSettings(_ app: XCUIApplication, source key: String) throws {
-        app.tabBars.buttons["漫画源"].tap()
+        try openSources(app)
         let row = element(app, "source.\(key)")
         guard row.waitForExistence(timeout: 25) else {
             throw XCTSkip("no sources seeded: run scripts/seed-simulator.sh first")
@@ -99,15 +146,18 @@ final class NekularityUITests: XCTestCase {
     /// screen is unreachable and no other test means anything.
     func testTabsExist() {
         let app = launch()
-        for name in ["搜索", "浏览", "书架", "漫画源"] {
+        // The four the user asked for: a home they arrange, their calendar, the
+        // sources, and settings.
+        for name in ["发现", "我的", "资源库", "设置"] {
             XCTAssertTrue(app.tabBars.buttons[name].waitForExistence(timeout: 30), "no \(name) tab")
         }
+        XCTAssertFalse(app.tabBars.buttons["更多"].exists, "a fifth tab should not fold anything into 更多")
     }
 
     /// Seeded sources appear, which is the precondition for every other check.
     func testSeededSourcesAppear() throws {
         let app = launch()
-        app.tabBars.buttons["漫画源"].tap()
+        try openSources(app)
         guard element(app, "source.nhentai").waitForExistence(timeout: 25) else {
             throw XCTSkip("no sources seeded: run scripts/seed-simulator.sh first")
         }
@@ -219,7 +269,7 @@ final class NekularityUITests: XCTestCase {
     /// own source, so the answer depends on the client and not on a site.
     func testTagTapOpensTheSourcesRule() throws {
         let app = launch()
-        app.tabBars.buttons["搜索"].tap()
+        try openSearch(app)
 
         // The tab searches the source the picker names, and the app remembers the
         // last choice, so this has to say which source it needs.
@@ -266,7 +316,7 @@ final class NekularityUITests: XCTestCase {
     /// which is the path the reading flow depends on.
     func testSearchReachesDetailWithTags() throws {
         let app = launch()
-        app.tabBars.buttons["搜索"].tap()
+        try openSearch(app)
         // The repository's own source: no network, and a comic with tags. Inheriting
         // whatever source a previous case left selected would make this case depend
         // on the order the suite runs in.
@@ -340,7 +390,7 @@ final class NekularityUITests: XCTestCase {
     /// now answers `loadComments`.
     func testCommentsShowTheSourcesThread() throws {
         let app = launch()
-        app.tabBars.buttons["搜索"].tap()
+        try openSearch(app)
         try chooseSource(app, "Callback Probe")
 
         let field = element(app, "search.field")
@@ -405,7 +455,7 @@ final class NekularityUITests: XCTestCase {
         defer { server.stop() }
 
         let app = launch()
-        app.tabBars.buttons["搜索"].tap()
+        try openSearch(app)
         try chooseSource(app, "Callback Probe")
 
         let field = element(app, "search.field")
@@ -478,7 +528,7 @@ final class NekularityUITests: XCTestCase {
     /// only the first shows choosers that never load anything.
     func testCategoryPageListsItsPartsAndComics() throws {
         let app = launch()
-        app.tabBars.buttons["浏览"].tap()
+        try openBrowse(app)
         try chooseSource(app, "Callback Probe")
 
         // The browse screen offers the category page as a chip once the source
@@ -536,7 +586,7 @@ final class NekularityUITests: XCTestCase {
         defer { server.stop() }
 
         let app = launch()
-        app.tabBars.buttons["搜索"].tap()
+        try openSearch(app)
         try chooseSource(app, "Callback Probe")
 
         let field = element(app, "search.field")
@@ -574,7 +624,7 @@ final class NekularityUITests: XCTestCase {
         app.swipeUp()
 
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.tabBars.buttons["书架"].tap()
+        try openShelf(app)
 
         // The comic's title also appears on the detail page, so a tab switch that
         // silently failed would leave it on screen and make a title-only assertion
@@ -611,7 +661,7 @@ final class NekularityUITests: XCTestCase {
     /// and shows its empty state.
     func testSourceFavoritesShowWhatTheSourceKeeps() throws {
         let app = launch()
-        app.tabBars.buttons["漫画源"].tap()
+        try openSources(app)
 
         let row = element(app, "source.callback_probe")
         guard row.waitForExistence(timeout: 25) else {
@@ -655,7 +705,7 @@ final class NekularityUITests: XCTestCase {
     /// back on the next launch.
     func testSearchHistorySurvivesRelaunch() throws {
         let app = launch()
-        app.tabBars.buttons["搜索"].tap()
+        try openSearch(app)
         try chooseSource(app, "Callback Probe")
 
         let field = element(app, "search.field")
@@ -674,7 +724,7 @@ final class NekularityUITests: XCTestCase {
 
         app.terminate()
         app.launch()
-        app.tabBars.buttons["搜索"].tap()
+        try openSearch(app)
 
         // The word comes back as a chip above the results. With an empty field the
         // screen shows the recent searches, which is where it has to appear.
@@ -699,7 +749,7 @@ final class NekularityUITests: XCTestCase {
     /// being checked, along with the switch between them.
     func testBrowseLoadsSections() throws {
         let app = launch()
-        app.tabBars.buttons["浏览"].tap()
+        try openBrowse(app)
         try chooseSource(app, "Callback Probe")
 
         let shelf = app.buttons["Probe Shelf"].firstMatch
@@ -757,7 +807,7 @@ final class NekularityUITests: XCTestCase {
         defer { server.stop() }
 
         let app = launch()
-        app.tabBars.buttons["视频"].tap()
+        try openVideo(app)
 
         let picker = element(app, "video.source")
         guard picker.waitForExistence(timeout: 20) else {
@@ -803,7 +853,7 @@ final class NekularityUITests: XCTestCase {
         try server.start()
 
         let app = launch()
-        app.tabBars.buttons["搜索"].tap()
+        try openSearch(app)
         try chooseSource(app, "Callback Probe")
 
         let field = element(app, "search.field")
@@ -828,12 +878,10 @@ final class NekularityUITests: XCTestCase {
         }
         keep.tap()
 
-        app.tabBars.buttons["书架"].tap()
-        let more = element(app, "shelf.more")
-        XCTAssertTrue(more.waitForExistence(timeout: 15), "the shelf has no more menu")
-        more.tap()
-        let entry = app.buttons["下载"].firstMatch
-        XCTAssertTrue(entry.waitForExistence(timeout: 10), "the shelf menu has no downloads entry")
+        // The downloads screen lives under 我的 now, next to the calendar.
+        tab(app, "我的")
+        let entry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '下载'")).firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 15), "我的 has no downloads entry")
         entry.tap()
         XCTAssertTrue(firstElement(app, containing: "Probe Comic").waitForExistence(timeout: 90),
                       "the chapter never appeared in downloads")
@@ -842,7 +890,7 @@ final class NekularityUITests: XCTestCase {
         server.stop()
 
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.tabBars.buttons["搜索"].tap()
+        try openSearch(app)
         let again = firstElement(app, containing: "Probe Comic")
         if again.waitForExistence(timeout: 5) { again.tap() }
         let reopen = firstElement(app, containing: "Chapter 1")

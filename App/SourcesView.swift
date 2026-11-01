@@ -6,6 +6,9 @@ import UniformTypeIdentifiers
 /// Installed sources, install from URL or index, and source details.
 struct SourcesView: View {
     let magpie: MagpieAccounts
+    /// Presented from Settings, so it needs a way to close.
+    var showsClose = false
+    @Environment(\.dismiss) private var dismiss
     @Environment(SourceLibrary.self) private var library
     @Environment(ShelfStore.self) private var shelf
     @Environment(SearchHistoryStore.self) private var searches
@@ -61,6 +64,9 @@ struct SourcesView: View {
             .navigationTitle("漫画源")
             .navigationDestination(for: PluginRecord.self) { SourceDetailView(source: $0) }
             .toolbar {
+                if showsClose {
+                    ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button { showAdd = true } label: { Label("添加", systemImage: "plus") }
                 }
