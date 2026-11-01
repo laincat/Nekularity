@@ -27,6 +27,7 @@ struct NekularityApp: App {
                         .environment(env.prompts)
                         .environment(env.shelf)
                         .environment(env.searches)
+                        .environment(env.downloads)
                         .environment(\.imageLoader, env.images)
                         .sourcePrompts(env.prompts)
                 }
@@ -56,6 +57,7 @@ final class AppModel {
         /// Installed AI provider packages and their accounts, separate from
         /// comic sources in every way.
         let magpie: MagpieAccounts
+        let downloads: DownloadStore
     }
 
     var state: State = .starting
@@ -110,9 +112,15 @@ final class AppModel {
                 // Archive install needs a Core that is not bound to a package;
                 // MagpieAccounts closes it after expanding.
                 makeCore: { try CoreMagpie(host: host, stream: CoreStreamHost(transport: transport)) })
+            // Downloads are asked before the network, so a kept chapter opens
+            // with no connection at all.
+            let downloads = DownloadStore(root: support.appending(path: "Downloads", directoryHint: .isDirectory))
             state = .ready(Environment(
                 library: library,
-                images: ImageLoader(core: core),
+                images: ImageLoader(core: core, offline: { key in
+                    await downloads.bytes(for: key)
+                }),
+                downloads: downloads,
                 prompts: prompts,
                 shelf: ShelfStore(directory: support),
                 searches: SearchHistoryStore(directory: support),

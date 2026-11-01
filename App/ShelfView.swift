@@ -74,6 +74,12 @@ struct ShelfView: View {
                 ComicDetailView(route: route)
             }
             .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    NavigationLink { DownloadsView() } label: {
+                        Label("下载", systemImage: "arrow.down.circle")
+                    }
+                    .accessibilityIdentifier("shelf.downloads")
+                }
                 if let error = shelf.lastError {
                     Text(error).font(.footnote).foregroundStyle(.secondary)
                 }

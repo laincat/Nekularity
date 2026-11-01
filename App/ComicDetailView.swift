@@ -5,6 +5,8 @@ struct ComicDetailView: View {
     let route: ComicRoute
     @Environment(SourceLibrary.self) private var library
     @Environment(ShelfStore.self) private var shelf
+    @Environment(DownloadStore.self) private var downloads
+    @Environment(\.imageLoader) private var images
     @State private var details: ComicDetails?
     @State private var error: String?
     /// The source's own favorites: whether it keeps them, its folders, and
@@ -18,6 +20,7 @@ struct ComicDetailView: View {
     @State private var tagSearch: TagSearchRequest?
     @State private var tagCategory: TagCategoryRequest?
     @State private var tagNotice: String?
+    @State private var downloadNote: String?
 
     var body: some View {
         Group {
@@ -51,6 +54,28 @@ struct ComicDetailView: View {
         }
         .navigationDestination(for: ReaderRoute.self) { ReaderView(route: $0) }
         .task { if details == nil { await load() } }
+        .toolbar {
+            if let details {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button {
+                            Task { await downloadAll(details) }
+                        } label: {
+                            Label("下载全部章节", systemImage: "arrow.down.circle")
+                        }
+                    } label: {
+                        Image(systemName: "arrow.down.circle")
+                    }
+                    .accessibilityIdentifier("detail.download")
+                }
+            }
+        }
+        .alert(downloadNote ?? "", isPresented: Binding(
+            get: { downloadNote != nil },
+            set: { if !$0 { downloadNote = nil } }
+        )) {
+            Button("好") { downloadNote = nil }
+        }
     }
 
     private func load() async {
@@ -230,8 +255,28 @@ struct ComicDetailView: View {
         }
     }
 
-    /// One chapter. The one the shelf stopped on says so, so the list and the
-    /// "继续阅读" button agree.
+    /// Keeps one chapter, using the page list the reader would have loaded.
+    private func download(_ chapter: ComicDetails.Chapter) async {
+        guard let images, let comicInfo = details else { return }
+        do {
+            let pages = try await library.core.chapterImages(key: route.source, comicID: comicInfo.id,
+                                                             chapterID: chapter.id)
+            guard !pages.isEmpty else { downloadNote = "这一章没有图片"; return }
+            downloads.download(.init(sourceKey: route.source, comicID: comicInfo.id,
+                                     comicTitle: comicInfo.title, chapterID: chapter.id,
+                                     chapterTitle: chapter.title, pages: pages), loader: images)
+            downloadNote = "已加入下载"
+        } catch {
+            downloadNote = CoreError.readable(error.localizedDescription)
+        }
+    }
+
+    private func downloadAll(_ comic: ComicDetails) async {
+        for chapter in comic.chapters {
+            await download(chapter)
+        }
+    }
+
     private func chapterRow(_ chapter: ComicDetails.Chapter, index: Int) -> some View {
         let here = shelf.entry(source: route.source, id: route.comic.id)?.chapterIndex == index
         return HStack {
@@ -239,6 +284,16 @@ struct ComicDetailView: View {
             Spacer()
             if here {
                 Text("读到").font(.caption).foregroundStyle(.secondary)
+            }
+            if downloads.isDownloaded(sourceKey: route.source, comicID: route.comic.id, chapterID: chapter.id) {
+                Image(systemName: "arrow.down.circle.fill").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .contextMenu {
+            Button {
+                Task { await download(chapter) }
+            } label: {
+                Label("下载这一话", systemImage: "arrow.down.circle")
             }
         }
     }

@@ -791,3 +791,60 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(element(app, "video.duration").waitForExistence(timeout: 90),
                       "the clip produced no duration, so nothing decoded")
     }
+
+    /// A downloaded chapter has to survive the network going away.
+    ///
+    /// The test downloads a chapter from the loopback fixture, **stops the
+    /// server**, and only then opens the reader. If the pages still draw, the
+    /// bytes came from disk — which is the whole promise of a download, and the
+    /// one thing a "the file exists" assertion would not prove.
+    func testDownloadedChapterReadsWithNoServer() throws {
+        let server = try LocalImageServer()
+        try server.start()
+
+        let app = launch()
+        app.tabBars.buttons["搜索"].tap()
+        try chooseSource(app, "Callback Probe")
+
+        let field = element(app, "search.field")
+        XCTAssertTrue(field.waitForExistence(timeout: 20), "the search tab has no field")
+        field.tap()
+        field.typeText("probe")
+        app.typeText("\n")
+
+        let card = app.scrollViews.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'Probe Comic'")).firstMatch
+        guard card.waitForExistence(timeout: 60) else {
+            throw XCTSkip("the source did not answer search")
+        }
+        card.tap()
+
+        let chapter = firstElement(app, containing: "Chapter 1")
+        XCTAssertTrue(chapter.waitForExistence(timeout: 30), "the detail page lists no chapter")
+        chapter.press(forDuration: 1.2)
+        let keep = app.buttons["下载这一话"].firstMatch
+        guard keep.waitForExistence(timeout: 10) else {
+            throw XCTSkip("no download action on a chapter row")
+        }
+        keep.tap()
+
+        app.tabBars.buttons["书架"].tap()
+        let entry = element(app, "shelf.downloads")
+        XCTAssertTrue(entry.waitForExistence(timeout: 15), "the shelf has no downloads entry")
+        entry.tap()
+        XCTAssertTrue(firstElement(app, containing: "Probe Comic").waitForExistence(timeout: 90),
+                      "the chapter never appeared in downloads")
+
+        // From here on there is no server: anything that draws is on disk.
+        server.stop()
+
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.tabBars.buttons["搜索"].tap()
+        let again = firstElement(app, containing: "Probe Comic")
+        if again.waitForExistence(timeout: 5) { again.tap() }
+        let reopen = firstElement(app, containing: "Chapter 1")
+        XCTAssertTrue(reopen.waitForExistence(timeout: 20), "the chapter is gone")
+        reopen.tap()
+        XCTAssertTrue(app.buttons["收藏本页"].waitForExistence(timeout: 60),
+                      "the reader drew nothing with the server down, so the download did not serve the pages")
+    }

@@ -23,6 +23,9 @@ public actor ImageLoader {
     }
 
     private let core: CoreClient
+    /// Where a downloaded copy may come from. Asked before the network, so a
+    /// chapter that was downloaded opens with no connection at all.
+    private let offline: (@Sendable (Key) async -> Data?)?
     private let cache = NSCache<NSString, CGImageBox>()
     private var inFlight: [CacheKey: SharedLoad] = [:]
     private var nextID: Int64 = 1 << 40 // distinct from Core's request ids
@@ -56,8 +59,10 @@ public actor ImageLoader {
         shared.task.cancel()
     }
 
-    public init(core: CoreClient, memoryLimitBytes: Int = 128 << 20) {
+    public init(core: CoreClient, memoryLimitBytes: Int = 128 << 20,
+                offline: (@Sendable (Key) async -> Data?)? = nil) {
         self.core = core
+        self.offline = offline
         cache.totalCostLimit = memoryLimitBytes
     }
 
@@ -109,7 +114,12 @@ public actor ImageLoader {
             var lastError: Error = CoreError("not an image")
             for _ in 0..<4 {
                 do {
-                    var body = try await Self.fetch(req, id: id, partition: partition, base: base, core: core)
+                    var body: Data
+                    if let offline, let saved = await offline(key) {
+                        body = saved
+                    } else {
+                        body = try await Self.fetch(req, id: id, partition: partition, base: base, core: core)
+                    }
                     if req.has("onLoadFailed"), Self.looksLikeHTML(body) {
                         throw CoreError("image response is an HTML page")
                     }
@@ -164,6 +174,43 @@ public actor ImageLoader {
     /// count is adjusted in one place whatever thread cancelled.
     private func giveUp(_ ck: CacheKey) {
         release(ck)
+    }
+
+    /// The bytes the source would hand the reader, without decoding them.
+    ///
+    /// The downloader needs exactly what the reader gets — the same request
+    /// rules and the same response callback — but saves the file instead of
+    /// drawing it. A mirror that fails is still followed to the next one.
+    public func raw(_ key: Key) async throws -> Data {
+        var req: ImageRequest
+        if key.isThumbnail {
+            req = try await core.thumbnailRequest(key: key.source, url: key.url)
+        } else {
+            req = try await core.imageRequest(key: key.source, url: key.url,
+                                              comicID: key.comicID ?? "", chapterID: key.chapterID)
+        }
+        let partition = CookiePartition.comic(key.source)
+        let base = core.host.transport.scheme(partition: partition)
+        var lastError: Error = CoreError("not an image")
+        for _ in 0..<4 {
+            do {
+                var body = try await Self.fetch(req, id: 0, partition: partition, base: base, core: core)
+                if req.has("onLoadFailed"), Self.looksLikeHTML(body) {
+                    throw CoreError("image response is an HTML page")
+                }
+                if !req.handle.isEmpty, req.has("onResponse"),
+                   let rewritten = try await core.applyImageResponse(key: key.source, handle: req.handle, body: body) {
+                    body = rewritten
+                }
+                return body
+            } catch {
+                lastError = error
+                guard req.has("onLoadFailed"),
+                      let next = try? await core.imageFallback(key: key.source, handle: req.handle) else { throw error }
+                req = next
+            }
+        }
+        throw lastError
     }
 
     /// One hop: the request as the source described it.

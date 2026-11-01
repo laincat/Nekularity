@@ -10,6 +10,7 @@
 
 界面层调用的 Kit 成员也逐个核过:`library.comicSources / sources / refresh / install / loadIndex / restoreFailures / setEnabled / remove`,`core.search / searchOptions / explore / explorePages`,`shelf.recentHistory / record / forgetHistory / folders / createFolder / renameFolder / deleteFolder / remove / lastError`,`searches.add`,`store.loadSetting / saveSetting` 全部存在且参数对得上。
 | 视频 | 视频源是 Core 里的插件(`video-js`、Kazumi 规则、内置源),客户端只负责播:`CoreClient.videoSearch/videoDetails/videoPlay` 三个调用;「视频」页选源、搜索、加载更多;详情页按站点给的线路分组列出剧集;点剧集后向源取播放地址,带 `Referer`/`User-Agent` 交给 **AetherEngine** 播放(AetherEngine 只依赖在 App target,`NekularityKit` 不引入,免得 `swift test` 拉二进制框架)。源若只给「嗅探播放页」而不给直链,界面明说这条路径尚未实现,而不是给一个黑屏。**尚未编译、未在真机或真实视频源上验证。** |
+| 下载 | `DownloadStore`:把一章的原始字节存到 `Downloads/<源>/<漫画哈希>/<章节哈希>/<页码>.img`,清单写在 `manifest.json`;地址来自 Core 的 `chapterImages`,取字节走 `ImageLoader.raw`(与阅读器同一套请求规则、同一份 `onResponse` 改写)。`ImageLoader` 在联网前先问它,所以**下载过的章节在没有网络时照样能读**,阅读器本身不需要知道下载的存在。详情页长按章节下载、右上角可下载全部,书架右上角进「下载」页看占用并删除。**尚未在 Mac 上编译验证。** |
 
 ## Mac 上已经跑过的检查
 
