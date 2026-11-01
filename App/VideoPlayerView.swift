@@ -28,10 +28,16 @@ final class VideoPlayerModel {
     /// What the source offers. Empty is a fact worth showing, not an error.
     private(set) var subtitleTracks: [TrackInfo] = []
     private(set) var activeSubtitleID: Int?
+    /// The picture's own clock, ~10 Hz. `state` does not change while playing, so
+    /// anything drawn against time has to read this rather than `position`.
+    private(set) var time: Double = 0
+    private(set) var cues: [SubtitleCue] = []
     /// Picture in Picture, for the route where the engine hands out an AVPlayer.
     @ObservationIgnored let pip = PiPController()
     @ObservationIgnored private var started = false
     @ObservationIgnored private var watch: AnyCancellable?
+    @ObservationIgnored private var clockWatch: AnyCancellable?
+    @ObservationIgnored private var positionWatch: AnyCancellable?
 
     /// Called when playback starts and when the screen closes, so an episode
     /// that was opened and abandoned still lands in history.
@@ -58,6 +64,17 @@ final class VideoPlayerModel {
             watch = made.objectWillChange.sink { [weak self] _ in
                 Task { @MainActor [weak self] in self?.sync(made) }
             }
+            // Separate object on purpose: subscribing to the engine's own publisher
+            // would re-render the whole screen ten times a second.
+            clockWatch = made.clock.$sourceTime.sink { [weak self] value in
+                Task { @MainActor [weak self] in self?.time = value }
+            }
+            // `position` was only updated when the engine published a state change,
+            // so closing a player mid-episode reported wherever the last change was.
+            positionWatch = made.clock.$currentTime.sink { [weak self] value in
+                guard value > 0 else { return }
+                Task { @MainActor [weak self] in self?.position = value }
+            }
             sync(made)
             onProgress?(made.currentTime, made.duration ?? 0)
         } catch {
@@ -78,6 +95,7 @@ final class VideoPlayerModel {
         format = String(describing: engine.videoFormat)
         subtitleTracks = engine.subtitleTracks
         activeSubtitleID = engine.activeSubtitleTrackIndex
+        cues = engine.subtitleCues
         // Only the native route publishes an AVPlayer; on the software route the
         // engine decodes into its own layer, and PiP there needs
         // `softwarePiPSource` wiring that this screen does not have yet.
@@ -118,6 +136,8 @@ final class VideoPlayerModel {
 
     func stop() {
         watch = nil
+        clockWatch = nil
+        positionWatch = nil
         engine?.stop()
         engine = nil
     }
@@ -156,6 +176,7 @@ struct VideoPlayerView: View {
                 if let engine = model.engine {
                     AetherPlayerSurface(engine: engine)
                         .ignoresSafeArea(edges: .bottom)
+                        .overlay { subtitleLayer }
                         .overlay { danmakuLayer }
                         .overlay(alignment: .bottom) { bottomBar(engine) }
                 } else if let failure = model.failure {
@@ -285,7 +306,7 @@ struct VideoPlayerView: View {
     @ViewBuilder
     private var danmakuLayer: some View {
         if showsDanmaku, !danmaku.isEmpty {
-            let active = DanmakuParser.active(danmaku, at: model.position)
+            let active = DanmakuParser.active(danmaku, at: model.time)
             VStack {
                 // Position, not the comment's own id: the same words can be sent
                 // twice at the same second, and duplicate ids make SwiftUI drop
@@ -300,6 +321,41 @@ struct VideoPlayerView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 40)
+            .allowsHitTesting(false)
+        }
+    }
+
+    /// Text cues from the engine, drawn as an overlay.
+    ///
+    /// Bitmap cues (PGS/DVB) are deliberately not drawn here: they arrive as images
+    /// with their own geometry, and the software route already composites them into
+    /// the frames it renders. Drawing an image cue badly would be worse than leaving
+    /// it to the path that already does it.
+    @ViewBuilder
+    private var subtitleLayer: some View {
+        let lines = model.cues
+            .filter { $0.startTime <= model.time && model.time < $0.endTime }
+            .compactMap(\.text)
+            .filter { !$0.isEmpty }
+        if !lines.isEmpty {
+            VStack {
+                Spacer()
+                VStack(spacing: 2) {
+                    ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                        Text(line)
+                            .font(.callout)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.white)
+                            // A caption over a bright frame needs its own ground; a
+                            // shadow alone disappears on a white sky.
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 4))
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 96)
+            }
             .allowsHitTesting(false)
         }
     }
