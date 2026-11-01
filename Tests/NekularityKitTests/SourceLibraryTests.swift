@@ -90,6 +90,18 @@ final class ScriptFeeder: @unchecked Sendable {
     }
 }
 
+@Suite("Reading Core's refusal")
+struct ExistingKeyTests {
+    /// Both wordings have been seen in Core, and only one of them used to be
+    /// understood — which is why updating an installed source failed.
+    @Test("the key is read out of either wording Core uses")
+    func readsBothWordings() {
+        #expect(SourceLibrary.existingKey(in: "js: invalid source: key(mini) already exists") == "mini")
+        #expect(SourceLibrary.existingKey(in: "js: source already installed: mini") == "mini")
+        #expect(SourceLibrary.existingKey(in: "js: some other failure") == nil)
+    }
+}
+
 @Suite("Batch source update (the loop)")
 struct SourceLibraryUpdateAllTests {
     private let script = """

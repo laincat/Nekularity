@@ -77,13 +77,34 @@ public final class SourceLibrary {
         let rec: PluginRecord
         do {
             rec = try await core.installComicSource(body, origin: origin, indexURL: indexURL)
-        } catch let e as CoreError where e.message.contains("already installed") {
-            guard let key = e.message.components(separatedBy: "already installed: ").last?.trimmingCharacters(in: .whitespaces),
+        } catch let e as CoreError {
+            // Core refuses a second install of a key it already holds, and it has
+            // worded that two ways: "already installed: <key>" and
+            // "key(<key>) already exists". Matching only the older wording meant
+            // the replace below never ran, so every update of an installed source
+            // failed with the very error that was supposed to trigger the update.
+            guard let key = Self.existingKey(in: e.message),
                   sources.contains(where: { $0.key == key }) else { throw e }
             rec = try await core.replace(key: key, type: "comic", body: body, origin: origin, indexURL: indexURL)
         }
         try await persist()
         return rec
+    }
+
+    /// The key Core names when it refuses to install a source it already has.
+    static func existingKey(in message: String) -> String? {
+        if let start = message.range(of: "key(") {
+            let rest = message[start.upperBound...]
+            if let close = rest.firstIndex(of: ")") {
+                let key = String(rest[rest.startIndex..<close]).trimmingCharacters(in: .whitespaces)
+                if !key.isEmpty { return key }
+            }
+        }
+        if let start = message.range(of: "already installed: ") {
+            let key = message[start.upperBound...].trimmingCharacters(in: .whitespaces)
+            if !key.isEmpty { return key }
+        }
+        return nil
     }
 
     /// What one source's update attempt did.
