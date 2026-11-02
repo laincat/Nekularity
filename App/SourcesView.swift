@@ -110,6 +110,9 @@ struct SourcesView: View {
                 } label: {
                     Label("导入备份", systemImage: "square.and.arrow.down")
                 }
+                // The batch update lives inside this menu, so a test has to open the
+                // menu before the button exists. Tagging the menu is what says so.
+                .accessibilityIdentifier("sources.menu")
             }
         }
         .sheet(isPresented: $showAdd) { AddSourceView() }

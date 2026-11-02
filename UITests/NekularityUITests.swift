@@ -924,8 +924,15 @@ final class NekularityUITests: XCTestCase {
         let row = firstElement(app, containing: "Batch")
         XCTAssertTrue(row.waitForExistence(timeout: 30), "the installed source never appeared")
 
+        // 更新全部源 lives in the toolbar menu, so it does not exist until the menu
+        // is open. Asking for it first and failing on that was the first version of
+        // this case: the control is there, the test was not looking where it is.
+        let menu = element(app, "sources.menu")
+        XCTAssertTrue(menu.waitForExistence(timeout: 20), "the sources page has no toolbar menu")
+        menu.tap()
+
         let update = element(app, "sources.updateAll")
-        XCTAssertTrue(update.waitForExistence(timeout: 20), "the sources page has no update-all control")
+        XCTAssertTrue(update.waitForExistence(timeout: 20), "the menu has no update-all control")
         update.tap()
 
         // The alert is the report. "已是最新" means the fetch and the replace both
@@ -936,8 +943,13 @@ final class NekularityUITests: XCTestCase {
         while Date() < deadline, !reported.exists, !failed.exists {
             Thread.sleep(forTimeInterval: 0.2)
         }
-        XCTAssertFalse(failed.exists, "the update reported the old refusal instead of a result")
-        XCTAssertTrue(reported.exists, "pressing 更新全部 produced no report")
+        let saidCurrent = reported.exists
+        let saidFailed = failed.exists
+        // Stop serving before asserting: the port is fixed, and the next case that
+        // needs it fails with "address already in use" if this one lingers.
+        server.stop()
+        XCTAssertFalse(saidFailed, "the update reported the old refusal instead of a result")
+        XCTAssertTrue(saidCurrent, "pressing 更新全部 produced no report")
     }
 
     /// A downloaded chapter has to survive the network going away.

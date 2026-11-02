@@ -124,7 +124,10 @@ final class LocalImageServer: @unchecked Sendable {
     /// launches against a server that is not there yet.
     func start(timeout: TimeInterval = 10) throws {
         var lastFailure: Error?
-        for _ in 0..<5 {
+        // Ten tries: a listener stopped a moment ago can hold the fixed port while
+        // its last connection drains, and the case that needs it next then fails
+        // with "address already in use" for a reason that is not a bug.
+        for _ in 0..<10 {
             let listener = try makeListener()
             self.listener = listener
             let signal = Signal()
@@ -153,7 +156,7 @@ final class LocalImageServer: @unchecked Sendable {
                 listener.stateUpdateHandler = nil
                 listener.newConnectionHandler = nil
                 listener.cancel()
-                Thread.sleep(forTimeInterval: 0.3)
+                Thread.sleep(forTimeInterval: 0.5)
                 continue
             }
             return
