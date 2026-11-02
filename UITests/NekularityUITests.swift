@@ -936,6 +936,12 @@ final class NekularityUITests: XCTestCase {
         // shown" from "something was shown, and it says something else" — the previous
         // version of this case could only report the first, which sent me looking in
         // the wrong place once already.
+        // Did the tap start anything? The button relabels itself while the update
+        // runs, so this separates "the task never began" from "it ran and showed
+        // nothing" — two failures that used to read the same.
+        let started = app.buttons.matching(NSPredicate(format: "label CONTAINS '正在更新'"))
+            .firstMatch.waitForExistence(timeout: 20)
+
         // An alert is its own element tree. Looking for its words among the page's
         // static texts is how this case reported "no report" without ever having
         // looked inside the alert.
@@ -950,12 +956,14 @@ final class NekularityUITests: XCTestCase {
         // needs it fails with "address already in use" if this one lingers.
         server.stop()
         if !appeared {
+            // Always kept: the tree is the only thing that says whether the screen was
+            // still busy, still empty, or showing something nobody expected.
             let tree = XCTAttachment(string: app.debugDescription)
             tree.name = "no-report-tree"
             tree.lifetime = .keepAlways
             add(tree)
         }
-        XCTAssertTrue(appeared, "pressing 更新全部 produced no report")
+        XCTAssertTrue(appeared, "pressing 更新全部 produced no report (task started: \(started))")
         XCTAssertFalse(said.contains("already exists"),
                        "the update reported the old refusal instead of a result: \(said)")
         XCTAssertFalse(said.contains("失败"), "the update failed: \(said)")

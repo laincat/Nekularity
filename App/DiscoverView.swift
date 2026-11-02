@@ -172,11 +172,14 @@ struct DiscoverView: View {
         .glassCard()
         .accessibilityIdentifier("home.card.\(block.id)")
         .jiggling(editing)
-        .onLongPressGesture(minimumDuration: 0.35) {
+        // Simultaneous, not exclusive: `.draggable` already claims the long press to
+        // begin a drag, and an exclusive gesture here never fires — which is exactly
+        // what "a long press did not put the board into arranging" reported.
+        .simultaneousGesture(LongPressGesture(minimumDuration: 0.5).onEnded { _ in
             guard !editing else { return }
             editPulse += 1
             withAnimation(.snappy) { editing = true }
-        }
+        })
         .sensoryFeedback(.impact(weight: .medium), trigger: editPulse)
     }
 
