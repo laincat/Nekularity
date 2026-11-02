@@ -18,7 +18,7 @@ Updated 2026-11-03. Only work that needs a device, an account, credentials or a 
 
 **Playback, subtitles and resume**: open the 视频 tab's online source, search an entry and play episode 1; expect picture and sound (record the mute switch state), subtitle options for English/Chinese/Off, and a resume from the same position after leaving and returning. Record **picture-in-picture and background audio** separately: whether audio continues on the desktop and whether a PiP button appears.
 
-**Retry after failure**: make a chapter download fail (for example by dropping the network mid-way), confirm the screen reports the failure, then retry and see it complete. The retry entry has no automated coverage, so only a device closes this one.
+**Retry after failure**: make a chapter download fail (for example by dropping the network mid-way); 我的 → 下载 should show a 没有下载完成 group with the reason and a 重试 button, and tapping it moves the chapter into the download list. This path now has unit and simulator coverage, but the reasons a device fails (a dropped network, the system reclaiming a background download) can only come from a device.
 
 ## 3. Accounts and media servers
 
