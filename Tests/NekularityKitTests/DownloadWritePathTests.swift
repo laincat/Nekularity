@@ -213,4 +213,25 @@ struct DownloadWritePathTests {
         try? await Task.sleep(nanoseconds: 300_000_000)
         #expect(fetches.value == pages.count)
     }
+
+    @Test func aPartialChapterFolderIsRemovedWhenTheStoreOpens() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = DownloadStore(root: dir)
+        let pages = ["https://fixture.invalid/1.jpg"]
+        store.download(request(pages)) { Data($0.url.utf8) }
+        #expect(await waitFor { store.chapters[id] != nil })
+
+        // What an interrupted write leaves: pages on disk, no manifest record.
+        let orphan = dir.appending(path: "probe/\(DownloadStore.Chapter.digest("other"))/\(DownloadStore.Chapter.digest("chX"))")
+        try FileManager.default.createDirectory(at: orphan, withIntermediateDirectories: true)
+        try Data("half a page".utf8).write(to: orphan.appending(path: "0.img"))
+
+        let reopened = DownloadStore(root: dir)
+        #expect(!FileManager.default.fileExists(atPath: orphan.path))
+        // The finished chapter is not swept with it.
+        let page = ImageLoader.Key(source: "probe", url: pages[0], comicID: "comic",
+                                   chapterID: "ch1", isThumbnail: false)
+        #expect(reopened.bytes(for: page) != nil)
+    }
 }
