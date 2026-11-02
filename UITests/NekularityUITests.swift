@@ -112,6 +112,10 @@ final class NekularityUITests: XCTestCase {
     /// left it there. A download that is already on disk is not fetched again, so
     /// the failed-download case would make no request at all; the cleanup uses the
     /// same swipe a user has rather than deleting files behind the app.
+    /// Removes the fixture chapter from the downloads screen if an earlier run
+    /// left it there. A download that is already on disk is not fetched again, so
+    /// the failed-download case would make no request at all; the cleanup uses the
+    /// same swipe a user has rather than deleting files behind the app.
     private func removeDownloadedProbeChapter(_ app: XCUIApplication) {
         tab(app, "我的")
         let entry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '下载'")).firstMatch
@@ -123,6 +127,11 @@ final class NekularityUITests: XCTestCase {
             let delete = app.buttons["删除"].firstMatch
             if delete.waitForExistence(timeout: 5) { delete.tap() }
         }
+        // Leave the pushed screen. Tapping the tab does not pop the stack, so
+        // staying here would hide the downloads entry from the rest of the test.
+        let back = app.navigationBars.buttons.element(boundBy: 0)
+        if back.waitForExistence(timeout: 10) { back.tap() }
+        XCTAssertTrue(entry.waitForExistence(timeout: 10), "我的 has no downloads entry after the cleanup")
     }
 
     private func firstElement(_ app: XCUIApplication, containing text: String) -> XCUIElement {
