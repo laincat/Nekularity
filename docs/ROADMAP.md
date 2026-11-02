@@ -8,7 +8,7 @@
 
 | 项目 | 当前事实 | 主要缺口 |
 |---|---|---|
-| Nekularity | SwiftUI + NekularityKit + gomobile Core;AltStore 已发布 0.2.7(build 9),App/Widget、IPA HTTP 200/大小、包内主题修复与订阅已核对 | 5d9a5a1 全套 24/24;原生导航 5f15769 完整 UI 26/26、后续 81eb017 定向三例通过;明暗窄宽屏矩阵、大字体与减少动态效果按底层优先后置;真机/后台/账号仍待验收 |
+| Nekularity | SwiftUI + NekularityKit + gomobile Core;AltStore 已发布 0.2.7(build 9),App/Widget、IPA HTTP 200/大小、包内主题修复与订阅已核对 | 5d9a5a1 全套 24/24;原生导航 5f15769 完整 UI 26/26、后续 81eb017 定向三例通过;明暗窄宽屏矩阵、大字体与减少动态效果按底层优先后置;下载离线索引已按漫画/源隔离并在 Mac 上 398/398 通过,重试改造待验收;真机/后台/账号仍待验收 |
 | Nekophage | MyGo 原生主窗口 + WebView 阅读器;Windows 有真实源、图片解码、书架与本机 Magpie 的运行证据 | 本地 HLS/MP4 解码、续播、源安装/恢复、读取取消及 AAC 音轨解码(HLS.js 与原生 MP4 两条路径)已验证;Windows 已有 0.2.4 便携包与按用户安装包;HLS 会话改为优先内置 HLS.js(原生 HLS 会丢字幕组),打包 GUI 内已实读中文字幕与 cue 请求;macOS 当前 pin 与扬声器实际输出仍待验收;无 Git 远端 |
 | VeneraCat Core | 共享漫画/视频/备份/AI 协议逻辑;网络与系统能力交给客户端 | JS 引擎的少量兼容限制、客户端边界契约仍需维护;Sender 没有生产调用方 |
 

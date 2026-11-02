@@ -50,6 +50,14 @@
 | 字幕叠层与播放时钟 | 用引擎的 `$subtitleCues` 画文字字幕(纯文本与富文本都经 `cue.text` 合并),位图字幕**不画**——软件通路本来就会把它合成进帧里,画坏不如不画。同时修了一个真实缺陷:叠层原先读 `position`,而 `position` 只在引擎状态变化时更新,所以**弹幕和字幕在播放中不会前进**;现在跟随 `clock.$sourceTime`(约 10 Hz),关闭播放器时的位置也改读 `$currentTime`,不再停在最后一次状态变化处。 | 需真机/软解源验证 |
 | 引擎接口签名自查 | 把 App 用到的 **28 个 AetherEngine 符号**逐个对到 7.53.1 源码:初始化、`load` 签名、`LoadOptions(httpHeaders:)` 的公开 init、播放/暂停/跳转、`setRate`/`maxSupportedRate`、`state` 的 `case error(String)`、字幕轨与 `subtitleCues`、`currentAVPlayer`、`softwarePiPSource` 的 `layer`/`timeRange`/`setPlaying`/`skip`、`SubtitleCue.startTime`/`text`、`AetherPlayerSurface(engine:)`。**全部命中**。这一步替代不了编译(Apple SDK 签名与 SwiftUI 约束仍需编译器),但能挡掉「把引擎 API 记错」这一类错误。 | 28 项核对,无缺失 |
 
+## 下载离线索引隔离(2026-11-03,提交 `2d9f555`)
+
+离线图片索引原来只用「源 + 章节 + 图片地址」,没有漫画 ID:同一源的两部漫画若复用章节 ID 与图片地址,阅读器会拿到另一部漫画的字节,删除一章也可能清掉另一部的索引。现在键包含源、漫画、章节与地址,写入/读取/删除/重开四条路径一致;只有阅读页会归档,封面/缩略图请求不再命中页面字节。
+
+Mac 单测按提交记录:`2317ea7`(仅新增复现用例)2 例全失败、共 6 条断言;`380bf89`(索引修复)剩 1 例失败,完整套件 397 PASS / 1 FAIL;`2d9f555`(缩略图隔离)目标用例 2/2、完整套件 **398 / 398 PASS,0 FAIL,0 SKIP**。环境为 macOS 27.0.1 arm64、Swift 6.4.2、Xcode 27.2,复用同一 Core pin 产物;日志在 `/tmp/nk-dl-isolation-evidence/`。该结果只覆盖临时目录与 manifest 的单元回归,不代表真机、下载界面或网络闭环。
+
+后续重试与可测性改造(`7550c12`)已提交但尚未验收:失败/删除后可重新下载,并让写盘路径脱离 Core 可测;在 Mac 回执到达前不并入上述通过统计。
+
 ## 原生导航与统一内容表面(Mac 已跑,视觉矩阵后置)
 
 `5f15769` 在 Mac 上 App 与 UITests 构建通过,完整正式 UI 套件 **26 条 / PASS 26 / FAIL 0 / SKIP 0**,日志 `/tmp/nk-native-5f15769-evidence/full-ui.log`。这是一轮完整执行,覆盖原生标签、编辑状态跨栏目保持、资源库模块入口与既有主题/发现页用例。
