@@ -40,8 +40,8 @@ fi
 # The container only exists once the app is installed, so the caller installs
 # first. Getting this wrong silently seeds nothing, hence the explicit failure.
 if ! container=$(xcrun simctl get_app_container "$device" "$bundle" data 2>/dev/null); then
-	printf 'seed-simulator: %s is not installed on the booted simulator\n' "$bundle" >&2
-	printf '  install it first: xcrun simctl install booted <path to Nekularity.app>\n' >&2
+	printf 'seed-simulator: %s is not installed on simulator %s\n' "$bundle" "$device" >&2
+	printf '  install it first: xcrun simctl install %s <path to Nekularity.app>\n' "$device" >&2
 	exit 2
 fi
 

@@ -52,7 +52,7 @@
 
 ## Mac 上已经跑过的检查
 
-**当前单项回归(2026-11-02,Orca Worker / Mac 模拟器)**:批量更新 `testUpdateAllReportsCurrentRatherThanFailing` 在 `fd1cef0` 上 PASS;发现页 `testArrangingTheBoardShowsItsControls` 在 `c259f3f` 上 PASS(24.6 秒,无失败/跳过),测试目标构建通过。修复包括将卡片标识符从祖先容器移至标题,以及把大小选项查询限定在对话框内。`c259f3f` 的全套 UI 仍待终态回执。新增长按进入编排、改尺寸后重启读回的用例尚未在 Mac 执行;静态解析通过不算 UI 通过。
+**当前单项回归(2026-11-02,Orca Worker / Mac 模拟器)**:批量更新 `testUpdateAllReportsCurrentRatherThanFailing` 在 `fd1cef0` 上 PASS;发现页 `testArrangingTheBoardShowsItsControls` 在 `c259f3f` 上 PASS(24.6 秒,无失败/跳过),测试目标构建通过。修复包括将卡片标识符从祖先容器移至标题,以及把大小选项查询限定在对话框内。`c259f3f` 全套首轮 18 条 / PASS 4 / FAIL 0 / SKIP 14;第二轮 PASS 3 / FAIL 1 / SKIP 14。种子缺失、补种目标未安装 App,以及批量更新页缺添加按钮均保留为事实,不能记成通过。下一轮固定模拟器 UUID 并关闭并行克隆后复测。新增长按进入编排、改尺寸后重启读回的用例尚未在 Mac 执行;静态解析通过不算 UI 通过。
 
 **`v0.2.5` 的发布构建(2026-11-02,提交 `7a00580`,run 83)**:GitHub Actions 的 macOS runner 上 **12 个步骤全绿**——构建固定 pin 的 Core、树检查、kit 单测、生成工程、未签名真机构建、编译界面测试、打包 IPA、发布 Release 资产。产物 `Nekularity.ipa` **29,359,908 字节**,`curl -L` 拉取 **HTTP 200**,字节数与 Release 资产一致;AltStore 源的 `apps.json` 已更新到 **`0.2.5`(build 7)**,订阅入口 `releases/download/latest/apps.json` 也回 **HTTP 200** 且版本一致。
 

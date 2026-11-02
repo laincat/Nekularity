@@ -14,7 +14,7 @@ Updated 2026-11-02. Covers Nekularity, Nekophage and VeneraCat Core. Work throug
 
 This review checked code and existing receipts; it did not rerun every test in all three projects. All three local worktrees were clean at the start. Both clients' `scripts/core-version` files contain `214e7782190d47c1f4bcdc9a95fb3a517072cc85`; the Core repository HEAD is `c3a7dd8`. Do not describe a pin and repository HEAD as the same version.
 
-Nekularity code baseline `c259f3f`: an Orca Worker built it on the Mac and passed the arranging case (24.6 seconds, no skip); update-all passed on `fd1cef0`. The same Orca Worker has been assigned the complete UI suite on `c259f3f`; its result has not arrived. An older 16/16 result cannot stand in for it.
+Nekularity code baseline `c259f3f`: an Orca Worker built it on the Mac and passed the arranging case (24.6 seconds, no skip); update-all passed on `fd1cef0`. The first full `c259f3f` UI run returned 18 cases / PASS 4 / FAIL 0 / SKIP 14; after seeding failed, the second returned PASS 3 / FAIL 1 / SKIP 14. Rerun on a fixed simulator UUID with complete fixtures. An older 16/16 result cannot stand in for it.
 
 ## Priorities and acceptance
 

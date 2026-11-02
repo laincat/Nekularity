@@ -324,7 +324,11 @@ except (ValueError, KeyError):
 						only="$only -only-testing:NekularityUITests/NekularityUITests/$name"
 					done
 				fi
+				# The seed lives in this device's data container. Parallel UI testing
+				# can create a simulator clone without that data, yielding skipped
+				# source cases even though the original device was seeded correctly.
 				if xcodebuild test-without-building -scheme Nekularity $only \
+					-parallel-testing-enabled NO \
 					-destination "platform=iOS Simulator,id=$device" \
 					-derivedDataPath "$ui/dd" >"$ui/tests.log" 2>&1; then
 					# grep -o, not sed: BSD sed has no \? and matched nothing silently,

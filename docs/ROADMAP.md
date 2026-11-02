@@ -14,7 +14,7 @@
 
 本轮只核对代码与已有回执,不声称重新跑过三个项目的全部测试。三个本地工作树在开始时均干净。两个客户端的 `scripts/core-version` 均为 `214e7782190d47c1f4bcdc9a95fb3a517072cc85`;Core 仓库 HEAD 是 `c3a7dd8`,不能把 pin 与仓库 HEAD 混称同一个版本。
 
-Nekularity 代码基线 `c259f3f`:Orca Worker 在 Mac 上构建并单跑发现页编排用例 PASS(24.6 秒,无跳过);批量更新在 `fd1cef0` 上 PASS。`c259f3f` 的完整 UI 套件已派发给同一个 Orca Worker,结果尚未回报。旧版本的 16/16 不能替代它。
+Nekularity 代码基线 `c259f3f`:Orca Worker 在 Mac 上构建并单跑发现页编排用例 PASS(24.6 秒,无跳过);批量更新在 `fd1cef0` 上 PASS。`c259f3f` 的完整 UI 首轮 18 条 / PASS 4 / FAIL 0 / SKIP 14,补种失败后的第二轮 PASS 3 / FAIL 1 / SKIP 14;需要固定模拟器 UUID 并补齐夹具后复测。旧版本的 16/16 不能替代它。
 
 ## 优先级与验收
 
