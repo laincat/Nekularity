@@ -112,11 +112,17 @@ final class NekularityUITests: XCTestCase {
         let entry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '下载'")).firstMatch
         guard entry.waitForExistence(timeout: 15) else { return }
         entry.tap()
-        let row = firstElement(app, containing: "Probe Comic")
-        if row.waitForExistence(timeout: 5) {
+        // A previous run can leave a downloaded chapter and a failure row, which
+        // now survives a relaunch; they sit in different sections, so clear until
+        // neither is left. A failure left behind would also leave a retry button
+        // in front of the one this case is about.
+        for _ in 0..<4 {
+            let row = firstElement(app, containing: "Probe Comic")
+            guard row.waitForExistence(timeout: 3) else { break }
             row.swipeLeft()
             let delete = app.buttons["删除"].firstMatch
-            if delete.waitForExistence(timeout: 5) { delete.tap() }
+            guard delete.waitForExistence(timeout: 3) else { break }
+            delete.tap()
         }
         // Leave the pushed screen. Tapping the tab does not pop the stack, so
         // staying here would hide the downloads entry from the rest of the test.
