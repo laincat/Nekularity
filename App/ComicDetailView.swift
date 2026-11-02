@@ -39,6 +39,7 @@ struct ComicDetailView: View {
                 ProgressView()
             }
         }
+        .themedPage()
         .navigationTitle(route.comic.title)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $tagSearch) { request in

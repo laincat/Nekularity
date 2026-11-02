@@ -7,8 +7,7 @@ final class ZZThreeColumnTests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         defer { XCUIDevice.shared.orientation = .portrait }
         app.launch()
-        let discover = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier == 'tab.discover'")).firstMatch
+        let discover = app.tabBars.buttons["发现"].firstMatch
         XCTAssertTrue(discover.waitForExistence(timeout: 30), "no discover tab")
         discover.tap()
         let edit = app.descendants(matching: .any)

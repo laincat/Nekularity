@@ -9,6 +9,7 @@ import SwiftUI
 /// here rather than in the tab bar because the bar holds four, and a fifth would
 /// fold the last one into 更多.
 struct LibraryView: View {
+    let magpie: MagpieAccounts
     @Environment(SourceLibrary.self) private var library
     @Environment(MediaServerStore.self) private var servers
     @Environment(LocalComicStore.self) private var local
@@ -27,13 +28,18 @@ struct LibraryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     section("媒体服务器") {
-                        card {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("还没有连接服务器").font(.callout)
-                                Text("Jellyfin、Emby、Plex 这些库还没有接；接上之后，它们会和本机视频出现在同一处。")
-                                    .font(.caption).foregroundStyle(.secondary)
+                        NavigationLink { MediaServersView() } label: {
+                            card {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(servers.servers.isEmpty ? "添加媒体服务器" : "已配置 \(servers.servers.count) 台服务器")
+                                        .font(.callout)
+                                    Text(servers.servers.isEmpty ? "连接媒体库,与本机内容一起查看。" : "管理地址与登录信息,在媒体库查看内容。")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
                             }
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("library.serverSummary")
                     }
 
                     section("入口") {
@@ -96,15 +102,23 @@ struct LibraryView: View {
                     section("模块") {
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                                   spacing: 12) {
-                            tile("漫画源", detail: "\(comics.count) 个 · 安装与设置", symbol: "book.closed")
-                            tile("视频源", detail: "\(videos.count) 个 · 插件与规则", symbol: "antenna.radiowaves.left.and.right")
+                            NavigationLink { SourcesView(magpie: magpie) } label: {
+                                tile("漫画源", detail: "\(comics.count) 个 · 安装与设置", symbol: "book.closed")
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("library.comicSources")
+                            NavigationLink { VideoView(startsInSources: true) } label: {
+                                tile("视频源", detail: "\(videos.count) 个 · 插件与规则", symbol: "antenna.radiowaves.left.and.right")
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("library.videoSources")
                         }
                     }
                 }
                 .padding(16)
             }
             .navigationTitle("资源库")
-            .contentMargins(.bottom, 76, for: .scrollContent)
+            .themedPage()
             .navigationDestination(isPresented: $allSearch) { SearchView(startsInAllSources: true) }
             .navigationDestination(isPresented: $watching) { VideoView() }
         }
@@ -119,8 +133,6 @@ struct LibraryView: View {
 
     private func card<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
             .glassCard()
     }
 
@@ -137,8 +149,6 @@ struct LibraryView: View {
             Text(title).font(.subheadline.weight(.semibold))
             Text(detail).font(.caption2).foregroundStyle(.secondary)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
     }
 }

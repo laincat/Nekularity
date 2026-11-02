@@ -8,6 +8,7 @@ struct SearchView: View {
     /// wrong default.
     var startsInAllSources = false
     @Environment(SourceLibrary.self) private var library
+    @Environment(ThemeStore.self) private var themes
     @AppStorage("searchSource") private var sourceKey = ""
     /// The remembered range, written only when the user picks one.
     @AppStorage("searchScope") private var storedScope: SearchModel.Scope = .current
@@ -40,6 +41,7 @@ struct SearchView: View {
                 }
             }
         }
+        .themedPage()
         .navigationTitle("搜索")
         .onAppear { allSourcesThisVisit = startsInAllSources }
         .navigationDestination(item: $opened) { ComicDetailView(route: $0) }
@@ -110,7 +112,7 @@ struct SearchView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color(.secondarySystemBackground)))
+        .background(RoundedRectangle(cornerRadius: Design.smallRadius).fill(themes.active.cardSurface))
         .padding(.horizontal, 16)
         .padding(.top, 8)
     }
