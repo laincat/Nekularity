@@ -98,4 +98,59 @@ struct HomeLayoutTests {
             #expect(HomeBlock(template: template).isWide)
         }
     }
+
+    /// A block is drawn at its own preferred width until the user says otherwise, and
+    /// the choice is a fact about that block, not a global setting.
+    @Test("a block can be resized, and the size survives a relaunch")
+    func aBlockCanBeResized() {
+        let name = "home-layout-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let layout = HomeLayout(defaults: defaults)
+
+        let block = layout.blocks[0]
+        #expect(block.span == (block.isWide ? 2 : 1))
+
+        layout.setColumns(block, block.span == 2 ? 1 : 2)
+        let flipped = layout.blocks[0].span
+        #expect(flipped == (block.isWide ? 1 : 2))
+
+        let reloaded = HomeLayout(defaults: defaults)
+        #expect(reloaded.blocks[0].span == flipped)
+    }
+
+    /// A resize is clamped to the grid: three columns on a two-column board would
+    /// overflow rather than widen.
+    @Test("a size beyond the grid is clamped")
+    func sizeIsClamped() {
+        let name = "home-layout-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let layout = HomeLayout(defaults: defaults)
+        layout.setColumns(layout.blocks[0], 7)
+        #expect(layout.blocks[0].span == 2)
+        layout.setColumns(layout.blocks[0], 0)
+        #expect(layout.blocks[0].span == 1)
+    }
+
+    /// A drop onto a card puts the dragged block where that card was, which is what
+    /// dragging means; dropping on itself changes nothing.
+    @Test("a dragged block lands where it was dropped")
+    func dragReorders() {
+        let name = "home-layout-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let layout = HomeLayout(defaults: defaults)
+
+        let first = layout.blocks[0], third = layout.blocks[2]
+        layout.moveBlock(first.id, before: third.id)
+        #expect(layout.blocks[1].id == first.id)
+
+        let before = layout.blocks.map(\.id)
+        layout.moveBlock(first.id, before: first.id)
+        #expect(layout.blocks.map(\.id) == before)
+
+        layout.moveBlockToEnd(layout.blocks[0].id)
+        #expect(layout.blocks.last?.id == before[0])
+    }
 }

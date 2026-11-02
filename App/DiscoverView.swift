@@ -18,6 +18,9 @@ struct DiscoverView: View {
     @Environment(LocalComicStore.self) private var local
 
     @State private var editing = false
+    /// Counts long presses, so the board can give a tap of feedback when it switches
+    /// into arranging.
+    @State private var editPulse = 0
     @State private var searching = false
     @State private var browsing = false
     @State private var adding = false
@@ -33,14 +36,37 @@ struct DiscoverView: View {
                 } else {
                     MasonryLayout(spacing: 12) {
                         ForEach(layout.visible) { block in
-                            card(block).wideBlock(block.isWide)
+                            card(block)
+                                .wideBlock(block.span == 2)
+                                // Drag is the arrangement; the up and down buttons it
+                                // replaced asked the user to move things one step at a
+                                // time and to count positions.
+                                .draggable(block.id)
+                                .dropDestination(for: String.self) { items, _ in
+                                    guard let id = items.first else { return false }
+                                    layout.moveBlock(id, before: block.id)
+                                    return true
+                                }
                         }
+                    }
+                    // A drop below the last card means "at the end".
+                    .dropDestination(for: String.self) { items, _ in
+                        guard let id = items.first else { return false }
+                        layout.moveBlockToEnd(id)
+                        return true
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                 }
             }
             .navigationTitle("发现")
+            .overlay {
+                if editing {
+                    // Taps land on the editing controls, not on the cards underneath:
+                    // opening a comic while trying to resize one was the complaint.
+                    Color.clear.contentShape(Rectangle()).allowsHitTesting(false)
+                }
+            }
             .contentMargins(.bottom, 76, for: .scrollContent)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -78,6 +104,9 @@ struct DiscoverView: View {
     private func card(_ block: HomeBlock) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             header(block)
+            // While arranging, a tap on a cover should not open a comic: the card is
+            // being moved, not read.
+            Group {
             switch block.kind {
             case .template(let template):
                 switch template {
@@ -94,19 +123,30 @@ struct DiscoverView: View {
             case .source(let ref):
                 SourceStrip(ref: ref)
             }
+            }
+            .allowsHitTesting(!editing)
             if editing {
-                HStack(spacing: 14) {
+                HStack(spacing: 16) {
+                    // The handle says the card can be dragged; without it the gesture
+                    // is invisible and the card looks inert.
+                    Image(systemName: "line.3.horizontal")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .accessibilityLabel("拖动排序")
+
+                    Button {
+                        layout.setColumns(block, block.span == 2 ? 1 : 2)
+                    } label: {
+                        Label(block.span == 2 ? "改为半宽" : "改为整宽",
+                              systemImage: block.span == 2 ? "rectangle.split.2x1" : "rectangle")
+                    }
+                    .accessibilityIdentifier("home.size.\(block.id)")
+
                     Button { layout.setEnabled(block, false) } label: {
                         Label("隐藏", systemImage: "eye.slash")
                     }
-                    Button { layout.move(block, by: -1) } label: {
-                        Label("上移", systemImage: "arrow.up")
-                    }
-                    .disabled(layout.blocks.first?.id == block.id)
-                    Button { layout.move(block, by: 1) } label: {
-                        Label("下移", systemImage: "arrow.down")
-                    }
-                    .disabled(layout.blocks.last?.id == block.id)
+                    .accessibilityIdentifier("home.hide.\(block.id)")
+
                     Spacer()
                 }
                 .font(.caption)
@@ -117,6 +157,12 @@ struct DiscoverView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
+        .onLongPressGesture(minimumDuration: 0.35) {
+            guard !editing else { return }
+            editPulse += 1
+            withAnimation(.snappy) { editing = true }
+        }
+        .sensoryFeedback(.impact(weight: .medium), trigger: editPulse)
     }
 
     private func header(_ block: HomeBlock) -> some View {

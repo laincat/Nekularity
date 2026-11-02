@@ -86,6 +86,10 @@ public struct HomeBlock: Codable, Sendable, Hashable, Identifiable {
 
     public var kind: Kind
     public var enabled: Bool
+    /// How many columns this block spans, when the user has said. `nil` means the
+    /// template's own preference, so a block added later still gets a sensible width
+    /// instead of whatever the last resize happened to be.
+    public var columns: Int?
 
     public var id: String {
         switch kind {
@@ -122,15 +126,20 @@ public struct HomeBlock: Codable, Sendable, Hashable, Identifiable {
         }
     }
 
-    public init(template: Template, enabled: Bool = true) {
+    public init(template: Template, enabled: Bool = true, columns: Int? = nil) {
         kind = .template(template)
         self.enabled = enabled
+        self.columns = columns
     }
 
-    public init(source ref: SourceRef, enabled: Bool = true) {
+    public init(source ref: SourceRef, enabled: Bool = true, columns: Int? = nil) {
         kind = .source(ref)
         self.enabled = enabled
+        self.columns = columns
     }
+
+    /// The width this block is drawn at, clamped to what the grid can show.
+    public var span: Int { min(2, max(1, columns ?? (isWide ? 2 : 1))) }
 }
 
 /// The block arrangement, kept across launches.
@@ -176,6 +185,33 @@ public final class HomeLayout {
         let target = index + delta
         guard blocks.indices.contains(target) else { return }
         move(from: IndexSet(integer: index), to: delta > 0 ? target + 1 : target)
+    }
+
+    /// Sets how many columns a block spans. `nil` restores its own preference.
+    public func setColumns(_ block: HomeBlock, _ columns: Int?) {
+        guard let index = blocks.firstIndex(where: { $0.id == block.id }) else { return }
+        blocks[index].columns = columns.map { min(2, max(1, $0)) }
+        save()
+    }
+
+    /// Puts the block with `id` where the block with `before` sits, which is what a
+    /// drop onto that card means. Dropping a block on itself changes nothing.
+    public func moveBlock(_ id: String, before other: String) {
+        guard id != other,
+              let from = blocks.firstIndex(where: { $0.id == id }),
+              let to = blocks.firstIndex(where: { $0.id == other }) else { return }
+        let block = blocks.remove(at: from)
+        let target = from < to ? to - 1 : to
+        blocks.insert(block, at: max(0, min(blocks.count, target)))
+        save()
+    }
+
+    /// Puts a block at the end, for a drop past the last card.
+    public func moveBlockToEnd(_ id: String) {
+        guard let from = blocks.firstIndex(where: { $0.id == id }) else { return }
+        let block = blocks.remove(at: from)
+        blocks.append(block)
+        save()
     }
 
     public func toggle(_ template: HomeBlock.Template) {
