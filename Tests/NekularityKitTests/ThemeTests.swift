@@ -134,16 +134,15 @@ struct ThemeTests {
         let store = ThemeStore(directory: dir, defaults: UserDefaults(suiteName: "theme-test-\(UUID().uuidString)")!)
         for text in ["http://themes.test/night.json", "HTTP://themes.test/night.json",
                      "file:///tmp/night.json", "https:///no-host.json", "themes.test/night.json"] {
-            var fetched = false
-            guard let url = URL(string: text) else { continue }
+            let url = try #require(URL(string: text))
             do {
-                try await store.install(from: url) { _ in
-                    fetched = true
+                try await store.install(from: url) { requested in
+                    Issue.record("\(requested) reached the network before the scheme check")
                     return Data(##"{"id":"plain","name":"plain","accent":"#000000","radius":8}"##.utf8)
                 }
                 Issue.record("\(text) was accepted")
             } catch {
-                #expect(!fetched, "\(text) reached the network before the scheme check")
+                #expect(error is CoreError)
             }
         }
         #expect(store.all.allSatisfy { $0.id == BuiltinThemes.system.id }, "a refused link installed a theme")
