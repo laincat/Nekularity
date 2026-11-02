@@ -100,8 +100,9 @@ struct ThemeTests {
 
     /// A theme from a link is the same file as one from a picker, so it goes through
     /// the same door: the id is sanitised, and a bad body is refused before anything
-    /// is written.
-    @Test("a theme installs from a link, and a bad one is refused")
+    /// is written. The link itself must be HTTPS — the check lives in the store so a
+    /// caller other than the settings screen cannot skip it.
+    @Test("a theme installs over HTTPS and a bad body is refused")
     func themeFromLink() async throws {
         let dir = try temporary()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -124,5 +125,27 @@ struct ThemeTests {
         }
         #expect(refused, "a body that is not a theme was accepted")
         #expect(store.all.contains { $0.id == "night" }, "the failing install removed the good theme")
+    }
+
+    @Test("plaintext and malformed theme links are refused before fetching")
+    func plaintextThemeLinksAreRefused() async throws {
+        let dir = try temporary()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = ThemeStore(directory: dir, defaults: UserDefaults(suiteName: "theme-test-\(UUID().uuidString)")!)
+        for text in ["http://themes.test/night.json", "HTTP://themes.test/night.json",
+                     "file:///tmp/night.json", "https:///no-host.json", "themes.test/night.json"] {
+            var fetched = false
+            guard let url = URL(string: text) else { continue }
+            do {
+                try await store.install(from: url) { _ in
+                    fetched = true
+                    return Data(##"{"id":"plain","name":"plain","accent":"#000000","radius":8}"##.utf8)
+                }
+                Issue.record("\(text) was accepted")
+            } catch {
+                #expect(!fetched, "\(text) reached the network before the scheme check")
+            }
+        }
+        #expect(store.all.allSatisfy { $0.id == BuiltinThemes.system.id }, "a refused link installed a theme")
     }
 }

@@ -265,11 +265,15 @@ struct SettingsView: View {
     /// Installs a theme from a URL, through the same store path as a picked file.
     private func installThemeFromLink() async {
         let text = themeLink.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: text), url.scheme?.hasPrefix("http") == true else {
+        // Only the shape of a link is checked here; the store enforces HTTPS, so a
+        // caller that bypasses this screen does not get a weaker rule. The error is
+        // shown here because this is where the address was typed.
+        guard let url = URL(string: text), url.host != nil else {
             note = "这不是一个可用的链接"
             return
         }
         do {
+            try ThemeSource.validate(url)
             try await themes.install(from: url) { address in
                 let (data, _) = try await URLSession.shared.data(from: address)
                 return data

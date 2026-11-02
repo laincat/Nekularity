@@ -88,6 +88,23 @@ public enum BuiltinThemes {
     public static let all = [system]
 }
 
+/// Where a theme file may come from.
+///
+/// A theme is only data, but the link is still an untrusted address fetched
+/// over the network. HTTPS is required: plain HTTP would let anything on the
+/// path replace what the app installs. A local file is a different entry point
+/// (`install(data:)`) and is not covered by this rule.
+public enum ThemeSource {
+    public static func validate(_ url: URL) throws {
+        guard url.scheme?.lowercased() == "https" else {
+            throw CoreError("主题链接必须是 https 地址")
+        }
+        guard url.host?.isEmpty == false else {
+            throw CoreError("主题链接缺少主机名")
+        }
+    }
+}
+
 /// Installed themes plus which one is active.
 ///
 /// Installed themes are files: `Themes/<id>.json` under Application Support.
@@ -163,6 +180,9 @@ public final class ThemeStore {
     /// and a test should not need a network to prove what this does with an answer.
     public func install(from url: URL,
                         fetch: @Sendable (URL) async throws -> Data) async throws {
+        // Checked here rather than only in the screen: a second caller must not
+        // be able to fetch a theme over plaintext by skipping the view's guard.
+        try ThemeSource.validate(url)
         let data = try await fetch(url)
         try install(data: data)
     }
