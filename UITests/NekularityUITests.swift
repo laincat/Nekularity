@@ -940,9 +940,9 @@ final class NekularityUITests: XCTestCase {
 
         // The result lands in the list, under 更新结果. It used to be an alert, where
         // "no alert" and "an alert saying something else" looked identical from a test.
-        let row = element(app, "sources.updateSummary")
-        let appeared = row.waitForExistence(timeout: 60)
-        let said = appeared ? row.label : ""
+        let summary = element(app, "sources.updateSummary")
+        let appeared = summary.waitForExistence(timeout: 60)
+        let said = appeared ? summary.label : ""
         server.stop()
         if !appeared {
             let tree = XCTAttachment(string: app.debugDescription)
