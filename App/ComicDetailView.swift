@@ -316,7 +316,8 @@ struct ComicDetailView: View {
             guard !pages.isEmpty else { downloadNote = "这一章没有图片"; return }
             downloads.download(.init(sourceKey: route.source, comicID: route.comic.id,
                                      comicTitle: comicInfo.title, chapterID: chapter.id,
-                                     chapterTitle: chapter.title, pages: pages), loader: images)
+                                     chapterTitle: chapter.title, pages: pages),
+                              fetch: { try await images.raw($0) })
             downloadNote = "已加入下载"
         } catch {
             downloadNote = CoreError.readable(error.localizedDescription)

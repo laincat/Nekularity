@@ -87,8 +87,13 @@ public final class DownloadStore {
         }
     }
 
+    /// Fetches one page with the reader's own request rules. The store takes a
+    /// function rather than the loader so the write path can be driven without a
+    /// Core connection in tests.
+    public typealias Fetch = @Sendable (ImageLoader.Key) async throws -> Data
+
     private let root: URL
-    private var queue: [Request] = []
+    private var queue: [(request: Request, fetch: Fetch)] = []
     private var running = 0
     /// Two at a time: a phone on a slow connection gains nothing from more, and
     /// every extra fetch is another way for a site to start refusing.
@@ -149,12 +154,14 @@ public final class DownloadStore {
 
     // MARK: - Writing
 
-    public func download(_ request: Request, loader: ImageLoader) {
+    public func download(_ request: Request, fetch: @escaping Fetch) {
         let id = "\(request.sourceKey)|\(request.comicID)|\(request.chapterID)"
-        guard progress[id] == nil else { return }
+        // A finished attempt stays recorded; a failed one may be retried, or a
+        // chapter that never downloaded could never be asked for again.
+        if let existing = progress[id], existing.failure == nil { return }
         progress[id] = Progress(done: 0, total: request.pages.count, failure: nil)
-        queue.append(request)
-        pump(loader: loader)
+        queue.append((request, fetch))
+        pump()
     }
 
     public func remove(sourceKey: String, comicID: String, chapterID: String) {
@@ -167,32 +174,40 @@ public final class DownloadStore {
                                 chapterID: chapterID, url: page)] = nil
         }
         chapters[id] = nil
+        // Forget how the attempt went, or a deleted chapter could never be
+        // downloaded again: the next download is blocked by its own old record.
+        progress[id] = nil
+        active[id] = nil
+        queue.removeAll { item in
+            "\(item.request.sourceKey)|\(item.request.comicID)|\(item.request.chapterID)" == id
+        }
         save()
     }
 
     /// Drops the whole archive. Used by the storage screen, and the only way a
     /// user can get the space back.
     public func removeAll() {
-        for id in chapters.keys {
+        // Snapshot the keys: remove() mutates the dictionary.
+        for id in Array(chapters.keys) {
             remove(sourceKey: chapters[id]!.sourceKey, comicID: chapters[id]!.comicID,
                    chapterID: chapters[id]!.chapterID)
         }
     }
 
-    private func pump(loader: ImageLoader) {
+    private func pump() {
         while running < parallel, !queue.isEmpty {
-            let request = queue.removeFirst()
+            let (request, fetch) = queue.removeFirst()
             active["\(request.sourceKey)|\(request.comicID)|\(request.chapterID)"] = request
             running += 1
             Task {
-                await write(request, loader: loader)
+                await write(request, fetch: fetch)
                 running -= 1
-                pump(loader: loader)
+                pump()
             }
         }
     }
 
-    private func write(_ request: Request, loader: ImageLoader) async {
+    private func write(_ request: Request, fetch: Fetch) async {
         let id = "\(request.sourceKey)|\(request.comicID)|\(request.chapterID)"
         let folder = root.appending(path: "\(request.sourceKey)/\(Chapter.digest(request.comicID))/\(Chapter.digest(request.chapterID))",
                                     directoryHint: .isDirectory)
@@ -204,7 +219,7 @@ public final class DownloadStore {
                 let key = ImageLoader.Key(source: request.sourceKey, url: page,
                                           comicID: request.comicID, chapterID: request.chapterID,
                                           isThumbnail: false)
-                let body = try await loader.raw(key)
+                let body = try await fetch(key)
                 let file = folder.appending(path: "\(number).img")
                 try body.write(to: file, options: .atomic)
                 files.append(file.path.replacingOccurrences(of: root.path + "/", with: ""))
