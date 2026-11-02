@@ -89,6 +89,11 @@ jobs:
             -configuration Release -sdk iphoneos -jobs 2 -quiet \
             -derivedDataPath "$RUNNER_TEMP/nekularity-derived" \
             COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGNING_ALLOWED=NO build
+      - name: Compile the interface tests
+        # The app scheme does not build UITests, so a case that does not compile is
+        # only found on a Mac — which is where every interface mistake so far was
+        # found. This compiles them and runs nothing.
+        run: xcodebuild -project Nekularity.xcodeproj -scheme Nekularity -destination 'generic/platform=iOS Simulator' -jobs 2 -quiet -derivedDataPath "$RUNNER_TEMP/nekularity-derived-ui" COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGNING_ALLOWED=NO build-for-testing
       - name: Package unsigned IPA
         run: |
           mkdir -p "$RUNNER_TEMP/package/Payload"
