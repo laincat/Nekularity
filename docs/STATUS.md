@@ -2,7 +2,7 @@
 
 [English](STATUS.en.md) | 简体中文
 
-更新:2026-10-31。
+更新:2026-11-02。
 
 ## 宿主接口形状已核对
 
@@ -51,6 +51,10 @@
 | 引擎接口签名自查 | 把 App 用到的 **28 个 AetherEngine 符号**逐个对到 7.53.1 源码:初始化、`load` 签名、`LoadOptions(httpHeaders:)` 的公开 init、播放/暂停/跳转、`setRate`/`maxSupportedRate`、`state` 的 `case error(String)`、字幕轨与 `subtitleCues`、`currentAVPlayer`、`softwarePiPSource` 的 `layer`/`timeRange`/`setPlaying`/`skip`、`SubtitleCue.startTime`/`text`、`AetherPlayerSurface(engine:)`。**全部命中**。这一步替代不了编译(Apple SDK 签名与 SwiftUI 约束仍需编译器),但能挡掉「把引擎 API 记错」这一类错误。 | 28 项核对,无缺失 |
 
 ## Mac 上已经跑过的检查
+
+**`v0.2.5` 的发布构建(2026-11-02,提交 `7a00580`,run 83)**:GitHub Actions 的 macOS runner 上 **12 个步骤全绿**——构建固定 pin 的 Core、树检查、kit 单测、生成工程、未签名真机构建、编译界面测试、打包 IPA、发布 Release 资产。产物 `Nekularity.ipa` **29,359,908 字节**,`curl -L` 拉取 **HTTP 200**,字节数与 Release 资产一致;AltStore 源的 `apps.json` 已更新到 **`0.2.5`(build 7)**,订阅入口 `releases/download/latest/apps.json` 也回 **HTTP 200** 且版本一致。
+
+这一轮只证明「能编译、能打包、能下载、源指对了版本」:**界面用例在这条流水线里只被编译,没有被执行**(`xcodebuild build-for-testing`),所以批量更新、发现页编排、Liquid Glass、灵动岛这几项仍然只有旧的或没有的设备证据。不要把它读成「测试全过」。
 
 **最新一轮(2026-11-01,树 `67c501a`,Core pin `d81445f`)**:`scripts/verify-ios.sh` **EXIT=0**,**13 个 UI 用例全部 PASS(0 FAIL / 0 SKIP)**;`swift test` **229 tests / 43 suites passed**,`check-seed.sh` 确认种子与仓库夹具一致,未签名 App 构建、build-for-testing、安装均通过。这一轮新增**分类页**:同时断言可选项、结果,以及切换取值后**选中态**真的改变;书架用例也改成先断言 `书架` 导航栏存在——两者都是为了让断言不会因为「元素在上一个界面也存在」而误通过。
 

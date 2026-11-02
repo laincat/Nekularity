@@ -53,6 +53,10 @@ layer as the capability layer. There is no Plex server to test against, so it is
 
 ## What a Mac has already run
 
+**The `v0.2.5` release build (2026-11-02, commit `7a00580`, run 83)**: **all twelve steps green** on the GitHub Actions macOS runner — build the pinned Core, the tree check, the kit's unit tests, generate the project, the unsigned device build, compile the interface tests, package the IPA, publish the release asset. The `Nekularity.ipa` asset is **29,359,908 bytes**, `curl -L` returns **HTTP 200** with that same size, and the AltStore source's `apps.json` now lists **`0.2.5` (build 7)**; the subscription entry point `releases/download/latest/apps.json` also returns **HTTP 200** with the matching version.
+
+That round proves "it compiles, it packages, it downloads, the source points at the right version". It does **not** mean the interface cases passed: this pipeline only **compiles** them (`xcodebuild build-for-testing`), it never runs them. Update-all, the Discover board, Liquid Glass and the Live Activity still rest on older or no device evidence.
+
 **Newest round (2026-11-01, tree `67c501a`, Core pin `d81445f`)**: `scripts/verify-ios.sh` **EXIT=0**, **all thirteen UI cases PASS (0 FAIL / 0 SKIP)**; `swift test` **229 tests / 43 suites passed**, `check-seed.sh` confirmed the seed matches the repository fixture, and the unsigned app build, build-for-testing and install all passed. This round added **the category page**: it asserts the choices, the results, and that switching a value really changes the **selected** state; the shelf case now asserts the 书架 header first — both so an assertion cannot pass because the element was already on the previous screen.
 
 **The accessibility tree found two real defects (2026-11-01, tree `9e8f84c`)**: after several rounds of failing interface cases, the tree the test exports on SKIP/FAIL is what located the problems — in the client, not in the test.
