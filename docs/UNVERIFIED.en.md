@@ -2,7 +2,7 @@
 
 [简体中文](UNVERIFIED.md) | English
 
-**Download archive isolation passes unit regression**: `2d9f555` passes 2/2 and 398/398 on macOS; this covers temporary directories and manifests only, with no device or downloads-screen verification. The retry change `7550c12` awaits its receipt.
+**Download archive isolation and retry pass unit regression**: `2d9f555` passes 2/2 and 398/398 on macOS, and `7550c12` adds 4/4 new cases with 402/402 in the full suite. Coverage is temporary directories, manifests and injected closures only; devices, the downloads screen and live networks remain unverified, and the UI entry for retrying a failed chapter still has no automated coverage.
 
 **Interface changes executed; visual matrix deferred**: `5f15769` builds App/UITests on a Mac and passes the complete UI suite 26/26; `81eb017` builds and passes three targeted interaction cases, though its full suite was not run. Light/dark narrow/wide captures, correctly oriented three-column captures, Dynamic Type and Reduce Motion remain unverified, and the large-text truncation issue is known and unfixed; these are the visual items the user asked to defer. The 24/24 and release evidence below belong to earlier commits and stay separate from this round.
 

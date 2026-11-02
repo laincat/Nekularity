@@ -57,7 +57,7 @@ The offline image index used only source + chapter + image address, with no comi
 
 Mac unit runs by commit: `2317ea7` (regression case only) failed 2/2 with 6 assertion failures; `380bf89` (index fix) left 1 case failing, full suite 397 PASS / 1 FAIL; `2d9f555` (thumbnail guard) passes the targeted 2/2 and the full **398 / 398 PASS, 0 FAIL, 0 SKIP**. Environment: macOS 27.0.1 arm64, Swift 6.4.2, Xcode 27.2, reusing the same Core pin artifacts; logs under `/tmp/nk-dl-isolation-evidence/`. This covers temporary-directory and manifest unit regressions only, not devices, the downloads screen or network flows.
 
-The later retry/testability change (`7550c12`) is committed but unverified: failed or deleted downloads can be requested again, and the write path no longer requires Core. It is excluded from the pass counts above until its Mac receipt arrives.
+The retry/testability change is verified at `7550c12`: failed or deleted downloads can be requested again, the write path takes an injected fetch closure instead of requiring Core, the four new write-path cases pass, archive isolation remains 2/2, and the full suite is **402 / 402 PASS**. Logs are under `/tmp/nk-dl-retry-evidence/`. The two runs belong to different commits, so their numbers are not combined into one figure.
 
 ## Native navigation and consistent content surfaces (run on Mac; visual matrix deferred)
 
