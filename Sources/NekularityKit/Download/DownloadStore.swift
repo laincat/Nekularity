@@ -112,8 +112,19 @@ public final class DownloadStore {
     /// Read on every page of the reader, so the hot path is a dictionary lookup;
     /// only a hit touches the disk.
     public func bytes(for key: ImageLoader.Key) -> Data? {
-        guard let relative = index["\(key.source)|\(key.chapterID ?? "")|\(key.url)"] else { return nil }
+        guard let comicID = key.comicID, let chapterID = key.chapterID,
+              let relative = index[Self.indexKey(source: key.source, comicID: comicID,
+                                                 chapterID: chapterID, url: key.url)]
+        else { return nil }
         return try? Data(contentsOf: root.appending(path: relative))
+    }
+
+    /// The identity of one archived page. The comic is part of it: two comics
+    /// in one source may reuse a chapter id and an image address, and an index
+    /// keyed by chapter alone would answer with the other comic's bytes.
+    private static func indexKey(source: String, comicID: String,
+                                 chapterID: String, url: String) -> String {
+        "\(source)\u{1F}\(comicID)\u{1F}\(chapterID)\u{1F}\(url)"
     }
 
     /// Chapters archived for one comic, in the order they were downloaded.
@@ -148,7 +159,8 @@ public final class DownloadStore {
         let folder = root.appending(path: chapter.folder, directoryHint: .isDirectory)
         try? FileManager.default.removeItem(at: folder)
         for page in chapter.pages {
-            index["\(sourceKey)|\(chapterID)|\(page)"] = nil
+            index[Self.indexKey(source: sourceKey, comicID: comicID,
+                                chapterID: chapterID, url: page)] = nil
         }
         chapters[id] = nil
         save()
@@ -200,7 +212,8 @@ public final class DownloadStore {
                                   chapterTitle: request.chapterTitle, pages: saved, files: files)
             chapters[id] = chapter
             for (page, file) in zip(saved, files) {
-                index["\(request.sourceKey)|\(request.chapterID)|\(page)"] = file
+                index[Self.indexKey(source: request.sourceKey, comicID: request.comicID,
+                                    chapterID: request.chapterID, url: page)] = file
             }
             progress[id] = Progress(done: saved.count, total: request.pages.count, failure: nil)
             active[id] = nil
@@ -232,7 +245,8 @@ public final class DownloadStore {
         for chapter in list {
             chapters[chapter.id] = chapter
             for (page, file) in zip(chapter.pages, chapter.files) {
-                index["\(chapter.sourceKey)|\(chapter.chapterID)|\(page)"] = file
+                index[Self.indexKey(source: chapter.sourceKey, comicID: chapter.comicID,
+                                    chapterID: chapter.chapterID, url: page)] = file
             }
         }
     }
