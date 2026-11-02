@@ -910,9 +910,9 @@ final class NekularityUITests: XCTestCase {
         try openSources(app)
 
         // Add from a URL, which is the flow the failure broke first.
-        let add = element(app, "sources.add")
-        XCTAssertTrue(add.waitForExistence(timeout: 20), "the sources page has no add button")
-        add.tap()
+        let addButton = element(app, "sources.add")
+        XCTAssertTrue(addButton.waitForExistence(timeout: 20), "the sources page has no add button")
+        addButton.tap()
 
         let field = element(app, "sources.scriptURL")
         XCTAssertTrue(field.waitForExistence(timeout: 15), "the add sheet has no URL field")
@@ -944,7 +944,7 @@ final class NekularityUITests: XCTestCase {
         // Keep the sentence the app produced: a failure here has to quote it.
         var said = ""
         if appeared {
-            said = alert.staticTexts.allElementsBoundByIndex.map(\.label).joined(separator: " | ")
+            said = alert.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")
         }
         // Stop serving before asserting: the port is fixed, and the next case that
         // needs it fails with "address already in use" if this one lingers.
