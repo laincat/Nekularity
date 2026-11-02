@@ -23,6 +23,10 @@ struct ComicDetailView: View {
     @State private var tagNotice: String?
     @State private var downloadNote: String?
 
+    /// Both notices go through one alert; see the note at the modifier.
+    private var note: String? { tagNotice ?? downloadNote }
+    private func clearNote() { tagNotice = nil; downloadNote = nil }
+
     var body: some View {
         Group {
             if let details {
@@ -47,9 +51,6 @@ struct ComicDetailView: View {
                     .navigationBarTitleDisplayMode(.inline)
             }
         }
-        .alert("标签", isPresented: Binding(get: { tagNotice != nil }, set: { if !$0 { tagNotice = nil } })) {
-            Button("好") { tagNotice = nil }
-        } message: { Text(tagNotice ?? "") }
         .sheet(isPresented: $showingComments) {
             ComicCommentsView(source: route.source, comicID: route.comic.id, subID: details?.subId ?? "")
         }
@@ -70,11 +71,14 @@ struct ComicDetailView: View {
                 }
             }
         }
-        .alert(downloadNote ?? "", isPresented: Binding(
-            get: { downloadNote != nil },
-            set: { if !$0 { downloadNote = nil } }
+        // One alert: SwiftUI keeps a single one per view, and this screen used to
+        // carry two, so whichever came second silently never appeared. The two
+        // notices share the slot; the first non-nil wins.
+        .alert(note ?? "", isPresented: Binding(
+            get: { note != nil },
+            set: { if !$0 { clearNote() } }
         )) {
-            Button("好") { downloadNote = nil }
+            Button("好") { clearNote() }
         }
     }
 

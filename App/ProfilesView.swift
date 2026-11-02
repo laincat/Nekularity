@@ -69,6 +69,14 @@ struct ProfilesView: View {
                     .accessibilityIdentifier("profile.create")
                 }
             }
+            .alert("重命名", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+                TextField("名称", text: $renameText)
+                Button("取消", role: .cancel) { renaming = nil }
+                Button("保存") {
+                    if let profile = renaming { profiles.rename(profile.id, to: renameText) }
+                    renaming = nil
+                }
+            }
             .navigationTitle("环境")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -87,14 +95,6 @@ struct ProfilesView: View {
                             dismiss()
                         }
                     }
-                }
-            }
-            .alert("重命名", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
-                TextField("名称", text: $renameText)
-                Button("取消", role: .cancel) { renaming = nil }
-                Button("保存") {
-                    if let profile = renaming { profiles.rename(profile.id, to: renameText) }
-                    renaming = nil
                 }
             }
         }

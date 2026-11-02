@@ -98,3 +98,13 @@ A device like the iPhone Duo is close to tablet width when opened: two columns l
 
 The test is available width, not device model: folding, split view and Stage Manager all change width, and a model name does not. A card's 小 and 中 follow from it — small is one column, medium is two.
 
+## 8. One alert per view
+
+SwiftUI keeps **one** `.alert` per view. The rest are dropped silently — no error, no warning, they simply never appear.
+
+It has happened three times in this project: Settings (while adding the theme-from-link prompt), the comic detail screen (tag notice and download notice), and the environments screen (create and rename). All three were features that existed and never showed.
+
+The rule: **merge the notices on one view into one piece of state** — a single optional message, or an enum — rather than two `.alert` modifiers side by side. If two prompts are really needed, put one on a **different subview** (the list itself, not the navigation stack around it).
+
+This is deliberately not an automatic check: static scanning cannot tell "two on the same modifier chain" from "one on each of two subviews", and a false positive that blocks CI is worse than no check at all. It has to be remembered by people and reviews.
+
