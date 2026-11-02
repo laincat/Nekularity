@@ -1148,4 +1148,94 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(app.buttons["收藏本页"].waitForExistence(timeout: 90),
                       "the reader drew nothing with the server down, so the download did not serve the pages")
     }
+
+    /// The board's drag path: a real drag on the visible handle, the other cards'
+    /// relative order, and the same order after a new process.
+    ///
+    /// Long-press entering arranging is covered by its own case. This one does not
+    /// call the layout's move methods: it presses and drags the control a person
+    /// would, then reads the card identifiers back from the screen.
+    func testBoardDragOrderSurvivesRelaunch() throws {
+        let app = launch()
+        tab(app, "发现")
+
+        func order() -> [String] {
+            // A card's header and its chevron both inherit the card identifier, so
+            // the raw list repeats every card. Keeping the first occurrence gives
+            // the order a person sees; without this the first two entries are the
+            // same card and a drag between them would assert nothing.
+            var seen = Set<String>()
+            return app.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier BEGINSWITH 'home.card.'"))
+                .allElementsBoundByIndex
+                .map { String($0.identifier.dropFirst("home.card.".count)) }
+                .filter { seen.insert($0).inserted }
+        }
+        func waitForOrder(_ expected: [String], timeout: TimeInterval = 20) -> Bool {
+            let deadline = Date().addingTimeInterval(timeout)
+            repeat {
+                if order() == expected { return true }
+                usleep(200_000)
+            } while Date() < deadline
+            return false
+        }
+        func handle(_ id: String) -> XCUIElement {
+            app.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier == %@", "board.handle.\(id)"))
+                .firstMatch
+        }
+        func card(_ id: String) -> XCUIElement {
+            app.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier == %@", "home.card.\(id)"))
+                .firstMatch
+        }
+        func attach(_ name: String) {
+            let shot = XCTAttachment(screenshot: app.screenshot())
+            shot.name = name
+            shot.lifetime = .keepAlways
+            add(shot)
+            let tree = XCTAttachment(string: app.debugDescription)
+            tree.name = name + "-tree"
+            tree.lifetime = .keepAlways
+            add(tree)
+        }
+
+        let edit = app.buttons.matching(NSPredicate(format: "identifier == 'discover.edit'")).firstMatch
+        XCTAssertTrue(edit.waitForExistence(timeout: 20), "发现 has no edit button")
+
+        let before = order()
+        XCTAssertGreaterThanOrEqual(before.count, 3, "the board shows fewer than three cards")
+        let first = before[0], second = before[1], third = before[2]
+        attach("board-before-drag")
+
+        edit.tap()
+        XCTAssertTrue(handle(second).waitForExistence(timeout: 10),
+                      "arranging shows no handle for \(second)")
+
+        handle(second).press(forDuration: 1.0, thenDragTo: card(first))
+        let expected = [second, first] + before.dropFirst(2)
+        XCTAssertTrue(waitForOrder(expected),
+                      "dragging \(second) before \(first) produced \(order()), expected \(expected)")
+        attach("board-after-drag")
+
+        edit.tap()
+        app.terminate()
+        app.launch()
+        tab(app, "发现")
+        XCTAssertTrue(waitForOrder(expected, timeout: 30),
+                      "after relaunch the board is \(order()), expected \(expected)")
+        attach("board-after-relaunch")
+
+        // Put the starting arrangement back. Reordering the same two cards is the
+        // inverse of the drag above and keeps the next case's layout unchanged.
+        if ProcessInfo.processInfo.environment["NK_DRAG_KEEP"] != "1" {
+            edit.tap()
+            XCTAssertTrue(handle(second).waitForExistence(timeout: 10),
+                          "arranging shows no handle for the moved card")
+            handle(second).press(forDuration: 1.0, thenDragTo: card(third))
+            XCTAssertTrue(waitForOrder(before),
+                          "the drag back produced \(order()), expected \(before)")
+            edit.tap()
+        }
+    }
 }
