@@ -82,7 +82,7 @@ struct SourcesView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    Task { await library.updateAll() }
+                    Task { await updateAll() }
                 } label: {
                     Label(updatingAll ? "正在更新…" : "更新全部源", systemImage: "arrow.triangle.2.circlepath")
                 }
@@ -331,6 +331,19 @@ struct SourceDetailView: View {
     private var authors: String {
         let names = (current.attribution?.authors ?? []).map(\.name).filter { !$0.isEmpty }
         return names.isEmpty ? "未提供" : names.joined(separator: "、")
+    }
+
+    /// Runs the batch update and says what happened.
+    ///
+    /// The result used to be discarded: the sources updated and the screen showed
+    /// nothing, which reads exactly like a button that does not work. The sentence
+    /// itself lives in the kit, where it is tested.
+    private func updateAll() async {
+        guard !updatingAll else { return }
+        updatingAll = true
+        defer { updatingAll = false }
+        let results = await library.updateAll()
+        notice = Notice(title: "更新完成", text: SourceLibrary.SourceUpdate.summary(results))
     }
 
     private func run(_ body: () async throws -> some Any) async {
