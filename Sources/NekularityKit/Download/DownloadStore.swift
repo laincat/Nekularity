@@ -93,7 +93,10 @@ public final class DownloadStore {
     public typealias Fetch = @Sendable (ImageLoader.Key) async throws -> Data
 
     private let root: URL
-    private var queue: [(request: Request, fetch: Fetch)] = []
+    private var queue: [(request: Request, fetch: Fetch, generation: Int)] = []
+    /// Bumped whenever an attempt must stop counting: a removed chapter's write
+    /// must not put itself back into the archive when it finishes later.
+    private var generation: [String: Int] = [:]
     private var running = 0
     /// Two at a time: a phone on a slow connection gains nothing from more, and
     /// every extra fetch is another way for a site to start refusing.
@@ -160,7 +163,9 @@ public final class DownloadStore {
         // chapter that never downloaded could never be asked for again.
         if let existing = progress[id], existing.failure == nil { return }
         progress[id] = Progress(done: 0, total: request.pages.count, failure: nil)
-        queue.append((request, fetch))
+        let attempt = (generation[id] ?? 0) + 1
+        generation[id] = attempt
+        queue.append((request, fetch, attempt))
         pump()
     }
 
@@ -178,6 +183,7 @@ public final class DownloadStore {
         // downloaded again: the next download is blocked by its own old record.
         progress[id] = nil
         active[id] = nil
+        generation[id, default: 0] += 1
         queue.removeAll { item in
             "\(item.request.sourceKey)|\(item.request.comicID)|\(item.request.chapterID)" == id
         }
@@ -196,18 +202,22 @@ public final class DownloadStore {
 
     private func pump() {
         while running < parallel, !queue.isEmpty {
-            let (request, fetch) = queue.removeFirst()
+            let (request, fetch, attempt) = queue.removeFirst()
             active["\(request.sourceKey)|\(request.comicID)|\(request.chapterID)"] = request
             running += 1
             Task {
-                await write(request, fetch: fetch)
+                await write(request, fetch: fetch, attempt: attempt)
                 running -= 1
                 pump()
             }
         }
     }
 
-    private func write(_ request: Request, fetch: Fetch) async {
+    /// The attempt stopped being current: its chapter was removed while the
+    /// fetch was in flight.
+    private struct AttemptReplaced: Error {}
+
+    private func write(_ request: Request, fetch: Fetch, attempt: Int) async {
         let id = "\(request.sourceKey)|\(request.comicID)|\(request.chapterID)"
         let folder = root.appending(path: "\(request.sourceKey)/\(Chapter.digest(request.comicID))/\(Chapter.digest(request.chapterID))",
                                     directoryHint: .isDirectory)
@@ -219,13 +229,16 @@ public final class DownloadStore {
                 let key = ImageLoader.Key(source: request.sourceKey, url: page,
                                           comicID: request.comicID, chapterID: request.chapterID,
                                           isThumbnail: false)
+                if generation[id] != attempt { throw AttemptReplaced() }
                 let body = try await fetch(key)
+                if generation[id] != attempt { throw AttemptReplaced() }
                 let file = folder.appending(path: "\(number).img")
                 try body.write(to: file, options: .atomic)
                 files.append(file.path.replacingOccurrences(of: root.path + "/", with: ""))
                 saved.append(page)
                 progress[id] = Progress(done: number + 1, total: request.pages.count, failure: nil)
             }
+            if generation[id] != attempt { throw AttemptReplaced() }
             let chapter = Chapter(sourceKey: request.sourceKey, comicID: request.comicID,
                                   comicTitle: request.comicTitle, chapterID: request.chapterID,
                                   chapterTitle: request.chapterTitle, pages: saved, files: files)
@@ -237,6 +250,11 @@ public final class DownloadStore {
             progress[id] = Progress(done: saved.count, total: request.pages.count, failure: nil)
             active[id] = nil
             save()
+        } catch is AttemptReplaced {
+            // The user removed the chapter while it was being written. Leave the
+            // record as removed; do not report a failure the user did not cause.
+            try? FileManager.default.removeItem(at: folder)
+            active[id] = nil
         } catch {
             // A half-written chapter is not a chapter: keeping it would make the
             // reader show three pages of a twenty-page chapter and call it a

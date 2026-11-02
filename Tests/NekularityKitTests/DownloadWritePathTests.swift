@@ -110,4 +110,30 @@ struct DownloadWritePathTests {
         #expect(store.bytes(for: pageA) == Data("a".utf8))
         #expect(store.bytes(for: pageB) == Data("b".utf8))
     }
+
+    @Test func removingWhileWritingDoesNotResurrectTheChapter() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = DownloadStore(root: dir)
+        let pages = ["https://fixture.invalid/1.jpg"]
+
+        // A fetch that is still in flight when the chapter is removed.
+        store.download(request(pages)) { key in
+            try await Task.sleep(nanoseconds: 150_000_000)
+            return Data(key.url.utf8)
+        }
+        #expect(await waitFor { store.active[id] != nil })
+        store.remove(sourceKey: "probe", comicID: "comic", chapterID: "ch1")
+
+        // Let the write finish after the removal; it must not add the chapter
+        // back, and it must not report a failure the user did not cause.
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        #expect(store.chapters[id] == nil)
+        #expect(store.progress[id] == nil)
+        #expect(store.active[id] == nil)
+        let page = ImageLoader.Key(source: "probe", url: pages[0], comicID: "comic",
+                                   chapterID: "ch1", isThumbnail: false)
+        #expect(store.bytes(for: page) == nil)
+        #expect(DownloadStore(root: dir).chapters[id] == nil)
+    }
 }
