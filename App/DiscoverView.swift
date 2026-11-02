@@ -18,6 +18,10 @@ struct DiscoverView: View {
     @Environment(LocalComicStore.self) private var local
 
     @State private var editing = false
+    /// Which card the size dialog is for, and whether it is up. A dialog rather than
+    /// a menu because the menu's label never carried its identifier.
+    @State private var sizeTarget: HomeBlock?
+    @State private var sizing = false
     /// Counts long presses, so the board can give a tap of feedback when it switches
     /// into arranging.
     @State private var editPulse = 0
@@ -104,6 +108,13 @@ struct DiscoverView: View {
                 SourcePickerView { ref in layout.add(ref) }.environment(library)
             }
             .navigationDestination(for: ComicRoute.self) { ComicDetailView(route: $0) }
+            .confirmationDialog("卡片大小", isPresented: $sizing, presenting: sizeTarget) { block in
+                Button("小") { layout.setColumns(block, 1) }
+                Button("中") { layout.setColumns(block, 2) }
+                Button("取消", role: .cancel) {}
+            } message: { _ in
+                Text("小占一列,中占相邻两列。")
+            }
         }
     }
 
@@ -141,14 +152,13 @@ struct DiscoverView: View {
                         .accessibilityLabel("拖动排序")
 
                     // A widget board offers sizes by name; a toggle hides which one
-                    // you are looking at.
-                    Menu {
-                        Button { layout.setColumns(block, 1) } label: {
-                            Label("小", systemImage: "rectangle.portrait")
-                        }
-                        Button { layout.setColumns(block, 2) } label: {
-                            Label("中", systemImage: "rectangle")
-                        }
+                    // you are looking at. This is a plain button plus a dialog rather
+                    // than a `Menu`: SwiftUI drops an `accessibilityIdentifier` put on
+                    // a menu's label, so the control existed on screen and nowhere in
+                    // the tree — unreachable for the tests and nameless for VoiceOver.
+                    Button {
+                        sizeTarget = block
+                        sizing = true
                     } label: {
                         Label(block.span == 2 ? "中" : "小",
                               systemImage: block.span == 2 ? "rectangle" : "rectangle.portrait")
