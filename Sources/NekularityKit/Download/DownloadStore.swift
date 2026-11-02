@@ -258,7 +258,7 @@ public final class DownloadStore {
     /// fetch was in flight.
     private struct AttemptReplaced: Error {}
 
-    private func write(_ request: Request, fetch: Fetch, attempt: Int) async {
+    private func write(_ request: Request, fetch: @escaping Fetch, attempt: Int) async {
         let id = request.id
         let folder = root.appending(path: "\(request.sourceKey)/\(Chapter.digest(request.comicID))/\(Chapter.digest(request.chapterID))",
                                     directoryHint: .isDirectory)
