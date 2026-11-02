@@ -1,3 +1,4 @@
+import NekularityKit
 import SwiftUI
 
 /// Places blocks down the shortest column.
@@ -38,40 +39,35 @@ struct MasonryLayout: Layout {
         }
     }
 
-    /// Wide blocks take the whole width and reset the column heights, so a full
-    /// width strip never sits beside a half block.
+    /// A block spans one or more adjacent columns; other columns remain available.
     private func arrange(width: CGFloat, subviews: Subviews) -> ([CGRect], CGFloat) {
-        let columnWidth = max(0, (width - spacing * CGFloat(columns - 1)) / CGFloat(columns))
-        var heights = Array(repeating: CGFloat.zero, count: columns)
+        let count = max(1, columns)
+        let columnWidth = max(0, (width - spacing * CGFloat(count - 1)) / CGFloat(count))
+        var heights = Array(repeating: CGFloat.zero, count: count)
         var frames: [CGRect] = []
 
         for subview in subviews {
-            let wide = subview[WideBlockKey.self]
-            if wide {
-                let top = heights.max() ?? 0
-                let size = subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
-                frames.append(CGRect(x: 0, y: top, width: width, height: size.height))
-                heights = Array(repeating: top + size.height + spacing, count: columns)
-                continue
-            }
-            let column = heights.enumerated().min { $0.element < $1.element }?.offset ?? 0
-            let size = subview.sizeThatFits(ProposedViewSize(width: columnWidth, height: nil))
+            let span = min(count, max(1, subview[BlockSpanKey.self]))
+            let column = HomeGrid.startColumn(heights: heights.map(Double.init), span: span)
+            let top = heights[column..<(column + span)].max() ?? 0
+            let blockWidth = columnWidth * CGFloat(span) + spacing * CGFloat(span - 1)
+            let size = subview.sizeThatFits(ProposedViewSize(width: blockWidth, height: nil))
             frames.append(CGRect(x: CGFloat(column) * (columnWidth + spacing),
-                                 y: heights[column], width: columnWidth, height: size.height))
-            heights[column] += size.height + spacing
+                                 y: top, width: blockWidth, height: size.height))
+            for index in column..<(column + span) {
+                heights[index] = top + size.height + spacing
+            }
         }
         return (frames, max(0, (heights.max() ?? spacing) - spacing))
     }
 }
 
-/// Whether a block wants the full width.
-struct WideBlockKey: LayoutValueKey {
-    static let defaultValue = false
+struct BlockSpanKey: LayoutValueKey {
+    static let defaultValue = 1
 }
 
 extension View {
-    /// Marks a block as full width inside `MasonryLayout`.
-    func wideBlock(_ wide: Bool = true) -> some View {
-        layoutValue(key: WideBlockKey.self, value: wide)
+    func blockSpan(_ span: Int) -> some View {
+        layoutValue(key: BlockSpanKey.self, value: span)
     }
 }

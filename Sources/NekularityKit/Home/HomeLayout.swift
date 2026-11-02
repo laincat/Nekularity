@@ -155,6 +155,15 @@ public enum HomeGrid {
         default: 4
         }
     }
+
+    /// Finds the contiguous columns with the lowest available top edge.
+    public static func startColumn(heights: [Double], span: Int) -> Int {
+        guard !heights.isEmpty else { return 0 }
+        let count = min(max(span, 1), heights.count)
+        return (0...(heights.count - count)).min {
+            heights[$0..<($0 + count)].max()! < heights[$1..<($1 + count)].max()!
+        } ?? 0
+    }
 }
 
 /// The block arrangement, kept across launches.

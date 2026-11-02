@@ -42,7 +42,7 @@ struct DiscoverView: View {
                     MasonryLayout(spacing: 12, columns: gridColumns) {
                         ForEach(layout.visible) { block in
                             card(block)
-                                .wideBlock(block.span == 2)
+                                .blockSpan(block.span)
                                 // Drag is the arrangement; the up and down buttons it
                                 // replaced asked the user to move things one step at a
                                 // time and to count positions.

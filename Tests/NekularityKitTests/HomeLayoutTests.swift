@@ -154,6 +154,15 @@ struct HomeLayoutTests {
         #expect(layout.blocks.last?.id == before[0])
     }
 
+    @Test("a medium card fits in the lowest adjacent pair of columns")
+    func mediumCardUsesAdjacentColumns() {
+        #expect(HomeGrid.startColumn(heights: [90, 20, 30, 100], span: 2) == 1)
+        #expect(HomeGrid.startColumn(heights: [10, 40, 20], span: 2) == 0)
+        #expect(HomeGrid.startColumn(heights: [30, 10, 20], span: 1) == 1)
+        #expect(HomeGrid.startColumn(heights: [30, 10], span: 9) == 0)
+        #expect(HomeGrid.startColumn(heights: [], span: 2) == 0)
+    }
+
     /// The board answers to the width it has, not to the device it is running on:
     /// folding, split view and iPad all land here, and so will anything wider.
     @Test("the column count follows the width")
