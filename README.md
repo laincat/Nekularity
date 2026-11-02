@@ -13,7 +13,7 @@ iOS/iPadOS 漫画客户端(视频为后续阶段),界面使用 SwiftUI,许可证
 
 主线是:**添加漫画源 → 搜索 / 浏览 → 查看详情 → 阅读 → 记进书架**。另有一个独立的「AI 供应商」页,运行 Magpie 供应商插件包:装包(文件夹或 `.zip`/`.tar.gz`)、登录、用量、模型列表、对话、打卡、插件自己的开关。两者互不相干 —— 不同的包、不同的账号、不同的 Cookie,AI 凭据只进 Keychain。装包被拒时会说明原因:TypeScript 源码、需要 Node 内置模块这两类会给出「该怎么办」,并附上 Core 的原文;认不出的拒绝就原样显示 Core 的话,不编造理由。
 
-在 macOS 27 / Xcode 27 / Swift 6.4 上的最近一次验证:`swift test` **407 tests / 76 suites** 全过(提交 `9f15203`),Kit 与 App 的 Swift 6 类型检查与 iOS 模块产出通过,Core pin 为 `214e7782`。CI 用 `xcodebuild` 归档并产出未签名 IPA,0.2.8(build 10)已发布并核对;模拟器 UI 套件在 `5f15769` 上 26/26 通过。**没有**验证的是:签名安装、真机行为、后台与画中画、真实账号。详见 [docs/STATUS.md](docs/STATUS.md),需要你出设备或账号的部分列在 [docs/HANDOFF.md](docs/HANDOFF.md)。每次改动仍先过 `scripts/check-swift.sh`(解析全部 Swift 文件,抓语法错误)。
+在 macOS 27 / Xcode 27 / Swift 6.4 上的最近一次验证:`swift test` **407 tests / 76 suites** 全过(提交 `9f15203`),Kit 与 App 的 Swift 6 类型检查与 iOS 模块产出通过,Core pin 为 `214e7782`。CI 用 `xcodebuild` 归档并产出未签名 IPA,0.2.9(build 11)已发布并核对;模拟器 UI 套件在 `5f15769` 上 26/26 通过。**没有**验证的是:签名安装、真机行为、后台与画中画、真实账号。详见 [docs/STATUS.md](docs/STATUS.md),需要你出设备或账号的部分列在 [docs/HANDOFF.md](docs/HANDOFF.md)。每次改动仍先过 `scripts/check-swift.sh`(解析全部 Swift 文件,抓语法错误)。
 
 用法:在「AI 供应商」页点「安装插件包」,选一个已解开的文件夹或下载来的 `.zip`/`.tar.gz`;插件自己声明登录方式——设备码就按提示打开页面输入验证码,API 密钥就在应用里填表(密码字段不会明文显示)。登录后可以看用量、拉模型列表、在对话页选模型发消息。停止按钮会取消**Core 里的请求**,不是只把界面关掉。
 
