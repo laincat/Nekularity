@@ -130,9 +130,21 @@ public enum ThemeSource {
         let config = configuration ?? URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 20
         config.urlCache = nil
-        let session = URLSession(configuration: config, delegate: HTTPSOnlyRedirects(), delegateQueue: nil)
+        let redirects = HTTPSOnlyRedirects()
+        let session = URLSession(configuration: config, delegate: redirects, delegateQueue: nil)
         defer { session.finishTasksAndInvalidate() }
-        let (data, response) = try await session.data(from: url)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(from: url)
+        } catch {
+            // The delegate cancels a refused hop so the user does not wait for
+            // the request timeout; report why instead of "cancelled".
+            if redirects.refusedNonHTTPS {
+                throw CoreError("主题链接重定向到了非 https 地址")
+            }
+            throw error
+        }
         guard let http = response as? HTTPURLResponse else {
             throw CoreError("主题地址没有返回 HTTP 响应")
         }
@@ -149,11 +161,26 @@ public enum ThemeSource {
 /// Refuses any redirect that leaves HTTPS, so a plaintext hop cannot happen
 /// inside a request whose original address passed `ThemeSource.validate`.
 final class HTTPSOnlyRedirects: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    private let lock = NSLock()
+    private var refused = false
+
+    /// True once a hop left HTTPS. `fetch` turns this into a message the user
+    /// can act on rather than a generic "cancelled".
+    var refusedNonHTTPS: Bool { lock.withLock { refused } }
+
     func urlSession(_ session: URLSession, task: URLSessionTask,
                     willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest,
                     completionHandler: @escaping (URLRequest?) -> Void) {
-        completionHandler(ThemeSource.allowsRedirect(to: request.url) ? request : nil)
+        guard ThemeSource.allowsRedirect(to: request.url) else {
+            lock.withLock { refused = true }
+            completionHandler(nil)
+            // Not following and then waiting for the timeout would make a
+            // hostile redirect look like a slow server; stop now.
+            task.cancel()
+            return
+        }
+        completionHandler(request)
     }
 }
 

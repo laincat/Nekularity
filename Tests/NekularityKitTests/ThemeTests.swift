@@ -148,17 +148,23 @@ struct ThemeTests {
         #expect(store.all.allSatisfy { $0.id == BuiltinThemes.system.id }, "a refused link installed a theme")
     }
 
-    @Test("a redirect away from HTTPS is refused")
+    @Test("a redirect away from HTTPS is refused without waiting for the timeout")
     func redirectToPlaintextIsRefused() async throws {
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [ThemeLinkStub.self]
+        let started = Date()
         do {
             _ = try await ThemeSource.fetch(URL(string: "https://redirect.test/hop.json")!,
                                             configuration: config)
             Issue.record("the plaintext redirect was followed")
         } catch {
-            #expect(!(error is ThemeLinkStub.FollowedRedirect), "the stub followed the hop")
+            #expect((error as? CoreError)?.message.contains("非 https") == true,
+                    "the refusal did not name the scheme: \(error)")
         }
+        // The first version refused the hop but left the task waiting for the
+        // 20-second request timeout, which reads as a slow server.
+        let elapsed = Date().timeIntervalSince(started)
+        #expect(elapsed < 5, "the refusal took \(elapsed)s, so the user waits for the timeout")
         let plaintext = ThemeLinkStub.requests().filter { $0.host == "plain.test" }
         #expect(plaintext.isEmpty, "the request went to \(plaintext) after the https hop")
     }
@@ -208,8 +214,6 @@ struct ThemeTests {
 /// a body larger than `ThemeSource.maximumBytes`. Requests are recorded so the
 /// refusal can be shown to stop before the plaintext host is reached.
 final class ThemeLinkStub: URLProtocol, @unchecked Sendable {
-    struct FollowedRedirect: Error {}
-
     private static let lock = NSLock()
     nonisolated(unsafe) private static var seen: [URL] = []
 
@@ -223,7 +227,7 @@ final class ThemeLinkStub: URLProtocol, @unchecked Sendable {
         Self.lock.withLock { Self.seen.append(url) }
         if url.path.contains("plain") {
             // Only reached if the plaintext hop was actually followed.
-            client?.urlProtocol(self, didFailWithError: FollowedRedirect())
+            client?.urlProtocol(self, didFailWithError: URLError(.badURL))
             return
         }
         switch url.host {
