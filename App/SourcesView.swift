@@ -80,16 +80,17 @@ struct SourcesView: View {
                 Button { showAdd = true } label: { Label("添加", systemImage: "plus") }
                     .accessibilityIdentifier("sources.add")
             }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    Task { await library.updateAll() }
+                } label: {
+                    Label(updatingAll ? "正在更新…" : "更新全部源", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .disabled(updatingAll)
+                .accessibilityIdentifier("sources.updateAll")
+            }
             ToolbarItem(placement: .secondaryAction) {
                 Menu {
-                    Button {
-                        Task { await library.updateAll() }
-                    } label: {
-                        Label(updatingAll ? "正在更新…" : "更新全部源", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    .disabled(updatingAll)
-                    .accessibilityIdentifier("sources.updateAll")
-                    Divider()
                     Button { restoreCookies = false; pickingBackup = true } label: {
                         Label("导入备份", systemImage: "square.and.arrow.down")
                     }
@@ -108,10 +109,8 @@ struct SourcesView: View {
                         Label("AI 供应商", systemImage: "sparkles")
                     }
                 } label: {
-                    Label("导入备份", systemImage: "square.and.arrow.down")
+                    Label("更多", systemImage: "ellipsis.circle")
                 }
-                // The batch update lives inside this menu, so a test has to open the
-                // menu before the button exists. Tagging the menu is what says so.
                 .accessibilityIdentifier("sources.menu")
             }
         }

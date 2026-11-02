@@ -20,17 +20,23 @@ import UIKit
 /// with complete concurrency checking, and `NWListener`'s handlers are `@Sendable`,
 /// so the alternative would be to hand the framework a fresh object per call.
 final class LocalImageServer: @unchecked Sendable {
-    static let port: UInt16 = 18731
+    /// The port the seeded fixtures name in their scripts.
+    static let fixturePort: UInt16 = 18731
+
+    /// The port this server listens on. Cases that install their own script take
+    /// another one: two cases in a row both needing 18731 was a real failure, and a
+    /// port is cheaper to divide than to serialize tests over.
+    let port: UInt16
 
     /// Where the fixture's chapter points: `http://127.0.0.1:18731/page.png`.
-    static var pageURL: String { "http://127.0.0.1:\(port)/page.png" }
+    static var pageURL: String { "http://127.0.0.1:\(fixturePort)/page.png" }
     /// Where the video fixture's play answer points.
-    static var clipURL: String { "http://127.0.0.1:\(port)/clip.mp4" }
+    static var clipURL: String { "http://127.0.0.1:\(fixturePort)/clip.mp4" }
 
     /// The script the batch-update case installs from, and then updates from. The
     /// body is fixed so the second fetch is the same version: "already current" is
     /// the answer that proves the replace path ran without an error.
-    static var scriptURL: String { "http://127.0.0.1:\(port)/source.js" }
+    var scriptURL: String { "http://127.0.0.1:\(port)/source.js" }
     static let scriptBody = """
     class LocalBatch extends ComicSource {
         name = "Batch"
@@ -69,7 +75,8 @@ final class LocalImageServer: @unchecked Sendable {
         clipLock.unlock()
     }
 
-    init() throws {
+    init(port: UInt16 = LocalImageServer.fixturePort) throws {
+        self.port = port
         // Drawn rather than pasted as base64: a hand-typed blob is exactly the kind
         // of thing that decodes to nothing and looks like a client bug.
         let side: CGFloat = 8
@@ -103,21 +110,21 @@ final class LocalImageServer: @unchecked Sendable {
     private func makeListener() throws -> NWListener {
         let options = NWParameters.tcp
         options.allowLocalEndpointReuse = true
-        guard let port = NWEndpoint.Port(rawValue: Self.port) else {
+        guard let endpoint = NWEndpoint.Port(rawValue: port) else {
             throw NSError(domain: "LocalImageServer", code: 2,
-                          userInfo: [NSLocalizedDescriptionKey: "port \(Self.port) is not usable"])
+                          userInfo: [NSLocalizedDescriptionKey: "port \(port) is not usable"])
         }
         var lastError: Error?
         for attempt in 0..<40 {
             do {
-                return try NWListener(using: options, on: port)
+                return try NWListener(using: options, on: endpoint)
             } catch {
                 lastError = error
                 Thread.sleep(forTimeInterval: attempt < 10 ? 0.05 : 0.2)
             }
         }
         throw lastError ?? NSError(domain: "LocalImageServer", code: 4,
-                                   userInfo: [NSLocalizedDescriptionKey: "port \(Self.port) stayed busy"])
+                                   userInfo: [NSLocalizedDescriptionKey: "port \(port) stayed busy"])
     }
 
     /// Starts listening and returns once the port is bound, so the app never
@@ -173,6 +180,7 @@ final class LocalImageServer: @unchecked Sendable {
     /// to reach `.cancelled` is the only signal the framework gives.
     func stop(timeout: TimeInterval = 5) {
         guard let listener else { return }
+        self.listener = nil
         let signal = Signal()
         listener.stateUpdateHandler = { state in
             if case .cancelled = state { signal.finish() }

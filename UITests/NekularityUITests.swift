@@ -900,7 +900,9 @@ final class NekularityUITests: XCTestCase {
     /// the loopback server, presses 更新全部, and expects the answer "already current"
     /// rather than a failure list.
     func testUpdateAllReportsCurrentRatherThanFailing() throws {
-        let server = try LocalImageServer()
+        // Its own port: the seeded fixtures need 18731, and two cases in a row both
+        // binding it is what failed the video case after this one.
+        let server = try LocalImageServer(port: 18741)
         try server.start()
         defer { server.stop() }
 
@@ -924,15 +926,10 @@ final class NekularityUITests: XCTestCase {
         let row = firstElement(app, containing: "Batch")
         XCTAssertTrue(row.waitForExistence(timeout: 30), "the installed source never appeared")
 
-        // 更新全部源 lives in the toolbar menu, so it does not exist until the menu
-        // is open. Asking for it first and failing on that was the first version of
-        // this case: the control is there, the test was not looking where it is.
-        let menu = element(app, "sources.menu")
-        XCTAssertTrue(menu.waitForExistence(timeout: 20), "the sources page has no toolbar menu")
-        menu.tap()
-
+        // Update-all is a first-class toolbar button. It used to sit inside a menu
+        // labelled 导入备份, which is both hard to find and wrongly named.
         let update = element(app, "sources.updateAll")
-        XCTAssertTrue(update.waitForExistence(timeout: 20), "the menu has no update-all control")
+        XCTAssertTrue(update.waitForExistence(timeout: 20), "the sources page has no update-all button")
         update.tap()
 
         // The alert is the report. "已是最新" means the fetch and the replace both
