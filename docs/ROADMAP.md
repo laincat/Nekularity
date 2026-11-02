@@ -8,20 +8,22 @@
 
 | 项目 | 当前事实 | 主要缺口 |
 |---|---|---|
-| Nekularity | SwiftUI + NekularityKit + gomobile Core;AltStore 已发布 0.2.6(build 8),App/Widget、IPA HTTP 200/大小与订阅已核对 | 主题 HTTPS 单项、3 列几何与 Theme 单测已有证据;9f7840f 完整回归未通过,已确认的基线用例依赖已修待复跑;失败用例计数待核;三列视觉重拍与真机/后台/账号仍待验收 |
+| Nekularity | SwiftUI + NekularityKit + gomobile Core;AltStore 已发布 0.2.6(build 8),App/Widget、IPA HTTP 200/大小与订阅已核对 | 5d9a5a1 干净容器全套 24/24 通过,含三条主题链接与三列几何用例;0.2.7/build 9 发布 CI 构建中;三列视觉重拍与真机/后台/账号仍待验收 |
 | Nekophage | MyGo 原生主窗口 + WebView 阅读器;Windows 有真实源、图片解码、书架与本机 Magpie 的运行证据 | 本地 HLS/MP4 解码、续播、源安装/恢复、读取取消及 AAC 音轨解码(HLS.js 与原生 MP4 两条路径)已验证;Windows 已有 0.2.4 便携包与按用户安装包;HLS 会话改为优先内置 HLS.js(原生 HLS 会丢字幕组),打包 GUI 内已实读中文字幕与 cue 请求;macOS 当前 pin 与扬声器实际输出仍待验收;无 Git 远端 |
 | VeneraCat Core | 共享漫画/视频/备份/AI 协议逻辑;网络与系统能力交给客户端 | JS 引擎的少量兼容限制、客户端边界契约仍需维护;Sender 没有生产调用方 |
 
 证据按提交和执行渠道分别记录;不声称重新跑过三个项目的全部测试。两个客户端的 `scripts/core-version` 均为 `214e7782190d47c1f4bcdc9a95fb3a517072cc85`;Core 仓库还包含后续文档与品牌提交,不能把客户端 pin 与仓库 HEAD 混称同一个版本。
 
-Nekularity 最近完整通过的 UI 验证提交 `8acbb78`:Orca Worker 在同一专用模拟器上构建、安装,完整 **19/19 PASS,0 FAIL,0 SKIP**。长按进入编排与尺寸重启持久化通过。后续 Orca Worker 单独验证 App `7586982` 的拖放/重启,并读偏好交叉核对;原测试提交 `33be2af` 已推送验证分支并纳入主线 `9b2b3e6`,测试文件与 Mac 已运行版本一致;2 列/4 列明暗截图已采集;`211cd64` 的五张到底截图确认页尾无遮挡(间隔约 21–43 pt),不需要额外底边距。后续 `5d7022d` 在 874 pt 内容宽度确认 3 列几何,完整视觉仍需重拍。HTTPS 安装/重启在 `5d7022d`、HTTP 拒绝在 App `a526add` 分别通过;Theme 单测 `9005dca` 8/8、`6bb7933` 12/12 通过。`9f7840f` 全套回执原报 24 条 / PASS 22 / FAIL 2 / SKIP 0,但明细只列一个方法的两条失败断言,失败用例数尚需按清单核对。已确认 `testHTTPSInvalidThemeShowsErrorAndPreservesSelection` 依赖前一次运行遗留主题,在成功安装后单独复跑通过;`5d9a5a1` 让该用例自己安装并选中基线主题。Theme 单测同为 12/12,快速拒绝 0.015 秒完成。修正后的完整 UI 复跑仍待回执。`0.2.6`(build 8)已发布,CI `41431641042`、IPA 29,361,985 字节、App/Widget 版本、HTTP 200 与 AltStore 订阅均已核对。
+Nekularity 最新完整 UI 验证提交 `5d9a5a1dfd5ce0e9d58fead6371d5cc4b3f842c4`:Orca Worker 在专用 iPhone 17 Pro 上卸载旧 App、重新安装并补种,启动前 Themes 为空,完整 **24 条 / PASS 24 / FAIL 0 / SKIP 0**。HTTPS 安装/选中/重启、坏 JSON 保留原主题、HTTP 拒绝三条均通过,三列几何也通过;日志 `/tmp/nk-ui-full-5d9a5a1.log`。这是一轮完整执行,不由早期单项结果拼合。三列完整视觉仍需重拍,真机/后台/账号不在该证据范围。
+
+`0.2.6`(build 8)已发布并核对 CI `41431641042`、29,361,985 字节 IPA、App/Widget、HTTP 200 与 AltStore。后续主题修复的 `0.2.7`(build 9)已推 tag,提交 `90b98b0`,发布 CI `41465697611` 正在构建;受测功能源码与 `5d9a5a1` 一致,版本元数据与文档有差异。新 IPA 内容、HTTP 下载与 AltStore 尚待核对,不视为新版已发布。
 
 ## 优先级与验收
 
 | 顺序 | 目标 | 完成条件 |
 |---|---|---|
-| P0-1 | 收口当前 iOS 回归(已完成:8acbb78,19/19) | 接收 `c259f3f` 全套 UI 结果,修复真实失败并复测;明确总数/PASS/FAIL/SKIP;更新 STATUS 和 UNVERIFIED 的中英文现状,历史结果保留为历史 |
-| P0-2 | 发布包含当前修复的测试版(已完成:0.2.6/build 8) | 回归完成后准备 0.2.6 或下一个未占用版本;App 与 Widget 版本一致;CI 单测、真机构建、UI 测试编译、IPA 打包成功;核对 IPA 内版本/扩展、下载 HTTP 200/大小,再更新 AltStore 并核对订阅入口 |
+| P0-1 | 收口当前 iOS 回归(已完成:5d9a5a1,24/24) | 接收 `c259f3f` 全套 UI 结果,修复真实失败并复测;明确总数/PASS/FAIL/SKIP;更新 STATUS 和 UNVERIFIED 的中英文现状,历史结果保留为历史 |
+| P0-2 | 发布包含当前修复的测试版(0.2.6 已发布;0.2.7/build 9 构建中) | 回归完成后准备 0.2.6 或下一个未占用版本;App 与 Widget 版本一致;CI 单测、真机构建、UI 测试编译、IPA 打包成功;核对 IPA 内版本/扩展、下载 HTTP 200/大小,再更新 AltStore 并核对订阅入口 |
 | P1-1 | 把发现页和主题界面验证完整 | 长按进入编排、拖放顺序持久化、小/中尺寸持久化;主题 HTTPS 安装成功与错误显示;浅/深色、窄/宽屏截图核对,区分模拟器宽度与真实折叠设备 |
 | P1-2 | 下载与播放真机闭环 | 下载开始/结束时 Live Activity、锁屏/灵动岛;断网阅读;播放/字幕/续播/画中画/后台音频;记录版本、设备、动作、结果。可先用本地媒体与夹具完成不需账号的部分 |
 | P1-3 | iOS AI 两条接入的真实闭环 | 标准 API 与 Magpie 插件各验证模型目录、回答、取消、凭据刷新持久化;请求完成前首块到达才算网络流式,整包响应只能记为整包;真实账号不足时明确缺口 |
