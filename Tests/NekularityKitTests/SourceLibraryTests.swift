@@ -127,6 +127,21 @@ struct SourceLibraryUpdateAllTests {
         return SourceLibrary(core: core, fetch: { url in try feeder.next(url) })
     }
 
+    /// Installing from a URL over a key that is already installed replaces it. This
+    /// is the other entry point the broken wording check took down: the user pasted a
+    /// newer address for a source they already had, and got "already exists".
+    @MainActor
+    @Test func installingFromAURLReplacesAnExistingKey() async throws {
+        let feeder = ScriptFeeder([.success(Data(script.utf8)), .success(newer("2.0.0"))])
+        let lib = try library(feeder)
+        _ = try await lib.install(from: URL(string: "https://index.test/mini.js")!)
+        let replaced = try await lib.install(from: URL(string: "https://index.test/mini.js")!)
+        #expect(replaced.key == "mini")
+        #expect(replaced.version == "2.0.0")
+        await lib.refresh()
+        #expect(lib.sources.map(\.key) == ["mini"])
+    }
+
     /// A source pasted as text has no address to update from. Reporting that as a
     /// failure would blame the source for how it was installed.
     @MainActor
