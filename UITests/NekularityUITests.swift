@@ -985,14 +985,17 @@ final class NekularityUITests: XCTestCase {
     /// can depend on — a hand has to try that one.
     func testArrangingTheBoardShowsItsControls() throws {
         let app = launch()
+        tab(app, "发现")
 
         let size = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH 'home.size.'")).firstMatch
         XCTAssertFalse(size.exists, "the size menu is on screen before arranging was entered")
 
-        let edit = element(app, "discover.edit")
+        let edit = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == 'discover.edit'")).firstMatch
         guard edit.waitForExistence(timeout: 25) else {
-            throw XCTSkip("发现 has no 编辑 button")
+            XCTFail("发现 has no 编辑 button")
+            return
         }
         edit.tap()
 

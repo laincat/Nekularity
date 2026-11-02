@@ -147,9 +147,6 @@ public final class SourceLibrary {
     /// are skipped rather than reported as failures — that would be the app
     /// blaming a source for a fact about how it was installed.
     public func updateAll() async -> [SourceUpdate] {
-        // Start from the truth: a batch update that trusts a list someone else
-        // refreshed can report "nothing to update" for sources it has never seen.
-        await refresh()
         var results: [SourceUpdate] = []
         for source in sources {
             guard let origin = source.origin, let url = URL(string: origin),
