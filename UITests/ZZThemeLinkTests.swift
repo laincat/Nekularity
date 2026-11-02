@@ -1,6 +1,44 @@
+import Darwin
 import XCTest
 
+/// The three link cases need a local HTTPS fixture on ports 18791/18792 plus a
+/// trusted CA in the simulator, which lives outside the repository. Skip rather
+/// than fail when that harness is absent, so a clean machine stays green and
+/// nobody mistakes an unreachable server for a product defect.
+private func fixtureListening(port: UInt16) -> Bool {
+    let fd = socket(AF_INET, SOCK_STREAM, 0)
+    guard fd >= 0 else { return false }
+    defer { close(fd) }
+    var addr = sockaddr_in()
+    addr.sin_family = sa_family_t(AF_INET)
+    addr.sin_port = port.bigEndian
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+    let flags = fcntl(fd, F_GETFL, 0)
+    _ = fcntl(fd, F_SETFL, flags | O_NONBLOCK)
+    let result = withUnsafePointer(to: &addr) {
+        $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+            connect(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+        }
+    }
+    if result != 0 {
+        guard errno == EINPROGRESS else { return false }
+        var descriptor = pollfd(fd: fd, events: Int16(POLLOUT), revents: 0)
+        guard poll(&descriptor, 1, 500) == 1 else { return false }
+        var code: Int32 = 0
+        var size = socklen_t(MemoryLayout<Int32>.size)
+        guard getsockopt(fd, SOL_SOCKET, SO_ERROR, &code, &size) == 0 else { return false }
+        guard code == 0 else { return false }
+    }
+    return true
+}
+
 final class ZZThemeLinkTests: XCTestCase {
+    private func requireFixture() throws {
+        let missing = [18791, 18792].filter { !fixtureListening(port: UInt16($0)) }
+        if !missing.isEmpty {
+            throw XCTSkip("theme fixture is not listening on 127.0.0.1:\(missing); see docs/UNVERIFIED.md")
+        }
+    }
     private func settings(_ app: XCUIApplication) {
         let tab = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'tab.settings'")).firstMatch
         XCTAssertTrue(tab.waitForExistence(timeout: 30))
@@ -33,6 +71,7 @@ final class ZZThemeLinkTests: XCTestCase {
         shot.name = name; shot.lifetime = .keepAlways; add(shot)
     }
     func testHTTPSThemeInstallSelectAndRelaunch() throws {
+        try requireFixture()
         let app = XCUIApplication(); app.launch(); settings(app)
         install(app, "https://127.0.0.1:18791/valid.json")
         let alert = app.alerts.firstMatch
@@ -53,6 +92,7 @@ final class ZZThemeLinkTests: XCTestCase {
                       "theme is not selected after relaunch")
     }
     func testHTTPSInvalidThemeShowsErrorAndPreservesSelection() throws {
+        try requireFixture()
         let app = XCUIApplication(); app.launch(); settings(app)
         install(app, "https://127.0.0.1:18791/invalid.json")
         let alert = app.alerts.firstMatch
@@ -68,6 +108,7 @@ final class ZZThemeLinkTests: XCTestCase {
                       "good theme no longer selected after invalid install")
     }
     func testHTTPThemeLinkIsRejected() throws {
+        try requireFixture()
         let app = XCUIApplication(); app.launch(); settings(app)
         install(app, "http://127.0.0.1:18792/http.json")
         let alert = app.alerts.firstMatch

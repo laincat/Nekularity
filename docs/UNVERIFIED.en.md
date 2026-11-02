@@ -10,6 +10,12 @@ Earlier evidence: **this tree compiles.** GitHub Actions run `41316459367` (comm
 
 Compiling is not behaving. CI runs `swift test`, but only compiles the iPhone interface cases; the Mac Orca Worker executes them on a simulator. Real devices, accounts and servers remain separate gaps below.
 
+## External fixture for the theme-link UI cases
+
+The three cases in `UITests/ZZThemeLinkTests.swift` need local fixture servers on `127.0.0.1:18791` (valid and invalid JSON) and `127.0.0.1:18792` (plaintext HTTP), plus a test CA trusted by that simulator. Those fixtures are not in the repository, so the cases `XCTSkip` when the ports are not listening rather than reporting a missing fixture as a product defect.
+
+Evidence provenance: run on 2026-11-02 by an Orca Worker on the dedicated simulator `0A67B65C-9EB9-4504-B7C6-7A8EC74DA1A0` at commit `aeead82` (cherry-picked as `3167a5e`). HTTP case: the alert names `https`, the test theme never appears in the list, the plaintext server receives 0 requests, and the Themes directory gains no file. HTTPS install/select/relaunch and the invalid-JSON error path are earlier passes on the same fixture. That CA is valid for two days and expires around 2026-11-04; afterwards it must be regenerated and installed, or the cases skip or fail.
+
 ## What the build proved
 
 | Item | Evidence |
