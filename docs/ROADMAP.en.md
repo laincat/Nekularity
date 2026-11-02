@@ -2,13 +2,13 @@
 
 [简体中文](ROADMAP.md) | English
 
-Updated 2026-11-02. Covers Nekularity, Nekophage and VeneraCat Core. Work through the order below one item at a time. When an item requires a device, account or server, record the missing condition and continue with the next independent item. One release does not complete the roadmap.
+Updated 2026-11-03. Covers Nekularity, Nekophage and VeneraCat Core. At the user's request, prioritize Core script compatibility, asynchronous cancellation, partition isolation, storage/backup and client API/media contracts, then the necessary functional flows. Defer interface rearrangement, visual consistency work and screenshot matrices. Retain P0–P3 identifiers for tracking, with the execution priorities above taking precedence. Preserve results already in progress and add no new purely visual work. When an item requires a device, account or server, record the missing condition and continue with the next independent item. One release does not complete the roadmap.
 
 ## Assessment and baseline
 
 | Project | Current facts | Main gaps |
 |---|---|---|
-| Nekularity | SwiftUI + NekularityKit + gomobile Core; AltStore has 0.2.7 (build 9); App/Widget, IPA HTTP 200/size, in-package theme fix and subscription are verified | Clean-container full UI at 5d9a5a1 passes 24/24, including all three theme-link cases and three-column geometry; three-column visual recapture, devices/background behavior and accounts remain pending |
+| Nekularity | SwiftUI + NekularityKit + gomobile Core; AltStore has 0.2.7 (build 9); App/Widget, IPA HTTP 200/size, in-package theme fix and subscription are verified | Full UI 24/24 at 5d9a5a1; native navigation passes a complete 26/26 at 5f15769 and three targeted cases at 81eb017; the narrow/wide visual matrix, Dynamic Type and Reduce Motion are deferred behind underlying work; devices/background behavior and accounts remain pending |
 | Nekophage | MyGo native window + WebView reader; Windows evidence covers real sources, decoded images, shelf and the installed Magpie gateway | Local HLS/MP4 decoding/resume, source installation/restoration, read cancellation and AAC audio decoding verified on both HLS.js and native MP4 paths; Windows has a 0.2.4 portable ZIP and per-user installer; HLS sessions now prefer the bundled HLS.js because native HLS drops subtitle groups, and the packaged GUI reads Chinese subtitles and cue requests; the current macOS pin and actual audible output remain; no Git remote |
 | VeneraCat Core | Shared comic, video, backup and AI protocol logic; clients own networking and platform facilities | A few JS engine compatibility limits and ongoing client contracts; Sender has no production caller |
 
@@ -22,7 +22,7 @@ Nekularity latest full UI validation commit `5d9a5a1dfd5ce0e9d58fead6371d5cc4b3f
 
 | Order | Goal | Acceptance |
 |---|---|---|
-| P0-1 | Close the current iOS regression round (complete:5d9a5a1,24/24) | Receive the full `c259f3f` UI result, fix real failures and retest; report total/PASS/FAIL/SKIP; bring the Chinese and English STATUS and UNVERIFIED current, keeping historical results as history |
+| P0-1 | Close the current iOS regression round (complete: 5d9a5a1 24/24; 5f15769 26/26; 81eb017 three targeted cases) | Complete executions, fixed real failures and retests, recording total/PASS/FAIL/SKIP per commit; Chinese and English STATUS/UNVERIFIED are current, with the 81eb017 full suite and visual matrix deferred |
 | P0-2 | Release a test build containing the fixes (0.2.7/build 9 published and verified) | After regression, prepare 0.2.6 or the next unused version; align app and widget versions; pass CI unit tests, device build, UI test compilation and packaging; verify IPA metadata/extensions and HTTP 200/size, then update and verify the AltStore subscription entry |
 | P1-1 | Finish Discover and theme UI validation | Long press enters arranging; drag order and small/medium sizes persist; HTTPS theme installation and errors work; inspect light/dark and narrow/wide screenshots, distinguishing simulated widths from real folding devices |
 | P1-2 | Complete download and playback device validation | Download start/end Live Activity on lock screen and Dynamic Island; offline reading; playback/subtitles/resume/PiP/background audio; record version, device, actions and results. Start with local media and fixtures where accounts are unnecessary |

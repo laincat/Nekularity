@@ -50,6 +50,18 @@
 | 字幕叠层与播放时钟 | 用引擎的 `$subtitleCues` 画文字字幕(纯文本与富文本都经 `cue.text` 合并),位图字幕**不画**——软件通路本来就会把它合成进帧里,画坏不如不画。同时修了一个真实缺陷:叠层原先读 `position`,而 `position` 只在引擎状态变化时更新,所以**弹幕和字幕在播放中不会前进**;现在跟随 `clock.$sourceTime`(约 10 Hz),关闭播放器时的位置也改读 `$currentTime`,不再停在最后一次状态变化处。 | 需真机/软解源验证 |
 | 引擎接口签名自查 | 把 App 用到的 **28 个 AetherEngine 符号**逐个对到 7.53.1 源码:初始化、`load` 签名、`LoadOptions(httpHeaders:)` 的公开 init、播放/暂停/跳转、`setRate`/`maxSupportedRate`、`state` 的 `case error(String)`、字幕轨与 `subtitleCues`、`currentAVPlayer`、`softwarePiPSource` 的 `layer`/`timeRange`/`setPlaying`/`skip`、`SubtitleCue.startTime`/`text`、`AetherPlayerSurface(engine:)`。**全部命中**。这一步替代不了编译(Apple SDK 签名与 SwiftUI 约束仍需编译器),但能挡掉「把引擎 API 记错」这一类错误。 | 28 项核对,无缺失 |
 
+## 原生导航与统一内容表面(Mac 已跑,视觉矩阵后置)
+
+`5f15769` 在 Mac 上 App 与 UITests 构建通过,完整正式 UI 套件 **26 条 / PASS 26 / FAIL 0 / SKIP 0**,日志 `/tmp/nk-native-5f15769-evidence/full-ui.log`。这是一轮完整执行,覆盖原生标签、编辑状态跨栏目保持、资源库模块入口与既有主题/发现页用例。
+
+后续入口与阅读修复在 `81eb017` 上单独验证:构建通过,`testLibraryModuleLinksOpenTheirPages`、`testReaderDrawsTheChaptersPage` 及临时交互探针(本地/在线阅读器返回、资源库与发现页视频入口)通过,日志在 `/tmp/nk-reader-81eb017-evidence/`。该提交的完整套件未跑,不能把三个定向用例当成整套通过。
+
+按用户「底层优先」要求,后续明暗窄宽屏与三列截图矩阵、动态字体与减少动态效果人工验收已后置,未完成;已知的大字体截断问题仍未修复。较早的完整回归 24/24 属于 `5d9a5a1`,与上述两轮分开记录。
+
+用户反馈 iOS 界面割裂后,根导航已从条件切换页面的手绘底栏改成系统 `TabView`,搜索使用系统 search role;栏目由 TabView 管理生命周期,不再由根视图切换时主动丢弃。发现、我的、资源库、设置及搜索使用统一页面底色,内容卡片使用主题 surface 或系统分组表面,移除卡片的重复内边距和手绘底栏的固定 76 pt 留白;工具栏编辑按钮恢复系统样式。主题 background/surface 现在参与这批页面绘制。另修复非编辑/减少动态效果时卡片仍倾斜,以及取消的旧封面任务可能回写。资源库的漫画源/视频源卡片接入实际页面;服务器摘要按已配置记录显示,不再始终声称没有连接或功能尚未接入。
+
+现有 UI 用例改为查找原生标签栏,新增「发现页编辑→设置→发现页仍在编辑」和资源库两种模块入口导航用例。这两轮已在 Mac 上构建并执行(见本节开头);包含这批改动的新版本尚未发布。真实 iPhone 上的 iOS 27 观感与 Liquid Glass 效果仍未验证,系统 API 的存在不等同真机观感。
+
 ## Mac 上已经跑过的检查
 
 **最新完整回归(2026-11-02,提交 `5d9a5a1dfd5ce0e9d58fead6371d5cc4b3f842c4`,Orca Worker / Mac 模拟器)**:在专用 iPhone 17 Pro 上卸载旧 App、重新安装、生成独立 profile 并补种;启动前 Themes 目录为空。完整 UI 套件 **24 条 / PASS 24 / FAIL 0 / SKIP 0**,日志 `/tmp/nk-ui-full-5d9a5a1.log`。无效主题保留选择、HTTPS 安装/选中/重启、HTTP 拒绝三个用例全部通过,三列几何用例也通过。无效主题用例已自行安装基线,不依赖前一次运行。临时服务与主题已清理;新增 CA 有效 1 天,约 2026-11-03 失效,仍在专用模拟器信任库中。这是一轮完整执行,不叠加早期单项结果;不证明真机、后台、真实账号或三列完整视觉。
