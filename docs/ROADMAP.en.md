@@ -9,12 +9,12 @@ Updated 2026-11-02. Covers Nekularity, Nekophage and VeneraCat Core. Work throug
 | Project | Current facts | Main gaps |
 |---|---|---|
 | Nekularity | SwiftUI + NekularityKit + gomobile Core; AltStore has 0.2.5 (build 7), with an HTTP 200 IPA download | Later Discover identifier and size-selection fixes are not included in 0.2.5 |
-| Nekophage | MyGo native window + WebView reader; Windows evidence covers real sources, decoded images, shelf and the installed Magpie gateway | Desktop video is not connected; generation tickets discard old results without cancelling the requests; no Git remote |
+| Nekophage | MyGo native window + WebView reader; Windows evidence covers real sources, decoded images, shelf and the installed Magpie gateway | Desktop video is not connected; search/browse/detail cancellation and image budgets passed local race tests; no Git remote |
 | VeneraCat Core | Shared comic, video, backup and AI protocol logic; clients own networking and platform facilities | A few JS engine compatibility limits and ongoing client contracts; Sender has no production caller |
 
 This review checked code and existing receipts; it did not rerun every test in all three projects. All three local worktrees were clean at the start. Both clients' `scripts/core-version` files contain `214e7782190d47c1f4bcdc9a95fb3a517072cc85`; the Core repository HEAD is `c3a7dd8`. Do not describe a pin and repository HEAD as the same version.
 
-Nekularity code baseline `c259f3f`: an Orca Worker built it on the Mac and passed the arranging case (24.6 seconds, no skip); update-all passed on `fd1cef0`. The first full `c259f3f` UI run returned 18 cases / PASS 4 / FAIL 0 / SKIP 14; after seeding failed, the second returned PASS 3 / FAIL 1 / SKIP 14. Rerun on a fixed simulator UUID with complete fixtures. An older 16/16 result cannot stand in for it.
+Nekularity code baseline `c259f3f`: an Orca Worker built it on the Mac and passed the arranging case (24.6 seconds, no skip); update-all passed on `fd1cef0`. With a fixed UUID and complete comic/video seed, the full `2cf44e4` suite returned 19 cases / PASS 18 / FAIL 1 / SKIP 0. Long-press entry was the sole failure. The `0f2a5a2` entry change is with the Orca Worker for targeted retesting; no result has arrived. Results from different commits cannot be combined into a full-suite pass.
 
 ## Priorities and acceptance
 

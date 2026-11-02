@@ -9,12 +9,12 @@
 | 项目 | 当前事实 | 主要缺口 |
 |---|---|---|
 | Nekularity | SwiftUI + NekularityKit + gomobile Core;AltStore 已发布 0.2.5(build 7),IPA 下载 HTTP 200 | 发版后又修了发现页可访问性标识符及大小选择用例;尚未包含在 0.2.5 中 |
-| Nekophage | MyGo 原生主窗口 + WebView 阅读器;Windows 有真实源、图片解码、书架与本机 Magpie 的运行证据 | 桌面视频尚未接;搜索代次只丢弃旧结果、未真正取消;无 Git 远端 |
+| Nekophage | MyGo 原生主窗口 + WebView 阅读器;Windows 有真实源、图片解码、书架与本机 Magpie 的运行证据 | 桌面视频尚未接;搜索/浏览/详情取消与图片预算已通过本地竞态测试;无 Git 远端 |
 | VeneraCat Core | 共享漫画/视频/备份/AI 协议逻辑;网络与系统能力交给客户端 | JS 引擎的少量兼容限制、客户端边界契约仍需维护;Sender 没有生产调用方 |
 
 本轮只核对代码与已有回执,不声称重新跑过三个项目的全部测试。三个本地工作树在开始时均干净。两个客户端的 `scripts/core-version` 均为 `214e7782190d47c1f4bcdc9a95fb3a517072cc85`;Core 仓库 HEAD 是 `c3a7dd8`,不能把 pin 与仓库 HEAD 混称同一个版本。
 
-Nekularity 代码基线 `c259f3f`:Orca Worker 在 Mac 上构建并单跑发现页编排用例 PASS(24.6 秒,无跳过);批量更新在 `fd1cef0` 上 PASS。`c259f3f` 的完整 UI 首轮 18 条 / PASS 4 / FAIL 0 / SKIP 14,补种失败后的第二轮 PASS 3 / FAIL 1 / SKIP 14;需要固定模拟器 UUID 并补齐夹具后复测。旧版本的 16/16 不能替代它。
+Nekularity 代码基线 `c259f3f`:Orca Worker 在 Mac 上构建并单跑发现页编排用例 PASS(24.6 秒,无跳过);批量更新在 `fd1cef0` 上 PASS。固定 UUID 与补齐漫画/视频种子后,`2cf44e4` 全套 19 条 / PASS 18 / FAIL 1 / SKIP 0,唯一失败是长按进入编排。`0f2a5a2` 修改入口后已交 Orca Worker 单跑复测,尚未收到结果;不能合并不同提交的结果宣称全套通过。
 
 ## 优先级与验收
 
