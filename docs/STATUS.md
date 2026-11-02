@@ -56,6 +56,8 @@
 
 **拖放与重启持久化(2026-11-02,Orca Worker / Mac 模拟器,目标提交 `7586982`)**:新增 `testBoardDragOrderSurvivesRelaunch` 并在专用 iPhone 17 Pro 上跑通(`/tmp/nk-drag-final.log`)。首版实现读排序时被**重复标识符**污染——每张卡的标题和箭头都带 `home.card.*`,于是「移动前两名」实际是同一张卡,断言空转通过;改为按首次出现去重后重跑,结果才有意义:拖动前 `history, favorites, …`,拖到第二位后为 `favorites, history, …`,terminate/launch 后仍是 `favorites, history, …`。停机后直接读 App 偏好交叉核对,`homeBlocksV2` 实读为 `['favorites','history',…]`,确认不是只重排了界面;用例末尾已拖回原顺序。**新增拖放用例的首版因比对同一张卡而空转通过**,已去重后重跑;这不意味着此前完整套件中的其他用例无效。
 
+拖放用例已从 Mac 的 Git bundle 导入并核对 2,169 字节与 SHA-256;远端 `validate/discover-drag-7586982` 保留原提交 `33be2af3767a02e438eaacef7405262015652e80`,主线整合为 `9b2b3e621219db4ee9dea3308d85af0a114eb5e7`。作者与 Assisted-by 保留,主线测试文件 blob 与 Mac 已运行版本完全一致。Windows `check-swift.sh` 解析通过,未在 Windows 运行 UI;最新完整套件仍按前述 19/19 记录,不将单独用例叠加为一次新全套通过。
+
 **八张真实模拟器截图(2026-11-02,App `0.2.6` / 提交 `7586982`,XCTest 在模拟器内直接捕获)**:iPhone 17 Pro(402 pt 宽)发现页 2 列、iPad Pro 13 英寸(1032 pt 宽)发现页 4 列,各含明/暗两套发现页与设置页。未看到横向溢出、标题截断或控件互相压盖,卡片文字在明暗两种外观下都可读。**3 列宽度(560–899 pt)本轮没有对应设备或分屏场景,未验证。**
 
 **滚到底无遮挡(2026-11-02,Orca Worker / Mac 模拟器,App `211cd64`)**:build-for-testing 与 iPhone/iPad 安装均通过。连续向上滑动直到页尾元素坐标连续两次不变,再对五张截图逐一判读:iPhone 明/暗设置页、iPad 明/暗设置页及 iPhone 暗色发现页。设置页「关于」、版本 `0.2.6` 和 Core 行,发现页最后「视频源」卡片都完整位于胶囊上方。iPhone 设置页 Core 文字底边约 748 pt、胶囊顶部 774 pt(间隔 26 pt);发现页内容底边约 731 pt(间隔 43 pt);iPad 设置页 Core 文字底边约 1264 pt、胶囊顶部 1285 pt(间隔 21 pt)。五张图均未见横向溢出或标题截断,没有需要增加底部边距的证据。截图和日志在 `/tmp/nk-bottom-211cd64/`。iPad TMDB 说明完整可见;iPhone 在最底部时 TMDB 说明已滚到顶部导航栏之后,不能据底部截图声称它同时完整可见。该回执仅覆盖这些模拟器和场景,不等于全部布局或真机验证。
