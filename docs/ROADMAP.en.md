@@ -14,13 +14,13 @@ Updated 2026-11-02. Covers Nekularity, Nekophage and VeneraCat Core. Work throug
 
 This review checked code and existing receipts; it did not rerun every test in all three projects. All three local worktrees were clean at the start. Both clients' `scripts/core-version` files contain `214e7782190d47c1f4bcdc9a95fb3a517072cc85`; the Core repository HEAD is `c3a7dd8`. Do not describe a pin and repository HEAD as the same version.
 
-Nekularity code baseline `c259f3f`: an Orca Worker built it on the Mac and passed the arranging case (24.6 seconds, no skip); update-all passed on `fd1cef0`. With a fixed UUID and complete comic/video seed, the full `2cf44e4` suite returned 19 cases / PASS 18 / FAIL 1 / SKIP 0. Long-press entry was the sole failure. The `0f2a5a2` long-press retest still failed. Follow-up `8acbb78` separates gestures by state and is with the Orca Worker for retesting without a result yet. Results from different commits cannot be combined into a full-suite pass.
+Nekularity full UI validation commit `8acbb78`: an Orca Worker built, installed and ran the complete suite on one dedicated simulator: **19/19 PASS,0 FAIL,0 SKIP**. Long-press entry and resize persistence after relaunch passed; dragging remains unverified. Preparing `0.2.6` (build 8); until IPA and subscription checks finish, AltStore remains recorded as `0.2.5`.
 
 ## Priorities and acceptance
 
 | Order | Goal | Acceptance |
 |---|---|---|
-| P0-1 | Close the current iOS regression round | Receive the full `c259f3f` UI result, fix real failures and retest; report total/PASS/FAIL/SKIP; bring the Chinese and English STATUS and UNVERIFIED current, keeping historical results as history |
+| P0-1 | Close the current iOS regression round (complete:8acbb78,19/19) | Receive the full `c259f3f` UI result, fix real failures and retest; report total/PASS/FAIL/SKIP; bring the Chinese and English STATUS and UNVERIFIED current, keeping historical results as history |
 | P0-2 | Release a test build containing the fixes | After regression, prepare 0.2.6 or the next unused version; align app and widget versions; pass CI unit tests, device build, UI test compilation and packaging; verify IPA metadata/extensions and HTTP 200/size, then update and verify the AltStore subscription entry |
 | P1-1 | Finish Discover and theme UI validation | Long press enters arranging; drag order and small/medium sizes persist; HTTPS theme installation and errors work; inspect light/dark and narrow/wide screenshots, distinguishing simulated widths from real folding devices |
 | P1-2 | Complete download and playback device validation | Download start/end Live Activity on lock screen and Dynamic Island; offline reading; playback/subtitles/resume/PiP/background audio; record version, device, actions and results. Start with local media and fixtures where accounts are unnecessary |
