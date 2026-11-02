@@ -917,7 +917,7 @@ final class NekularityUITests: XCTestCase {
         let field = element(app, "sources.scriptURL")
         XCTAssertTrue(field.waitForExistence(timeout: 15), "the add sheet has no URL field")
         field.tap()
-        field.typeText(LocalImageServer.scriptURL)
+        field.typeText(server.scriptURL)
 
         let install = element(app, "sources.installScript")
         XCTAssertTrue(install.exists, "the add sheet has no install button")
