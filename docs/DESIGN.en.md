@@ -120,3 +120,11 @@ The rule: **put the identifier on the element itself**, never on a container tha
 The first diagnosis was wrong: it blamed `Menu`, on the theory that a menu's label drops its identifier, and turned the menu into a `Button` + dialog. After that change the identifier still could not be found, and `home.hide` — a plain `Button` all along — was 0 too, which put the problem on the ancestor rather than the control type. The dialog version stayed because it happens to spell out 小/中 as explicit options, but it is **not** what fixed anything.
 
 With the identifiers restored, the same case fell over at the next step: a query for 中 by label matched several elements, because a card's own size button reads 中 too. A dialog's buttons have no identifiers of their own and can only be found by label, so the query has to be **scoped to the dialog** (`app.sheets` or `app.alerts`) rather than run app-wide. A label works as a selector only while that name is unique.
+
+## 10. `.draggable` swallows the long press
+
+Add `.draggable` to a card and its own long-press recogniser claims that gesture: a `LongPressGesture` on the same chain — even through `simultaneousGesture` or `highPriorityGesture` — never receives it, and a long press on the card does nothing. Attaching both the drag and "long press to arrange" to the same handle reproduces it exactly: the handle is visible and pressing it has no effect.
+
+Two failed runs set the order clearly: first a long press on the whole card did nothing; then a handle carrying both `highPriorityGesture` and `.draggable` still did nothing. The "entry exists" assertion passed both times, which places the problem in **gesture ownership**, not in a missing element.
+
+The rule: one control must not both enter a mode on a long press and take part in dragging. Split by state — attach only the long press before arranging, and `.draggable` once arranging has begun. When the element is there and pressing it does nothing, list the gestures on that control before deciding which one claimed the press.

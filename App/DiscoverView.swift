@@ -185,8 +185,14 @@ struct DiscoverView: View {
 
     /// The board's entry into arranging: a long press here, visible before it is
     /// used, and carrying the drag once the board is arranging.
+    ///
+    /// The drag is attached only while arranging. `.draggable` starts on a long
+    /// press of its own, so attaching it to the same handle before arranging took
+    /// the press that was meant to switch modes — the handle existed and pressing
+    /// it did nothing.
+    @ViewBuilder
     private func editHandle(_ block: HomeBlock) -> some View {
-        Image(systemName: "line.3.horizontal")
+        let handle = Image(systemName: "line.3.horizontal")
             .font(.caption2)
             .foregroundStyle(.tertiary)
             .frame(width: 28, height: 28)
@@ -198,8 +204,14 @@ struct DiscoverView: View {
                 editPulse += 1
                 withAnimation(.snappy) { editing = true }
             })
-            .draggable(block.id)
-            .sensoryFeedback(.impact(weight: .medium), trigger: editPulse)
+        if editing {
+            handle
+                .draggable(block.id)
+                .sensoryFeedback(.impact(weight: .medium), trigger: editPulse)
+        } else {
+            handle
+                .sensoryFeedback(.impact(weight: .medium), trigger: editPulse)
+        }
     }
 
     private func header(_ block: HomeBlock) -> some View {
