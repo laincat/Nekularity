@@ -95,6 +95,10 @@ public enum BuiltinThemes {
 /// path replace what the app installs. A local file is a different entry point
 /// (`install(data:)`) and is not covered by this rule.
 public enum ThemeSource {
+    /// A theme is a small JSON file. Anything past this is not a theme, and
+    /// fetching it would spend the user's data for nothing.
+    public static let maximumBytes = 1 << 20
+
     public static func validate(_ url: URL) throws {
         guard url.scheme?.lowercased() == "https" else {
             throw CoreError("主题链接必须是 https 地址")
@@ -102,6 +106,54 @@ public enum ThemeSource {
         guard url.host?.isEmpty == false else {
             throw CoreError("主题链接缺少主机名")
         }
+    }
+
+    /// Whether a redirect hop may be followed. Only HTTPS qualifies: `validate`
+    /// sees the address the user typed, not where the server sends them next.
+    public static func allowsRedirect(to url: URL?) -> Bool {
+        guard let url, url.scheme?.lowercased() == "https", url.host?.isEmpty == false else {
+            return false
+        }
+        return true
+    }
+
+    /// Fetches a theme without ever leaving HTTPS.
+    ///
+    /// URLSession follows redirects, so an HTTPS link that answers `302
+    /// Location: http://…` would otherwise download the theme in the clear.
+    /// A refused hop surfaces as the 3xx response itself, which the status
+    /// check below rejects. `configuration` exists for tests, whose stub
+    /// protocol cannot be installed into a session built here.
+    public static func fetch(_ url: URL,
+                             configuration: URLSessionConfiguration? = nil) async throws -> Data {
+        try validate(url)
+        let config = configuration ?? URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 20
+        config.urlCache = nil
+        let session = URLSession(configuration: config, delegate: HTTPSOnlyRedirects(), delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+        let (data, response) = try await session.data(from: url)
+        guard let http = response as? HTTPURLResponse else {
+            throw CoreError("主题地址没有返回 HTTP 响应")
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            throw CoreError("主题地址返回了 HTTP \(http.statusCode)")
+        }
+        if http.expectedContentLength > Int64(maximumBytes) || data.count > maximumBytes {
+            throw CoreError("主题文件超过 1 MiB")
+        }
+        return data
+    }
+}
+
+/// Refuses any redirect that leaves HTTPS, so a plaintext hop cannot happen
+/// inside a request whose original address passed `ThemeSource.validate`.
+final class HTTPSOnlyRedirects: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest,
+                    completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(ThemeSource.allowsRedirect(to: request.url) ? request : nil)
     }
 }
 

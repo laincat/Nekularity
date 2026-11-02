@@ -275,8 +275,7 @@ struct SettingsView: View {
         do {
             try ThemeSource.validate(url)
             try await themes.install(from: url) { address in
-                let (data, _) = try await URLSession.shared.data(from: address)
-                return data
+                try await ThemeSource.fetch(address)
             }
             showingThemeLink = false
             note = "已安装主题，在上面的列表里选中它即可"

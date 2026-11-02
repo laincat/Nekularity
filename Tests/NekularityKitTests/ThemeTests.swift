@@ -147,4 +147,116 @@ struct ThemeTests {
         }
         #expect(store.all.allSatisfy { $0.id == BuiltinThemes.system.id }, "a refused link installed a theme")
     }
+
+    @Test("a redirect away from HTTPS is refused")
+    func redirectToPlaintextIsRefused() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [ThemeLinkStub.self]
+        do {
+            _ = try await ThemeSource.fetch(URL(string: "https://redirect.test/hop.json")!,
+                                            configuration: config)
+            Issue.record("the plaintext redirect was followed")
+        } catch {
+            #expect(!(error is ThemeLinkStub.FollowedRedirect), "the stub followed the hop")
+        }
+        let plaintext = ThemeLinkStub.requests().filter { $0.host == "plain.test" }
+        #expect(plaintext.isEmpty, "the request went to \(plaintext) after the https hop")
+    }
+
+    @Test("a redirect that stays on HTTPS is followed")
+    func redirectWithinHTTPSIsFollowed() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [ThemeLinkStub.self]
+        let data = try await ThemeSource.fetch(URL(string: "https://keep.test/hop.json")!,
+                                              configuration: config)
+        #expect(String(decoding: data, as: UTF8.self).contains("\"id\":\"kept\""),
+                "the https hop did not deliver the theme")
+    }
+
+    @Test("a non-2xx response and an oversized body are refused")
+    func badResponsesAreRefused() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [ThemeLinkStub.self]
+        do {
+            _ = try await ThemeSource.fetch(URL(string: "https://missing.test/theme.json")!,
+                                            configuration: config)
+            Issue.record("a 404 body was accepted as a theme")
+        } catch {
+            #expect(error is CoreError)
+        }
+        do {
+            _ = try await ThemeSource.fetch(URL(string: "https://huge.test/theme.json")!,
+                                            configuration: config)
+            Issue.record("an oversized body was accepted as a theme")
+        } catch {
+            #expect(error is CoreError)
+        }
+    }
+
+    @Test("only an HTTPS host may be a redirect target")
+    func redirectTargets() throws {
+        #expect(ThemeSource.allowsRedirect(to: URL(string: "https://themes.test/a.json")))
+        #expect(!ThemeSource.allowsRedirect(to: URL(string: "http://themes.test/a.json")))
+        #expect(!ThemeSource.allowsRedirect(to: URL(string: "HTTP://themes.test/a.json")))
+        #expect(!ThemeSource.allowsRedirect(to: URL(string: "file:///tmp/a.json")))
+        #expect(!ThemeSource.allowsRedirect(to: URL(string: "https:///a.json")))
+        #expect(!ThemeSource.allowsRedirect(to: nil))
+    }
+}
+
+/// Answers theme fetches from a table: a plaintext hop, an HTTPS hop, a 404 and
+/// a body larger than `ThemeSource.maximumBytes`. Requests are recorded so the
+/// refusal can be shown to stop before the plaintext host is reached.
+final class ThemeLinkStub: URLProtocol, @unchecked Sendable {
+    struct FollowedRedirect: Error {}
+
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var seen: [URL] = []
+
+    static func requests() -> [URL] { lock.withLock { seen } }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let url = request.url else { return }
+        Self.lock.withLock { Self.seen.append(url) }
+        if url.path.contains("plain") {
+            // Only reached if the plaintext hop was actually followed.
+            client?.urlProtocol(self, didFailWithError: FollowedRedirect())
+            return
+        }
+        switch url.host {
+        case "redirect.test":
+            let target = URL(string: "http://plain.test/plain.json")!
+            let response = HTTPURLResponse(url: url, statusCode: 302, httpVersion: "HTTP/1.1",
+                                           headerFields: ["Location": target.absoluteString])!
+            client?.urlProtocol(self, wasRedirectedTo: URLRequest(url: target), redirectResponse: response)
+            return
+        case "keep.test":
+            let target = URL(string: "https://keep.test/final.json")!
+            if url.path == "/hop.json" {
+                let response = HTTPURLResponse(url: url, statusCode: 302, httpVersion: "HTTP/1.1",
+                                              headerFields: ["Location": target.absoluteString])!
+                client?.urlProtocol(self, wasRedirectedTo: URLRequest(url: target), redirectResponse: response)
+                return
+            }
+            deliver(url, status: 200, body: Data("{\"id\":\"kept\"}".utf8))
+        case "missing.test":
+            deliver(url, status: 404, body: Data("not a theme".utf8))
+        default:
+            let big = Data(repeating: 0x20, count: ThemeSource.maximumBytes + 1)
+            deliver(url, status: 200, body: big)
+        }
+    }
+
+    private func deliver(_ url: URL, status: Int, body: Data) {
+        let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1",
+                                       headerFields: ["Content-Length": String(body.count)])!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
 }
