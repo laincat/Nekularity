@@ -59,6 +59,16 @@ final class LocalImageServer: @unchecked Sendable {
     /// player that asks and draws nothing look identical from the assertion alone.
     private var clipLog: [String] = []
     private let clipLock = NSLock()
+    /// Page requests to fail before answering, so a download can be made to fail
+    /// once and then succeed on retry. Zero means answer normally.
+    private var pagesToFail = 0
+
+    /// Makes the next `count` page requests fail, so the retry path can be driven.
+    func failNextPageRequests(_ count: Int) {
+        clipLock.lock()
+        defer { clipLock.unlock() }
+        pagesToFail = count
+    }
 
     /// For a failure message: how many times the clip was asked for, and how each
     /// answer went.
@@ -248,6 +258,17 @@ final class LocalImageServer: @unchecked Sendable {
             reply(connection, status: "200 OK", body: video, type: "video/mp4",
                   range: headers["range"], extra: ["Accept-Ranges": "bytes"])
         default:
+            // Only the chapter's own page path may fail: a cover request would
+            // otherwise spend the failure budget and the download would succeed
+            // on its first attempt, which is the opposite of what the test means.
+            clipLock.lock()
+            let failing = route == "/page.png" && pagesToFail > 0
+            if failing { pagesToFail -= 1 }
+            clipLock.unlock()
+            if failing {
+                reply(connection, status: "500 Internal Server Error", body: Data())
+                return
+            }
             reply(connection, status: "200 OK", body: png, type: "image/png")
         }
     }

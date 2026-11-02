@@ -338,8 +338,14 @@ struct ComicDetailView: View {
             if here {
                 Text("读到").font(.caption).foregroundStyle(.secondary)
             }
+            let key = "\(route.source)|\(route.comic.id)|\(chapter.id)"
             if downloads.isDownloaded(sourceKey: route.source, comicID: route.comic.id, chapterID: chapter.id) {
                 Image(systemName: "arrow.down.circle.fill").font(.caption).foregroundStyle(.secondary)
+            } else if downloads.failures[key] != nil {
+                // Otherwise the only way to learn that this chapter failed is to
+                // leave for the downloads screen and look.
+                Image(systemName: "exclamationmark.triangle.fill").font(.caption)
+                    .foregroundStyle(.orange)
             }
         }
         .contextMenu {

@@ -257,4 +257,52 @@ struct DownloadWritePathTests {
         reopened.download(request(pages)) { Data($0.url.utf8) }
         #expect(await waitFor { reopened.chapters[id] != nil })
     }
+
+    /// Fails the first attempt only, so a retry can succeed.
+    private final class FirstAttempt: @unchecked Sendable {
+        private let lock = NSLock()
+        private var used = false
+        func take() -> Bool {
+            lock.lock(); defer { lock.unlock() }
+            if used { return false }
+            used = true
+            return true
+        }
+    }
+
+    @Test func aFailedDownloadIsKeptAndCanBeRetried() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = DownloadStore(root: dir)
+        let pages = ["https://fixture.invalid/1.jpg"]
+        let first = FirstAttempt()
+
+        store.download(request(pages)) { key in
+            if first.take() { throw URLError(.notConnectedToInternet) }
+            return Data(key.url.utf8)
+        }
+        // A failure the screen cannot name is a chapter that silently never
+        // arrives, so the attempt is kept with its message and fetcher.
+        #expect(await waitFor { store.failures[id] != nil })
+        #expect(store.chapters[id] == nil)
+        #expect(store.progress[id]?.failure != nil)
+        #expect(store.failures[id]?.request.chapterID == "ch1")
+
+        store.retry(id)
+        #expect(await waitFor { store.chapters[id] != nil })
+        #expect(store.failures[id] == nil)
+    }
+
+    @Test func removingAFailedDownloadForgetsIt() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = DownloadStore(root: dir)
+        let pages = ["https://fixture.invalid/1.jpg"]
+
+        store.download(request(pages)) { _ in throw URLError(.notConnectedToInternet) }
+        #expect(await waitFor { store.failures[id] != nil })
+        store.remove(sourceKey: "probe", comicID: "comic", chapterID: "ch1")
+        #expect(store.failures[id] == nil)
+        #expect(store.progress[id] == nil)
+    }
 }

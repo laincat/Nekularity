@@ -20,11 +20,21 @@ struct DownloadsView: View {
 
     var body: some View {
         Group {
-            if downloads.chapters.isEmpty {
+            if downloads.chapters.isEmpty && downloads.failures.isEmpty {
                 ContentUnavailableView("还没有下载", systemImage: "arrow.down.circle",
                                        description: Text("在漫画详情页长按章节即可下载，下载后没有网络也能看。"))
             } else {
                 List {
+                    if !downloads.failures.isEmpty {
+                        // A failed attempt is the one state that used to be invisible:
+                        // no chapter record means no row anywhere, so the chapter the
+                        // user asked for simply never arrived.
+                        Section("没有下载完成") {
+                            ForEach(failed) { failure in
+                                failedRow(failure)
+                            }
+                        }
+                    }
                     Section {
                         ForEach(groups, id: \.comic) { group in
                             ForEach(group.chapters) { chapter in
@@ -47,11 +57,32 @@ struct DownloadsView: View {
         .navigationTitle("下载")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if !downloads.chapters.isEmpty {
+            // Failures are part of what this screen holds now, so a screen with
+            // only failures still needs a way to clear them; removeAll covers both.
+            if !downloads.chapters.isEmpty || !downloads.failures.isEmpty {
                 ToolbarItem(placement: .primaryAction) {
                     Button("全部删除", role: .destructive) { downloads.removeAll() }
                 }
             }
+        }
+    }
+
+    /// Failures in a stable order, so a list that changes does not require a tap.
+    private var failed: [DownloadStore.Failure] {
+        downloads.failures.values.sorted { $0.id < $1.id }
+    }
+
+    private func failedRow(_ failure: DownloadStore.Failure) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(failure.request.comicTitle).font(.headline)
+            HStack {
+                Text(failure.request.chapterTitle)
+                Spacer()
+                Button("重试") { downloads.retry(failure.id) }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("download.retry")
+            }
+            Text(failure.message).font(.caption).foregroundStyle(.red)
         }
     }
 

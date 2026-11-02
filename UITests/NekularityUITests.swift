@@ -1175,6 +1175,61 @@ final class NekularityUITests: XCTestCase {
                       "the reader drew nothing with the server down, so the download did not serve the pages")
     }
 
+    /// A chapter that failed has to be visible and retryable. Before this, a
+    /// failure left no record: the row showed nothing, the downloads screen was
+    /// empty, and the chapter the user asked for silently never arrived.
+    func testAFailedDownloadCanBeRetriedFromTheDownloadsScreen() throws {
+        let server = try LocalImageServer()
+        try server.start()
+        defer { server.stop() }
+        // The first page request fails, so the attempt fails once; the retry gets
+        // the fixture's real bytes.
+        server.failNextPageRequests(1)
+
+        let app = launch()
+        try openSearch(app)
+        try chooseSource(app, "Callback Probe")
+
+        let field = element(app, "search.field")
+        XCTAssertTrue(field.waitForExistence(timeout: 20), "the search tab has no field")
+        field.tap()
+        field.typeText("probe")
+        app.typeText("\n")
+
+        let card = app.scrollViews.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'Probe Comic'")).firstMatch
+        guard card.waitForExistence(timeout: 60) else {
+            throw XCTSkip("the source did not answer search")
+        }
+        card.tap()
+
+        let chapter = firstElement(app, containing: "Chapter 1")
+        XCTAssertTrue(chapter.waitForExistence(timeout: 30), "the detail page lists no chapter")
+        chapter.press(forDuration: 1.2)
+        let download = app.buttons["下载这一话"].firstMatch
+        guard download.waitForExistence(timeout: 10) else {
+            throw XCTSkip("no download action on a chapter row")
+        }
+        download.tap()
+
+        tab(app, "我的")
+        let entry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '下载'")).firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 15), "我的 has no downloads entry")
+        entry.tap()
+
+        // The failed attempt is listed with a retry button; nothing else on this
+        // screen can make the chapter arrive.
+        let retry = app.buttons["download.retry"].firstMatch
+        XCTAssertTrue(retry.waitForExistence(timeout: 30),
+                      "the failed download is not listed, so it can never be retried")
+        retry.tap()
+
+        XCTAssertTrue(firstElement(app, containing: "Probe Comic").waitForExistence(timeout: 90),
+                      "the retry did not produce a downloaded chapter")
+        XCTAssertFalse(app.buttons["download.retry"].exists,
+                       "the failure is still listed after a successful retry")
+    }
+
     /// The board's drag path: a real drag on the visible handle, the other cards'
     /// relative order, and the same order after a new process.
     ///

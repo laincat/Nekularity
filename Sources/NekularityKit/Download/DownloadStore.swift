@@ -97,6 +97,18 @@ public final class DownloadStore {
     public typealias Fetch = @Sendable (ImageLoader.Key) async throws -> Data
 
     private let root: URL
+    /// A download that ended without its chapter. It is kept, not dropped: the
+    /// user asked for this chapter, a failure they cannot see is a chapter that
+    /// silently never arrives, and retrying needs the same request and fetcher.
+    public struct Failure: Sendable, Identifiable {
+        public let request: Request
+        public let message: String
+        public var id: String { request.id }
+        let fetch: Fetch
+    }
+
+    public private(set) var failures: [String: Failure] = [:]
+
     private var queue: [(request: Request, fetch: Fetch, generation: Int)] = []
     /// Bumped whenever an attempt must stop counting: a removed chapter's write
     /// must not put itself back into the archive when it finishes later.
@@ -170,6 +182,7 @@ public final class DownloadStore {
         // never downloaded could never be asked for again.
         if chapters[id] != nil { return }
         if let existing = progress[id], existing.failure == nil { return }
+        failures[id] = nil
         progress[id] = Progress(done: 0, total: request.pages.count, failure: nil)
         let attempt = (generation[id] ?? 0) + 1
         generation[id] = attempt
@@ -185,6 +198,7 @@ public final class DownloadStore {
         generation[id, default: 0] += 1
         progress[id] = nil
         active[id] = nil
+        failures[id] = nil
         queue.removeAll { item in
             "\(item.request.sourceKey)|\(item.request.comicID)|\(item.request.chapterID)" == id
         }
@@ -197,6 +211,12 @@ public final class DownloadStore {
         }
         chapters[id] = nil
         save()
+    }
+
+    /// Runs a failed attempt again with the request and fetcher it kept.
+    public func retry(_ id: String) {
+        guard let failure = failures[id] else { return }
+        download(failure.request, fetch: failure.fetch)
     }
 
     /// Drops the whole archive. Used by the storage screen, and the only way a
@@ -217,6 +237,7 @@ public final class DownloadStore {
             progress[id] = nil
             active[id] = nil
         }
+        failures.removeAll()
         queue.removeAll()
     }
 
@@ -237,7 +258,7 @@ public final class DownloadStore {
     /// fetch was in flight.
     private struct AttemptReplaced: Error {}
 
-    private func write(_ request: Request, fetch: Fetch, attempt: Int) async {
+    private func write(_ request: Request, fetch: @escaping Fetch, attempt: Int) async {
         let id = request.id
         let folder = root.appending(path: "\(request.sourceKey)/\(Chapter.digest(request.comicID))/\(Chapter.digest(request.chapterID))",
                                     directoryHint: .isDirectory)
@@ -276,6 +297,13 @@ public final class DownloadStore {
             try? FileManager.default.removeItem(at: folder)
             active[id] = nil
         } catch {
+            // Keep the attempt so the screen can name it and offer a retry; a
+            // failure the user cannot see is a chapter that silently never
+            // arrives.
+            // The same wording the detail page uses for a failed load; a raw system
+            // message in English would be a second vocabulary for one failure.
+            failures[id] = Failure(request: request, message: CoreError.readable(error.localizedDescription),
+                                   fetch: fetch)
             // A half-written chapter is not a chapter: keeping it would make the
             // reader show three pages of a twenty-page chapter and call it a
             // download.
