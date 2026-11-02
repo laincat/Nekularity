@@ -15,9 +15,9 @@ struct DownloadWritePathTests {
         return url
     }
 
-    private func request(_ pages: [String]) -> DownloadStore.Request {
+    private func request(_ pages: [String], chapterID: String = "ch1") -> DownloadStore.Request {
         .init(sourceKey: "probe", comicID: "comic", comicTitle: "Comic",
-              chapterID: "ch1", chapterTitle: "Chapter 1", pages: pages)
+              chapterID: chapterID, chapterTitle: "Chapter \(chapterID.dropFirst(2))", pages: pages)
     }
 
     /// The store completes writes in a Task, so tests wait for the record
@@ -109,5 +109,64 @@ struct DownloadWritePathTests {
                                     comicID: "comic-b", chapterID: "ch1", isThumbnail: false)
         #expect(store.bytes(for: pageA) == Data("a".utf8))
         #expect(store.bytes(for: pageB) == Data("b".utf8))
+    }
+
+    @Test func removingWhileWritingDoesNotResurrectTheChapter() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = DownloadStore(root: dir)
+        let pages = ["https://fixture.invalid/1.jpg"]
+
+        // A fetch that is still in flight when the chapter is removed.
+        store.download(request(pages)) { key in
+            try await Task.sleep(nanoseconds: 150_000_000)
+            return Data(key.url.utf8)
+        }
+        #expect(await waitFor { store.active[id] != nil })
+        store.remove(sourceKey: "probe", comicID: "comic", chapterID: "ch1")
+
+        // Let the write finish after the removal; it must not add the chapter
+        // back, and it must not report a failure the user did not cause.
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        #expect(store.chapters[id] == nil)
+        #expect(store.progress[id] == nil)
+        #expect(store.active[id] == nil)
+        let page = ImageLoader.Key(source: "probe", url: pages[0], comicID: "comic",
+                                   chapterID: "ch1", isThumbnail: false)
+        #expect(store.bytes(for: page) == nil)
+        #expect(DownloadStore(root: dir).chapters[id] == nil)
+    }
+
+    @Test func clearingStorageStopsPendingAndQueuedDownloads() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = DownloadStore(root: dir)
+        let pages = ["https://fixture.invalid/1.jpg"]
+
+        // Four chapters: two run in parallel and two wait in the queue.
+        var ids: [String] = []
+        var requests: [DownloadStore.Request] = []
+        for number in 1...4 {
+            let request = request(pages, chapterID: "ch\(number)")
+            ids.append("probe|comic|ch\(number)")
+            requests.append(request)
+            store.download(request) { key in
+                try await Task.sleep(nanoseconds: 150_000_000)
+                return Data(key.url.utf8)
+            }
+        }
+        #expect(await waitFor { store.active.count == 2 })
+
+        // Clearing storage must cover chapters that have no record yet, or the
+        // running pair writes itself back and the queued pair starts after.
+        store.removeAll()
+        #expect(store.active.isEmpty)
+
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        for id in ids {
+            #expect(store.chapters[id] == nil)
+            #expect(store.progress[id] == nil)
+        }
+        #expect(DownloadStore(root: dir).chapters.isEmpty)
     }
 }
