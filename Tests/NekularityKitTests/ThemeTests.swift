@@ -78,6 +78,19 @@ struct ThemeTests {
         #expect(!Theme(id: "f", name: "f", accent: "#000000").accentTextIsDark)
     }
 
+    /// The decision above is "dark text when white is unreadable", which is a rule
+    /// about a number. This checks the number for the accents that ship, so the
+    /// claim stops resting on one hand-written comment about 3.44:1.
+    @Test func everyShippedAccentKeepsItsTextAboveTheFloor() throws {
+        for accent in ["#3482FF", "#6BA4FF", "#0A84FF"] {
+            let rgb = try #require(Theme.components(of: accent))
+            let theme = Theme(id: accent, name: accent, accent: accent)
+            let text = theme.accentTextIsDark ? 0.0 : 1.0
+            let ratio = Theme.contrast(Theme.luminance(rgb), text)
+            #expect(ratio >= 3, "\(accent) scores \(ratio):1, below the 3:1 floor")
+        }
+    }
+
     @Test("an unreadable accent falls back to white text")
     func anUnreadableAccentFallsBack() {
         #expect(!Theme(id: "g", name: "g", accent: "not a colour").accentTextIsDark)
