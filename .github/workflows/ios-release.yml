@@ -69,7 +69,10 @@ jobs:
           # The kit declares macOS alongside iOS so its tests run on the host the
           # build already happens on. Without this step a green run means "it
           # compiles", which is not the same as "the tests pass".
-          if ! swift test > "$RUNNER_TEMP/swift-test.log" 2>&1; then
+          # --verbose makes each case announce itself as it starts. Without it a
+          # hang leaves a log with nothing in it, which is what the last two cost:
+          # fifteen minutes and no name.
+          if ! swift test --verbose > "$RUNNER_TEMP/swift-test.log" 2>&1; then
             grep -E "error:|XCTAssert|failed" "$RUNNER_TEMP/swift-test.log" | head -40 || true
             tail -25 "$RUNNER_TEMP/swift-test.log"
             exit 1

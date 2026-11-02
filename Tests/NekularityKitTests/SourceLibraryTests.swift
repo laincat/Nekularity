@@ -7,7 +7,7 @@ import Testing
 /// network is only used for downloads, so this runs without a server.
 // The library is @MainActor: its initialiser and its properties are isolated.
 @MainActor
-@Suite("SourceLibrary")
+@Suite("SourceLibrary", .serialized)
 struct SourceLibraryTests {
     private let script = """
     class Mini extends ComicSource {
