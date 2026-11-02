@@ -24,6 +24,19 @@ import Testing
         #expect(text.contains("反馈"))
     }
 
+    /// Foundation reports a dead network in English sentences, before Core is
+    /// involved. Those are not the source's fault, and "源返回错误:" would say they
+    /// were while leaving the user with English.
+    @Test func foundationsNetworkErrorsAreNotBlamedOnTheSource() {
+        let offline = CoreError.readable("The Internet connection appears to be offline.")
+        #expect(offline == "设备当前离线,请检查网络")
+        #expect(!offline.hasPrefix("源返回错误:"))
+        #expect(CoreError.readable("The network connection was lost.") == "设备当前离线,请检查网络")
+        #expect(CoreError.readable("The request timed out.") == "连不上服务器,请检查网络或稍后重试")
+        #expect(CoreError.readable("A server with the specified hostname could not be found.")
+                    == "连不上服务器,请检查网络或稍后重试")
+    }
+
     @Test func anUnknownMessageKeepsCoresWording() {
         // A Chinese prefix, then Core's own words, so a report still carries
         // what happened without showing a bare English sentence.

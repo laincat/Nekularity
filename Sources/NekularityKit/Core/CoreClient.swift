@@ -56,6 +56,16 @@ public struct CoreError: Error, LocalizedError, Sendable {
         if has("permission") || has("not allowed") {
             return "没有权限执行这个操作"
         }
+        // Foundation's own network errors arrive as English sentences when a
+        // fetch fails before Core answers. Falling through would blame the source
+        // for the phone being offline, and leave the sentence in English.
+        if has("offline") || has("not connected to the internet") || has("network connection was lost") {
+            return "设备当前离线,请检查网络"
+        }
+        if has("timed out") || has("cannot connect to host") || has("could not connect")
+            || has("hostname could not be found") || has("network is unreachable") {
+            return "连不上服务器,请检查网络或稍后重试"
+        }
         if message.isEmpty {
             return "操作失败,源没有给出原因"
         }
