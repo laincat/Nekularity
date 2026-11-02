@@ -57,7 +57,9 @@ struct DownloadsView: View {
         .navigationTitle("下载")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if !downloads.chapters.isEmpty {
+            // Failures are part of what this screen holds now, so a screen with
+            // only failures still needs a way to clear them; removeAll covers both.
+            if !downloads.chapters.isEmpty || !downloads.failures.isEmpty {
                 ToolbarItem(placement: .primaryAction) {
                     Button("全部删除", role: .destructive) { downloads.removeAll() }
                 }
