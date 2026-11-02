@@ -51,6 +51,10 @@ public final class DownloadStore {
         public var chapterTitle: String
         public var pages: [String]
 
+        /// The same identity the store keys chapters by: queued and finished
+        /// chapters must not be able to disagree about which one they are.
+        public var id: String { "\(sourceKey)|\(comicID)|\(chapterID)" }
+
         public init(sourceKey: String, comicID: String, comicTitle: String,
                     chapterID: String, chapterTitle: String, pages: [String]) {
             self.sourceKey = sourceKey
@@ -230,7 +234,7 @@ public final class DownloadStore {
     private struct AttemptReplaced: Error {}
 
     private func write(_ request: Request, fetch: Fetch, attempt: Int) async {
-        let id = "\(request.sourceKey)|\(request.comicID)|\(request.chapterID)"
+        let id = request.id
         let folder = root.appending(path: "\(request.sourceKey)/\(Chapter.digest(request.comicID))/\(Chapter.digest(request.chapterID))",
                                     directoryHint: .isDirectory)
         var files: [String] = []
