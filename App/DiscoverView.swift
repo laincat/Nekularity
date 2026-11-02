@@ -134,11 +134,18 @@ struct DiscoverView: View {
                         .foregroundStyle(.tertiary)
                         .accessibilityLabel("拖动排序")
 
-                    Button {
-                        layout.setColumns(block, block.span == 2 ? 1 : 2)
+                    // A widget board offers sizes by name; a toggle hides which one
+                    // you are looking at.
+                    Menu {
+                        Button { layout.setColumns(block, 1) } label: {
+                            Label("小", systemImage: "rectangle.portrait")
+                        }
+                        Button { layout.setColumns(block, 2) } label: {
+                            Label("中", systemImage: "rectangle")
+                        }
                     } label: {
-                        Label(block.span == 2 ? "改为半宽" : "改为整宽",
-                              systemImage: block.span == 2 ? "rectangle.split.2x1" : "rectangle")
+                        Label(block.span == 2 ? "中" : "小",
+                              systemImage: block.span == 2 ? "rectangle" : "rectangle.portrait")
                     }
                     .accessibilityIdentifier("home.size.\(block.id)")
 
@@ -157,6 +164,7 @@ struct DiscoverView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
+        .jiggling(editing)
         .onLongPressGesture(minimumDuration: 0.35) {
             guard !editing else { return }
             editPulse += 1

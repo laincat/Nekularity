@@ -57,7 +57,28 @@ extension View {
 }
 
 /// The rounded capsule button the reference app puts in its bars.
+/// The small wobble an editable board gives its cards.
+///
+/// It is the difference between a screen that happens to have drag targets and one that
+/// says so: without it the gesture is invisible until someone guesses it.
+struct Jiggle: ViewModifier {
+    let active: Bool
+    @State private var tilt = false
+
+    func body(content: Content) -> some View {
+        content
+            .rotationEffect(.degrees(active && tilt ? 0.7 : -0.7))
+            .animation(active ? .easeInOut(duration: 0.16).repeatForever(autoreverses: true) : .default,
+                       value: tilt)
+            .onAppear { tilt = active }
+            .onChange(of: active) { _, on in tilt = on }
+    }
+}
+
 extension View {
+    /// Wobbles while `active`, the way an editable home board does.
+    func jiggling(_ active: Bool) -> some View { modifier(Jiggle(active: active)) }
+
     /// A floating control's surface. Not for content: see the note at the top.
     @ViewBuilder func glassControl<S: Shape>(_ shape: S) -> some View {
         self.glassEffect(.regular, in: shape)
