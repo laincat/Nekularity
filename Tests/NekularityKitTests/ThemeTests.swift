@@ -97,4 +97,32 @@ struct ThemeTests {
         #expect(store.active.id == BuiltinThemes.system.id)
         #expect(store.all.map(\.id) == [BuiltinThemes.system.id])
     }
+
+    /// A theme from a link is the same file as one from a picker, so it goes through
+    /// the same door: the id is sanitised, and a bad body is refused before anything
+    /// is written.
+    @Test("a theme installs from a link, and a bad one is refused")
+    func themeFromLink() async throws {
+        let dir = try temporary()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = ThemeStore(directory: dir, defaults: UserDefaults(suiteName: "theme-test-\(UUID().uuidString)")!)
+        let url = URL(string: "https://themes.test/night.json")!
+
+        let body = Data(##"{"id":"night","name":"夜","accent":"#8E7BFF","radius":14,"dark":true}"##.utf8)
+        try await store.install(from: url) { asked in
+            #expect(asked == url)
+            return body
+        }
+        #expect(store.all.contains { $0.id == "night" })
+        #expect(store.active.id == BuiltinThemes.system.id)
+
+        var refused = false
+        do {
+            try await store.install(from: url) { _ in Data("not json".utf8) }
+        } catch {
+            refused = true
+        }
+        #expect(refused, "a body that is not a theme was accepted")
+        #expect(store.all.contains { $0.id == "night" }, "the failing install removed the good theme")
+    }
 }

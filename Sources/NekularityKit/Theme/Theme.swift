@@ -156,6 +156,17 @@ public final class ThemeStore {
         active = all.first { $0.id == wanted } ?? BuiltinThemes.system
     }
 
+    /// Installs a theme from a link.
+    ///
+    /// The same file a person would import by hand, fetched instead of picked. The
+    /// fetch is passed in rather than done here: the kit has no transport of its own,
+    /// and a test should not need a network to prove what this does with an answer.
+    public func install(from url: URL,
+                        fetch: @Sendable (URL) async throws -> Data) async throws {
+        let data = try await fetch(url)
+        try install(data: data)
+    }
+
     /// A file name that cannot escape the directory, since the id comes from a
     /// file someone else wrote.
     private func safe(_ id: String) -> String {

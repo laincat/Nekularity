@@ -38,6 +38,8 @@ struct SettingsView: View {
     @Environment(\.switchProfile) private var switchProfile
     @State private var showingProfiles = false
     @State private var importing = false
+    @State private var showingThemeLink = false
+    @State private var themeLink = ""
     @State private var note: String?
     @State private var showAI = false
 
@@ -181,6 +183,13 @@ struct SettingsView: View {
                         Label("导入主题文件", systemImage: "square.and.arrow.down")
                     }
                     .accessibilityIdentifier("settings.importTheme")
+                    Button {
+                        themeLink = ""
+                        showingThemeLink = true
+                    } label: {
+                        Label("从链接安装主题", systemImage: "link")
+                    }
+                    .accessibilityIdentifier("settings.themeFromLink")
                 }
 
                 Section {
@@ -218,9 +227,36 @@ struct SettingsView: View {
                     note = error.localizedDescription
                 }
             }
+            .alert("从链接安装主题", isPresented: $showingThemeLink) {
+                TextField("https://…/theme.json", text: $themeLink)
+                    .accessibilityIdentifier("settings.themeLinkField")
+                Button("安装") { Task { await installThemeFromLink() } }
+                    .accessibilityIdentifier("settings.themeLinkInstall")
+                Button("取消", role: .cancel) {}
+            } message: {
+                Text("粘贴一个主题 JSON 的地址。装好后在上面的列表里选中它。")
+            }
             .alert(note ?? "", isPresented: Binding(get: { note != nil }, set: { if !$0 { note = nil } })) {
                 Button("好") { note = nil }
             }
+        }
+    }
+
+    /// Installs a theme from a URL, through the same store path as a picked file.
+    private func installThemeFromLink() async {
+        let text = themeLink.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: text), url.scheme?.hasPrefix("http") == true else {
+            note = "这不是一个可用的链接"
+            return
+        }
+        do {
+            try await themes.install(from: url) { address in
+                let (data, _) = try await URLSession.shared.data(from: address)
+                return data
+            }
+            note = "已安装主题，在上面的列表里选中它即可"
+        } catch {
+            note = (error as? CoreError)?.message ?? error.localizedDescription
         }
     }
 
