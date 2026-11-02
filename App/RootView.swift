@@ -67,6 +67,12 @@ struct RootView: View {
     }
 
     /// The floating bar: four sections in one capsule, and search in its own.
+    @Namespace private var tabNamespace
+
+    /// Turning motion off is a setting people set for a reason: the pill snaps into
+    /// place instead of sliding, and nothing else here animates either.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private var bar: some View {
         // One container for the strip and the search circle: separate pieces of
         // glass next to each other refract each other and neither reads cleanly.
@@ -80,7 +86,11 @@ struct RootView: View {
             HStack(spacing: 2) {
                 ForEach(Section.allCases) { item in
                     Button {
-                        section = item
+                        if reduceMotion {
+                            section = item
+                        } else {
+                            withAnimation(.snappy(duration: 0.28)) { section = item }
+                        }
                     } label: {
                         VStack(spacing: 3) {
                             Image(systemName: item.symbol).font(.system(size: 17, weight: .medium))
@@ -92,6 +102,7 @@ struct RootView: View {
                         .background {
                             if section == item {
                                 Capsule().fill(accent.opacity(0.16))
+                                    .matchedGeometryEffect(id: "tab.pill", in: tabNamespace)
                             }
                         }
                     }

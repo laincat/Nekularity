@@ -64,11 +64,14 @@ extension View {
 struct Jiggle: ViewModifier {
     let active: Bool
     @State private var tilt = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
-            .rotationEffect(.degrees(active && tilt ? 0.7 : -0.7))
-            .animation(active ? .easeInOut(duration: 0.16).repeatForever(autoreverses: true) : .default,
+            // A repeated rotation is exactly what Reduce Motion exists to stop.
+            .rotationEffect(.degrees(active && tilt && !reduceMotion ? 0.7 : -0.7))
+            .animation(active && !reduceMotion
+                       ? .easeInOut(duration: 0.16).repeatForever(autoreverses: true) : .default,
                        value: tilt)
             .onAppear { tilt = active }
             .onChange(of: active) { _, on in tilt = on }

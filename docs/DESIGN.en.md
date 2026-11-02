@@ -69,3 +69,32 @@ Where it should get to:
 | Subscription updates | To do: a theme with a `url` can be checked for updates, reusing the batch update |
 
 The judgement behind it: a theme is **content**, not a plugin. It has no behaviour, only data, so the install path should be "take a file" — no package, no execution environment.
+
+## 6. Motion: few, short, and switchable
+
+https://liquidglassdesign.com/ is a gallery of liquid-glass interface and motion **work**; it has no parameters or code to copy. The authority remains Apple's HIG and SwiftUI's own animation APIs. What this app takes from either is short enough to list.
+
+| Rule | Why |
+| --- | --- |
+| Animate transforms and opacity only | Animating blur radius, shadow radius or geometry repaints the layer; scrolling drops frames |
+| 0.2–0.35 s, and `.snappy` for springs | Longer reads as sluggish, shorter is not seen |
+| Move with one geometry transition, not two cross-fades | Two layers animating at each other look jittery and cost twice as much |
+| Looping animation only for "this can be dragged" | A permanent loop is the most expensive thing on screen and the most distracting |
+| Honour Reduce Motion | It stops the wobble and places the selected pill without a sliding transition |
+| No per-row entrance animation in long lists | Dozens of animations in one frame is what a slow launch is made of |
+| Motion never carries information | With animation off, every action still reads |
+
+In place today: the selection pill moves with one `matchedGeometryEffect` (0.28 s, `.snappy`), and the arranging wobble obeys Reduce Motion.
+
+## 7. Wide and folding devices
+
+A device like the iPhone Duo is close to tablet width when opened: two columns leave the screen looking empty and stretch each card too tall. So:
+
+| Width | Columns |
+| --- | --- |
+| Compact (phone portrait) | 2 |
+| Regular (unfolded, iPad portrait) | 3 |
+| Wider (iPad landscape, split view) | 4 |
+
+The test is available width, not device model: folding, split view and Stage Manager all change width, and a model name does not. A card's 小 and 中 follow from it — small is one column, medium is two.
+

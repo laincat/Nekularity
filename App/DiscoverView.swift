@@ -21,6 +21,11 @@ struct DiscoverView: View {
     /// Counts long presses, so the board can give a tap of feedback when it switches
     /// into arranging.
     @State private var editPulse = 0
+    /// The board's width, so the grid answers to the space it has rather than to a
+    /// device name: a folding screen, split view and iPad all differ here.
+    @State private var gridWidth: CGFloat = 0
+
+    private var gridColumns: Int { HomeGrid.columns(forWidth: gridWidth) }
     @State private var searching = false
     @State private var browsing = false
     @State private var adding = false
@@ -34,7 +39,7 @@ struct DiscoverView: View {
                                            description: Text("编辑里把要看的卡片打开。"))
                         .padding(.top, 60)
                 } else {
-                    MasonryLayout(spacing: 12) {
+                    MasonryLayout(spacing: 12, columns: gridColumns) {
                         ForEach(layout.visible) { block in
                             card(block)
                                 .wideBlock(block.span == 2)
@@ -59,6 +64,7 @@ struct DiscoverView: View {
                     .padding(.vertical, 8)
                 }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 }
             .navigationTitle("发现")
             .overlay {
                 if editing {

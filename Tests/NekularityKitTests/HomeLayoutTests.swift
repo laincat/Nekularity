@@ -153,4 +153,16 @@ struct HomeLayoutTests {
         layout.moveBlockToEnd(layout.blocks[0].id)
         #expect(layout.blocks.last?.id == before[0])
     }
+
+    /// The board answers to the width it has, not to the device it is running on:
+    /// folding, split view and iPad all land here, and so will anything wider.
+    @Test("the column count follows the width")
+    func columnsFollowWidth() {
+        #expect(HomeGrid.columns(forWidth: 390) == 2)
+        #expect(HomeGrid.columns(forWidth: 559) == 2)
+        #expect(HomeGrid.columns(forWidth: 560) == 3)
+        #expect(HomeGrid.columns(forWidth: 820) == 3)
+        #expect(HomeGrid.columns(forWidth: 900) == 4)
+        #expect(HomeGrid.columns(forWidth: 1366) == 4)
+    }
 }

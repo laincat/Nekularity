@@ -142,6 +142,21 @@ public struct HomeBlock: Codable, Sendable, Hashable, Identifiable {
     public var span: Int { min(2, max(1, columns ?? (isWide ? 2 : 1))) }
 }
 
+/// How many columns the home board has at a given width.
+///
+/// The question is the width available, not the device: folding, split view and Stage
+/// Manager all change it, and a model name does not. Two columns on a screen close to
+/// tablet width leaves it looking empty and stretches every card too tall.
+public enum HomeGrid {
+    public static func columns(forWidth width: Double) -> Int {
+        switch width {
+        case ..<560: 2
+        case ..<900: 3
+        default: 4
+        }
+    }
+}
+
 /// The block arrangement, kept across launches.
 @MainActor
 @Observable
