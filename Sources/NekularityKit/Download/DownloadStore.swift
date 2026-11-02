@@ -138,7 +138,6 @@ public final class DownloadStore {
         let id = "\(request.sourceKey)|\(request.comicID)|\(request.chapterID)"
         guard progress[id] == nil else { return }
         progress[id] = Progress(done: 0, total: request.pages.count, failure: nil)
-        active[id] = request
         queue.append(request)
         pump(loader: loader)
     }

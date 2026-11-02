@@ -1,4 +1,9 @@
-import ActivityKit
+// ActivityKit does not annotate `Activity` as Sendable, so awaiting one of its methods
+// from the main actor reads to Swift 6 as sending it across isolation domains. The
+// framework is thread-safe by design — Apple's own samples call these from anywhere —
+// but the annotations are missing, and this is what @preconcurrency is for. It is a
+// statement about the framework, not a blanket switch in this file.
+@preconcurrency import ActivityKit
 import Foundation
 import NekularityKit
 
@@ -6,7 +11,7 @@ import NekularityKit
 ///
 /// One activity, not one per chapter: the island has room for a single story, and two
 /// activities started in a row is a queue of islands the user has to dismiss. The
-/// chapter that started first is the one it tells.
+/// chapter already shown stays visible until it finishes.
 ///
 /// Everything here stays on the main actor. Handing an `Activity` to a detached task
 /// was rejected under strict concurrency for good reason — it is not `Sendable` — so the
@@ -18,8 +23,9 @@ final class DownloadActivityBridge {
 
     /// Called whenever the download queue changes.
     func sync(_ downloads: DownloadStore) async {
-        let running = downloads.active.sorted { $0.key < $1.key }
-        guard let (id, request) = running.first,
+        let id = shown.flatMap { downloads.active[$0] == nil ? nil : $0 }
+            ?? downloads.active.keys.sorted().first
+        guard let id, let request = downloads.active[id],
               let progress = downloads.progress[id] else {
             await end()
             return
