@@ -99,6 +99,18 @@ final class NekularityUITests: XCTestCase {
             .matching(NSPredicate(format: "label == %@", identifier)).firstMatch
     }
 
+    /// A button inside the dialog that is on screen, not anywhere in the app.
+    ///
+    /// `confirmationDialog` presents as a sheet on iPhone, and its buttons have no
+    /// identifiers of their own, so they can only be found by label — which the cards
+    /// underneath already use. Scoping the query to the dialog is what makes the label
+    /// unambiguous.
+    private func dialogButton(_ app: XCUIApplication, _ label: String) -> XCUIElement {
+        let sheet = app.sheets.firstMatch
+        if sheet.exists { return sheet.buttons[label] }
+        return app.alerts.firstMatch.buttons[label]
+    }
+
     /// The first element whose label contains `text`, whichever type it is.
     ///
     /// Each predicate is built where it is used: storing one and passing it to
@@ -1006,9 +1018,15 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(hide.exists, "arranging shows no hide control")
 
         size.tap()
-        XCTAssertTrue(app.buttons["小"].waitForExistence(timeout: 5), "the size menu offers no 小")
-        XCTAssertTrue(app.buttons["中"].exists, "the size menu offers no 中")
-        app.buttons["中"].tap()
+        // Scoped to the dialog: the card's own size button carries the same 小/中
+        // label, so an app-wide query for 中 matches several elements and the tap
+        // fails with "Multiple matching elements found" — a broken query, not a
+        // broken control.
+        let small = dialogButton(app, "小")
+        XCTAssertTrue(small.waitForExistence(timeout: 5), "the size dialog offers no 小")
+        let medium = dialogButton(app, "中")
+        XCTAssertTrue(medium.exists, "the size dialog offers no 中")
+        medium.tap()
 
         let done = app.buttons["完成"].firstMatch
         if done.waitForExistence(timeout: 5) { done.tap() }

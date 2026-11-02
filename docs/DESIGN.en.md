@@ -118,3 +118,5 @@ The way to tell: look for the controls in one card by **identifier** and by **la
 The rule: **put the identifier on the element itself**, never on a container that wraps other controls. When a card needs an identity, give it to the title row.
 
 The first diagnosis was wrong: it blamed `Menu`, on the theory that a menu's label drops its identifier, and turned the menu into a `Button` + dialog. After that change the identifier still could not be found, and `home.hide` — a plain `Button` all along — was 0 too, which put the problem on the ancestor rather than the control type. The dialog version stayed because it happens to spell out 小/中 as explicit options, but it is **not** what fixed anything.
+
+With the identifiers restored, the same case fell over at the next step: a query for 中 by label matched several elements, because a card's own size button reads 中 too. A dialog's buttons have no identifiers of their own and can only be found by label, so the query has to be **scoped to the dialog** (`app.sheets` or `app.alerts`) rather than run app-wide. A label works as a selector only while that name is unique.
