@@ -936,20 +936,15 @@ final class NekularityUITests: XCTestCase {
         // shown" from "something was shown, and it says something else" — the previous
         // version of this case could only report the first, which sent me looking in
         // the wrong place once already.
-        let title = firstElement(app, containing: "更新完成")
-        let appeared = title.waitForExistence(timeout: 60)
-        // Read what it actually said before asserting, and keep it: a failure here has
-        // to name the sentence the app produced.
+        // An alert is its own element tree. Looking for its words among the page's
+        // static texts is how this case reported "no report" without ever having
+        // looked inside the alert.
+        let alert = app.alerts.firstMatch
+        let appeared = alert.waitForExistence(timeout: 60)
+        // Keep the sentence the app produced: a failure here has to quote it.
         var said = ""
         if appeared {
-            for text in app.staticTexts.allElementsBoundByIndex {
-                let label = text.label
-                if label.contains("已是最新") || label.contains("已更新") || label.contains("失败")
-                    || label.contains("没有可从网址更新的源") {
-                    said = label
-                    break
-                }
-            }
+            said = alert.staticTexts.allElementsBoundByIndex.map(\.label).joined(separator: " | ")
         }
         // Stop serving before asserting: the port is fixed, and the next case that
         // needs it fails with "address already in use" if this one lingers.
