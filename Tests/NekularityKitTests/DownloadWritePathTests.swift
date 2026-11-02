@@ -169,4 +169,48 @@ struct DownloadWritePathTests {
         }
         #expect(DownloadStore(root: dir).chapters.isEmpty)
     }
+
+    /// Counts fetches so "asked again" is a number rather than a timing guess.
+    private final class Fetches: @unchecked Sendable {
+        private let lock = NSLock()
+        private var count = 0
+        func next() -> Int {
+            lock.lock(); defer { lock.unlock() }
+            count += 1
+            return count
+        }
+        var value: Int {
+            lock.lock(); defer { lock.unlock() }
+            return count
+        }
+    }
+
+    @Test func aDownloadedChapterIsNotFetchedAgain() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = DownloadStore(root: dir)
+        let pages = ["https://fixture.invalid/1.jpg", "https://fixture.invalid/2.jpg"]
+        let fetches = Fetches()
+
+        store.download(request(pages)) { key in
+            _ = fetches.next()
+            return Data(key.url.utf8)
+        }
+        #expect(await waitFor { store.chapters[id] != nil })
+        #expect(fetches.value == pages.count)
+
+        // The same session must not refetch it.
+        store.download(request(pages)) { key in
+            _ = fetches.next()
+            return Data(key.url.utf8)
+        }
+        // Neither must a fresh store, which only knows the chapter from the
+        // manifest: `progress` is not persisted, so it cannot be the guard.
+        DownloadStore(root: dir).download(request(pages)) { key in
+            _ = fetches.next()
+            return Data(key.url.utf8)
+        }
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        #expect(fetches.value == pages.count)
+    }
 }

@@ -163,8 +163,11 @@ public final class DownloadStore {
 
     public func download(_ request: Request, fetch: @escaping Fetch) {
         let id = "\(request.sourceKey)|\(request.comicID)|\(request.chapterID)"
-        // A finished attempt stays recorded; a failed one may be retried, or a
-        // chapter that never downloaded could never be asked for again.
+        // A chapter on disk is finished, whatever this session remembers: after a
+        // restart `progress` is empty, and asking for it again would fetch every
+        // page a second time. A failed attempt may be retried, or a chapter that
+        // never downloaded could never be asked for again.
+        if chapters[id] != nil { return }
         if let existing = progress[id], existing.failure == nil { return }
         progress[id] = Progress(done: 0, total: request.pages.count, failure: nil)
         let attempt = (generation[id] ?? 0) + 1
