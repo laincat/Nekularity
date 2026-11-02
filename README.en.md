@@ -1,5 +1,7 @@
 # Nekularity
 
+<img src="Assets/brand/nekularity-banner.png" alt="Nekularity" width="720">
+
 English | [简体中文](README.md)
 
 A comic client for iOS/iPadOS with a SwiftUI interface (video comes later), licensed GPL-3.0-or-later. Its logic comes from [VeneraCat Core](https://github.com/laincat/VeneraCat-Core), which is compatible with Venera comic-source scripts and their indexes.

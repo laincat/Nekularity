@@ -2,6 +2,8 @@
 
 [English](README.en.md) | 简体中文
 
+<img src="Assets/brand/nekularity-banner.png" alt="Nekularity" width="720">
+
 iOS/iPadOS 漫画客户端(视频为后续阶段),界面使用 SwiftUI,许可证为 GPL-3.0-or-later。业务逻辑来自 [VeneraCat Core](https://github.com/laincat/VeneraCat-Core),兼容 Venera 的漫画源脚本和订阅索引。
 
 ## 状态
