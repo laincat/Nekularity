@@ -11,7 +11,7 @@ set -eu
 cd "${CHECK_DOCS_ROOT:-$(dirname "$0")/..}"
 
 ROOT_ALLOWED=".git .github .gitattributes .gitignore AGENTS.md AGENTS.en.md LICENSE README.md README.en.md Package.swift project.yml
-App Sources Tests UITests plugins docs scripts build Vendor .build .swiftpm Nekularity.xcodeproj Live Widgets Assets"
+App Sources Tests UITests plugins docs scripts build Vendor .build .swiftpm Nekularity.xcodeproj Live Widgets"
 
 fail=0
 err() { printf 'check-docs: %s\n' "$*" >&2; fail=1; }
