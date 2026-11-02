@@ -52,9 +52,11 @@
 
 ## Mac 上已经跑过的检查
 
-**当前完整回归(2026-11-02,提交 `8acbb7841509ffa637a1392d88d439d5f1e9aaa1`,Orca Worker / Mac 模拟器)**:同一专用 iPhone 17 Pro 上测试目标构建与安装成功;完整界面套件 **19 条 / PASS 19 / FAIL 0 / SKIP 0**,日志 `/tmp/nk-ui-full-8acbb78.log`。长按拖动柄进入编排、切换尺寸后终止并重启读回、通过编辑按钮操作与批量更新都已执行通过。此结果不证明拖放排序、真机灵动岛、后台播放或真实账号可用。准备发布 `0.2.6`(build 8),IPA 与 AltStore 尚待本次发布构建。
+**当前完整回归(2026-11-02,提交 `8acbb7841509ffa637a1392d88d439d5f1e9aaa1`,Orca Worker / Mac 模拟器)**:同一专用 iPhone 17 Pro 上测试目标构建与安装成功;完整界面套件 **19 条 / PASS 19 / FAIL 0 / SKIP 0**,日志 `/tmp/nk-ui-full-8acbb78.log`。长按拖动柄进入编排、切换尺寸后终止并重启读回、通过编辑按钮操作与批量更新都已执行通过。此结果不证明拖放排序、真机灵动岛、后台播放或真实账号可用。
 
 历史回归:`c259f3f` 因缺种子大量跳过,固定 UUID 并补齐漫画/视频夹具后 `2cf44e4` 为 18/19、0 跳过,唯一失败长按进入;`0f2a5a2` 仍失败,`8acbb78` 在未编排时移除 `.draggable` 后完整通过。不同提交的结果没有拼接成一次全套通过。
+
+**`v0.2.6` 的发布构建(2026-11-02,提交 `75869826c890a9e1e0208aa2b05b576f11394623`,run `41431641042`)**:macOS runner 上 **全部步骤成功**(构建固定 pin 的 Core、树检查、kit 单测、生成工程、未签名真机构建、编译界面测试、打包 IPA、发布资产)。Release `v0.2.6` 已发布,`Nekularity.ipa` **29,361,985 字节**,`curl -L` 下载 **HTTP 200** 且字节数一致,SHA-256 `c25a35851a8310a593bcac89f3d2205c7c8cdc6a2b349ad484dc70498c729ae2`。下载后解包核对:`Nekularity.app` 为 **`0.2.6`(build 8)**、`com.laincat.nekularity`、最低 iOS 26.0,`PlugIns/NekularityWidgets.appex` 同为 **`0.2.6`(build 8)**,AppIcon 图标文件在包内。此构建的界面证据来自同源码的 `8acbb78` 完整套件(19/19);发布构建本身只做了编译与打包,没有在模拟器上再跑界面测试。AltStore 源 `apps.json` 已同步到 **`0.2.6`(build 8)**(大小、下载地址、`minOSVersion` 26.0 与 `releaseTag` 均一致,图标指向 `v0.2.6` 的 AppIcon),订阅入口 `releases/download/latest/apps.json` 回 **HTTP 200** 且版本相同。
 
 **`v0.2.5` 的发布构建(2026-11-02,提交 `7a00580`,run 83)**:GitHub Actions 的 macOS runner 上 **12 个步骤全绿**——构建固定 pin 的 Core、树检查、kit 单测、生成工程、未签名真机构建、编译界面测试、打包 IPA、发布 Release 资产。产物 `Nekularity.ipa` **29,359,908 字节**,`curl -L` 拉取 **HTTP 200**,字节数与 Release 资产一致;AltStore 源的 `apps.json` 已更新到 **`0.2.5`(build 7)**,订阅入口 `releases/download/latest/apps.json` 也回 **HTTP 200** 且版本一致。
 
