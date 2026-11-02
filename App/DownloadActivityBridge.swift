@@ -23,9 +23,9 @@ final class DownloadActivityBridge {
 
     /// Called whenever the download queue changes.
     func sync(_ downloads: DownloadStore) async {
-        let id = shown.flatMap { downloads.active[$0] == nil ? nil : $0 }
-            ?? downloads.active.keys.sorted().first
-        guard let id, let request = downloads.active[id],
+        guard let id = DownloadActivityChoice.chapter(active: Array(downloads.active.keys),
+                                                      shown: shown),
+              let request = downloads.active[id],
               let progress = downloads.progress[id] else {
             await end()
             return

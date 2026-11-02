@@ -31,4 +31,15 @@ struct DownloadActivityTextTests {
         #expect(DownloadProgressText.detail(done: 10, total: 10, failure: nil) == "10 页已保存")
         #expect(DownloadProgressText.detail(done: 0, total: 0, failure: nil) == "正在准备")
     }
+
+    /// The island has one slot. A chapter that is already on it keeps it until it
+    /// finishes, so a second download starting does not rewrite the text under the
+    /// user's eyes.
+    @Test("the shown chapter keeps the island until it ends")
+    func chosenChapterIsStable() {
+        #expect(DownloadActivityChoice.chapter(active: ["a", "b"], shown: "b") == "b")
+        #expect(DownloadActivityChoice.chapter(active: ["b"], shown: "a") == "b")
+        #expect(DownloadActivityChoice.chapter(active: [], shown: "a") == nil)
+        #expect(DownloadActivityChoice.chapter(active: ["c", "a"], shown: nil) == "a")
+    }
 }

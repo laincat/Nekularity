@@ -34,3 +34,15 @@ public enum DownloadProgressText {
         return "第 \(done)/\(total) 页"
     }
 }
+
+/// Which chapter a single Live Activity should be telling about.
+///
+/// The island has room for one story. Starting a new one every time a second chapter
+/// begins would flip the text under the user's eyes, so a chapter that is already
+/// shown keeps the island until it finishes.
+public enum DownloadActivityChoice {
+    public static func chapter(active: [String], shown: String?) -> String? {
+        if let shown, active.contains(shown) { return shown }
+        return active.sorted().first
+    }
+}
