@@ -234,4 +234,27 @@ struct DownloadWritePathTests {
                                    chapterID: "ch1", isThumbnail: false)
         #expect(reopened.bytes(for: page) != nil)
     }
+
+    @Test func aChapterWhoseFolderIsGoneIsNoLongerDownloaded() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = DownloadStore(root: dir)
+        let pages = ["https://fixture.invalid/1.jpg"]
+        store.download(request(pages)) { Data($0.url.utf8) }
+        #expect(await waitFor { store.chapters[id] != nil })
+
+        // Something outside the app removed the folder; the manifest still says
+        // the chapter is downloaded.
+        try FileManager.default.removeItem(at: dir.appending(path: "probe"))
+        let reopened = DownloadStore(root: dir)
+        #expect(reopened.chapters[id] == nil)
+        #expect(!reopened.isDownloaded(sourceKey: "probe", comicID: "comic", chapterID: "ch1"))
+        let page = ImageLoader.Key(source: "probe", url: pages[0], comicID: "comic",
+                                   chapterID: "ch1", isThumbnail: false)
+        #expect(reopened.bytes(for: page) == nil)
+
+        // And it can be downloaded again, which is what the user will do.
+        reopened.download(request(pages)) { Data($0.url.utf8) }
+        #expect(await waitFor { reopened.chapters[id] != nil })
+    }
 }

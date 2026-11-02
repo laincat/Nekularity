@@ -300,6 +300,13 @@ public final class DownloadStore {
             return
         }
         for chapter in list {
+            // The manifest says "downloaded"; the disk decides. Files can be gone
+            // — cleared by the system, restored from a backup that skipped them,
+            // removed outside the app — and a record whose folder is missing would
+            // mark the chapter downloaded while every page still came from the
+            // network.
+            let folder = root.appending(path: chapter.folder, directoryHint: .isDirectory)
+            guard FileManager.default.fileExists(atPath: folder.path) else { continue }
             chapters[chapter.id] = chapter
             for (page, file) in zip(chapter.pages, chapter.files) {
                 index[Self.indexKey(source: chapter.sourceKey, comicID: chapter.comicID,
