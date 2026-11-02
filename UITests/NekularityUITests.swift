@@ -103,15 +103,6 @@ final class NekularityUITests: XCTestCase {
         return app.alerts.firstMatch.buttons[label]
     }
 
-    /// The first element whose label contains `text`, whichever type it is.
-    ///
-    /// Each predicate is built where it is used: storing one and passing it to
-    /// `matching` is what `check-swift` flags, because a stored predicate can carry
-    /// its isolation across a call boundary.
-    /// Removes the fixture chapter from the downloads screen if an earlier run
-    /// left it there. A download that is already on disk is not fetched again, so
-    /// the failed-download case would make no request at all; the cleanup uses the
-    /// same swipe a user has rather than deleting files behind the app.
     /// Removes the fixture chapter from the downloads screen if an earlier run
     /// left it there. A download that is already on disk is not fetched again, so
     /// the failed-download case would make no request at all; the cleanup uses the
@@ -134,6 +125,11 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(entry.waitForExistence(timeout: 10), "我的 has no downloads entry after the cleanup")
     }
 
+    /// The first element whose label contains `text`, whichever type it is.
+    ///
+    /// Each predicate is built where it is used: storing one and passing it to
+    /// `matching` is what `check-swift` flags, because a stored predicate can carry
+    /// its isolation across a call boundary.
     private func firstElement(_ app: XCUIApplication, containing text: String) -> XCUIElement {
         let asButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
         if asButton.exists { return asButton }
