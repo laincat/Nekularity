@@ -8,7 +8,7 @@ Updated 2026-11-02. Covers Nekularity, Nekophage and VeneraCat Core. Work throug
 
 | Project | Current facts | Main gaps |
 |---|---|---|
-| Nekularity | SwiftUI + NekularityKit + gomobile Core; AltStore has 0.2.7 (build 9); App/Widget, IPA HTTP 200/size, in-package theme fix and subscription are verified | Clean-container full UI at 5d9a5a1 passes 24/24, including all three theme-link cases and three-column geometry; three-column visual recapture, devices/background behavior and accounts remain pending |
+| Nekularity | SwiftUI + NekularityKit + gomobile Core; AltStore has 0.2.7 (build 9); App/Widget, IPA HTTP 200/size, in-package theme fix and subscription are verified | Clean-container full UI at 5d9a5a1 passes 24/24, including all three theme-link cases and three-column geometry; the later native-navigation/content-surface batch awaits Mac builds, UI and light/dark narrow/wide captures; devices/background behavior and accounts remain pending |
 | Nekophage | MyGo native window + WebView reader; Windows evidence covers real sources, decoded images, shelf and the installed Magpie gateway | Local HLS/MP4 decoding/resume, source installation/restoration, read cancellation and AAC audio decoding verified on both HLS.js and native MP4 paths; Windows has a 0.2.4 portable ZIP and per-user installer; HLS sessions now prefer the bundled HLS.js because native HLS drops subtitle groups, and the packaged GUI reads Chinese subtitles and cue requests; the current macOS pin and actual audible output remain; no Git remote |
 | VeneraCat Core | Shared comic, video, backup and AI protocol logic; clients own networking and platform facilities | A few JS engine compatibility limits and ongoing client contracts; Sender has no production caller |
 

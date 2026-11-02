@@ -11,30 +11,17 @@ import NekularityKit
 ///
 /// The deployment target is iOS 26, so `glassEffect` is available without a fallback.
 ///
-/// Taken from the reference app's screens, but built from the theme tokens this
-/// app already has — the accent and radius come from the chosen theme, so a
-/// custom theme changes this surface too instead of fighting it.
+/// The system supplies navigation glass; installed themes supply the accent,
+/// page background and content surfaces.
 enum Design {
     static let cardRadius: CGFloat = 22
     static let smallRadius: CGFloat = 14
     static let spacing: CGFloat = 12
 }
 
-extension Color {
-    /// The blurred backdrop the cards sit on. Two tones of the accent, plus a
-    /// neutral floor, so a theme with a red accent does not produce a red app.
-    static func canvas(_ accent: Color, dark: Bool) -> LinearGradient {
-        let base: [Color] = dark
-            ? [Color(white: 0.09), Color(white: 0.14)]
-            : [Color(white: 0.97), Color(white: 0.92)]
-        return LinearGradient(
-            colors: [accent.opacity(dark ? 0.28 : 0.16)] + base + [accent.opacity(dark ? 0.16 : 0.08)],
-            startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
-}
-
-/// A translucent card, the one surface every screen draws with.
+/// Content uses a stable surface; navigation owns the system glass material.
 struct GlassCard: ViewModifier {
+    @Environment(ThemeStore.self) private var themes: ThemeStore?
     var radius: CGFloat = Design.cardRadius
     var padding: CGFloat = 14
 
@@ -42,11 +29,8 @@ struct GlassCard: ViewModifier {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(.white.opacity(0.08), lineWidth: 1)
-            )
+            .background(themes?.active.cardSurface ?? Color(.secondarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: radius, style: .continuous))
     }
 }
 
@@ -56,7 +40,6 @@ extension View {
     }
 }
 
-/// The rounded capsule button the reference app puts in its bars.
 /// The small wobble an editable board gives its cards.
 ///
 /// It is the difference between a screen that happens to have drag targets and one that
@@ -69,7 +52,7 @@ struct Jiggle: ViewModifier {
     func body(content: Content) -> some View {
         content
             // A repeated rotation is exactly what Reduce Motion exists to stop.
-            .rotationEffect(.degrees(active && tilt && !reduceMotion ? 0.7 : -0.7))
+            .rotationEffect(.degrees(active && !reduceMotion ? (tilt ? 0.7 : -0.7) : 0))
             .animation(active && !reduceMotion
                        ? .easeInOut(duration: 0.16).repeatForever(autoreverses: true) : .default,
                        value: tilt)
@@ -82,10 +65,6 @@ extension View {
     /// Wobbles while `active`, the way an editable home board does.
     func jiggling(_ active: Bool) -> some View { modifier(Jiggle(active: active)) }
 
-    /// A floating control's surface. Not for content: see the note at the top.
-    @ViewBuilder func glassControl<S: Shape>(_ shape: S) -> some View {
-        self.glassEffect(.regular, in: shape)
-    }
 }
 
 struct Pill: ButtonStyle {
@@ -115,6 +94,23 @@ struct Pill: ButtonStyle {
 
 extension Theme {
     var onAccent: Color { accentTextIsDark ? .black : .white }
+    var pageSurface: Color { background.flatMap { Color(hex: $0) } ?? Color(.systemGroupedBackground) }
+    var cardSurface: Color { surface.flatMap { Color(hex: $0) } ?? Color(.secondarySystemGroupedBackground) }
+}
+
+/// Applied inside navigation so pushed pages and root pages share the same floor.
+struct ThemedPage: ViewModifier {
+    @Environment(ThemeStore.self) private var themes: ThemeStore?
+
+    func body(content: Content) -> some View {
+        content
+            .scrollContentBackground(.hidden)
+            .background((themes?.active.pageSurface ?? Color(.systemGroupedBackground)).ignoresSafeArea())
+    }
+}
+
+extension View {
+    func themedPage() -> some View { modifier(ThemedPage()) }
 }
 
 /// A section title with the chevron that says "there is more behind this".

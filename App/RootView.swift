@@ -1,143 +1,52 @@
 import NekularityKit
 import SwiftUI
 
-/// The shell: four sections over one shared canvas, with a floating bar.
-///
-/// The reference app floats a pill-shaped bar with a round search button beside
-/// it, and blurs a two-tone gradient behind everything. A stock `TabView` cannot
-/// draw that, so the bar is here and the sections are plain views. The section
-/// buttons keep identifiers because the interface tests tap them.
+/// System tabs own navigation material, safe areas and each section's lifetime.
+/// Search uses the system search role rather than a second custom floating bar.
 struct RootView: View {
     /// Magpie accounts are a plain class, not an Observable one, so they are
     /// passed down rather than put in the SwiftUI environment.
     let magpie: MagpieAccounts
     @Environment(ThemeStore.self) private var themes
     @Environment(DownloadStore.self) private var downloads
-    @Environment(\.colorScheme) private var scheme
-
     @State private var section = Section.discover
-    @State private var searching = false
     /// One Live Activity for the whole app: the island tells one story at a time.
     @State private var activityBridge = DownloadActivityBridge()
 
-    enum Section: String, CaseIterable, Identifiable {
-        case discover, mine, library, settings
-        var id: String { rawValue }
-        var title: String {
-            switch self {
-            case .discover: "发现"
-            case .mine: "我的"
-            case .library: "资源库"
-            case .settings: "设置"
-            }
-        }
-        var symbol: String {
-            switch self {
-            case .discover: "sparkles"
-            case .mine: "person.crop.circle"
-            case .library: "archivebox"
-            case .settings: "gearshape"
-            }
-        }
+    enum Section: Hashable {
+        case discover, mine, library, settings, search
     }
 
     private var accent: Color { Color(hex: themes.active.accent) ?? .accentColor }
 
     var body: some View {
-        ZStack {
-            Color.canvas(accent, dark: themeIsDark).ignoresSafeArea()
-
-            Group {
-                switch section {
-                case .discover: DiscoverView()
-                case .mine: MineView()
-                case .library: LibraryView()
-                case .settings: SettingsView(magpie: magpie)
-                }
+        TabView(selection: $section) {
+            Tab("发现", systemImage: "sparkles", value: Section.discover) {
+                DiscoverView()
             }
-            .safeAreaInset(edge: .bottom) { bar }
+            Tab("我的", systemImage: "person.crop.circle", value: Section.mine) {
+                MineView()
+            }
+            Tab("资源库", systemImage: "archivebox", value: Section.library) {
+                LibraryView(magpie: magpie)
+            }
+            Tab("设置", systemImage: "gearshape", value: Section.settings) {
+                SettingsView(magpie: magpie)
+            }
+            Tab(value: Section.search, role: .search) {
+                NavigationStack { SearchView() }
+            } label: {
+                Label("搜索", systemImage: "magnifyingglass")
+            }
         }
         .tint(accent)
         .preferredColorScheme(themes.active.dark == nil ? nil : (themes.active.dark! ? .dark : .light))
-        // Presented, not pushed: the sections own their own navigation stacks,
-        // and a destination registered here would sit outside all of them.
-        .sheet(isPresented: $searching) { NavigationStack { SearchView() } }
         // The signature changes on every page written and when a chapter starts or
         // ends, which is exactly when the island has something to say.
         .onChange(of: downloads.activitySignature) { _, _ in
             Task { await activityBridge.sync(downloads) }
         }
         .task { await activityBridge.sync(downloads) }
-    }
-
-    private var themeIsDark: Bool {
-        if let forced = themes.active.dark { return forced }
-        return scheme == .dark
-    }
-
-    /// The floating bar: four sections in one capsule, and search in its own.
-    @Namespace private var tabNamespace
-
-    /// Turning motion off is a setting people set for a reason: the pill snaps into
-    /// place instead of sliding, and nothing else here animates either.
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private var bar: some View {
-        // One container for the strip and the search circle: separate pieces of
-        // glass next to each other refract each other and neither reads cleanly.
-        GlassEffectContainer(spacing: 10) {
-            barContents
-        }
-    }
-
-    private var barContents: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 2) {
-                ForEach(Section.allCases) { item in
-                    Button {
-                        if reduceMotion {
-                            section = item
-                        } else {
-                            withAnimation(.snappy(duration: 0.28)) { section = item }
-                        }
-                    } label: {
-                        VStack(spacing: 3) {
-                            Image(systemName: item.symbol).font(.system(size: 17, weight: .medium))
-                            Text(item.title).font(.system(size: 10, weight: .medium))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .foregroundStyle(section == item ? AnyShapeStyle(accent) : AnyShapeStyle(.secondary))
-                        .background {
-                            if section == item {
-                                Capsule().fill(accent.opacity(0.16))
-                                    .matchedGeometryEffect(id: "tab.pill", in: tabNamespace)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("tab.\(item.rawValue)")
-                }
-            }
-            .padding(4)
-            .glassControl(Capsule())
-            // Clip the whole strip: a selected capsule is drawn wider than its
-            // slot at the edge and would otherwise slide under the search button.
-            .clipShape(Capsule())
-
-            Button {
-                searching = true
-            } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 46, height: 46)
-                    .glassControl(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("tab.search")
-        }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 6)
     }
 }
 
@@ -164,7 +73,14 @@ struct SourceImage: View {
         .task(id: key) {
             image = nil
             failed = false
-            do { image = try await loader?.image(key, maxPixel: maxPixel).image } catch { failed = !Task.isCancelled }
+            do {
+                let loaded = try await loader?.image(key, maxPixel: maxPixel).image
+                guard !Task.isCancelled else { return }
+                image = loaded
+            } catch {
+                guard !Task.isCancelled else { return }
+                failed = true
+            }
         }
     }
 }

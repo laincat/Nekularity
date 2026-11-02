@@ -45,7 +45,7 @@ struct MineView: View {
                 .padding(16)
             }
             .navigationTitle("我的")
-            .contentMargins(.bottom, 76, for: .scrollContent)
+            .themedPage()
             .sheet(isPresented: $showingProfiles) {
                 ProfilesView(profiles: profiles, switchTo: switchProfile)
             }
@@ -143,8 +143,6 @@ struct MineView: View {
                 }
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
     }
 
@@ -168,8 +166,6 @@ struct MineView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: 82)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
     }
 
@@ -206,8 +202,6 @@ struct MineView: View {
                 }
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
     }
 

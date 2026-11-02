@@ -40,7 +40,7 @@ final class ZZThemeLinkTests: XCTestCase {
         }
     }
     private func settings(_ app: XCUIApplication) {
-        let tab = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'tab.settings'")).firstMatch
+        let tab = app.tabBars.buttons["设置"].firstMatch
         XCTAssertTrue(tab.waitForExistence(timeout: 30))
         tab.tap()
     }

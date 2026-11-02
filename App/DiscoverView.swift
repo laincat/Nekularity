@@ -79,13 +79,12 @@ struct DiscoverView: View {
                     Color.clear.contentShape(Rectangle()).allowsHitTesting(false)
                 }
             }
-            .contentMargins(.bottom, 76, for: .scrollContent)
+            .themedPage()
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button(editing ? "完成" : "编辑") {
                         if editing { editing = false } else { editing = true }
                     }
-                    .buttonStyle(Pill(filled: editing))
                     .accessibilityIdentifier("discover.edit")
                 }
                 if editing {
@@ -177,8 +176,6 @@ struct DiscoverView: View {
                 .foregroundStyle(.secondary)
             }
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
         .jiggling(editing)
     }

@@ -23,15 +23,7 @@ final class NekularityUITests: XCTestCase {
     /// its own tab is now behind one of them. These helpers keep the cases about
     /// what they test rather than about the shape of the bar.
     private func tab(_ app: XCUIApplication, _ name: String) {
-        // The bar is a floating custom one, so it is not `app.tabBars` any more;
-        // the sections keep identifiers instead of labels.
-        let ids = ["发现": "tab.discover", "我的": "tab.mine", "资源库": "tab.library", "设置": "tab.settings"]
-        let identifier = ids[name] ?? name
-        // Any descendant, and wait: `element()` checks `.exists` synchronously
-        // and hands back a fallback query that never matches, which is how all
-        // thirteen cases reported "no 发现 section" while the button was there.
-        let button = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier == %@", identifier)).firstMatch
+        let button = app.tabBars.buttons[name].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 30), "no \(name) section")
         button.tap()
     }
@@ -170,13 +162,43 @@ final class NekularityUITests: XCTestCase {
     /// screen is unreachable and no other test means anything.
     func testTabsExist() {
         let app = launch()
-        // The four the user asked for: a home they arrange, their calendar, the
-        // sources, and settings, in a floating bar of their own.
-        for id in ["tab.discover", "tab.mine", "tab.library", "tab.settings", "tab.search"] {
-            let button = app.descendants(matching: .any)
-                .matching(NSPredicate(format: "identifier == %@", id)).firstMatch
-            XCTAssertTrue(button.waitForExistence(timeout: 30), "no \(id)")
+        for title in ["发现", "我的", "资源库", "设置", "搜索"] {
+            let button = app.tabBars.buttons[title].firstMatch
+            XCTAssertTrue(button.waitForExistence(timeout: 30), "no \(title) tab")
         }
+    }
+
+    func testSwitchingTabsPreservesDiscoveryEditing() {
+        let app = launch()
+        tab(app, "发现")
+        let edit = element(app, "discover.edit")
+        XCTAssertTrue(edit.waitForExistence(timeout: 20))
+        edit.tap()
+        XCTAssertEqual(edit.label, "完成")
+        tab(app, "设置")
+        tab(app, "发现")
+        XCTAssertTrue(edit.waitForExistence(timeout: 20))
+        XCTAssertEqual(edit.label, "完成", "switching tabs discarded the board's editing state")
+        edit.tap()
+    }
+
+    func testLibraryModuleLinksOpenTheirPages() {
+        let app = launch()
+        tab(app, "资源库")
+        let comics = element(app, "library.comicSources")
+        for _ in 0..<4 {
+            if comics.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(comics.waitForExistence(timeout: 20))
+        comics.tap()
+        XCTAssertTrue(app.navigationBars["漫画源"].waitForExistence(timeout: 20))
+        app.navigationBars["漫画源"].buttons.element(boundBy: 0).tap()
+        let videos = element(app, "library.videoSources")
+        XCTAssertTrue(videos.waitForExistence(timeout: 20))
+        if !videos.isHittable { app.swipeUp() }
+        videos.tap()
+        XCTAssertTrue(app.navigationBars["视频"].waitForExistence(timeout: 20))
     }
 
     /// Seeded sources appear, which is the precondition for every other check.
