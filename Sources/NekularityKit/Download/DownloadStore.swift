@@ -112,7 +112,11 @@ public final class DownloadStore {
     /// Read on every page of the reader, so the hot path is a dictionary lookup;
     /// only a hit touches the disk.
     public func bytes(for key: ImageLoader.Key) -> Data? {
-        guard let comicID = key.comicID, let chapterID = key.chapterID,
+        // Only reader pages are archived. A cover/thumbnail is a different
+        // request (its own handler and transform) and must not be answered with
+        // a page that happens to share its address.
+        guard !key.isThumbnail,
+              let comicID = key.comicID, let chapterID = key.chapterID,
               let relative = index[Self.indexKey(source: key.source, comicID: comicID,
                                                  chapterID: chapterID, url: key.url)]
         else { return nil }
