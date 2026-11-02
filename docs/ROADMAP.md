@@ -14,7 +14,7 @@
 
 证据按提交和执行渠道分别记录;不声称重新跑过三个项目的全部测试。两个客户端的 `scripts/core-version` 均为 `214e7782190d47c1f4bcdc9a95fb3a517072cc85`;Core 仓库 HEAD 是 `c3a7dd8`,不能把 pin 与仓库 HEAD 混称同一个版本。
 
-Nekularity 当前完整 UI 验证提交 `8acbb78`:Orca Worker 在同一专用模拟器上构建、安装,完整 **19/19 PASS,0 FAIL,0 SKIP**。长按进入编排与尺寸重启持久化通过。后续 Orca Worker 单独验证 App `7586982` 的拖放/重启,并读偏好交叉核对;2 列/4 列明暗截图已采集,3 列与滚到底无遮挡仍待确认。`0.2.6`(build 8)已发布,CI `41431641042`、IPA 29,361,985 字节、App/Widget 版本、HTTP 200 与 AltStore 订阅均已核对。
+Nekularity 当前完整 UI 验证提交 `8acbb78`:Orca Worker 在同一专用模拟器上构建、安装,完整 **19/19 PASS,0 FAIL,0 SKIP**。长按进入编排与尺寸重启持久化通过。后续 Orca Worker 单独验证 App `7586982` 的拖放/重启,并读偏好交叉核对;2 列/4 列明暗截图已采集;`211cd64` 的五张到底截图确认页尾无遮挡(间隔约 21–43 pt),不需要额外底边距。3 列仍待验证。`0.2.6`(build 8)已发布,CI `41431641042`、IPA 29,361,985 字节、App/Widget 版本、HTTP 200 与 AltStore 订阅均已核对。
 
 ## 优先级与验收
 

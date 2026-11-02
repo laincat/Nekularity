@@ -14,7 +14,7 @@ Updated 2026-11-02. Covers Nekularity, Nekophage and VeneraCat Core. Work throug
 
 Evidence is recorded per commit and execution channel; this does not claim a fresh run of every test in all three projects. Both clients' `scripts/core-version` files contain `214e7782190d47c1f4bcdc9a95fb3a517072cc85`; the Core repository HEAD is `c3a7dd8`. Do not describe a pin and repository HEAD as the same version.
 
-Nekularity full UI validation commit `8acbb78`: an Orca Worker built, installed and ran the complete suite on one dedicated simulator: **19/19 PASS,0 FAIL,0 SKIP**. Long-press entry and resize persistence passed. A later Orca Worker separately verified drag/relaunch on App `7586982` and cross-checked preferences; two/four-column light/dark captures exist, while three columns and end-of-scroll clearance await confirmation. `0.2.6` (build 8) is released: CI `41431641042`, the 29,361,985-byte IPA, App/Widget versions, HTTP 200 and AltStore subscription are verified.
+Nekularity full UI validation commit `8acbb78`: an Orca Worker built, installed and ran the complete suite on one dedicated simulator: **19/19 PASS,0 FAIL,0 SKIP**. Long-press entry and resize persistence passed. A later Orca Worker separately verified drag/relaunch on App `7586982` and cross-checked preferences; two/four-column light/dark captures exist; five end-of-scroll captures on `211cd64` confirm unobstructed footers with about 21–43 pt clearance, requiring no extra bottom margin. Three columns remain unverified. `0.2.6` (build 8) is released: CI `41431641042`, the 29,361,985-byte IPA, App/Widget versions, HTTP 200 and AltStore subscription are verified.
 
 ## Priorities and acceptance
 
