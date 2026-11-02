@@ -73,6 +73,19 @@ public final class DownloadStore {
     /// Why the manifest could not be read, when it could not.
     public private(set) var failure: String?
     public private(set) var progress: [String: Progress] = [:]
+    /// The chapters being written right now, so a screen — or a Live Activity — can say
+    /// whose download this is. `progress` is keyed by an id that means nothing outside
+    /// this file.
+    public private(set) var active: [String: Request] = [:]
+
+    /// One line per running chapter: `id|done|total|failure`. A view observes this to
+    /// know something changed, without watching a dictionary of structs.
+    public var activitySignature: [String] {
+        active.keys.sorted().compactMap { id in
+            guard let request = active[id], let progress = progress[id] else { return nil }
+            return "\(id)|\(progress.done)|\(progress.total)|\(progress.failure ?? "")"
+        }
+    }
 
     private let root: URL
     private var queue: [Request] = []
@@ -125,6 +138,7 @@ public final class DownloadStore {
         let id = "\(request.sourceKey)|\(request.comicID)|\(request.chapterID)"
         guard progress[id] == nil else { return }
         progress[id] = Progress(done: 0, total: request.pages.count, failure: nil)
+        active[id] = request
         queue.append(request)
         pump(loader: loader)
     }
@@ -153,6 +167,7 @@ public final class DownloadStore {
     private func pump(loader: ImageLoader) {
         while running < parallel, !queue.isEmpty {
             let request = queue.removeFirst()
+            active["\(request.sourceKey)|\(request.comicID)|\(request.chapterID)"] = request
             running += 1
             Task {
                 await write(request, loader: loader)
@@ -189,6 +204,7 @@ public final class DownloadStore {
                 index["\(request.sourceKey)|\(request.chapterID)|\(page)"] = file
             }
             progress[id] = Progress(done: saved.count, total: request.pages.count, failure: nil)
+            active[id] = nil
             save()
         } catch {
             // A half-written chapter is not a chapter: keeping it would make the
@@ -197,6 +213,7 @@ public final class DownloadStore {
             try? FileManager.default.removeItem(at: folder)
             progress[id] = Progress(done: 0, total: request.pages.count,
                                     failure: CoreError.readable(error.localizedDescription))
+            active[id] = nil
         }
     }
 

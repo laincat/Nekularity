@@ -12,10 +12,13 @@ struct RootView: View {
     /// passed down rather than put in the SwiftUI environment.
     let magpie: MagpieAccounts
     @Environment(ThemeStore.self) private var themes
+    @Environment(DownloadStore.self) private var downloads
     @Environment(\.colorScheme) private var scheme
 
     @State private var section = Section.discover
     @State private var searching = false
+    /// One Live Activity for the whole app: the island tells one story at a time.
+    @State private var activityBridge = DownloadActivityBridge()
 
     enum Section: String, CaseIterable, Identifiable {
         case discover, mine, library, settings
@@ -59,6 +62,12 @@ struct RootView: View {
         // Presented, not pushed: the sections own their own navigation stacks,
         // and a destination registered here would sit outside all of them.
         .sheet(isPresented: $searching) { NavigationStack { SearchView() } }
+        // The signature changes on every page written and when a chapter starts or
+        // ends, which is exactly when the island has something to say.
+        .onChange(of: downloads.activitySignature) { _, _ in
+            activityBridge.sync(downloads)
+        }
+        .onAppear { activityBridge.sync(downloads) }
     }
 
     private var themeIsDark: Bool {

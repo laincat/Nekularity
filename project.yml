@@ -36,11 +36,16 @@ targets:
         # then fails the build with "contains this target's Info.plist".
         excludes:
           - Info.plist
+      # Shared with the extension: one definition of what an activity carries, so the
+      # app and the island cannot disagree about its shape.
+      - path: Live
     dependencies:
       - package: NekularityKit
         product: NekularityKit
       - package: AetherEngine
         product: AetherEngine
+      # The Live Activity lives in the extension; the app starts and updates it.
+      - target: NekularityWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.laincat.nekularity
@@ -51,6 +56,29 @@ targets:
         # INFOPLIST_KEY_* settings only carry flat values.
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: App/Info.plist
+  # The Dynamic Island and the Lock Screen. An extension because ActivityKit requires
+  # one; nothing here draws content of the app's own.
+  NekularityWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+        excludes:
+          - Info.plist
+      - path: Live
+    dependencies:
+      - package: NekularityKit
+        product: NekularityKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.laincat.nekularity.widgets
+        PRODUCT_NAME: NekularityWidgets
+        MARKETING_VERSION: "0.2.4"
+        CURRENT_PROJECT_VERSION: "6"
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Widgets/Info.plist
+        SKIP_INSTALL: YES
+
   # Drives the app on a simulator, because the Windows machine cannot draw an
   # interface and "the button works" was otherwise only checked by hand.
   NekularityUITests:
