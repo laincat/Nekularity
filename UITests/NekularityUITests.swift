@@ -963,6 +963,48 @@ final class NekularityUITests: XCTestCase {
                       "the update produced no result line: \(said)")
     }
 
+    /// Arranging the home board has to be reachable without a toolbar button, and
+    /// the controls that appear have to be the ones that were designed: a size menu
+    /// and a hide, on a card that wobbles.
+    ///
+    /// This is the part of the board that a person can see; the drag itself needs
+    /// coordinates and is left to a hand.
+    func testLongPressOpensTheHomeBoardForArranging() throws {
+        let app = launch()
+
+        // The tab bar's first section is 发现, which is where the board lives.
+        let card = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'home.card.'")).firstMatch
+        guard card.waitForExistence(timeout: 25) else {
+            throw XCTSkip("the home board has no cards")
+        }
+        XCTAssertFalse(app.descendants(matching: .any)
+                        .matching(NSPredicate(format: "identifier BEGINSWITH 'home.size.'"))
+                        .firstMatch.exists,
+                       "the size menu is on screen before anything was long pressed")
+
+        card.press(forDuration: 0.8)
+
+        let size = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'home.size.'")).firstMatch
+        XCTAssertTrue(size.waitForExistence(timeout: 10),
+                      "a long press did not put the board into arranging")
+        let hide = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'home.hide.'")).firstMatch
+        XCTAssertTrue(hide.exists, "arranging shows no hide control")
+
+        // The menu offers the two sizes by name, which is what "小/中" promised.
+        size.tap()
+        XCTAssertTrue(app.buttons["小"].waitForExistence(timeout: 5), "the size menu offers no 小")
+        XCTAssertTrue(app.buttons["中"].exists, "the size menu offers no 中")
+        app.buttons["中"].tap()
+
+        // 完成 leaves arranging, and the controls go with it.
+        let done = app.buttons["完成"].firstMatch
+        if done.waitForExistence(timeout: 5) { done.tap() }
+        XCTAssertFalse(size.exists, "the size control stayed after arranging ended")
+    }
+
     /// A downloaded chapter has to survive the network going away.
     ///
     /// The test downloads a chapter from the loopback fixture, **stops the

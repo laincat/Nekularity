@@ -170,6 +170,7 @@ struct DiscoverView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
+        .accessibilityIdentifier("home.card.\(block.id)")
         .jiggling(editing)
         .onLongPressGesture(minimumDuration: 0.35) {
             guard !editing else { return }
