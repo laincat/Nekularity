@@ -448,6 +448,10 @@ private struct AddSourceView: View {
         do {
             try await library.install(from: url)
             scriptText = ""
+            // Leave the sheet. Staying open meant the list underneath — and every
+            // control in it — was covered by a panel the user had finished with,
+            // which is what a batch update tapped "into nothing" looked like.
+            dismiss()
         } catch { self.error = error.localizedDescription }
     }
 }

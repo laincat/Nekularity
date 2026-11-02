@@ -922,6 +922,11 @@ final class NekularityUITests: XCTestCase {
         let install = element(app, "sources.installScript")
         XCTAssertTrue(install.exists, "the add sheet has no install button")
         install.tap()
+        // The sheet stayed open after a successful install once, covering the list and
+        // every control in it — which is what a batch update that did nothing was.
+        let gone = NSPredicate(format: "exists == false")
+        expectation(for: gone, evaluatedWith: field)
+        waitForExpectations(timeout: 30)
 
         let row = firstElement(app, containing: "Batch")
         XCTAssertTrue(row.waitForExistence(timeout: 30), "the installed source never appeared")
@@ -956,6 +961,41 @@ final class NekularityUITests: XCTestCase {
         XCTAssertFalse(said.contains("失败"), "the update failed: \(said)")
         XCTAssertTrue(said.contains("已是最新") || said.contains("已更新"),
                       "the update produced no result line: \(said)")
+    }
+
+    /// Arranging the board: the controls that appear, the sizes on offer, and that
+    /// 完成 puts them away.
+    ///
+    /// 编辑 is the entry this case uses. A long press is wired too, but `.draggable`
+    /// claims that gesture to start a drag, so a press alone is not something a test
+    /// can depend on — a hand has to try that one.
+    func testArrangingTheBoardShowsItsControls() throws {
+        let app = launch()
+
+        let size = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'home.size.'")).firstMatch
+        XCTAssertFalse(size.exists, "the size menu is on screen before arranging was entered")
+
+        let edit = element(app, "discover.edit")
+        guard edit.waitForExistence(timeout: 25) else {
+            throw XCTSkip("发现 has no 编辑 button")
+        }
+        edit.tap()
+
+        XCTAssertTrue(size.waitForExistence(timeout: 10),
+                      "编辑 did not put the board into arranging")
+        let hide = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'home.hide.'")).firstMatch
+        XCTAssertTrue(hide.exists, "arranging shows no hide control")
+
+        size.tap()
+        XCTAssertTrue(app.buttons["小"].waitForExistence(timeout: 5), "the size menu offers no 小")
+        XCTAssertTrue(app.buttons["中"].exists, "the size menu offers no 中")
+        app.buttons["中"].tap()
+
+        let done = app.buttons["完成"].firstMatch
+        if done.waitForExistence(timeout: 5) { done.tap() }
+        XCTAssertFalse(size.exists, "the size control stayed after arranging ended")
     }
 
     /// A downloaded chapter has to survive the network going away.
