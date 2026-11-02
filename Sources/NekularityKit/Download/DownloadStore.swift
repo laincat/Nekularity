@@ -111,6 +111,7 @@ public final class DownloadStore {
     public init(root: URL) {
         self.root = root
         load()
+        sweepPartials()
     }
 
     // MARK: - Reading
@@ -305,6 +306,40 @@ public final class DownloadStore {
                                     chapterID: chapter.chapterID, url: page)] = file
             }
         }
+    }
+
+    /// Removes chapter folders no manifest record points at.
+    ///
+    /// A write that is interrupted — the app is killed, the phone runs out of
+    /// power — leaves a folder and a few pages behind, and nothing will ever
+    /// refer to them again: the manifest is only written once a chapter is
+    /// complete. Left alone they are disk space the storage screen cannot even
+    /// show, because it lists chapters.
+    private func sweepPartials() {
+        let manager = FileManager.default
+        let kept = Set(chapters.values.map(\.folder))
+        guard let sources = try? manager.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey])
+        else { return }
+        for source in sources where isDirectory(source) {
+            let comics = (try? manager.contentsOfDirectory(at: source, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
+            for comic in comics where isDirectory(comic) {
+                let parts = (try? manager.contentsOfDirectory(at: comic, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
+                for part in parts where isDirectory(part) {
+                    let relative = "\(source.lastPathComponent)/\(comic.lastPathComponent)/\(part.lastPathComponent)"
+                    if !kept.contains(relative) {
+                        try? manager.removeItem(at: part)
+                    }
+                }
+                // A comic folder that held only a partial chapter is now empty.
+                if ((try? manager.contentsOfDirectory(atPath: comic.path)) ?? []).isEmpty {
+                    try? manager.removeItem(at: comic)
+                }
+            }
+        }
+    }
+
+    private func isDirectory(_ url: URL) -> Bool {
+        (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
     }
 
     private func save() {
