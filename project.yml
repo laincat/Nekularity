@@ -50,8 +50,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.laincat.nekularity
         PRODUCT_NAME: Nekularity
-        MARKETING_VERSION: "0.2.8"
-        CURRENT_PROJECT_VERSION: "10"
+        MARKETING_VERSION: "0.2.9"
+        CURRENT_PROJECT_VERSION: "11"
         # An explicit Info.plist because ATS is a nested dictionary, and the
         # INFOPLIST_KEY_* settings only carry flat values.
         GENERATE_INFOPLIST_FILE: NO
@@ -76,8 +76,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.laincat.nekularity.widgets
         PRODUCT_NAME: NekularityWidgets
-        MARKETING_VERSION: "0.2.8"
-        CURRENT_PROJECT_VERSION: "10"
+        MARKETING_VERSION: "0.2.9"
+        CURRENT_PROJECT_VERSION: "11"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Widgets/Info.plist
         SKIP_INSTALL: YES
