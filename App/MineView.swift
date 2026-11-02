@@ -178,7 +178,7 @@ struct MineView: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(Array(items), id: \.id) { comic in
+                        ForEach(Array(items), id: \.key) { comic in
                             NavigationLink(value: ComicRoute(source: comic.source,
                                                             comic: Comic(id: comic.id, title: comic.title,
                                                                          subtitle: comic.author, cover: comic.cover))) {

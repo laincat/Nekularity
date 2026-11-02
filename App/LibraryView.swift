@@ -107,7 +107,7 @@ struct LibraryView: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("library.comicSources")
-                            NavigationLink { VideoView() } label: {
+                            NavigationLink { VideoView(startsInSources: true) } label: {
                                 tile("视频源", detail: "\(videos.count) 个 · 插件与规则", symbol: "antenna.radiowaves.left.and.right")
                             }
                             .buttonStyle(.plain)

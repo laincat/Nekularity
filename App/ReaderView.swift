@@ -52,6 +52,7 @@ struct ReaderView: View {
         .navigationTitle(route.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(chromeHidden ? .hidden : .visible, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {

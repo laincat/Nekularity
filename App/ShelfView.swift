@@ -58,6 +58,7 @@ struct ShelfView: View {
                 }
             }
         }
+        .themedPage()
         .navigationTitle("书架")
         .alert("重命名收藏夹", isPresented: Binding(
             get: { renaming != nil },

@@ -199,6 +199,9 @@ final class NekularityUITests: XCTestCase {
         if !videos.isHittable { app.swipeUp() }
         videos.tap()
         XCTAssertTrue(app.navigationBars["视频"].waitForExistence(timeout: 20))
+        let online = app.segmentedControls["video.mode"].buttons["在线源"]
+        XCTAssertTrue(online.waitForExistence(timeout: 10))
+        XCTAssertTrue(online.isSelected, "the video-source entry opened the local-files segment")
     }
 
     /// Seeded sources appear, which is the precondition for every other check.
@@ -556,6 +559,7 @@ final class NekularityUITests: XCTestCase {
         }
         XCTAssertFalse(empty, "the reader says the chapter has no pages")
         XCTAssertTrue(keep.isEnabled, "the reader had no page to keep, so no image decoded")
+        XCTAssertFalse(app.tabBars.firstMatch.isHittable, "the root tab bar is still covering the reader")
 
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = "reader-page"

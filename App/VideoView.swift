@@ -62,6 +62,10 @@ struct VideoView: View {
     @State private var playing: Playing?
     @State private var note: String?
 
+    init(startsInSources: Bool = false) {
+        _mode = State(initialValue: startsInSources ? .sources : .library)
+    }
+
     private var sources: [PluginRecord] {
         library.sources.filter { $0.enabled && $0.isVideo }
     }
@@ -86,6 +90,7 @@ struct VideoView: View {
             case .sources: sourcesTab
             }
         }
+        .themedPage()
         .navigationTitle("视频")
         .safeAreaInset(edge: .top) {
             Picker("来源", selection: $mode) {

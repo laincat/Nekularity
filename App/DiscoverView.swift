@@ -33,6 +33,7 @@ struct DiscoverView: View {
     @State private var browsing = false
     @State private var adding = false
     @State private var watching = false
+    @State private var watchingSources = false
 
     var body: some View {
         NavigationStack {
@@ -104,7 +105,7 @@ struct DiscoverView: View {
             }
             .navigationDestination(isPresented: $searching) { SearchView() }
             .navigationDestination(isPresented: $browsing) { BrowseView() }
-            .navigationDestination(isPresented: $watching) { VideoView() }
+            .navigationDestination(isPresented: $watching) { VideoView(startsInSources: watchingSources) }
             .sheet(isPresented: $adding) {
                 SourcePickerView { ref in layout.add(ref) }.environment(library)
             }
@@ -400,13 +401,13 @@ struct DiscoverView: View {
     private var localVideosBlock: some View {
         Group {
             if media.items.isEmpty {
-                Button("导入视频") { watching = true }.font(.caption)
+                Button("导入视频") { watchingSources = false; watching = true }.font(.caption)
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(media.items.count)").font(.title2.bold())
                     Text("个本机视频").font(.caption).foregroundStyle(.secondary)
                     if let resume = media.resume {
-                        Button("继续 \(resume.title)") { watching = true }
+                        Button("继续 \(resume.title)") { watchingSources = false; watching = true }
                             .font(.caption2).lineLimit(1)
                     }
                 }
@@ -415,7 +416,7 @@ struct DiscoverView: View {
     }
 
     private var videoBlock: some View {
-        Button { watching = true } label: {
+        Button { watchingSources = true; watching = true } label: {
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(library.sources.filter { $0.enabled && $0.isVideo }.count)").font(.title2.bold())
                 Text("个视频源").font(.caption).foregroundStyle(.secondary)

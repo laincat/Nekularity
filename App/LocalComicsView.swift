@@ -114,6 +114,7 @@ struct LocalComicReaderView: View {
         }
         .navigationTitle(comic.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Text("\(page + 1)/\(comic.pages.count)")
