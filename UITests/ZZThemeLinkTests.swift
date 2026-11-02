@@ -64,6 +64,22 @@ final class ZZThemeLinkTests: XCTestCase {
         XCTAssertTrue(button.waitForExistence(timeout: 10), "no install button")
         button.tap()
     }
+    /// Installs and selects the good theme. The invalid-JSON case needs a
+    /// baseline of its own: relying on the success case to have run first made
+    /// the assertion fail on a fresh simulator, which looks like a product bug.
+    private func installAndSelectGood(_ app: XCUIApplication) {
+        install(app, "https://127.0.0.1:18791/valid.json")
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 25), "baseline theme was not installed")
+        XCTAssertTrue(alert.label.contains("已安装主题"), "unexpected baseline result: \(alert.label)")
+        alert.buttons["好"].tap()
+        let theme = app.buttons.matching(NSPredicate(format: "label CONTAINS 'P1 HTTPS Proof'")).firstMatch
+        for _ in 0..<6 { if theme.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(theme.waitForExistence(timeout: 10), "baseline theme missing")
+        theme.tap()
+        XCTAssertTrue(theme.images.matching(NSPredicate(format: "identifier == 'checkmark'")).firstMatch.exists,
+                      "baseline theme was not selected")
+    }
     private func capture(_ app: XCUIApplication, _ name: String) {
         let tree = XCTAttachment(string: app.debugDescription)
         tree.name = name + "-tree"; tree.lifetime = .keepAlways; add(tree)
@@ -94,6 +110,10 @@ final class ZZThemeLinkTests: XCTestCase {
     func testHTTPSInvalidThemeShowsErrorAndPreservesSelection() throws {
         try requireFixture()
         let app = XCUIApplication(); app.launch(); settings(app)
+        // Establish the baseline in this test rather than inheriting whatever a
+        // previous test left behind.
+        installAndSelectGood(app)
+        capture(app, "invalid-baseline")
         install(app, "https://127.0.0.1:18791/invalid.json")
         let alert = app.alerts.firstMatch
         if !alert.waitForExistence(timeout: 20) { capture(app, "https-error-missing") }
