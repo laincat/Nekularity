@@ -171,6 +171,15 @@ public final class DownloadStore {
 
     public func remove(sourceKey: String, comicID: String, chapterID: String) {
         let id = "\(sourceKey)|\(comicID)|\(chapterID)"
+        // Invalidate any attempt before looking for a record. A chapter that is
+        // still downloading has none yet, and returning early here would let its
+        // write put the chapter back after the user deleted it.
+        generation[id, default: 0] += 1
+        progress[id] = nil
+        active[id] = nil
+        queue.removeAll { item in
+            "\(item.request.sourceKey)|\(item.request.comicID)|\(item.request.chapterID)" == id
+        }
         guard let chapter = chapters[id] else { return }
         let folder = root.appending(path: chapter.folder, directoryHint: .isDirectory)
         try? FileManager.default.removeItem(at: folder)
@@ -179,14 +188,6 @@ public final class DownloadStore {
                                 chapterID: chapterID, url: page)] = nil
         }
         chapters[id] = nil
-        // Forget how the attempt went, or a deleted chapter could never be
-        // downloaded again: the next download is blocked by its own old record.
-        progress[id] = nil
-        active[id] = nil
-        generation[id, default: 0] += 1
-        queue.removeAll { item in
-            "\(item.request.sourceKey)|\(item.request.comicID)|\(item.request.chapterID)" == id
-        }
         save()
     }
 
