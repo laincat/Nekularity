@@ -109,12 +109,12 @@ The rule: **merge the notices on one view into one piece of state** — a single
 This is deliberately not an automatic check: static scanning cannot tell "two on the same modifier chain" from "one on each of two subviews", and a false positive that blocks CI is worse than no check at all. It has to be remembered by people and reviews.
 
 
-## 9. A `Menu` drops its identifier
+## 9. An identifier on a container swallows its children's
 
-Put an `accessibilityIdentifier` on a `Menu`'s label and the button is **visible and tappable** on screen, but the identifier never reaches the accessibility tree. So on the same row the 隐藏 button (a plain `Button`) had a name and the size menu beside it had none — and the test reported "编辑 did not put the board into arranging" while arranging had in fact started.
+Put an `accessibilityIdentifier` on a card's whole `VStack` and the 大小 and 隐藏 buttons inside it **lose their names**: they are visible and tappable on screen and their labels are in the accessibility tree, yet no identifier finds them. The case then reports "编辑 did not put the board into arranging" while arranging had already started.
 
-The shape of that failure is the clue: the button's label had already become 完成 and the cards had grown a 隐藏 control, so the state change worked and what was missing was the **name**, not the behaviour.
+The way to tell: look for the controls in one card by **identifier** and by **label**. Here `home.size` matched 0 and `home.hide` matched 0, while `discover.edit` matched 1 and the labels 小/中 were both present — in the same modifier chain, only the control that no container wrapped still had a name.
 
-The rule: a control that tests or VoiceOver must find by name is a `Button` with an identifier; when it needs a second level of choice, use `Button` + `.confirmationDialog`, not `Menu`. `Menu` is for places where being unfindable does not matter.
+The rule: **put the identifier on the element itself**, never on a container that wraps other controls. When a card needs an identity, give it to the title row.
 
-Neither a compiler nor a static check catches this — it only shows up in a real accessibility tree, so when an interface case fails, **read the tree first** and decide whether the implementation broke or the assertion looked for the wrong thing.
+The first diagnosis was wrong: it blamed `Menu`, on the theory that a menu's label drops its identifier, and turned the menu into a `Button` + dialog. After that change the identifier still could not be found, and `home.hide` — a plain `Button` all along — was 0 too, which put the problem on the ancestor rather than the control type. The dialog version stayed because it happens to spell out 小/中 as explicit options, but it is **not** what fixed anything.

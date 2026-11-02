@@ -180,7 +180,6 @@ struct DiscoverView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
-        .accessibilityIdentifier("home.card.\(block.id)")
         .jiggling(editing)
         // Simultaneous, not exclusive: `.draggable` already claims the long press to
         // begin a drag, and an exclusive gesture here never fires — which is exactly
@@ -194,7 +193,13 @@ struct DiscoverView: View {
     }
 
     private func header(_ block: HomeBlock) -> some View {
+        // The card's identifier lives here, on the title, and not on the card's stack.
+        // An `accessibilityIdentifier` on a container is inherited by everything inside
+        // it, so the one on the whole card overwrote the size and hide controls' own
+        // identifiers: both were on screen (their labels were in the tree) and neither
+        // could be found by name.
         SectionHeader(title: block.title, subtitle: block.subtitle)
+            .accessibilityIdentifier("home.card.\(block.id)")
     }
 
     // MARK: - Blocks the app builds itself
