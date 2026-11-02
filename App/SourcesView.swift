@@ -199,9 +199,21 @@ struct SourcesView: View {
             notice = Notice(title: "导入失败", text: error.localizedDescription)
         }
     }
+
+    /// Runs the batch update and says what happened.
+    ///
+    /// The result used to be discarded: the sources updated and the screen showed
+    /// nothing, which reads exactly like a button that does not work. The sentence
+    /// itself lives in the kit, where it is tested.
+    private func updateAll() async {
+        guard !updatingAll else { return }
+        updatingAll = true
+        defer { updatingAll = false }
+        let results = await library.updateAll()
+        notice = Notice(title: "更新完成", text: SourceLibrary.SourceUpdate.summary(results))
+    }
 }
 
-/// A message shown in the single alert this screen owns.
 /// One exported archive, so the share sheet can write it wherever the user says.
 /// The file is written to the temporary directory: an export is a document, not
 /// something this app keeps.
@@ -253,6 +265,7 @@ struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
+/// A message shown in the single alert this screen owns.
 private struct Notice: Identifiable {
     let id = UUID()
     let title: String
@@ -331,19 +344,6 @@ struct SourceDetailView: View {
     private var authors: String {
         let names = (current.attribution?.authors ?? []).map(\.name).filter { !$0.isEmpty }
         return names.isEmpty ? "未提供" : names.joined(separator: "、")
-    }
-
-    /// Runs the batch update and says what happened.
-    ///
-    /// The result used to be discarded: the sources updated and the screen showed
-    /// nothing, which reads exactly like a button that does not work. The sentence
-    /// itself lives in the kit, where it is tested.
-    private func updateAll() async {
-        guard !updatingAll else { return }
-        updatingAll = true
-        defer { updatingAll = false }
-        let results = await library.updateAll()
-        notice = Notice(title: "更新完成", text: SourceLibrary.SourceUpdate.summary(results))
     }
 
     private func run(_ body: () async throws -> some Any) async {

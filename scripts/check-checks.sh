@@ -57,6 +57,24 @@ printf 'import NekularityKit\nlet w = Widget()\n' >"$tmp/import/App/Screen.swift
 expect_pass "the missing-import rule" \
 	python3 scripts/check-swift.py --root "$tmp/import"
 
+# 2. A member that escaped its type. Swift reports this from the call site, which
+#    names the wrong file; the indent is the only local evidence.
+mkdir -p "$tmp/scope/App"
+printf 'struct A {
+    var x = 1
+}
+
+    private func lost() { }
+' >"$tmp/scope/App/Lost.swift"
+expect_failure "the file-scope member rule" "indented member outside any type" 	python3 scripts/check-swift.py --root "$tmp/scope"
+printf 'struct A {
+    var x = 1
+}
+
+private func helper() { }
+' >"$tmp/scope/App/Lost.swift"
+expect_pass "the file-scope member rule" 	python3 scripts/check-swift.py --root "$tmp/scope"
+
 # 2. A document whose pair is missing, and the same pair linked properly.
 mkdir -p "$tmp/docs/docs"
 printf '# a\n' >"$tmp/docs/docs/lonely.md"

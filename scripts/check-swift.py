@@ -391,6 +391,38 @@ def missing_kit_import(root: pathlib.Path, files: list[pathlib.Path]) -> list[tu
     return problems
 
 
+def members_outside_a_type(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
+    """A member written at file scope with an indent, where no type can own it.
+
+    This happened while adding a method: the anchor was a declaration that also exists
+    in another struct, so the method landed after the closing brace. Swift then reports
+    "cannot find X in scope" from the call site, which points at the wrong file.
+
+    Indentation is the tell. A file-scope helper is written flush left; a member that
+    escaped its type kept the four spaces it was written with. A `func` at file scope is
+    perfectly legal, so the rule cannot be "no functions here" — it is "nothing indented
+    here", and string literals are skipped because a fixture full of Swift code would
+    otherwise match.
+    """
+    problems: list[tuple[str, str]] = []
+    member = re.compile(r"^[ 	]+(?:public\s+|private\s+|internal\s+|fileprivate\s+)?(?:func|var|let)\s")
+    for path in files:
+        depth = 0
+        in_string = False
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if line.count('"""') % 2 == 1:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if depth == 0 and member.match(line):
+                problems.append((str(path.relative_to(root)), f"line {number}: indented member outside any type"))
+            depth += line.count("{") - line.count("}")
+            if depth < 0:
+                depth = 0
+    return problems
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quiet", action="store_true", help="only print the summary")
@@ -444,6 +476,10 @@ def main() -> int:
         print(f"{rel}: {detail} is declared twice")
 
     for rel, detail in unterminated_strings(root, files):
+        failed += 1
+        print(f"{rel}: {detail}")
+
+    for rel, detail in members_outside_a_type(root, files):
         failed += 1
         print(f"{rel}: {detail}")
 
