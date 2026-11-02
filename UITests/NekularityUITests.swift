@@ -924,9 +924,13 @@ final class NekularityUITests: XCTestCase {
         install.tap()
         // The sheet stayed open after a successful install once, covering the list and
         // every control in it — which is what a batch update that did nothing was.
-        let gone = NSPredicate(format: "exists == false")
-        expectation(for: gone, evaluatedWith: field)
-        waitForExpectations(timeout: 30)
+        // Polled rather than expectation(_:evaluatedWith:): that form hands the element
+        // to a non-isolated predicate callback, which strict concurrency rejects.
+        let closed = Date().addingTimeInterval(30)
+        while Date() < closed, field.exists {
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        XCTAssertFalse(field.exists, "the add sheet stayed open after installing")
 
         let row = firstElement(app, containing: "Batch")
         XCTAssertTrue(row.waitForExistence(timeout: 30), "the installed source never appeared")
