@@ -32,6 +32,11 @@ struct DownloadsView: View {
                         Section("没有下载完成") {
                             ForEach(failed) { failure in
                                 failedRow(failure)
+                                    .swipeActions(edge: .trailing) {
+                                        Button("删除", role: .destructive) {
+                                            downloads.discardFailure(failure.id)
+                                        }
+                                    }
                             }
                         }
                     }

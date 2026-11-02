@@ -43,7 +43,7 @@ public final class DownloadStore {
     }
 
     /// What to keep. `pages` are the addresses the reader would have loaded.
-    public struct Request: Sendable {
+    public struct Request: Sendable, Codable {
         public var sourceKey: String
         public var comicID: String
         public var comicTitle: String
@@ -104,10 +104,23 @@ public final class DownloadStore {
         public let request: Request
         public let message: String
         public var id: String { request.id }
-        let fetch: Fetch
+        /// Absent when the failure was read back after a relaunch: the request and
+        /// the reason survive, the closure that produced them does not.
+        let fetch: Fetch?
+    }
+
+    /// The part of a failure that can be written down.
+    private struct StoredFailure: Codable {
+        var request: Request
+        var message: String
     }
 
     public private(set) var failures: [String: Failure] = [:]
+
+    /// The fetcher a restored failure retries with. Set once the app has an image
+    /// loader; without it a failure from a previous launch is shown but cannot be
+    /// retried.
+    public var fallbackFetch: Fetch?
 
     private var queue: [(request: Request, fetch: Fetch, generation: Int)] = []
     /// Bumped whenever an attempt must stop counting: a removed chapter's write
@@ -183,6 +196,7 @@ public final class DownloadStore {
         if chapters[id] != nil { return }
         if let existing = progress[id], existing.failure == nil { return }
         failures[id] = nil
+        saveFailures()
         progress[id] = Progress(done: 0, total: request.pages.count, failure: nil)
         let attempt = (generation[id] ?? 0) + 1
         generation[id] = attempt
@@ -199,6 +213,7 @@ public final class DownloadStore {
         progress[id] = nil
         active[id] = nil
         failures[id] = nil
+        saveFailures()
         queue.removeAll { item in
             "\(item.request.sourceKey)|\(item.request.comicID)|\(item.request.chapterID)" == id
         }
@@ -214,9 +229,18 @@ public final class DownloadStore {
     }
 
     /// Runs a failed attempt again with the request and fetcher it kept.
+    /// Forgets one failure the user is not going to retry. The chapter itself is
+    /// untouched: a failure that outlives its launch must be dismissable on its
+    /// own, or the only way to clear one stale row would be to delete the library.
+    public func discardFailure(_ id: String) {
+        guard failures.removeValue(forKey: id) != nil else { return }
+        saveFailures()
+    }
+
     public func retry(_ id: String) {
         guard let failure = failures[id] else { return }
-        download(failure.request, fetch: failure.fetch)
+        guard let fetch = failure.fetch ?? fallbackFetch else { return }
+        download(failure.request, fetch: fetch)
     }
 
     /// Drops the whole archive. Used by the storage screen, and the only way a
@@ -238,6 +262,7 @@ public final class DownloadStore {
             active[id] = nil
         }
         failures.removeAll()
+        saveFailures()
         queue.removeAll()
     }
 
@@ -304,6 +329,7 @@ public final class DownloadStore {
             // message in English would be a second vocabulary for one failure.
             failures[id] = Failure(request: request, message: CoreError.readable(error.localizedDescription),
                                    fetch: fetch)
+            saveFailures()
             // A half-written chapter is not a chapter: keeping it would make the
             // reader show three pages of a twenty-page chapter and call it a
             // download.
@@ -317,6 +343,7 @@ public final class DownloadStore {
     // MARK: - Persistence
 
     private func load() {
+        loadFailures()
         let manifest = root.appending(path: "manifest.json")
         guard let data = try? Data(contentsOf: manifest) else { return }
         guard let list = try? JSONDecoder().decode([Chapter].self, from: data) else {
@@ -375,6 +402,24 @@ public final class DownloadStore {
 
     private func isDirectory(_ url: URL) -> Bool {
         (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+    }
+
+    private func saveFailures() {
+        let stored = failures.mapValues { StoredFailure(request: $0.request, message: $0.message) }
+        guard let data = try? JSONEncoder().encode(stored) else { return }
+        try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try? data.write(to: root.appending(path: "failures.json"), options: .atomic)
+    }
+
+    /// A failure the user can no longer see is a chapter that silently never
+    /// arrives, and closing the app is not a decision to stop caring about it.
+    private func loadFailures() {
+        let file = root.appending(path: "failures.json")
+        guard let data = try? Data(contentsOf: file),
+              let stored = try? JSONDecoder().decode([String: StoredFailure].self, from: data) else { return }
+        for (id, item) in stored {
+            failures[id] = Failure(request: item.request, message: item.message, fetch: nil)
+        }
     }
 
     private func save() {

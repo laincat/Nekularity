@@ -305,4 +305,66 @@ struct DownloadWritePathTests {
         #expect(store.failures[id] == nil)
         #expect(store.progress[id] == nil)
     }
+
+    /// Closing the app is not a decision to stop caring about a chapter that
+    /// failed: the request and the reason are written down, and the next launch
+    /// shows the same entry.
+    @Test func aFailureOutlivesTheLaunchThatSawIt() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let pages = ["https://fixture.invalid/1.jpg"]
+
+        let first = DownloadStore(root: dir)
+        first.download(request(pages)) { _ in throw CoreError("upstream failed") }
+        #expect(await waitFor { first.failures[id] != nil })
+        let message = first.failures[id]?.message
+
+        let second = DownloadStore(root: dir)
+        #expect(second.failures[id]?.message == message)
+        #expect(second.failures[id]?.request.pages == pages)
+
+        // A restored failure has no fetcher of its own, so retrying uses the one
+        // the app installs after building its loader.
+        second.fallbackFetch = { key in Data(key.url.utf8) }
+        second.retry(id)
+        #expect(await waitFor { second.chapters[id] != nil })
+        #expect(second.failures[id] == nil)
+
+        let third = DownloadStore(root: dir)
+        #expect(third.failures[id] == nil)
+    }
+
+    @Test func removingAFailedChapterAlsoClearsTheStoredFailure() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let first = DownloadStore(root: dir)
+
+        first.download(request(["https://fixture.invalid/1.jpg"])) { _ in throw CoreError("upstream failed") }
+        #expect(await waitFor { first.failures[id] != nil })
+        first.remove(sourceKey: "probe", comicID: "comic", chapterID: "ch1")
+
+        let second = DownloadStore(root: dir)
+        #expect(second.failures.isEmpty)
+    }
+
+    @Test func aStaleFailureCanBeDismissedWithoutLosingTheLibrary() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let pages = ["https://fixture.invalid/1.jpg"]
+
+        let store = DownloadStore(root: dir)
+        store.download(request(pages, chapterID: "ch1")) { key in Data(key.url.utf8) }
+        #expect(await waitFor { store.chapters[id] != nil })
+        store.download(request(pages, chapterID: "ch2")) { _ in throw CoreError("upstream failed") }
+        let failed = "probe|comic|ch2"
+        #expect(await waitFor { store.failures[failed] != nil })
+
+        store.discardFailure(failed)
+        #expect(store.failures[failed] == nil)
+        #expect(store.chapters[id] != nil, "dismissing a failure must not touch downloads")
+
+        let reopened = DownloadStore(root: dir)
+        #expect(reopened.failures[failed] == nil)
+        #expect(reopened.chapters[id] != nil)
+    }
 }

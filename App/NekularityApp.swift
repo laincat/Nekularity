@@ -158,11 +158,16 @@ final class AppModel {
             // Downloads are asked before the network, so a kept chapter opens
             // with no connection at all.
             let downloads = DownloadStore(root: root.appending(path: "Downloads", directoryHint: .isDirectory))
+            let images = ImageLoader(core: core, offline: { key in
+                await downloads.bytes(for: key)
+            })
+            // A failure kept from a previous launch has its request and reason but
+            // not the closure that fetched it, so retrying one needs the loader the
+            // app already has.
+            downloads.fallbackFetch = { try await images.raw($0) }
             state = .ready(Environment(
                 library: library,
-                images: ImageLoader(core: core, offline: { key in
-                    await downloads.bytes(for: key)
-                }),
+                images: images,
                 prompts: prompts,
                 shelf: ShelfStore(directory: root),
                 searches: SearchHistoryStore(directory: root),
