@@ -102,7 +102,9 @@ struct ExistingKeyTests {
     }
 }
 
-@Suite("Batch source update (the loop)")
+// Serialized on purpose: each case builds a Core runtime, and creating several of
+// those at once is how this suite twice wedged CI for ten minutes at a time.
+@Suite("Batch source update (the loop)", .serialized)
 struct SourceLibraryUpdateAllTests {
     private let script = """
     class Mini extends ComicSource {

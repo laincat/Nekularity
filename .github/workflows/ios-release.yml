@@ -62,6 +62,9 @@ jobs:
           run_check sh scripts/check-checks.sh
           exit $fail
       - name: Run the kit's unit tests
+        # A hang here has cost ten minutes of a 90-minute job twice. Failing at
+        # fifteen says so and keeps the log, which a cancelled run does not.
+        timeout-minutes: 15
         run: |
           # The kit declares macOS alongside iOS so its tests run on the host the
           # build already happens on. Without this step a green run means "it
