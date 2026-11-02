@@ -1035,6 +1035,9 @@ final class NekularityUITests: XCTestCase {
     /// Uses the gesture entry, changes a size, and checks that the saved choice
     /// survives a new process. A label changing before termination alone would
     /// only prove that in-memory state changed, not that the choice was saved.
+    ///
+    /// The press goes on the handle, not the whole card: a card long press belongs to
+    /// `.draggable` and never reaches a simultaneous long-press gesture on the board.
     func testBoardLongPressAndSizeSurviveRelaunch() throws {
         let app = launch()
         tab(app, "发现")
@@ -1051,7 +1054,11 @@ final class NekularityUITests: XCTestCase {
         let sizeID = "home.size.template:history"
         let size = app.buttons.matching(NSPredicate(format: "identifier == %@", sizeID)).firstMatch
         XCTAssertFalse(size.exists, "arranging was already active before the long press")
-        card.press(forDuration: 1.0)
+        let handle = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == 'board.handle.template:history'")).firstMatch
+        XCTAssertTrue(handle.waitForExistence(timeout: 10),
+                      "the board offers no visible way into arranging")
+        handle.press(forDuration: 1.0)
         XCTAssertTrue(size.waitForExistence(timeout: 10), "a long press did not enter arranging")
         let edit = app.buttons.matching(NSPredicate(format: "identifier == 'discover.edit'")).firstMatch
         XCTAssertEqual(edit.label, "完成", "the long press did not change the edit action")

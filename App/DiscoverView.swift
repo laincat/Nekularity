@@ -46,14 +46,17 @@ struct DiscoverView: View {
                         ForEach(layout.visible) { block in
                             card(block)
                                 .blockSpan(block.span)
-                                // Drag is the arrangement; the up and down buttons it
-                                // replaced asked the user to move things one step at a
-                                // time and to count positions.
-                                .draggable(block.id)
                                 .dropDestination(for: String.self) { items, _ in
                                     guard let id = items.first else { return false }
                                     layout.moveBlock(id, before: block.id)
                                     return true
+                                }
+                                .overlay(alignment: .topLeading) {
+                                    // The handle owns both gestures. `.draggable` claims the
+                                    // long press on the card and keeps it from the board, so
+                                    // a long press that only enters arranging lives here,
+                                    // where a press that becomes a drag is still a drag.
+                                    editHandle(block)
                                 }
                         }
                     }
@@ -178,15 +181,25 @@ struct DiscoverView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()
         .jiggling(editing)
-        // Simultaneous, not exclusive: `.draggable` already claims the long press to
-        // begin a drag, and an exclusive gesture here never fires — which is exactly
-        // what "a long press did not put the board into arranging" reported.
-        .simultaneousGesture(LongPressGesture(minimumDuration: 0.5).onEnded { _ in
-            guard !editing else { return }
-            editPulse += 1
-            withAnimation(.snappy) { editing = true }
-        })
-        .sensoryFeedback(.impact(weight: .medium), trigger: editPulse)
+    }
+
+    /// The board's entry into arranging: a long press here, visible before it is
+    /// used, and carrying the drag once the board is arranging.
+    private func editHandle(_ block: HomeBlock) -> some View {
+        Image(systemName: "line.3.horizontal")
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .frame(width: 28, height: 28)
+            .contentShape(Rectangle())
+            .accessibilityLabel("拖动排序")
+            .accessibilityIdentifier("board.handle.\(block.id)")
+            .highPriorityGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                guard !editing else { return }
+                editPulse += 1
+                withAnimation(.snappy) { editing = true }
+            })
+            .draggable(block.id)
+            .sensoryFeedback(.impact(weight: .medium), trigger: editPulse)
     }
 
     private func header(_ block: HomeBlock) -> some View {
