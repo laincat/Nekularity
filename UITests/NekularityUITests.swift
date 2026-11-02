@@ -914,10 +914,20 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(addButton.waitForExistence(timeout: 20), "the sources page has no add button")
         addButton.tap()
 
-        let field = element(app, "sources.scriptURL")
+        // Asked for as a text field directly: the generic lookup can land on the
+        // placeholder label, and a tap there focuses nothing. The value is then read
+        // back, because "the install button is disabled" and "the URL never arrived"
+        // are the same symptom from the outside.
+        let field = app.textFields["sources.scriptURL"]
         XCTAssertTrue(field.waitForExistence(timeout: 15), "the add sheet has no URL field")
         field.tap()
         field.typeText(server.scriptURL)
+        let typed = Date().addingTimeInterval(15)
+        while Date() < typed, (field.value as? String) != server.scriptURL {
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        XCTAssertEqual(field.value as? String, server.scriptURL,
+                       "the URL never reached the add sheet's field")
 
         let install = element(app, "sources.installScript")
         XCTAssertTrue(install.exists, "the add sheet has no install button")
