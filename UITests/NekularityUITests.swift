@@ -108,6 +108,23 @@ final class NekularityUITests: XCTestCase {
     /// Each predicate is built where it is used: storing one and passing it to
     /// `matching` is what `check-swift` flags, because a stored predicate can carry
     /// its isolation across a call boundary.
+    /// Removes the fixture chapter from the downloads screen if an earlier run
+    /// left it there. A download that is already on disk is not fetched again, so
+    /// the failed-download case would make no request at all; the cleanup uses the
+    /// same swipe a user has rather than deleting files behind the app.
+    private func removeDownloadedProbeChapter(_ app: XCUIApplication) {
+        tab(app, "我的")
+        let entry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '下载'")).firstMatch
+        guard entry.waitForExistence(timeout: 15) else { return }
+        entry.tap()
+        let row = firstElement(app, containing: "Probe Comic")
+        if row.waitForExistence(timeout: 5) {
+            row.swipeLeft()
+            let delete = app.buttons["删除"].firstMatch
+            if delete.waitForExistence(timeout: 5) { delete.tap() }
+        }
+    }
+
     private func firstElement(_ app: XCUIApplication, containing text: String) -> XCUIElement {
         let asButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
         if asButton.exists { return asButton }
@@ -1187,6 +1204,10 @@ final class NekularityUITests: XCTestCase {
         server.failNextPageRequests(1)
 
         let app = launch()
+        // A chapter already on disk is not fetched again, so the forced failure
+        // would never happen on a machine that ran this before. Start clean, the
+        // way a user would: remove it from the downloads screen.
+        removeDownloadedProbeChapter(app)
         try openSearch(app)
         try chooseSource(app, "Callback Probe")
 
