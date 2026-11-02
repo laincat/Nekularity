@@ -932,21 +932,40 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(update.waitForExistence(timeout: 20), "the sources page has no update-all button")
         update.tap()
 
-        // The alert is the report. "已是最新" means the fetch and the replace both
-        // worked; the old failure text named the key.
-        let reported = firstElement(app, containing: "已是最新")
-        let failed = firstElement(app, containing: "already exists")
-        let deadline = Date().addingTimeInterval(60)
-        while Date() < deadline, !reported.exists, !failed.exists {
-            Thread.sleep(forTimeInterval: 0.2)
+        // The alert is the report. Waiting for its title first separates "nothing was
+        // shown" from "something was shown, and it says something else" — the previous
+        // version of this case could only report the first, which sent me looking in
+        // the wrong place once already.
+        let title = firstElement(app, containing: "更新完成")
+        let appeared = title.waitForExistence(timeout: 60)
+        // Read what it actually said before asserting, and keep it: a failure here has
+        // to name the sentence the app produced.
+        var said = ""
+        if appeared {
+            for text in app.staticTexts.allElementsBoundByIndex {
+                let label = text.label
+                if label.contains("已是最新") || label.contains("已更新") || label.contains("失败")
+                    || label.contains("没有可从网址更新的源") {
+                    said = label
+                    break
+                }
+            }
         }
-        let saidCurrent = reported.exists
-        let saidFailed = failed.exists
         // Stop serving before asserting: the port is fixed, and the next case that
         // needs it fails with "address already in use" if this one lingers.
         server.stop()
-        XCTAssertFalse(saidFailed, "the update reported the old refusal instead of a result")
-        XCTAssertTrue(saidCurrent, "pressing 更新全部 produced no report")
+        if !appeared {
+            let tree = XCTAttachment(string: app.debugDescription)
+            tree.name = "no-report-tree"
+            tree.lifetime = .keepAlways
+            add(tree)
+        }
+        XCTAssertTrue(appeared, "pressing 更新全部 produced no report")
+        XCTAssertFalse(said.contains("already exists"),
+                       "the update reported the old refusal instead of a result: \(said)")
+        XCTAssertFalse(said.contains("失败"), "the update failed: \(said)")
+        XCTAssertTrue(said.contains("已是最新") || said.contains("已更新"),
+                      "the update produced no result line: \(said)")
     }
 
     /// A downloaded chapter has to survive the network going away.
