@@ -6,8 +6,8 @@ Updated 2026-11-03. Only work that needs a device, an account, credentials or a 
 
 ## 1. One on-device iOS acceptance run
 
-1. Subscribe AltStore / SideStore to `https://raw.githubusercontent.com/laincat/AltStore/main/apps.json` and install **0.3.0 (build 12)**; the build is unsigned, and the sideloading tool signs it on your machine.
-2. After the first launch, confirm 我的 shows 0.3.0/12 and record the device model, iOS version and install method. Devices below iOS 26 cannot install it (minimum 26.0); record that failure separately, it is not a defect.
+1. Subscribe AltStore / SideStore to `https://raw.githubusercontent.com/laincat/AltStore/main/apps.json` and install **0.3.1 (build 13)**; the build is unsigned, and the sideloading tool signs it on your machine.
+2. After the first launch, confirm 我的 shows 0.3.1/13 and record the device model, iOS version and install method. Devices below iOS 26 cannot install it (minimum 26.0); record that failure separately, it is not a defect.
 3. Record every item as device + version + action + expected + observed, with a screenshot where possible. **Do not** treat simulator results as evidence for this section.
 
 ## 2. Mobile actions and their criteria
@@ -44,4 +44,4 @@ Updated 2026-11-03. Only work that needs a device, an account, credentials or a 
 
 ## 5. What is already done without external conditions
 
-The 0.3.0 release and AltStore subscription are verified; download isolation, retry, delete/clear races and manifest-versus-disk honesty all have unit regressions; the twelve desktop window probes pass at the latest commit; the macOS reading mainline and the ad-hoc bundle are verified; NSIS install and uninstall were checked on 0.2.7. Details and log paths are in [STATUS](STATUS.en.md) and [UNVERIFIED](UNVERIFIED.en.md).
+The 0.3.1 release and AltStore subscription are verified; download isolation, retry, delete/clear races and manifest-versus-disk honesty all have unit regressions; the twelve desktop window probes pass at the latest commit; the macOS reading mainline and the ad-hoc bundle are verified; NSIS install and uninstall were checked on 0.2.7. Details and log paths are in [STATUS](STATUS.en.md) and [UNVERIFIED](UNVERIFIED.en.md).
