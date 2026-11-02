@@ -1,7 +1,15 @@
 import SwiftUI
 import NekularityKit
 
-/// The shared look: glass cards on a soft gradient, pill buttons, floating bar.
+/// The shared look.
+///
+/// Liquid Glass is a **navigation-layer** material: Apple's guidance is that content
+/// stays primary and the controls float above it. So glass goes on bars, toolbars and
+/// buttons, and the cards that hold comics, episodes and text keep a plain surface.
+/// Applying it to both is the "glass everywhere" anti-pattern, and stacking two glass
+/// layers is worse: they refract each other and neither reads.
+///
+/// The deployment target is iOS 26, so `glassEffect` is available without a fallback.
 ///
 /// Taken from the reference app's screens, but built from the theme tokens this
 /// app already has — the accent and radius come from the chosen theme, so a
@@ -49,6 +57,13 @@ extension View {
 }
 
 /// The rounded capsule button the reference app puts in its bars.
+extension View {
+    /// A floating control's surface. Not for content: see the note at the top.
+    @ViewBuilder func glassControl<S: Shape>(_ shape: S) -> some View {
+        self.glassEffect(.regular, in: shape)
+    }
+}
+
 struct Pill: ButtonStyle {
     // Optional on purpose: a ButtonStyle that traps when the theme is absent turns a
     // preview or a sheet built outside the root into a crash, and white is the same
@@ -56,17 +71,19 @@ struct Pill: ButtonStyle {
     @Environment(ThemeStore.self) private var themes: ThemeStore?
     var filled = false
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
+        // Named so the type checker does not have to work it out of a ternary
+        // inside a modifier chain.
+        let surface: Glass = filled ? .identity : .regular
+        return configuration.label
             .font(.subheadline)
             .padding(.horizontal, 16)
             .padding(.vertical, 9)
+            // A filled pill carries an action's meaning, so it is tinted rather than
+            // glass; an unfilled one is a floating control and is glass.
             .background {
-                if filled {
-                    Capsule().fill(.tint)
-                } else {
-                    Capsule().fill(.ultraThinMaterial)
-                }
+                if filled { Capsule().fill(.tint) }
             }
+            .glassEffect(surface, in: .capsule)
             .foregroundStyle(filled ? AnyShapeStyle(themes?.active.onAccent ?? .white) : AnyShapeStyle(.primary))
             .opacity(configuration.isPressed ? 0.7 : 1)
     }

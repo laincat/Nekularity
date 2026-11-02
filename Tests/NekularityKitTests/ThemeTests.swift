@@ -83,4 +83,18 @@ struct ThemeTests {
         #expect(!Theme(id: "g", name: "g", accent: "not a colour").accentTextIsDark)
         #expect(!Theme(id: "h", name: "h", accent: "#12345").accentTextIsDark)
     }
+
+    /// A stored choice that no longer exists falls back rather than leaving the app
+    /// with no theme: the built-in Miuix pair was removed, and anyone who had picked
+    /// it kept its id in defaults.
+    @Test("a choice that is gone falls back to the system look")
+    func removedChoiceFallsBack() throws {
+        let dir = try temporary()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let defaults = UserDefaults(suiteName: "theme-test-\(UUID().uuidString)")!
+        defaults.set("miuix", forKey: "theme")
+        let store = ThemeStore(directory: dir, defaults: defaults)
+        #expect(store.active.id == BuiltinThemes.system.id)
+        #expect(store.all.map(\.id) == [BuiltinThemes.system.id])
+    }
 }

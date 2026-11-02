@@ -68,6 +68,14 @@ struct RootView: View {
 
     /// The floating bar: four sections in one capsule, and search in its own.
     private var bar: some View {
+        // One container for the strip and the search circle: separate pieces of
+        // glass next to each other refract each other and neither reads cleanly.
+        GlassEffectContainer(spacing: 10) {
+            barContents
+        }
+    }
+
+    private var barContents: some View {
         HStack(spacing: 10) {
             HStack(spacing: 2) {
                 ForEach(Section.allCases) { item in
@@ -92,7 +100,7 @@ struct RootView: View {
                 }
             }
             .padding(4)
-            .background(.ultraThinMaterial, in: Capsule())
+            .glassControl(Capsule())
             // Clip the whole strip: a selected capsule is drawn wider than its
             // slot at the edge and would otherwise slide under the search button.
             .clipShape(Capsule())
@@ -103,7 +111,7 @@ struct RootView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 18, weight: .semibold))
                     .frame(width: 46, height: 46)
-                    .background(.ultraThinMaterial, in: Circle())
+                    .glassControl(Circle())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("tab.search")

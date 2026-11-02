@@ -82,12 +82,10 @@ extension Theme {
 public enum BuiltinThemes {
     /// The system's own colours: no accent override, no forced scheme.
     public static let system = Theme(id: "system", name: "跟随系统", accent: "#0A84FF", radius: 12)
-    /// Soft, rounded and blue — the Miuix look, as tokens rather than code.
-    public static let miuix = Theme(id: "miuix", name: "Miuix", accent: "#3482FF",
-                                    background: "#F7F8FA", surface: "#FFFFFF", radius: 20)
-    public static let miuixDark = Theme(id: "miuix-dark", name: "Miuix 深色", accent: "#6BA4FF",
-                                        background: "#0F1115", surface: "#1A1D23", radius: 20, dark: true)
-    public static let all = [system, miuix, miuixDark]
+    /// Only the system's own look ships. Everything else is content someone installs:
+    /// a palette written by hand here is a palette nobody asked for, and the two that
+    /// did ship — Miuix and Miuix dark — were never used.
+    public static let all = [system]
 }
 
 /// Installed themes plus which one is active.

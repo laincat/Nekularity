@@ -12,7 +12,7 @@ Updated 2026-11-01. This file keeps **what is to be done and what counts as done
 | The reading path | Multi-source search, browse, details with grouped chapters, two reader layouts, progress written back | 13 simulator cases passed |
 | Source abilities | Install/update/enable/remove, settings, callbacks, logs, web login, source favourites | Simulator cases plus desktop probes |
 | Backup | `.venera` import and export, including per-source cookies | Unit tests and real backup files |
-| Themes | A theme is one JSON; system, Miuix and Miuix dark ship, others can be imported | Unit tests (compile pending) |
+| Themes | A theme is one JSON; only follow-the-system ships, the rest are imported | Unit tests (compile pending) |
 | Downloads | Chapter bytes on disk, readable with no network, manifest stores relative paths | Case pending |
 | Video | Source search → details → play, decoded by AetherEngine, headers carried | Cases pending |
 | The Pixiv plugin | Five rankings, search, details and pages work anonymously; images need the Referer | Verified on the desktop against the live site |
