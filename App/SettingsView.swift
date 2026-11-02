@@ -227,14 +227,34 @@ struct SettingsView: View {
                     note = error.localizedDescription
                 }
             }
-            .alert("从链接安装主题", isPresented: $showingThemeLink) {
-                TextField("https://…/theme.json", text: $themeLink)
-                    .accessibilityIdentifier("settings.themeLinkField")
-                Button("安装") { Task { await installThemeFromLink() } }
-                    .accessibilityIdentifier("settings.themeLinkInstall")
-                Button("取消", role: .cancel) {}
-            } message: {
-                Text("粘贴一个主题 JSON 的地址。装好后在上面的列表里选中它。")
+            // A sheet, not a second alert: SwiftUI keeps one alert per view, and the
+            // older one is the result message. Two of them meant one silently never
+            // appeared.
+            .sheet(isPresented: $showingThemeLink) {
+                NavigationStack {
+                    Form {
+                        Section {
+                            TextField("https://…/theme.json", text: $themeLink)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .accessibilityIdentifier("settings.themeLinkField")
+                        } footer: {
+                            Text("粘贴一个主题 JSON 的地址。装好后在上面的列表里选中它。")
+                        }
+                        Section {
+                            Button("安装") { Task { await installThemeFromLink() } }
+                                .accessibilityIdentifier("settings.themeLinkInstall")
+                        }
+                    }
+                    .navigationTitle("从链接安装主题")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("取消") { showingThemeLink = false }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
             }
             .alert(note ?? "", isPresented: Binding(get: { note != nil }, set: { if !$0 { note = nil } })) {
                 Button("好") { note = nil }
@@ -254,6 +274,7 @@ struct SettingsView: View {
                 let (data, _) = try await URLSession.shared.data(from: address)
                 return data
             }
+            showingThemeLink = false
             note = "已安装主题，在上面的列表里选中它即可"
         } catch {
             note = (error as? CoreError)?.message ?? error.localizedDescription
