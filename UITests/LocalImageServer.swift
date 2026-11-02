@@ -26,6 +26,20 @@ final class LocalImageServer: @unchecked Sendable {
     static var pageURL: String { "http://127.0.0.1:\(port)/page.png" }
     /// Where the video fixture's play answer points.
     static var clipURL: String { "http://127.0.0.1:\(port)/clip.mp4" }
+
+    /// The script the batch-update case installs from, and then updates from. The
+    /// body is fixed so the second fetch is the same version: "already current" is
+    /// the answer that proves the replace path ran without an error.
+    static var scriptURL: String { "http://127.0.0.1:\(port)/source.js" }
+    static let scriptBody = """
+    class LocalBatch extends ComicSource {
+        name = "Batch"
+        key = "localbatch"
+        version = "1.0.0"
+        minAppVersion = "1.0.0"
+        search = { load: async (keyword, options, page) => ({ comics: [], maxPage: 1 }) }
+    }
+    """
     /// The value the video route demands; the fixture sends it as `Referer`.
     static let clipReferer = "http://127.0.0.1:18731/"
 
@@ -201,6 +215,9 @@ final class LocalImageServer: @unchecked Sendable {
         }
 
         switch route {
+        case "/source.js":
+            reply(connection, status: "200 OK", body: Data(Self.scriptBody.utf8),
+                  type: "application/javascript")
         case "/clip.mp4":
             // The header the source declared. Without it the request fails, which is
             // the whole point of the case.

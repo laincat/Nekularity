@@ -892,6 +892,54 @@ final class NekularityUITests: XCTestCase {
                       "no duration: \(server.clipSummary())")
     }
 
+    /// The batch update, driven through the interface it is reached by.
+    ///
+    /// It shipped broken: every installed source failed with "already exists" because
+    /// the replace branch looked for a wording Core no longer uses. A unit test pins
+    /// that now, but the button is what a person presses — this installs a source from
+    /// the loopback server, presses 更新全部, and expects the answer "already current"
+    /// rather than a failure list.
+    func testUpdateAllReportsCurrentRatherThanFailing() throws {
+        let server = try LocalImageServer()
+        try server.start()
+        defer { server.stop() }
+
+        let app = launch()
+        try openSources(app)
+
+        // Add from a URL, which is the flow the failure broke first.
+        let add = element(app, "sources.add")
+        XCTAssertTrue(add.waitForExistence(timeout: 20), "the sources page has no add button")
+        add.tap()
+
+        let field = element(app, "sources.scriptURL")
+        XCTAssertTrue(field.waitForExistence(timeout: 15), "the add sheet has no URL field")
+        field.tap()
+        field.typeText(LocalImageServer.scriptURL)
+
+        let install = element(app, "sources.installScript")
+        XCTAssertTrue(install.exists, "the add sheet has no install button")
+        install.tap()
+
+        let row = firstElement(app, containing: "Batch")
+        XCTAssertTrue(row.waitForExistence(timeout: 30), "the installed source never appeared")
+
+        let update = element(app, "sources.updateAll")
+        XCTAssertTrue(update.waitForExistence(timeout: 20), "the sources page has no update-all control")
+        update.tap()
+
+        // The alert is the report. "已是最新" means the fetch and the replace both
+        // worked; the old failure text named the key.
+        let reported = firstElement(app, containing: "已是最新")
+        let failed = firstElement(app, containing: "already exists")
+        let deadline = Date().addingTimeInterval(60)
+        while Date() < deadline, !reported.exists, !failed.exists {
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        XCTAssertFalse(failed.exists, "the update reported the old refusal instead of a result")
+        XCTAssertTrue(reported.exists, "pressing 更新全部 produced no report")
+    }
+
     /// A downloaded chapter has to survive the network going away.
     ///
     /// The test downloads a chapter from the loopback fixture, **stops the

@@ -78,6 +78,7 @@ struct SourcesView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 Button { showAdd = true } label: { Label("添加", systemImage: "plus") }
+                    .accessibilityIdentifier("sources.add")
             }
             ToolbarItem(placement: .secondaryAction) {
                 Menu {
@@ -376,8 +377,11 @@ private struct AddSourceView: View {
 
                 Section("脚本链接") {
                     TextField("https://…/source.js", text: $scriptText)
+                        .accessibilityIdentifier("sources.scriptURL")
                         .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                    Button("安装") { Task { await installScript() } }.disabled(URL(string: scriptText)?.host() == nil)
+                    Button("安装") { Task { await installScript() } }
+                        .disabled(URL(string: scriptText)?.host() == nil)
+                        .accessibilityIdentifier("sources.installScript")
                 }
             }
             .navigationTitle("添加漫画源").navigationBarTitleDisplayMode(.inline)
