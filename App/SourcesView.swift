@@ -25,6 +25,8 @@ struct SourcesView: View {
     @State private var showLogs = false
     @State private var showAI = false
     @State private var updatingAll = false
+    /// The last batch result, shown above the list until dismissed.
+    @State private var lastUpdate: String?
 
     /// Sorted here rather than inside the `ForEach`: written as one expression the
     /// row builder was more than the type checker would take in reasonable time.
@@ -34,6 +36,17 @@ struct SourcesView: View {
 
     var body: some View {
         List {
+            // The batch result is shown where the sources are, not in an alert. A
+            // report about a list belongs next to the list: it survives a dismiss,
+            // it can be read twice, and it does not depend on the alert layer.
+            if let lastUpdate {
+                Section("更新结果") {
+                    Text(lastUpdate)
+                        .font(.footnote)
+                        .accessibilityIdentifier("sources.updateSummary")
+                    Button("关闭") { self.lastUpdate = nil }
+                }
+            }
             if !library.restoreFailures.isEmpty {
                 Section("未能恢复") {
                     ForEach(restoreFailures, id: \.key) { failure in
@@ -210,7 +223,7 @@ struct SourcesView: View {
         updatingAll = true
         defer { updatingAll = false }
         let results = await library.updateAll()
-        notice = Notice(title: "更新完成", text: SourceLibrary.SourceUpdate.summary(results))
+        lastUpdate = SourceLibrary.SourceUpdate.summary(results)
     }
 }
 

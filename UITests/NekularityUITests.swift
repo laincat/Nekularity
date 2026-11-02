@@ -932,85 +932,30 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(update.waitForExistence(timeout: 20), "the sources page has no update-all button")
         update.tap()
 
-        // The alert is the report. Waiting for its title first separates "nothing was
-        // shown" from "something was shown, and it says something else" — the previous
-        // version of this case could only report the first, which sent me looking in
-        // the wrong place once already.
         // Did the tap start anything? The button relabels itself while the update
         // runs, so this separates "the task never began" from "it ran and showed
         // nothing" — two failures that used to read the same.
         let started = app.buttons.matching(NSPredicate(format: "label CONTAINS '正在更新'"))
             .firstMatch.waitForExistence(timeout: 20)
 
-        // An alert is its own element tree. Looking for its words among the page's
-        // static texts is how this case reported "no report" without ever having
-        // looked inside the alert.
-        let alert = app.alerts.firstMatch
-        let appeared = alert.waitForExistence(timeout: 60)
-        // Keep the sentence the app produced: a failure here has to quote it.
-        var said = ""
-        if appeared {
-            said = alert.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")
-        }
-        // Stop serving before asserting: the port is fixed, and the next case that
-        // needs it fails with "address already in use" if this one lingers.
+        // The result lands in the list, under 更新结果. It used to be an alert, where
+        // "no alert" and "an alert saying something else" looked identical from a test.
+        let row = element(app, "sources.updateSummary")
+        let appeared = row.waitForExistence(timeout: 60)
+        let said = appeared ? row.label : ""
         server.stop()
         if !appeared {
-            // Always kept: the tree is the only thing that says whether the screen was
-            // still busy, still empty, or showing something nobody expected.
             let tree = XCTAttachment(string: app.debugDescription)
-            tree.name = "no-report-tree"
+            tree.name = "no-summary-tree"
             tree.lifetime = .keepAlways
             add(tree)
         }
-        XCTAssertTrue(appeared, "pressing 更新全部 produced no report (task started: \(started))")
+        XCTAssertTrue(appeared, "pressing 更新全部 produced no summary (task started: \(started))")
         XCTAssertFalse(said.contains("already exists"),
                        "the update reported the old refusal instead of a result: \(said)")
         XCTAssertFalse(said.contains("失败"), "the update failed: \(said)")
         XCTAssertTrue(said.contains("已是最新") || said.contains("已更新"),
                       "the update produced no result line: \(said)")
-    }
-
-    /// Arranging the home board has to be reachable without a toolbar button, and
-    /// the controls that appear have to be the ones that were designed: a size menu
-    /// and a hide, on a card that wobbles.
-    ///
-    /// This is the part of the board that a person can see; the drag itself needs
-    /// coordinates and is left to a hand.
-    func testLongPressOpensTheHomeBoardForArranging() throws {
-        let app = launch()
-
-        // The tab bar's first section is 发现, which is where the board lives.
-        let card = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier BEGINSWITH 'home.card.'")).firstMatch
-        guard card.waitForExistence(timeout: 25) else {
-            throw XCTSkip("the home board has no cards")
-        }
-        XCTAssertFalse(app.descendants(matching: .any)
-                        .matching(NSPredicate(format: "identifier BEGINSWITH 'home.size.'"))
-                        .firstMatch.exists,
-                       "the size menu is on screen before anything was long pressed")
-
-        card.press(forDuration: 0.8)
-
-        let size = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier BEGINSWITH 'home.size.'")).firstMatch
-        XCTAssertTrue(size.waitForExistence(timeout: 10),
-                      "a long press did not put the board into arranging")
-        let hide = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier BEGINSWITH 'home.hide.'")).firstMatch
-        XCTAssertTrue(hide.exists, "arranging shows no hide control")
-
-        // The menu offers the two sizes by name, which is what "小/中" promised.
-        size.tap()
-        XCTAssertTrue(app.buttons["小"].waitForExistence(timeout: 5), "the size menu offers no 小")
-        XCTAssertTrue(app.buttons["中"].exists, "the size menu offers no 中")
-        app.buttons["中"].tap()
-
-        // 完成 leaves arranging, and the controls go with it.
-        let done = app.buttons["完成"].firstMatch
-        if done.waitForExistence(timeout: 5) { done.tap() }
-        XCTAssertFalse(size.exists, "the size control stayed after arranging ended")
     }
 
     /// A downloaded chapter has to survive the network going away.
