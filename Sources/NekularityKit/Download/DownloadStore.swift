@@ -300,7 +300,10 @@ public final class DownloadStore {
             // Keep the attempt so the screen can name it and offer a retry; a
             // failure the user cannot see is a chapter that silently never
             // arrives.
-            failures[id] = Failure(request: request, message: error.localizedDescription, fetch: fetch)
+            // The same wording the detail page uses for a failed load; a raw system
+            // message in English would be a second vocabulary for one failure.
+            failures[id] = Failure(request: request, message: CoreError.readable(error.localizedDescription),
+                                   fetch: fetch)
             // A half-written chapter is not a chapter: keeping it would make the
             // reader show three pages of a twenty-page chapter and call it a
             // download.
