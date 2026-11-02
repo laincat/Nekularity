@@ -18,8 +18,7 @@ struct DiscoverView: View {
     @Environment(LocalComicStore.self) private var local
 
     @State private var editing = false
-    /// Which card the size dialog is for, and whether it is up. A dialog rather than
-    /// a menu because the menu's label never carried its identifier.
+    /// Which card the size dialog is for, and whether it is up.
     @State private var sizeTarget: HomeBlock?
     @State private var sizing = false
     /// Counts long presses, so the board can give a tap of feedback when it switches
@@ -151,11 +150,9 @@ struct DiscoverView: View {
                         .foregroundStyle(.tertiary)
                         .accessibilityLabel("拖动排序")
 
-                    // A widget board offers sizes by name; a toggle hides which one
-                    // you are looking at. This is a plain button plus a dialog rather
-                    // than a `Menu`: SwiftUI drops an `accessibilityIdentifier` put on
-                    // a menu's label, so the control existed on screen and nowhere in
-                    // the tree — unreachable for the tests and nameless for VoiceOver.
+                    // Name both sizes explicitly. Keep the identifier on the control:
+                    // a card-wide identifier used to overwrite the controls inside it.
+                    // Their labels remained present in the accessibility tree.
                     Button {
                         sizeTarget = block
                         sizing = true

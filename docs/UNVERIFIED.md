@@ -2,13 +2,13 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
-更新:2026-11-01。**最后一次在 Mac 上完整跑过的是 `1f1e557`(tag `v0.2.3`)**:`swift test` 374 项 / 71 套 / 0 失败,界面用例 **16 条全过**,`verify-ios.sh` 各项通过。此后只有检查器自测(脚本与文档)有改动,只经 CI。CI 编译成功不等于界面行为已验证。
+更新:2026-11-02。当前发布版为 `v0.2.5`(build 7,提交 `7a00580`):CI 已执行 kit 单测、真机构建、UI 测试编译与 IPA 打包,并验证下载 HTTP 200。Orca Worker 在 Mac 上运行批量更新用例(`fd1cef0`)通过,发现页编排用例(`c259f3f`)通过(24.6 秒,无失败、无跳过)。`c259f3f` 的完整 UI 套件已派发,尚未收到终态结果;新增长按与尺寸重启持久化用例也尚未在 Mac 执行。此前 `v0.2.3` 的 374 项单测与 16/16 UI 是历史结果,不能代表当前提交。
 
 主题对比度这条**没有截图证据**:判定依据是 `accentTextFollowsTheAccent` 单测与代码位置,而非观察到的画面;三个内置强调色的判定为 `#3482FF` 白字、`#6BA4FF` 深字、`#0A84FF` 白字。
 
 更早的那份结论是:**这棵树编译过了**:GitHub Actions 运行 `41316459367`(提交 `71c8c97`)在 macOS 上完成内置 Core 构建、四项仓库检查、工程生成、`xcodebuild` 编译,并产出了未签名 IPA(18.9 MB)。此前 `b9fdf3c` 之后的一批提交从未经过编译器,那份顾虑到此为止。
 
-编译通过不等于行为正确。iPhone 界面用例与 `swift test` 仍未在 CI 上跑,真机与真实服务器仍是空白。
+编译通过不等于行为正确。CI 已运行 `swift test`,但 iPhone 界面用例在 CI 里只编译、未执行;模拟器执行交给 Mac Orca Worker。真机、真实账号与服务器仍按下表保留缺口。
 
 ## 构建已经证明的
 
@@ -70,4 +70,4 @@ sh scripts/fetch-core.sh
 NK_UI_TESTS=1 NK_UI_SEED=/tmp/seed.json NK_UI_SEED_REPLACE=1 sh scripts/verify-ios.sh
 ```
 
-CI 上目前只构建、不跑测试:`xcodebuild` 的目标是 `build`。要把单测也纳入,需要给工作流加一步 `test`,并指定模拟器目标——这是下一件该做的事。`swift test` 的期望数随提交增长,最后一次确认的是 249 / 48(在 `b9fdf3c` 之前),应按新增用例数核对,而不是记住一个数字。
+CI 已加入 `swift test --no-parallel --verbose`;`xcodebuild build-for-testing` 仍只编译界面用例。执行 UI 要在 Mac 上运行 `test-without-building`,汇报提交号、总数、失败与跳过,保留完整日志。新增用例必须重新构建测试目标;不要拿旧构建产物验证新源码。

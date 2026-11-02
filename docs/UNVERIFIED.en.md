@@ -2,13 +2,13 @@
 
 [简体中文](UNVERIFIED.md) | English
 
-Updated 2026-11-01. **The last tree fully run on a Mac is `1f1e557` (tag `v0.2.3`)**: `swift test` 374 tests / 71 suites / 0 failures, **all 16 interface cases pass**, and every step of `verify-ios.sh` succeeds. Only the self-tests for the checks (scripts and docs) have changed since, and those have been through CI alone. A green CI build is not a verified screen.
+Updated 2026-11-02. The published version is `v0.2.5` (build 7, commit `7a00580`): CI ran kit unit tests, the device build, UI test compilation and IPA packaging; the download returned HTTP 200. An Orca Worker on the Mac passed update-all (`fd1cef0`) and arranging (`c259f3f`, 24.6 seconds, no failure or skip). The full `c259f3f` UI suite has been assigned but has no terminal result yet; the new long-press and resize-persistence case has not run on the Mac either. The older 374 unit tests and 16/16 UI on `v0.2.3` are historical results, not evidence for this commit.
 
 The accent contrast has **no screenshot behind it**: the evidence is the `accentTextFollowsTheAccent` test and the code, not an observed screen. The three shipped accents resolve to white text on `#3482FF`, dark text on `#6BA4FF`, and white text on `#0A84FF`.
 
 Earlier evidence: **this tree compiles.** GitHub Actions run `41316459367` (commit `71c8c97`) built the pinned Core, ran the four repository checks, generated the project, compiled the app with `xcodebuild` on macOS, and produced an unsigned IPA (18.9 MB). The worry that the commits after `b9fdf3c` had never seen a compiler is now settled.
 
-Compiling is not behaving. The iPhone interface cases and `swift test` still do not run on CI, and a real device and real servers are still missing.
+Compiling is not behaving. CI runs `swift test`, but only compiles the iPhone interface cases; the Mac Orca Worker executes them on a simulator. Real devices, accounts and servers remain separate gaps below.
 
 ## What the build proved
 
@@ -70,4 +70,4 @@ sh scripts/fetch-core.sh
 NK_UI_TESTS=1 NK_UI_SEED=/tmp/seed.json NK_UI_SEED_REPLACE=1 sh scripts/verify-ios.sh
 ```
 
-CI currently builds without running tests: the `xcodebuild` action is `build`. To bring the unit tests in, the workflow needs a `test` step with a simulator destination — that is the next thing to add. The expected `swift test` count grows with the commits: the last confirmed number was 249 / 48 (before `b9fdf3c`). Count the tests added since rather than checking a remembered number against it.
+CI now runs `swift test --no-parallel --verbose`; `xcodebuild build-for-testing` still only compiles interface cases. Execute UI cases with `test-without-building` on the Mac, reporting the commit, total, failures and skips while keeping full logs. New cases require rebuilding the test target; old products cannot validate new source.

@@ -52,11 +52,13 @@
 
 ## Mac 上已经跑过的检查
 
+**当前单项回归(2026-11-02,Orca Worker / Mac 模拟器)**:批量更新 `testUpdateAllReportsCurrentRatherThanFailing` 在 `fd1cef0` 上 PASS;发现页 `testArrangingTheBoardShowsItsControls` 在 `c259f3f` 上 PASS(24.6 秒,无失败/跳过),测试目标构建通过。修复包括将卡片标识符从祖先容器移至标题,以及把大小选项查询限定在对话框内。`c259f3f` 的全套 UI 仍待终态回执。新增长按进入编排、改尺寸后重启读回的用例尚未在 Mac 执行;静态解析通过不算 UI 通过。
+
 **`v0.2.5` 的发布构建(2026-11-02,提交 `7a00580`,run 83)**:GitHub Actions 的 macOS runner 上 **12 个步骤全绿**——构建固定 pin 的 Core、树检查、kit 单测、生成工程、未签名真机构建、编译界面测试、打包 IPA、发布 Release 资产。产物 `Nekularity.ipa` **29,359,908 字节**,`curl -L` 拉取 **HTTP 200**,字节数与 Release 资产一致;AltStore 源的 `apps.json` 已更新到 **`0.2.5`(build 7)**,订阅入口 `releases/download/latest/apps.json` 也回 **HTTP 200** 且版本一致。
 
 这一轮只证明「能编译、能打包、能下载、源指对了版本」:**界面用例在这条流水线里只被编译,没有被执行**(`xcodebuild build-for-testing`),所以批量更新、发现页编排、Liquid Glass、灵动岛这几项仍然只有旧的或没有的设备证据。不要把它读成「测试全过」。
 
-**最新一轮(2026-11-01,树 `67c501a`,Core pin `d81445f`)**:`scripts/verify-ios.sh` **EXIT=0**,**13 个 UI 用例全部 PASS(0 FAIL / 0 SKIP)**;`swift test` **229 tests / 43 suites passed**,`check-seed.sh` 确认种子与仓库夹具一致,未签名 App 构建、build-for-testing、安装均通过。这一轮新增**分类页**:同时断言可选项、结果,以及切换取值后**选中态**真的改变;书架用例也改成先断言 `书架` 导航栏存在——两者都是为了让断言不会因为「元素在上一个界面也存在」而误通过。
+**历史一轮(2026-11-01,树 `67c501a`,Core pin `d81445f`)**:`scripts/verify-ios.sh` **EXIT=0**,**13 个 UI 用例全部 PASS(0 FAIL / 0 SKIP)**;`swift test` **229 tests / 43 suites passed**,`check-seed.sh` 确认种子与仓库夹具一致,未签名 App 构建、build-for-testing、安装均通过。这一轮新增**分类页**:同时断言可选项、结果,以及切换取值后**选中态**真的改变;书架用例也改成先断言 `书架` 导航栏存在——两者都是为了让断言不会因为「元素在上一个界面也存在」而误通过。
 
 **无障碍树揪出两个真实缺陷(2026-11-01,树 `9e8f84c`)**:连续几轮 UI 用例失败,最后靠测试在 SKIP/FAIL 时导出的整棵无障碍树定位到客户端问题,而不是测试写法。
 - **「搜索」页在 iOS 27 上没有输入框**。树里导航栏只有「范围」「漫画源」两个 picker 与标题,内容区只有「最近搜索」,没有任何可输入的元素——`.searchable` 在这个布局下没有画出输入框,用户无从输入关键词。现在改成页面自带的 `TextField`(`search.field`),提交走 `onSubmit`。

@@ -992,9 +992,8 @@ final class NekularityUITests: XCTestCase {
     /// Arranging the board: the controls that appear, the sizes on offer, and that
     /// 完成 puts them away.
     ///
-    /// 编辑 is the entry this case uses. A long press is wired too, but `.draggable`
-    /// claims that gesture to start a drag, so a press alone is not something a test
-    /// can depend on — a hand has to try that one.
+    /// 编辑 is the entry this case uses. The long-press entry and persistence across
+    /// a fresh process are exercised separately below.
     func testArrangingTheBoardShowsItsControls() throws {
         let app = launch()
         tab(app, "发现")
@@ -1031,6 +1030,58 @@ final class NekularityUITests: XCTestCase {
         let done = app.buttons["完成"].firstMatch
         if done.waitForExistence(timeout: 5) { done.tap() }
         XCTAssertFalse(size.exists, "the size control stayed after arranging ended")
+    }
+
+    /// Uses the gesture entry, changes a size, and checks that the saved choice
+    /// survives a new process. A label changing before termination alone would
+    /// only prove that in-memory state changed, not that the choice was saved.
+    func testBoardLongPressAndSizeSurviveRelaunch() throws {
+        let app = launch()
+        tab(app, "发现")
+        defer {
+            let tree = XCTAttachment(string: app.debugDescription)
+            tree.name = "board-long-press-and-persistence"
+            tree.lifetime = .keepAlways
+            add(tree)
+        }
+
+        let card = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == 'home.card.template:history'")).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 20), "the history card is missing")
+        let sizeID = "home.size.template:history"
+        let size = app.buttons.matching(NSPredicate(format: "identifier == %@", sizeID)).firstMatch
+        XCTAssertFalse(size.exists, "arranging was already active before the long press")
+        card.press(forDuration: 1.0)
+        XCTAssertTrue(size.waitForExistence(timeout: 10), "a long press did not enter arranging")
+        let edit = app.buttons.matching(NSPredicate(format: "identifier == 'discover.edit'")).firstMatch
+        XCTAssertEqual(edit.label, "完成", "the long press did not change the edit action")
+
+        let original = size.label
+        XCTAssertTrue(original == "小" || original == "中", "unexpected size label: \(original)")
+        let chosen = original == "中" ? "小" : "中"
+        size.tap()
+        let option = dialogButton(app, chosen)
+        XCTAssertTrue(option.waitForExistence(timeout: 5), "the size choice is missing")
+        option.tap()
+        let changed = app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", sizeID, chosen)).firstMatch
+        XCTAssertTrue(changed.waitForExistence(timeout: 5), "the chosen size did not reach the card")
+        edit.tap()
+
+        app.terminate()
+        app.launch()
+        tab(app, "发现")
+        XCTAssertFalse(size.exists, "arranging unexpectedly survived a relaunch")
+        XCTAssertTrue(edit.waitForExistence(timeout: 10), "the edit action is missing after relaunch")
+        edit.tap()
+        XCTAssertTrue(changed.waitForExistence(timeout: 10), "the size choice was not restored after relaunch")
+
+        // Restore the starting size so this case does not choose the next case's
+        // layout. It deliberately chooses the opposite of whatever was persisted.
+        changed.tap()
+        let restore = dialogButton(app, original)
+        XCTAssertTrue(restore.waitForExistence(timeout: 5), "the original size choice is missing")
+        restore.tap()
+        edit.tap()
     }
 
     /// A downloaded chapter has to survive the network going away.
