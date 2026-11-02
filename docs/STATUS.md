@@ -60,7 +60,7 @@
 
 **三列与主题 HTTPS 界面(2026-11-02,Orca Worker / Mac 模拟器,提交 `5d7022d`)**:iPhone 横屏实测滚动内容宽 **874 pt**,前三张卡临时调成“小”后,去重标题横坐标约 **101、347、590 pt**,落在三个不同列,`testLandscapeBoardHasThreeColumns` 明暗两次通过,结束时已恢复布局与竖屏。**这只证明 3 列确实发生**,截图以旋转方向保存且暗色顶部被导航区域裁切,文字可读性、标题截断与完整视觉仍需重拍。
 
-主题 HTTPS:合法夹具主题写入 `Themes/p1-https-proof.json`,重启后选中状态仍在;无效 JSON 显示“未能读取数据,因为它的格式不正确。”且原主题仍选中。**反例发现一个真实缺陷**:`http://` 主题被实际下载并安装——设置页只判断 `scheme?.hasPrefix("http")`,而 `ThemeStore.install(from:)` 只校验主题内容、不校验协议。已修(提交 `0e40eeb`):`ThemeSource.validate` 要求精确 `https` 且主机非空,校验放在共享安装路径、调用 fetch 之前;设置页只保留链接形状检查并显示具体拒绝文案。新增 kit 单测覆盖 http、大写 HTTP、file、hostless https 与无 scheme,并断言 fetch 从未发生。该修复的 Mac 复测已在派发中,未收到前不得记为已验证。
+主题 HTTPS:合法夹具主题写入 `Themes/p1-https-proof.json`,重启后选中状态仍在;无效 JSON 显示“未能读取数据,因为它的格式不正确。”且原主题仍选中。**反例发现一个真实缺陷**:`http://` 主题被实际下载并安装——设置页只判断 `scheme?.hasPrefix("http")`,而 `ThemeStore.install(from:)` 只校验主题内容、不校验协议。已修(提交 `0e40eeb`):`ThemeSource.validate` 要求精确 `https` 且主机非空,校验放在共享安装路径、调用 fetch 之前;设置页只保留链接形状检查并显示具体拒绝文案。新增 kit 单测覆盖 http、大写 HTTP、file、hostless https 与无 scheme,并断言 fetch 从未发生。Orca Worker 随后在 App `a526add` 上单独验证 HTTP 拒绝:弹窗为“主题链接必须是 https 地址”,主题未进入列表,HTTP 服务器收到 0 次请求,Themes 目录无新增文件;日志 `/tmp/nk-p2-http-test.log`。单测首次因捕获并改写 `fetched` 而编译失败,`9005dca` 修正后在 Mac 实跑 8/8 PASS,日志 `/tmp/nk-theme-filter.log`;`6bb7933` 加重定向/404/超限后实跑 12/12 PASS、0 FAIL、0 SKIP,日志 `/tmp/nk-theme-6bb7933.log`。该轮明文重定向用例耗时约 21 秒,`9f7840f` 已改为立即取消并断言小于 5 秒;该提交的 Theme 与完整 UI 回归仍待 Orca Worker 回执。这些单项结果不并入旧的完整 19/19。
 
 **八张真实模拟器截图(2026-11-02,App `0.2.6` / 提交 `7586982`,XCTest 在模拟器内直接捕获)**:iPhone 17 Pro(402 pt 宽)发现页 2 列、iPad Pro 13 英寸(1032 pt 宽)发现页 4 列,各含明/暗两套发现页与设置页。未看到横向溢出、标题截断或控件互相压盖,卡片文字在明暗两种外观下都可读。**3 列宽度(560–899 pt)本轮没有对应设备或分屏场景,未验证。**
 
