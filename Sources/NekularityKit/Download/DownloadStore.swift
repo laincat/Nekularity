@@ -198,6 +198,17 @@ public final class DownloadStore {
             remove(sourceKey: chapters[id]!.sourceKey, comicID: chapters[id]!.comicID,
                    chapterID: chapters[id]!.chapterID)
         }
+        // A chapter still downloading has no record to remove yet. Left alone it
+        // would finish after the user cleared storage and put itself back, and a
+        // queued one would start afterwards and do the same.
+        var pending = Set(queue.map { $0.request.id })
+        pending.formUnion(active.keys)
+        for id in pending {
+            generation[id, default: 0] += 1
+            progress[id] = nil
+            active[id] = nil
+        }
+        queue.removeAll()
     }
 
     private func pump() {

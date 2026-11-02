@@ -15,9 +15,9 @@ struct DownloadWritePathTests {
         return url
     }
 
-    private func request(_ pages: [String]) -> DownloadStore.Request {
+    private func request(_ pages: [String], chapterID: String = "ch1") -> DownloadStore.Request {
         .init(sourceKey: "probe", comicID: "comic", comicTitle: "Comic",
-              chapterID: "ch1", chapterTitle: "Chapter 1", pages: pages)
+              chapterID: chapterID, chapterTitle: "Chapter \(chapterID.dropFirst(2))", pages: pages)
     }
 
     /// The store completes writes in a Task, so tests wait for the record
@@ -135,5 +135,38 @@ struct DownloadWritePathTests {
                                    chapterID: "ch1", isThumbnail: false)
         #expect(store.bytes(for: page) == nil)
         #expect(DownloadStore(root: dir).chapters[id] == nil)
+    }
+
+    @Test func clearingStorageStopsPendingAndQueuedDownloads() async throws {
+        let dir = try root()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = DownloadStore(root: dir)
+        let pages = ["https://fixture.invalid/1.jpg"]
+
+        // Four chapters: two run in parallel and two wait in the queue.
+        var ids: [String] = []
+        var requests: [DownloadStore.Request] = []
+        for number in 1...4 {
+            let request = request(pages, chapterID: "ch\(number)")
+            ids.append("probe|comic|ch\(number)")
+            requests.append(request)
+            store.download(request) { key in
+                try await Task.sleep(nanoseconds: 150_000_000)
+                return Data(key.url.utf8)
+            }
+        }
+        #expect(await waitFor { store.active.count == 2 })
+
+        // Clearing storage must cover chapters that have no record yet, or the
+        // running pair writes itself back and the queued pair starts after.
+        store.removeAll()
+        #expect(store.active.isEmpty)
+
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        for id in ids {
+            #expect(store.chapters[id] == nil)
+            #expect(store.progress[id] == nil)
+        }
+        #expect(DownloadStore(root: dir).chapters.isEmpty)
     }
 }
