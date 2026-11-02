@@ -6,8 +6,8 @@
 
 ## 一、一次 iOS 真机验收怎么做
 
-1. 用 AltStore / SideStore 订阅 `https://raw.githubusercontent.com/laincat/AltStore/main/apps.json`,安装 **0.2.9(build 11)**;包未签名,签名由侧载工具在本机完成。
-2. 首次启动后确认「我的」页显示 0.2.9/11,并把设备型号、iOS 版本、安装方式记下来。iOS 26 以下的设备装不上(最低系统 26.0),这种失败要单独记,不算缺陷。
+1. 用 AltStore / SideStore 订阅 `https://raw.githubusercontent.com/laincat/AltStore/main/apps.json`,安装 **0.3.0(build 12)**;包未签名,签名由侧载工具在本机完成。
+2. 首次启动后确认「我的」页显示 0.3.0/12,并把设备型号、iOS 版本、安装方式记下来。iOS 26 以下的设备装不上(最低系统 26.0),这种失败要单独记,不算缺陷。
 3. 每一项都按「设备 + 版本 + 动作 + 期望 + 实际」四段记录,能截图就附截图。**不要**把模拟器结果当成这一节的证据。
 
 ## 二、移动端要记录的动作与判据
@@ -44,4 +44,4 @@
 
 ## 五、不需要外部条件、已经完成的部分
 
-0.2.9 的发布与 AltStore 订阅已核对;下载库的隔离、重试、删除/清空竞态、清单与实际文件一致都有单元回归;桌面 12 项窗口探针在最新提交全绿;macOS 阅读主线与 ad-hoc 打包已验证;NSIS 安装与卸载在 0.2.7 上验证过。细节与日志路径见 [STATUS](STATUS.md) 与 [UNVERIFIED](UNVERIFIED.md)。
+0.3.0 的发布与 AltStore 订阅已核对;下载库的隔离、重试、删除/清空竞态、清单与实际文件一致都有单元回归;桌面 12 项窗口探针在最新提交全绿;macOS 阅读主线与 ad-hoc 打包已验证;NSIS 安装与卸载在 0.2.7 上验证过。细节与日志路径见 [STATUS](STATUS.md) 与 [UNVERIFIED](UNVERIFIED.md)。
