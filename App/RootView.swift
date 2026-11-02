@@ -65,9 +65,9 @@ struct RootView: View {
         // The signature changes on every page written and when a chapter starts or
         // ends, which is exactly when the island has something to say.
         .onChange(of: downloads.activitySignature) { _, _ in
-            activityBridge.sync(downloads)
+            Task { await activityBridge.sync(downloads) }
         }
-        .onAppear { activityBridge.sync(downloads) }
+        .task { await activityBridge.sync(downloads) }
     }
 
     private var themeIsDark: Bool {
