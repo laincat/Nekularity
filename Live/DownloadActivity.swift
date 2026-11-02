@@ -1,5 +1,6 @@
 import ActivityKit
 import Foundation
+import NekularityKit
 
 /// A chapter being saved, as the Lock Screen and the Dynamic Island see it.
 ///

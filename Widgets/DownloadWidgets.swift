@@ -34,7 +34,7 @@ struct DownloadLiveActivity: Widget {
                 Spacer(minLength: 8)
                 Text(context.state.compact)
                     .font(.callout.monospacedDigit())
-                    .foregroundStyle(context.state.failure == nil ? .primary : .red)
+                    .foregroundStyle(context.state.failure == nil ? Color.primary : Color.red)
             }
             .padding(14)
             .activityBackgroundTint(.clear)
@@ -65,7 +65,7 @@ struct DownloadLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(spacing: 4) {
                         ProgressView(value: context.state.fraction)
-                            .tint(context.state.failure == nil ? .accentColor : .red)
+                            .tint(context.state.failure == nil ? Color.accentColor : Color.red)
                         Text(context.state.detail)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
@@ -87,7 +87,7 @@ struct DownloadLiveActivity: Widget {
                 ring(context.state)
                     .frame(width: 18, height: 18)
             }
-            .keylineTint(context.state.failure == nil ? .accentColor : .red)
+            .keylineTint(context.state.failure == nil ? Color.accentColor : Color.red)
         }
     }
 
