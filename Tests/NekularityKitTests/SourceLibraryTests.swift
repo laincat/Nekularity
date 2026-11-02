@@ -144,6 +144,19 @@ struct SourceLibraryUpdateAllTests {
         #expect(lib.sources.map(\.key) == ["mini"])
     }
 
+    /// The batch update refreshes first, so a list that was never read after an
+    /// install cannot make it answer "nothing to update".
+    @MainActor
+    @Test func theBatchUpdateStartsFromAFreshList() async throws {
+        let feeder = ScriptFeeder([.success(Data(script.utf8)), .success(newer("1.2.0"))])
+        let lib = try library(feeder)
+        _ = try await lib.install(from: URL(string: "https://index.test/mini.js")!)
+        // No refresh here on purpose: the update is what has to look.
+        let results = await lib.updateAll()
+        #expect(results.count == 1)
+        #expect(results.first?.to == "1.2.0")
+    }
+
     /// A source pasted as text has no address to update from. Reporting that as a
     /// failure would blame the source for how it was installed.
     @MainActor
