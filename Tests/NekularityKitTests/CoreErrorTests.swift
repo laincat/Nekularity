@@ -66,4 +66,13 @@ import Testing
         #expect(!CoreError("network is unreachable").isCancelled)
         #expect(CoreError.readable("network is unreachable") != "操作已取消")
     }
+
+    /// The prefix has to survive being applied twice: a failure is written down
+    /// with it, read back on the next launch and shown — and by then it has been
+    /// through this function once already.
+    @Test func theSourceErrorPrefixIsAppliedOnce() {
+        let once = CoreError.readable("TypeError: Cannot read properties of null")
+        #expect(once == "源返回错误:TypeError: Cannot read properties of null")
+        #expect(CoreError.readable(once) == once)
+    }
 }

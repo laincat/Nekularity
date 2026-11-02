@@ -69,7 +69,12 @@ public struct CoreError: Error, LocalizedError, Sendable {
         if message.isEmpty {
             return "操作失败,源没有给出原因"
         }
-        return "源返回错误:" + message
+        // Already through here once: an error that travelled from one screen to
+        // another, or a failure read back from disk, arrives with the prefix and
+        // wrapping it again reads like a rendering bug.
+        let prefix = "源返回错误:"
+        if message.hasPrefix(prefix) { return message }
+        return prefix + message
     }
 }
 
