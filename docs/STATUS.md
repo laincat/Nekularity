@@ -4,6 +4,12 @@
 
 更新:2026-11-02。
 
+## Core pin 提到 `4f213ff`(待 macOS 构建)
+
+两端原先都 pin 在 `8e14aad`,那时源作用域还没有 `URL`/`URLSearchParams`;官方 `manhuaren.js` 用 `new URL(imageUrl).host` 拼 Referer,在这个 pin 上会走进失败分支。Core 之后补了这两个类,并修了特殊 scheme 主机名未转小写的问题;本分支把 `scripts/core-version` 与 `CoreVersion.pinned` 一起提到 **`4f213ff`**,`scripts/check-core-pin.sh` 通过。
+
+这还只是源码改动:Windows 上不能构建 xcframework,也没有编译 Swift。`scripts/fetch-core.sh`、`swift build --build-tests`、单测与真实源 UI 用例需要 macOS 执行,完成前不把这条 pin 写进发布说明。
+
 ## 宿主接口形状已核对
 
 `CoreHost` 的 21 个方法逐个比过 Core 里 `apple/CoreSmoke` 的 Swift 宿主实现(那份在 CI 里真的编译并跑过):返回对象的方法由 Clang 导入成 `(参数…, error: NSErrorPointer) -> String`,返回 `void`/`Bool` 的方法导入成 `throws`。例如 `http(_:error:) -> String`、`saveData(_:dataKey:valueJSON:) throws`、`writeClipboard(_:) throws`、`readClipboard(_:) -> String`,Nekularity 的写法与之一致。这只是签名对得上,不等于编译通过——真正的类型检查仍要等 Mac 上那次 `swift build`。
