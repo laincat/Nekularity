@@ -143,9 +143,7 @@ struct CoreStreamHeadTests {
 
     private func verifyHead(status: Int) async throws {
         let (host, id, url, reply) = try open(status: status)
-        // Cleanup runs only after the observation. A defer here executes
-        // before the awaited read and cancels the stream under observation.
-        defer { reply.cancel(); HeadGateProtocol.remove(url) }
+        defer { host.streamClose(id); reply.cancel(); HeadGateProtocol.remove(url) }
         let head = try await next(host, id)
         try #require(!head.done)
         #expect(head.chunkBase64 == nil)
@@ -160,7 +158,6 @@ struct CoreStreamHeadTests {
             let chunk = try await next(host, id)
             if let encoded = chunk.chunkBase64 { body.append(try #require(Data(base64Encoded: encoded))) }
             if chunk.done {
-                host.streamClose(id)
                 #expect(chunk.status == status)
                 #expect(chunk.finalUrl == head.finalUrl)
                 #expect(chunk.headers == head.headers)
@@ -169,13 +166,12 @@ struct CoreStreamHeadTests {
                 return
             }
         }
-        host.streamClose(id)
         Issue.record("stream did not end after the held body was released")
     }
 
     @Test func cancellationAfterHeadStopsHeldBody() async throws {
         let (host, id, url, reply) = try open(status: 200)
-        defer { reply.cancel(); HeadGateProtocol.remove(url) }
+        defer { host.streamClose(id); reply.cancel(); HeadGateProtocol.remove(url) }
         let head = try await next(host, id)
         try #require(!head.done && head.status == 200)
         host.streamClose(id)
