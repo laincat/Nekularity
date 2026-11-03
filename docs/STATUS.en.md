@@ -2,6 +2,12 @@
 
 English | [简体中文](STATUS.md)
 
+## Offline downloaded-page assertion needs strengthening (2026-11-04)
+
+Review found that `testDownloadedChapterReadsWithNoServer` only waits for the Keep Page button after stopping the loopback server. ReaderView's toolbar exists before image decoding, and its enabled state only reflects the URL list. The earlier test pass therefore does not independently prove decoded downloaded images. Historical 27/0/0 counts remain unchanged; same-title download navigation is not promoted to image-rendering acceptance.
+
+Test branch e36b171 waits for the page image exposed by ReaderPage's successful CGImage branch and attaches its screenshot; it is not yet integrated into main. The existing Mac Worker still needs to exercise valid-image and corrupt-image cases on the dedicated simulator. Only Windows syntax parsing is available so far; no new UI pass is claimed. Server shutdown, reader navigation and image decoding need distinct evidence.
+
 ## Targeted thirty-second HLS resume accepted (2026-11-04)
 
 Orca Worker played thirty-second local media on the dedicated signed simulator and closed it by swipe and button. Positions before closure were 7.24/7.30 seconds; both persisted 7 seconds of 30, or 23%. On automatic reopening, without touching pause, play or subtitle controls, both started at 7.00; early App/engine/source clocks were 9.60/9.50 seconds. CoreMedia reported postSeekPosition 7.000000 in both cases; the approximately 2.5 seconds elapsed includes autoplay and UI sampling. After temporary read-only diagnostics were removed, the app was rebuilt and installed with VideoPlayerView SHA 0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37, matching the previously tested source. The Git master playlist uses LF/110 bytes; the Windows CRLF copy uses 114 bytes; remaining media digests matched. Logs: `/tmp/nk-hls30-resume-evidence/`; receipt: `E:/Temp/nk-ios-033-evidence/hls30-mac-receipt.json`. The original ten-second failure logs remain: later actions near the end may trigger normal replay, but its precise caller is not established. This acceptance covers simulator page dismissal and reopening, not cross-process, background or device behavior.
