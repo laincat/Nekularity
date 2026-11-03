@@ -8,7 +8,7 @@ Lead 已构建并实际安装 0.2.7/`bf9cbd9`(Core `4f213ff`)。ZIP 21,566,978 b
 
 回执、校验和截图见 `E:/Temp/nk-subtitle-package/accept-8acc7abc/receipt.json`、`verify.log`、`restored-english.png`、`off.png`、`reopened-off.png`。两轮应用均正常关闭,本任务夹具停止、临时安装卸载,实际资料文件哈希不变。此结果属于 bf9cbd9/Core 4f213ff 的 Windows 安装版,不代替 Core 3be57b5 候选安装包或 macOS 验收;夹具无音轨,不证明扬声器或真实账号自动登录。
 
-**Core 发布与消费端候选更新(2026-11-04)**:Core main 为 `3be57b5`,功能源码与 CI 41631619233 四作业通过的 `6129f59` 相同,保树收拢回执 `E:/Temp/core-stream-release/publish-receipt.json`。当前 iOS 组合候选为 `d3672a8`:已整合精确受测的 Swift SSE 首事件/提前响应头路径,CI 41661859155 的 Kit 执行、App/UITests 编译与 IPA 核对通过,回执 `E:/Temp/nk-ios-d367-ci/receipt.json`。Orca Worker 的 Mac 真实 URLSession→CoreMagpie→HTTP 1/1 通过,含首段早到、取消 peer_closed、SavedAuth 文件重建后刷新计数1;专用模拟器的1项UI则在无登录按钮处失败,服务端0请求,正定位真实错误,不计界面通过。旧零正文扣住时未提前交头的失败仍保留。标准 AI 页面仍整包。桌面修复候选 `ca8f370`/3be57b5 的 Windows 安装版已验英文活动字幕恢复、关闭及跨进程保持关闭、3.030709秒与画面恢复、鉴权和Range206,回执 `E:/Temp/nk-ca8-package/media-5a6e7b15/receipt.json`。其 Mac 源码增量包已从90e784f独立恢复并核对HEAD/树/pin,通过用户此前授权的临时secret gist交接通道上传且远端摘要一致,尚待Mac接收与验收;本地回执 `E:/Temp/nk-mac-transfer-current/transfer.json`,Mac校验后删除临时gist。两端 main pin 仍为4f213ff;新pin结果不借用旧版本。
+**Core 发布与消费端更新(2026-11-04)**:Core main为3be57b5。Nekophage main已整合为c545212并升级到3be57b5,包含WebKit字幕修复、关闭竞态修复、打包pin校验及关闭字幕跨进程探针;七项检查、实际WebView2新进程关闭恢复、ZIP/NSIS构建与版本核对通过,回执 `E:/Temp/nk-desktop-core-integration-evidence/receipt.json`。Windows安装版97e24b6的语言/关闭/跨进程续播证据与当前构建分开;Mac ca8f370/Core3be的阅读、视频和同一WebKit修复后字幕已验,正常包装窗口关闭仍被screen_locked拒绝,新-baseline-off尚未在Mac补验。临时源码gist在Mac核对接收后已删除。Nekularity main仍pin4f213ff;独立d3672a8组合CI/IPA已核对,随后9ae1118整合与Mac受测文件一致的登录后绑定Core修复,签名专用模拟器Magpie UI1/1完成登录/模型/首段/停止peer_closed/重启凭据恢复,新增回归源码及标准AI UI仍在收尾。旧零正文扣住时未提前交头的失败保留,标准AI页面仍整包,不把编译、Go宿主或旧版本证据当新UI通过。
 
 **桌面主线整合(2026-11-03)**:先前把 Nekophage 工作分支称作 main 的口径已更正;整合前真正 main 为 `28be4bd`/Core `214e778`,核对日志 `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`。现已将 `fix/subtitle-record-cap` 快进整合为真正 main 的 `67fc877`,pin 为 `4f213ff`,原分支保留;同时带回 WebView 探针隔离修复并移除误入版本控制的 Python 缓存。七项检查与 Windows 隔离阅读回归通过:两页解码、双页、55% 进度、重开恢复 1200,仅有本次章节存储键。回执 `E:/Temp/nk-desktop-integration/receipt.json`。`a079ce7`/Core `b55c1a4` 的 Windows 包仍属于独立候选,新 pin 的 macOS 消费端尚未验收;Nekularity main 仍 pin `4f213ff`。
 
@@ -19,10 +19,10 @@ Lead 已构建并实际安装 0.2.7/`bf9cbd9`(Core `4f213ff`)。ZIP 21,566,978 b
 | 项目 | 当前事实 | 主要缺口 |
 |---|---|---|
 | Nekularity | **0.3.2/build 14 已发布并核对**(tag `v0.3.2`、CI `41578147149`、IPA 29,418,522 字节、App/Widget 均 0.3.2/14、包内 pin `4f213ff`、AltStore `468761a`);合并树 `9498b4c` 已过 Mac 416 单测/76 suites 与完整 UI 27/0/0 | 真机、后台/锁屏、PiP、Live Activity、真实账号与服务继续单列交接;标准接口取消修复 `77b969f` 已整合 main,Mac Kit 421/77 与 App/UITests 编译通过,HTTP/界面闭环待验 |
-| Nekophage | MyGo 原生主窗口 + WebView 阅读/播放;main Core pin `4f213ff`;最新 Windows 主线包为 0.2.7/`bf9cbd9` | 主线安装版英文字幕恢复、关闭字幕及跨进程保持关闭已验,恢复视频区域与保存帧一致;新 pin 候选与 macOS 结果分开记录;macOS 新 pin 源码增量已上传临时交接入口,待接收验收,真实扬声器与签名/公证仍待外部条件;无 Git 远端 |
+| Nekophage | MyGo 原生主窗口 + WebView 阅读/播放;main c545212/Core 3be57b5;当前 Windows 构建为0.2.7/c545212 | 当前整合树七项检查和关闭恢复探针通过;安装版97e24b6的字幕/续播证据单列;Mac阅读/解码已验,正常关窗受screen_locked限制;真实扬声器和签名/公证待外部条件,无Git远端 |
 | VeneraCat Core | 共享漫画/视频/备份/AI 协议逻辑;网络与系统能力交给客户端 | JS 引擎的少量兼容限制、客户端边界契约仍需维护;Sender 没有生产调用方 |
 
-证据按提交和执行渠道分别记录,不声称重新跑过三个项目的全部测试。两个客户端当前源码 pin 均为 `4f213ffbd51cfa22ef032a4279a04efb71b36283`;iOS 受测分支 `98e2e76` 已由 Orca Worker 重建 xcframework、通过 415 单测与四例定向 UI 后整合。已发布 Nekularity 0.3.2 的包内 pin 核到 `4f213ff`(旧 `8e14aad` 已不在包内),Nekophage `90e784f` 的 macOS 本地夹具搜索、阅读、进度恢复与双页现已在 `4f213ff` 验证;`c387e3f` 打包 App 已实际开窗,正常关闭因 `screen_locked` 待验。Core 后续文档提交不自动改变客户端 pin。
+证据按提交和执行渠道分别记录,不声称重新跑过三个项目的全部测试。Nekophage main 当前 pin 为 `3be57b5ceb848bb9623c090abc463764add14de4`,Nekularity main 仍为 `4f213ffbd51cfa22ef032a4279a04efb71b36283`;iOS 受测分支 `98e2e76` 已由 Orca Worker 重建 xcframework、通过 415 单测与四例定向 UI 后整合。已发布 Nekularity 0.3.2 的包内 pin 核到 `4f213ff`(旧 `8e14aad` 已不在包内),Nekophage `90e784f` 的 macOS 本地夹具搜索、阅读、进度恢复与双页现已在 `4f213ff` 验证;`c387e3f` 打包 App 已实际开窗,正常关闭因 `screen_locked` 待验。Core 后续文档提交不自动改变客户端 pin。
 
 **此前 b55c1a4 候选记录**:Core 取消修复经 `696a504` 的四个 CI 作业与真实 loopback 验收后,按仓库约定保树收拢为主线 `b55c1a4`。iOS 候选 `b39e6b0` 的 CI `41612614917` 与 IPA 内容核验已通过,仅编译 UI 用例,未执行或发布;桌面 `a079ce7` 已过七项检查与 Windows 安装版 HLS/中英字幕/关闭字幕/跨进程续播/鉴权/Range/正常关闭卸载,详见两端 STATUS。macOS 新 pin 消费端仍待验收。两端 main 仍为 `4f213ff`。Magpie 插件文字尚不能在正文结束前交付,这一限制已单独复现,不与取消通过混算。
 
