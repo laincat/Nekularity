@@ -4,6 +4,12 @@
 
 更新:2026-11-03。
 
+## Core 2c9c83b 升级候选(2026-11-03)
+
+独立分支 `update/core-2c9c83b` 将两处构建 pin 指向 `2c9c83b409a7fa5933bf34b5773c31a67df944bd`,未改下面各历史验收的 Core 归属。CI `41590287663` 的三平台 Go job 与 Apple job 全部成功,包括 xcframework、macOS 和 iOS 模拟器 Swift smoke test。下载的 `apple-build.zip` 为 72,755,594 字节,SHA-256 `15e16329406cac3dafa2a912b411fb610e7d9d96740565763a6192c2252cda3a`,CRC 通过。设备 arm64、macOS arm64/x86_64、模拟器 arm64/x86_64 三类切片与新增 API 头文件已核对;详细摘要 `E:/Temp/core-2c9-apple/verified-sdk.json`。Vendor 已放入该隔离工作树。
+
+这是 Core SDK 的 CI 证据,尚未用此 SDK 编译 Nekularity Kit/App 或运行其界面,不把 CoreSmoke 当客户端验收。主线与已发布包仍使用已验的 `4f213ff`;候选需继续消费端验证后整合。
+
 ## Core pin 工具保留历史证据(2026-11-03)
 
 旧 `set-core-pin.sh` 会全局替换两份 STATUS 中的旧 Core 哈希,使已有测试记录看起来使用了新 Core。已用临时仓库复现两份文档均被错误改写,日志 `E:/Temp/nk-pin-evidence-before.log`。脚本现在只改 `scripts/core-version` 与 `CoreVersion.pinned`,复用 `check-core-pin.sh` 校验,不改历史文档;新候选和新验收应单独通过 `update-pair.py` 记录。修复后验证历史文档与 Swift 原行尾不变、重复设置幂等、`--check` 通过、非法参数不写文件,日志 `E:/Temp/nk-pin-evidence-after.log`。这次修复本身不升级客户端 pin。

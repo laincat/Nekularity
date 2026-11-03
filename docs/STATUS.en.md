@@ -4,6 +4,12 @@ English | [简体中文](STATUS.md)
 
 Updated 2026-11-03.
 
+## Candidate Core 2c9c83b upgrade (2026-11-03)
+
+Isolated branch `update/core-2c9c83b` points both build pins at `2c9c83b409a7fa5933bf34b5773c31a67df944bd`, leaving historical Core attribution below intact. CI `41590287663` passes its three Go platforms and Apple job, including xcframework generation plus macOS and iOS simulator Swift smoke tests. Downloaded `apple-build.zip` is 72,755,594 bytes with SHA-256 `15e16329406cac3dafa2a912b411fb610e7d9d96740565763a6192c2252cda3a` and valid CRC. Device arm64, macOS arm64/x86_64 and simulator arm64/x86_64 slices and new API headers were checked; detailed receipt `E:/Temp/core-2c9-apple/verified-sdk.json`. Vendor is installed in this isolated worktree.
+
+This is Core SDK CI evidence, without a Nekularity Kit/App build or UI run against this SDK. CoreSmoke is not client acceptance. Main and published packages still use accepted `4f213ff`; the candidate needs consumer validation before integration.
+
 ## Core pin tooling preserves historical evidence (2026-11-03)
 
 The old `set-core-pin.sh` globally replaced the old Core hash in both STATUS files, making prior test records appear to have used the new Core. A temporary repository reproduced both incorrect rewrites; log `E:/Temp/nk-pin-evidence-before.log`. The script now changes only `scripts/core-version` and `CoreVersion.pinned`, reuses `check-core-pin.sh`, and leaves historical documents intact. New candidates and acceptance records should be added explicitly through `update-pair.py`. Regression checks preserve document bytes and Swift line endings, prove repeated updates are idempotent, pass `--check` and reject invalid input without writes; log `E:/Temp/nk-pin-evidence-after.log`. This tooling fix does not upgrade the client pin itself.
