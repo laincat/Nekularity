@@ -2,6 +2,8 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
+**分支口径更正(2026-11-03)**:此前将 Nekophage 当前工作分支笼统写成 main 并不准确。实际 `E:/Code/Nekophage` 在 `fix/subtitle-record-cap`/`c7c0d90`,pin 为 `4f213ff`;真正 main 是 `28be4bd`,pin 为 `214e778`。最新 Windows 验收属于独立 `update/core-b55c1a4` 候选的功能源码 `a079ce7`/Core `b55c1a4`。Nekularity main 的 pin 则确为 `4f213ff`。因此“客户端 main pin 未升级”还包含桌面工作分支整合,不能把工作分支验收当成已经进入 main。核对日志 `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`。
+
 **标准接口 HTTP 错误修复已过 Mac Kit 回归,页面待验**:`bb77b5d` 已经 `9af6148` 整合 main,Orca Worker 的四条定向测试与全套 425/78 suites 通过,恢复旧实现的负向对照使两条错误用例失败。Windows loopback 夹具和 Mac URLProtocol 测试各有证据,不替代页面真实 HTTP/UI 结果。地址候选 `ad8e191` 已有 Mac 回执,模型目录仍失败,根因未证实。详见 STATUS。
 
 **标准接口输入与请求配置仍有分歧**:`ad8e191` 已经 Mac 编译,Orca Worker 报告五个显示/清空/重启读回用例通过,但模型目录仍报 `no host`、夹具 0 请求;后续回答/取消/错误态未验收。离线 plist 读值与应用读回不一致,根因待逐层字节对照,不能认定是滞后快照。Lead 的同 pin Go 边界复现区分了完整地址、单斜杠和 `/v1` 三种输入,见 STATUS。

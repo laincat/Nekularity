@@ -2,6 +2,8 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+**分支口径更正(2026-11-03)**:此前将 Nekophage 当前工作分支笼统写成 main 并不准确。实际 `E:/Code/Nekophage` 在 `fix/subtitle-record-cap`/`c7c0d90`,pin 为 `4f213ff`;真正 main 是 `28be4bd`,pin 为 `214e778`。最新 Windows 验收属于独立 `update/core-b55c1a4` 候选的功能源码 `a079ce7`/Core `b55c1a4`。Nekularity main 的 pin 则确为 `4f213ff`。因此“客户端 main pin 未升级”还包含桌面工作分支整合,不能把工作分支验收当成已经进入 main。核对日志 `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`。
+
 更新:2026-11-03。范围为 Nekularity、Nekophage、VeneraCat Core。按用户最新要求,当前优先 Core 脚本兼容、异步取消、分区隔离、存储/备份和客户端 API/媒体契约,再完成必要功能闭环;界面重排、视觉统一和截图矩阵后置。P0–P3 编号沿用原表便于追踪,当前执行次序以上述优先级为准。已运行的验证保留结果,不再追加纯界面任务;遇到需要真机、账号或服务器的事项,记录缺口并继续可独立完成的下一项。不能把一次发版当成整个路线图完成。
 
 ## 项目判断与基线

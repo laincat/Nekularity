@@ -2,6 +2,8 @@
 
 [简体中文](UNVERIFIED.md) | English
 
+**Branch terminology correction (2026-11-03)**: earlier references loosely calling the current Nekophage working branch main were inaccurate. `E:/Code/Nekophage` is on `fix/subtitle-record-cap`/`c7c0d90`, pinned to `4f213ff`; actual main is `28be4bd`, pinned to `214e778`. Latest Windows acceptance belongs to functional source `a079ce7`/Core `b55c1a4` on the separate `update/core-b55c1a4` candidate. Nekularity main is indeed pinned to `4f213ff`. Remaining client-main integration therefore includes the desktop working branch; its acceptance is not evidence of a main-branch update. Inspection log: `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`.
+
 **Standard-interface HTTP errors pass Mac Kit regression; the screen remains pending**: `bb77b5d` is integrated through `9af6148`. The Orca Worker passed four targeted cases and the full 425/78 suites, and restoring the old implementation failed two error cases. Windows loopback checks and Mac URLProtocol tests have separate evidence, neither replacing real HTTP/UI screen results. A Mac receipt is available for address candidate `ad8e191`; model listing still fails and the cause is unproven. See STATUS.
 
 **Standard-interface entry still disagrees with request configuration**: `ad8e191` compiles on Mac and the Orca Worker reports five display/clear/relaunch passes, but catalogs still fail with `no host` and zero fixture requests; replies/cancellation/error UI remain unaccepted. Offline plist reads disagree with app read-back. Layer-by-layer byte comparison is needed; a stale snapshot is not an established cause. The Lead's same-pin Go reproduction distinguishes complete, single-slash and `/v1` inputs; see STATUS.
