@@ -89,6 +89,11 @@ targets:
     platform: iOS
     sources:
       - path: UITests
+        # These servers run on the host. Copying both into the flat test
+        # bundle would give them the same serve.py output path.
+        excludes:
+          - Fixtures/theme/serve.py
+          - Fixtures/standard-ai/serve.py
     dependencies:
       - target: Nekularity
     settings:

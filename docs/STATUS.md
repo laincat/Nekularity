@@ -4,6 +4,16 @@
 
 更新:2026-11-03。
 
+## Core 主线 b55c1a4、编译修复整合与下一 pin(2026-11-03)
+
+Core 取消修复 `696a504` 的三个 Go 平台与 Apple job 全过(CI `41606605713`),产物日志确认 macOS/iOS 模拟器 CoreSmoke 各 8 例通过。下载 SDK 72,763,815 字节,SHA-256 `2253fcac9be9c68859a022abee489b6ddef304f7a26a760cef8252cfeb53f593`,CRC/三类切片/头文件核对通过(`E:/Temp/core-696-apple/receipt.json`)。SDK 不嵌 Git revision,归属由 CI/artifact HEAD 和摘要证明,不声称二进制含提交号。按 Core 仓库约定整合并收拢历史后,主线为 `b55c1a488746efc1454e4f4781e4e83dc577d187`;完整 tree 在收拢前后相同,与受测 `696a504` 的功能源码一致,仅证据文档不同。日志 `E:/Temp/nk-magpie-loopback/squash-publish.log`。
+
+真实 loopback 补验也通过:公开 mobile API 的响应头等待、分块等待和整包读取均在取消后被服务器观察到连接关闭,之后同一 runner 能完成新回答。旧 `2c9c83b` 对照不能在取消后关闭连接。日志 `E:/Temp/nk-magpie-loopback/cancel-fixed.log`、`cancel-old-negative.log`。这是 Go HTTP 客户端,不是 Swift URLSession 或 UI。另一个未通过项已明确复现:设置 `REQUIRE_PLUGIN_FIRST_CHUNK=1` 后,服务器已发送首段但扣住后续正文时,`ChatNext` 文本超时;同目录 `first-text-limitation-b55.log`。插件 fetch 等待 DoStream 完成才返回,所以不能把传输分块当成界面增量交付。
+
+旧 pin 客户端候选 `af48d65` 的 CI `41607054742` 已全部通过,包括 Kit、设备 App、UITests 编译和 IPA 打包。诊断 artifact 中生成的工程没有 `serve.py in Resources`,仍有 `clip.mp4 in Resources`。实际 IPA 29,436,243 字节,SHA-256 `1f4586d96bc9754f6161432df30d548e4e2ba161d5028ea0849b55941eb254c0`,CRC 通过;App/Widget 均为 0.3.2/14、最低 iOS 26.0,App 二进制含 Core `2c9c83b`。它只是分支验证包,未发布或更新 AltStore,也未运行 UI 套件。回执 `E:/Temp/nk-ios-core-2c9-ci/ipa-receipt.json`。资源排除与构建诊断配置已单独整合到 main,Git 暂存内容与受测 `af48d65` 两文件逐字相同(工作区行尾不同),不借此升级 main pin。
+
+两端新候选均为 `update/core-b55c1a4`:Nekularity `b39e6b0` 已过 Windows 解析/pin/调用契约检查并启动 CI `41612614917`,结果待验;Nekophage `e21b04c` 已过七项检查,实际构建二进制的 `-version` 报告该提交和 Core `b55c1a4`,新 pin 窗口/macOS 验收待补。回执 `E:/Temp/nk-b55-candidates/candidates.json`,检查与版本日志在同目录。两端 main pin 仍为 `4f213ff`,不把旧 pin 的窗口或 UI 结果复用到新候选。
+
 ## 新 Core pin 的客户端编译候选(2026-11-03)
 
 初始候选 `0ea786f` 尚未包含已验的 HTTP 错误修复;在隔离工作树 `E:/Temp/nk-ios-core-2c9` 整合 main `bf9d93d` 后得到 `5bc5b674d1477ac311a0470338e185e769fd1291`。与该 main 相比,功能源码只有 `scripts/core-version` 与 `CoreVersion.pinned` 两处 pin 差异,另有候选状态文档。Windows 文档检查、Swift 解析、pin 检查与 Kit→Core 调用契约检查通过;契约检查初次因隔离目录旁没有 Core 源码退出 3,指定 `NK_CORE_SRC` 到干净的 `2c9c83b` 工作树后通过,不属于 Mac 编译证据。
