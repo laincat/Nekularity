@@ -2,6 +2,12 @@
 
 English | [简体中文](STATUS.md)
 
+## Download image integrity issues under repair (2026-11-04)
+
+The 0.3.3 Orca Worker negative case actually showed that an HTTP 200 response with non-image bytes still creates a completed download entry, and the reader later reports a page-load failure. The current workaround is to delete that chapter from Downloads and download it again after the network/source is healthy; an entry alone does not prove decodability.
+
+Source review also shows that download `raw` saves bytes after the source's `onResponse`, while the offline reader may call `onResponse` again on those saved bytes. Lead reproduced the data flow using an actual Core JS callback and local HTTP: one byte inversion yields a valid PNG, while applying the callback again to the saved PNG after server shutdown makes it undecodable. Log: `E:/Temp/nk-offline-transform/repro.log`. This is actual Core callback/byte-flow evidence plus Swift source review, not execution of Swift ImageLoader itself. Targeted Mac reproduction and repair are next. Pixel-level `modifyImage` must still run after decoding and must not be skipped merely because bytes are offline.
+
 ## Packaged Mac window closure and Core main revalidation (2026-11-04)
 
 After the user confirmed Laincat-Mini was unlocked, Orca Worker accepted an isolated instance of the verified c545212/Core 3be 0.2.7 arm64 package: archive SHA bb39921a…, binary SHA d955c9ab… and strict ad-hoc signature passed. PID 78539/window 11481 used isolated `-data-dir /tmp/nk-c545-close-only/data`; one AX click on the native close button removed the window and the original process exited 0 without a termination signal. Its isolated data directory contained no files before or after. Remote logs: `/tmp/nk-c545-close-only/`; Lead receipt: `E:/Temp/nk-c545-mac-transfer/normal-close-accepted.json`. This does not establish Gatekeeper/notarization, other-machine behavior or the full packaged media suite.

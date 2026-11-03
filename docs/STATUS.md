@@ -2,6 +2,12 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## 下载图片完整性问题待修复(2026-11-04)
+
+`0.3.3` 的Orca Worker负向用例实际发现:服务返回HTTP200但正文不是图片时,下载条目仍形成,进入阅读页才显示加载失败。当前临时绕过方式是从下载页删除该章节,网络恢复后重新下载;不要把已形成条目当作解码成功。
+
+另由源码确认下载的 `raw` 路径保存了 `onResponse` 转换后的字节,而阅读的离线路径仍可能对这些字节调用一次 `onResponse`。Lead用真实Core JS回调及本地HTTP复现:一次字节反转得到有效PNG,停服后将保存的PNG再次传给回调则无法解码,日志 `E:/Temp/nk-offline-transform/repro.log`。这是Core回调与字节流实测及Swift源码审阅,尚未执行Swift ImageLoader本身;接下来进行Mac定向复现和修复。像素级 `modifyImage` 仍须在解码后执行,不能因离线而跳过。
+
 ## Mac包装窗口正常关闭与Core主线复验(2026-11-04)
 
 用户确认Laincat-Mini已解锁后,Orca Worker对已核验c545212/Core3be的0.2.7 arm64包做隔离验收:包SHA bb39921a…、二进制SHA d955c9ab…及ad-hoc严格签名复核通过,以独立 `-data-dir /tmp/nk-c545-close-only/data` 启动PID78539/窗口11481;原生关闭按钮一次AX点击后窗口消失、原进程退出码0,未发终止信号。独立资料目录前后无文件。原始日志 `/tmp/nk-c545-close-only/`,Lead回执 `E:/Temp/nk-c545-mac-transfer/normal-close-accepted.json`。这不代替Gatekeeper/公证、其他机器运行或完整包装媒体流程。

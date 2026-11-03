@@ -2,6 +2,12 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
+## 下载图片完整性问题待修复(2026-11-04)
+
+`0.3.3` 的Orca Worker负向用例实际发现:服务返回HTTP200但正文不是图片时,下载条目仍形成,进入阅读页才显示加载失败。当前临时绕过方式是从下载页删除该章节,网络恢复后重新下载;不要把已形成条目当作解码成功。
+
+另由源码确认下载的 `raw` 路径保存了 `onResponse` 转换后的字节,而阅读的离线路径仍可能对这些字节调用一次 `onResponse`。Lead用真实Core JS回调及本地HTTP复现:一次字节反转得到有效PNG,停服后将保存的PNG再次传给回调则无法解码,日志 `E:/Temp/nk-offline-transform/repro.log`。这是Core回调与字节流实测及Swift源码审阅,尚未执行Swift ImageLoader本身;接下来进行Mac定向复现和修复。像素级 `modifyImage` 仍须在解码后执行,不能因离线而跳过。
+
 ## Mac关窗与Core主线结果(2026-11-04)
 
 Orca Worker在用户解锁后,以隔离资料启动已核验c545212包,原生关闭按钮一次点击后窗口消失、原进程退出0,无信号终止。Core单提交main c0f0dfa在自身SHA完成三平台Go和Apple SDK/Swift四作业CI。详见[STATUS](STATUS.md);用户设备、账号与分发选择仍单列。
