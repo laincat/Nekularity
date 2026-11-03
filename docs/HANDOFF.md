@@ -9,7 +9,7 @@
 | 构建 | 状态与用途 |
 |---|---|
 | 已发布 `v0.3.2` / build14 / Core4f213ff | AltStore 的当前已核版本;不能用于证明后续 Core3be 或 Magpie 登录绑定修复 |
-| 候选3574346 / 0.3.2 build14 / Core3be57b5 | 未签名 IPA 已核验,产品/测试源码已整合 main6eab317;与公开0.3.2同版本号但不是同一包,尚不含后续下载/字号/手势修复 |
+| 候选3574346 / 0.3.2 build14 / 3be57b5 | 未签名 IPA 已核验,产品/测试源码已整合 main6eab317;与公开0.3.2同版本号但不是同一包,尚不含后续下载/字号/手势修复 |
 | 准备中的0.3.3 / build15 | 本地候选,尚未发布;待定向回执收齐并核对最终CI/IPA后,才用于验证本轮全部修复 |
 
 订阅入口为 `https://raw.githubusercontent.com/laincat/AltStore/main/apps.json`。安装前核对实际订阅版本,不要把准备中的版本当成已上线。当前候选 IPA 与 Windows 产物的本地清单位于 `E:/Code/deliveries/2026-11-04-core-3be57b5/README.md`。
