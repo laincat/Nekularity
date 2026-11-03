@@ -2,6 +2,14 @@
 
 English | [简体中文](STATUS.md)
 
+## Theme matrix follow-up: empty states reviewed, largest text layout needs repair (2026-11-04)
+
+Orca Worker completed three theme-link cases and individually read all eight discovery/settings images and AX trees across light/dark and portrait/landscape. Portrait app.frame is 402×874 pt with 1206×2622-pixel images; landscape is 874×402 pt with 2622×1206-pixel images. All four states have correct orientation and nonblank captures; initially cropped XCTest landscape captures were excluded. Landscape is a wider viewport on the same iPhone simulator, not iPad or foldable hardware. Evidence: `/tmp/nk-theme-matrix-evidence/visual-review.md`; Lead scope receipt: `E:/Temp/nk-theme-matrix-review/receipt.json`.
+
+Discovery coverage is limited to empty states: normal-size cards/two columns and light/dark appearance were correct. Lower content sits behind the native tab bar; this has not established that scrolling cannot reach the final content. Dark settings blue text appeared dim, without a quantitative contrast finding. At maximum accessibility text size, the Favorites card wraps one character per line and needs a minimal layout repair. The AI settings row initially sits behind the bar, but discover.search, discover.browse and settings.ai each actually opened when tapped; log: large-actions.log. This does not accept all content or largest-text layout.
+
+No product changes were made. System appearance and text size were restored; the ending theme follows system. Initial orientation is unknown; the run ended portrait and retained its fixture CA/theme. Remaining coverage includes the largest-text repair, populated cover lists and the scroll endpoint; the three passed link paths do not need a repeated full suite.
+
 ## Core 3be57b5 integrated into main; final CI/IPA accepted (2026-11-04)
 
 Current main pins `3be57b5ceb848bb9623c090abc463764add14de4`, including Swift streaming response-head/chunk forwarding, immediate Core binding after successful Magpie sign-in, and the byte-exact real-Core regressions. Product and test sources remain identical to tested combination `357434677c7fd389ccc512965027a5e456021658`; only integration documentation and removal of temporary candidate-branch CI triggering differ.
