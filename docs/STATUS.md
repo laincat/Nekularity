@@ -4,6 +4,10 @@
 
 更新:2026-11-03。
 
+## Core pin 工具保留历史证据(2026-11-03)
+
+旧 `set-core-pin.sh` 会全局替换两份 STATUS 中的旧 Core 哈希,使已有测试记录看起来使用了新 Core。已用临时仓库复现两份文档均被错误改写,日志 `E:/Temp/nk-pin-evidence-before.log`。脚本现在只改 `scripts/core-version` 与 `CoreVersion.pinned`,复用 `check-core-pin.sh` 校验,不改历史文档;新候选和新验收应单独通过 `update-pair.py` 记录。修复后验证历史文档与 Swift 原行尾不变、重复设置幂等、`--check` 通过、非法参数不写文件,日志 `E:/Temp/nk-pin-evidence-after.log`。这次修复本身不升级客户端 pin。
+
 ## 标准接口取消修复已整合(2026-11-03)
 
 main 已整合 `77b969f` 的三份 Swift 文件,与 Mac 受测版本逐字一致,其余整合差异仅文档。Orca Worker 在该提交上通过 `swift build --build-tests`(14.79 秒)、`swift test` **421 tests / 77 suites** 与五条定向回归;之后 App + UITests 的 `xcodebuild build-for-testing` 通过,日志明确编译了 `App/StandardAIView.swift` 与 `StandardAIRequest.swift`。工程复用已有生成项目,`project.yml` 与 `9498b4c` 一致,没有声称重跑 XcodeGen。

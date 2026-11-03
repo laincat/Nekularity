@@ -4,6 +4,10 @@ English | [简体中文](STATUS.md)
 
 Updated 2026-11-03.
 
+## Core pin tooling preserves historical evidence (2026-11-03)
+
+The old `set-core-pin.sh` globally replaced the old Core hash in both STATUS files, making prior test records appear to have used the new Core. A temporary repository reproduced both incorrect rewrites; log `E:/Temp/nk-pin-evidence-before.log`. The script now changes only `scripts/core-version` and `CoreVersion.pinned`, reuses `check-core-pin.sh`, and leaves historical documents intact. New candidates and acceptance records should be added explicitly through `update-pair.py`. Regression checks preserve document bytes and Swift line endings, prove repeated updates are idempotent, pass `--check` and reject invalid input without writes; log `E:/Temp/nk-pin-evidence-after.log`. This tooling fix does not upgrade the client pin itself.
+
 ## Standard-interface cancellation fix integrated (2026-11-03)
 
 Main incorporates the three Swift files from `77b969f`, byte-identical to the Mac-tested code; other integration differences are documentation only. The Orca Worker passed `swift build --build-tests` (14.79 seconds), **421 tests / 77 suites**, and five targeted regressions at that commit. App + UITests then passed `xcodebuild build-for-testing`, with explicit compile records for `App/StandardAIView.swift` and `StandardAIRequest.swift`. The existing generated project was reused; `project.yml` matches `9498b4c`, without claiming a fresh XcodeGen run.
