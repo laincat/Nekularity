@@ -4,6 +4,12 @@
 
 更新:2026-11-03。
 
+## 新 Core pin 的客户端编译候选(2026-11-03)
+
+初始候选 `0ea786f` 尚未包含已验的 HTTP 错误修复;在隔离工作树 `E:/Temp/nk-ios-core-2c9` 整合 main `bf9d93d` 后得到 `5bc5b674d1477ac311a0470338e185e769fd1291`。与该 main 相比,功能源码只有 `scripts/core-version` 与 `CoreVersion.pinned` 两处 pin 差异,另有候选状态文档。Windows 文档检查、Swift 解析、pin 检查与 Kit→Core 调用契约检查通过;契约检查初次因隔离目录旁没有 Core 源码退出 3,指定 `NK_CORE_SRC` 到干净的 `2c9c83b` 工作树后通过,不属于 Mac 编译证据。
+
+通过 GitHub 插件触发分支工作流 `41599831561`,回执确认 HEAD 为 `5bc5b67`、event 为 `workflow_dispatch`;将运行 Kit 单测、App 和 UITests 编译并生成未签名 IPA。该分支不满足发布步骤的 tag 条件,不会创建 release 或更新 AltStore。提交与本地检查日志在 `E:/Temp/nk-ios-core-2c9-ci/`,CI 回执 `build/receipts/core-2c9-consumer-runs.json`。本条仍是待验候选,不声称 CI 完成或 UI 通过;地址实验 `ad8e191` 保留给现有 Orca Worker 独立复测,未合入此候选。
+
 ## Core pin 工具保留历史证据(2026-11-03)
 
 旧 `set-core-pin.sh` 会全局替换两份 STATUS 中的旧 Core 哈希,使已有测试记录看起来使用了新 Core。已用临时仓库复现两份文档均被错误改写,日志 `E:/Temp/nk-pin-evidence-before.log`。脚本现在只改 `scripts/core-version` 与 `CoreVersion.pinned`,复用 `check-core-pin.sh` 校验,不改历史文档;新候选和新验收应单独通过 `update-pair.py` 记录。修复后验证历史文档与 Swift 原行尾不变、重复设置幂等、`--check` 通过、非法参数不写文件,日志 `E:/Temp/nk-pin-evidence-after.log`。这次修复本身不升级客户端 pin。

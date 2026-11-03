@@ -4,6 +4,12 @@ English | [简体中文](STATUS.md)
 
 Updated 2026-11-03.
 
+## Consumer compilation candidate for the new Core pin (2026-11-03)
+
+Initial candidate `0ea786f` omitted the accepted HTTP-error fix. Integrating main `bf9d93d` in isolated worktree `E:/Temp/nk-ios-core-2c9` produced `5bc5b674d1477ac311a0470338e185e769fd1291`. Functional source differs from that main only at the two pin locations, `scripts/core-version` and `CoreVersion.pinned`, plus candidate status documentation. Windows documentation, Swift parsing, pin and Kit→Core call-contract checks pass. The contract check initially exited 3 because the isolated directory had no adjacent Core source; pointing `NK_CORE_SRC` at the clean `2c9c83b` worktree passed. This is not Mac compilation evidence.
+
+The GitHub plugin dispatched branch workflow `41599831561`; its receipt verifies HEAD `5bc5b67` and event `workflow_dispatch`. It will run Kit tests, compile App and UITests, and produce an unsigned IPA. The branch does not satisfy the publication step's tag condition and will not create a release or update AltStore. Commit/local-check logs are under `E:/Temp/nk-ios-core-2c9-ci/`, and the CI receipt is `build/receipts/core-2c9-consumer-runs.json`. This remains a pending candidate, without claiming CI completion or UI acceptance. Address experiment `ad8e191` remains with the existing Orca Worker for independent retesting and is not integrated here.
+
 ## Core pin tooling preserves historical evidence (2026-11-03)
 
 The old `set-core-pin.sh` globally replaced the old Core hash in both STATUS files, making prior test records appear to have used the new Core. A temporary repository reproduced both incorrect rewrites; log `E:/Temp/nk-pin-evidence-before.log`. The script now changes only `scripts/core-version` and `CoreVersion.pinned`, reuses `check-core-pin.sh`, and leaves historical documents intact. New candidates and acceptance records should be added explicitly through `update-pair.py`. Regression checks preserve document bytes and Swift line endings, prove repeated updates are idempotent, pass `--check` and reject invalid input without writes; log `E:/Temp/nk-pin-evidence-after.log`. This tooling fix does not upgrade the client pin itself.
