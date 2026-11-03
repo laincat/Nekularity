@@ -32,14 +32,14 @@ private final class HeldBody: @unchecked Sendable {
         return released
     }
 
-    var summary: String {
-        condition.lock(); defer { condition.unlock() }
-        return "released=\(released), peerClosed=\(peerClosed), error=\(problem ?? "none")"
-    }
-
     var wasPeerClosed: Bool {
         condition.lock(); defer { condition.unlock() }
         return peerClosed
+    }
+
+    var summary: String {
+        condition.lock(); defer { condition.unlock() }
+        return "released=\(released), peerClosed=\(peerClosed), error=\(problem ?? "none")"
     }
 
     private func fail(_ message: String) {
@@ -92,8 +92,10 @@ private final class HeldBody: @unchecked Sendable {
             guard buffer.count <= 32_768 else { fail("request head too large"); return }
             if buffer.range(of: Data("\r\n\r\n".utf8)) != nil {
                 let reason = status == 503 ? "Service Unavailable" : (status == 201 ? "Created" : "OK")
-                let head = "HTTP/1.1 \(status) \(reason)\r\nX-Fixture: ready\r\nContent-Type: application/octet-stream\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n"
-                connection.send(content: Data(head.utf8), completion: .contentProcessed { [weak self] error in
+                let head = "HTTP/1.1 \(status) \(reason)\r\nX-Fixture: ready\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n"
+                var initial = Data(head.utf8)
+                initial.append(firstEvent)
+                connection.send(content: initial, completion: .contentProcessed { [weak self] error in
                     if let error { self?.fail("send head: \(error)") }
                 })
                 receiveClose(connection)
@@ -227,7 +229,6 @@ struct CoreStreamHeadTests {
         let first = try await readFirstEvent(host, id, reply)
         #expect(first == reply.firstEvent)
         #expect(!reply.wasReleased)
-
         reply.release()
         var body = first
         for _ in 0..<8 {
@@ -260,6 +261,8 @@ struct CoreStreamHeadTests {
     @Test func cancellationAfterFirstEventStopsHeldTail() async throws {
         let (host, id, _, reply) = try open(status: 200)
         defer { host.streamClose(id); reply.stop() }
+        let head = try await next(host, id)
+        try #require(!head.done && head.status == 200, "first chunk: \(head); \(reply.summary)")
         let first = try await readFirstEvent(host, id, reply)
         #expect(first == reply.firstEvent)
         #expect(!reply.wasReleased)
