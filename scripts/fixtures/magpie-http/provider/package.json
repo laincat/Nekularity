@@ -1,0 +1,8 @@
+{
+  "name": "@nekularity/local-http-fixture",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.mjs",
+  "description": "Loopback-only Magpie acceptance fixture with fake credentials."
+}
