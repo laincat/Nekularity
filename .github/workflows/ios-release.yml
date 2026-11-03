@@ -3,6 +3,7 @@ name: Build iOS IPA
 on:
   workflow_dispatch:
   push:
+    branches: ['fix/magpie-early-headers']
     tags:
       - 'v*'
 

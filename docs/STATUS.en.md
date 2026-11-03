@@ -6,6 +6,12 @@ English | [简体中文](STATUS.md)
 
 Updated 2026-11-03.
 
+## Swift streaming response-head candidate (2026-11-03)
+
+Branch `fix/magpie-early-headers` adds an optional onResponse callback to URLSessionTransport streaming, delivering status/headers/final URL after accepting the response head and before body chunks. CoreStreamHost emits a separate head-only chunk and repeats metadata on the final chunk for older Core versions. Buffer, head and terminal error share one condition lock; closing drops queued content and wakes waiters. Controlled URLProtocol tests hold the body to check early 201/503 metadata, retained final metadata and cancellation after the head stopping the transfer.
+
+The candidate keeps Core pin `4f213ff` and uses validation-branch pushes to trigger the existing macOS build/test workflow. Windows only checks Swift syntax; Mac compilation/tests require separate results and are not accepted yet. The old pin cannot resolve plugin fetch early. End-to-end incremental text requires both the later Core first-chunk fix and this client candidate. No iOS UI, physical-device or real-provider requests ran in this step.
+
 ## Core main b55c1a4, integrated build fix and next consumer pins (2026-11-03)
 
 Cancellation fix `696a504` passed all three Go platforms and the Apple job in CI `41606605713`; artifact logs confirm eight CoreSmoke tests each on macOS/iOS Simulator. The downloaded SDK is 72,763,815 bytes, SHA-256 `2253fcac9be9c68859a022abee489b6ddef304f7a26a760cef8252cfeb53f593`, with verified CRC, three slice kinds and headers (`E:/Temp/core-696-apple/receipt.json`). The SDK embeds no Git revision; CI/artifact HEAD and digest establish attribution. Following Core's history-folding convention, main is now `b55c1a488746efc1454e4f4781e4e83dc577d187`. The full tree is unchanged by folding, and functional source matches tested `696a504`, differing only in evidence documentation. Log `E:/Temp/nk-magpie-loopback/squash-publish.log`.

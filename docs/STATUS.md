@@ -6,6 +6,12 @@
 
 更新:2026-11-03。
 
+## Swift 流式响应头候选(2026-11-03)
+
+分支 `fix/magpie-early-headers` 给 URLSessionTransport 的流式路径增加可选 onResponse 回调,在接受响应头后、正文分块前交付状态/头/最终地址。CoreStreamHost 把该事件作为独立的头部块输出,并在最终块重复元数据以兼容旧 Core;缓冲区、头部和结束错误共用条件锁,关闭时丢弃排队内容并唤醒等待者。新增受控 URLProtocol 测试,扣住正文后检查 201/503 响应头提前到达、结束元数据保留,以及收到头部后取消能停止传输。
+
+该候选保持 Core pin `4f213ff`,通过验证分支 push 触发既有 macOS 构建与测试流水线。Windows 只能检查 Swift 语法;Mac 编译和测试结果需单独接收,不得视为已通过。旧 pin 不会提前兑现插件 fetch;只有后续 Core 首块修复与本候选同时接入后,才能继续验证端到端增量文字。本轮没有执行 iOS UI、真机或真实供应商请求。
+
 ## Core 主线 b55c1a4、编译修复整合与下一 pin(2026-11-03)
 
 Core 取消修复 `696a504` 的三个 Go 平台与 Apple job 全过(CI `41606605713`),产物日志确认 macOS/iOS 模拟器 CoreSmoke 各 8 例通过。下载 SDK 72,763,815 字节,SHA-256 `2253fcac9be9c68859a022abee489b6ddef304f7a26a760cef8252cfeb53f593`,CRC/三类切片/头文件核对通过(`E:/Temp/core-696-apple/receipt.json`)。SDK 不嵌 Git revision,归属由 CI/artifact HEAD 和摘要证明,不声称二进制含提交号。按 Core 仓库约定整合并收拢历史后,主线为 `b55c1a488746efc1454e4f4781e4e83dc577d187`;完整 tree 在收拢前后相同,与受测 `696a504` 的功能源码一致,仅证据文档不同。日志 `E:/Temp/nk-magpie-loopback/squash-publish.log`。

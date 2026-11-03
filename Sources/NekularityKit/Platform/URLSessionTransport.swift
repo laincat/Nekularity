@@ -86,11 +86,16 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable {
     /// limit as `send`; the difference is that `onChunk` is called on the
     /// delegate queue for every piece, before the reply is done. The returned
     /// `Response` still carries the whole body, because a caller may want both.
-    public func sendStreaming(_ r: Request, onChunk: @escaping @Sendable (Data) -> Void) async throws -> Response {
-        try await perform(r, onChunk: onChunk)
+    /// `onResponse` receives accepted final headers with an empty body before
+    /// any body callback, including HTTP error statuses.
+    public func sendStreaming(_ r: Request,
+                              onResponse: (@Sendable (Response) -> Void)? = nil,
+                              onChunk: @escaping @Sendable (Data) -> Void) async throws -> Response {
+        try await perform(r, onResponse: onResponse, onChunk: onChunk)
     }
 
-    private func perform(_ r: Request, onChunk: (@Sendable (Data) -> Void)?) async throws -> Response {
+    private func perform(_ r: Request, onResponse: (@Sendable (Response) -> Void)? = nil,
+                         onChunk: (@Sendable (Data) -> Void)?) async throws -> Response {
         if takeEarlyCancellation(r.id) {
             throw CoreError("request cancelled before it started")
         }
@@ -115,7 +120,7 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable {
 
         let state = TaskState(limit: maxBodyBytes, partition: r.partition, useCookies: r.useCookies,
                               manualHeaders: manual, manualCookie: manualCookie,
-                              cookies: cookies, origin: r.url, onChunk: onChunk)
+                              cookies: cookies, origin: r.url, onResponse: onResponse, onChunk: onChunk)
         let (data, http): (Data, HTTPURLResponse) = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { k in
                 state.attach(k)
@@ -367,6 +372,8 @@ final class TaskState: @unchecked Sendable {
     let manualCookie: String?
     let cookies: CookieJars
     let origin: URL
+    /// Called when the final response head is accepted, before body pieces.
+    private let onResponse: (@Sendable (URLSessionTransport.Response) -> Void)?
     /// Called with every accepted piece, for the streaming path.
     private let onChunk: (@Sendable (Data) -> Void)?
 
@@ -379,6 +386,7 @@ final class TaskState: @unchecked Sendable {
 
     init(limit: Int, partition: String, useCookies: Bool, manualHeaders: [String: [String]],
          manualCookie: String?, cookies: CookieJars, origin: URL,
+         onResponse: (@Sendable (URLSessionTransport.Response) -> Void)? = nil,
          onChunk: (@Sendable (Data) -> Void)? = nil) {
         self.limit = limit
         self.partition = partition
@@ -387,6 +395,7 @@ final class TaskState: @unchecked Sendable {
         self.manualCookie = manualCookie
         self.cookies = cookies
         self.origin = origin
+        self.onResponse = onResponse
         self.onChunk = onChunk
     }
 
@@ -404,7 +413,22 @@ final class TaskState: @unchecked Sendable {
         if let finishNow { finish(.failure(finishNow)) }
     }
 
-    func received(_ response: HTTPURLResponse) { lock.withLock { http = response } }
+    func received(_ response: HTTPURLResponse) {
+        let notify = lock.withLock {
+            guard !done, http == nil else { return false }
+            http = response
+            return true
+        }
+        guard notify, let onResponse else { return }
+        var headers: [String: [String]] = [:]
+        for (key, value) in response.allHeaderFields {
+            guard let key = key as? String, let value = value as? String else { continue }
+            headers[key, default: []].append(value)
+        }
+        // Notify outside the state lock: a consumer may cancel from this call.
+        onResponse(URLSessionTransport.Response(status: response.statusCode, headers: headers,
+                                                 body: Data(), finalURL: response.url ?? origin))
+    }
 
     /// Appends one piece, refusing the piece that would cross the limit.
     ///
