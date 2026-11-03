@@ -2,6 +2,12 @@
 
 English | [简体中文](STATUS.md)
 
+## Real-HTTP early-head failure reproduction (2026-11-03)
+
+Orca Worker mac-validate-2 replaced CoreStreamHeadTests with a loopback-only NWListener fixture at 77c2c6/Core 4f213ff. The Lead verified the 10,014-byte test file, SHA-256 78caae9b76d76ee871268663ac9d389a79ec3a3ba558b9904e7b0c7bba5dd02c. It compiled on Mac, but all three tests failed: response-header sends completed in about 3–11 ms with the body unreleased; the watchdog cancelled about two seconds later, yielding done=true/status=0/CancellationError. Log: `/tmp/nk-early-head-diagnostic/77c2c6/loopback/head-server-trace2.log`. Product Sources/ is identical to 77c2c6. Related tests, the full Kit suite and the negative control were not run and cannot be counted as passes.
+
+The reproduction does not yet identify Foundation buffering, fixture response type or host polling as the responsible layer. StreamingTransportTests uses 1 KiB pieces for its early-arrival case and already documents Foundation coalescing small pieces; it does not prove response-head delivery before any body bytes. The same Orca Worker is comparing direct transport with host polling. This commit preserves a failing reproduction, not a product fix or iOS UI acceptance.
+
 **Desktop main integration (2026-11-03)**: the earlier confusion between Nekophage's working branch and main has been corrected. Before integration, actual main was `28be4bd`/Core `214e778`; inspection log `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`. The `fix/subtitle-record-cap` branch has now fast-forwarded actual main to `67fc877`, pinned to `4f213ff`, with the source branch retained. WebView probe isolation was ported and accidentally tracked Python bytecode removed. Seven checks and isolated Windows reading pass: two decoded pages, double-page layout, 55% progress and reopening at 1200, with only the current chapter's storage key. Receipt `E:/Temp/nk-desktop-integration/receipt.json`. The `a079ce7`/Core `b55c1a4` Windows package remains a separate candidate, pending new-pin macOS consumer acceptance. Nekularity main remains pinned to `4f213ff`.
 
 Updated 2026-11-03.

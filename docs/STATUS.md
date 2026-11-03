@@ -2,6 +2,12 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## 提前响应头的真实 HTTP 失败复现(2026-11-03)
+
+Orca Worker mac-validate-2 在 77c2c6/Core 4f213ff 上将 CoreStreamHeadTests 改为只监听 loopback 的 NWListener。测试文件 10,014 字节、SHA-256 78caae9b76d76ee871268663ac9d389a79ec3a3ba558b9904e7b0c7bba5dd02c 已在 Lead 侧核对。Mac 编译成功但三项均失败:服务端约 3–11 ms 完成响应头发送,正文未释放;约 2 秒后 watchdog 取消,首块为 done=true/status=0/CancellationError。日志 `/tmp/nk-early-head-diagnostic/77c2c6/loopback/head-server-trace2.log`;产品 Sources/ 与 77c2c6 无差异。关联测试、完整 Kit、负向对照均未执行,不能记通过。
+
+该复现尚未确定 Foundation 缓冲、夹具响应类型或宿主轮询中哪一层负责。StreamingTransportTests 的提前到达用例使用 1 KiB 数据块,并已记录小块会被 Foundation 合并;它不证明零正文时响应头必定提前交付。直接传输层与宿主轮询的对照正在由同一 Orca Worker 处理。本提交只保存失败复现,不表示产品修复或 iOS UI 验收。
+
 **桌面主线整合(2026-11-03)**:先前把 Nekophage 工作分支称作 main 的口径已更正;整合前真正 main 为 `28be4bd`/Core `214e778`,核对日志 `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`。现已将 `fix/subtitle-record-cap` 快进整合为真正 main 的 `67fc877`,pin 为 `4f213ff`,原分支保留;同时带回 WebView 探针隔离修复并移除误入版本控制的 Python 缓存。七项检查与 Windows 隔离阅读回归通过:两页解码、双页、55% 进度、重开恢复 1200,仅有本次章节存储键。回执 `E:/Temp/nk-desktop-integration/receipt.json`。`a079ce7`/Core `b55c1a4` 的 Windows 包仍属于独立候选,新 pin 的 macOS 消费端尚未验收;Nekularity main 仍 pin `4f213ff`。
 
 更新:2026-11-03。

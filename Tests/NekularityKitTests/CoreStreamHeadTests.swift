@@ -1,90 +1,153 @@
 import Foundation
+import Network
 import Testing
 @testable import NekularityKit
 
-/// Holds the body until the test has observed the response head. Cancellation
-/// wakes the producer as well, so a failing timing assertion cannot leak it.
+/// Real HTTP headers with a body held until the test releases it. Network state
+/// belongs to `queue`; cross-thread observations are protected by `condition`.
 private final class HeldBody: @unchecked Sendable {
+    private let listener: NWListener
+    private let queue = DispatchQueue(label: "held-http-body")
+    private var connection: NWConnection?
+    private var stopped = false
     private let condition = NSCondition()
+    private var ready = false
     private var released = false
-    private var cancelled = false
+    private var peerClosed = false
+    private var problem: String?
     let status: Int
     let body = Data("body released by the test".utf8)
 
-    init(status: Int) { self.status = status }
+    init(status: Int) throws {
+        self.status = status
+        let parameters = NWParameters.tcp
+        parameters.requiredLocalEndpoint = .hostPort(host: .ipv4(.loopback), port: .any)
+        listener = try NWListener(using: parameters)
+    }
 
     var wasReleased: Bool {
         condition.lock(); defer { condition.unlock() }
         return released
     }
 
-    func release() {
+    var summary: String {
         condition.lock(); defer { condition.unlock() }
-        released = true
+        return "released=\(released), peerClosed=\(peerClosed), error=\(problem ?? "none")"
+    }
+
+    private func fail(_ message: String) {
+        condition.lock(); defer { condition.unlock() }
+        problem = message
         condition.broadcast()
     }
 
-    func cancel() {
-        condition.lock(); defer { condition.unlock() }
-        cancelled = true
-        condition.broadcast()
-    }
-
-    func waitForBody() -> Bool {
-        condition.lock(); defer { condition.unlock() }
-        let deadline = Date().addingTimeInterval(5)
-        while !released && !cancelled {
-            if !condition.wait(until: deadline) { return false }
+    func start() throws -> URL {
+        listener.stateUpdateHandler = { [weak self] state in
+            guard let self else { return }
+            condition.lock(); defer { condition.unlock() }
+            switch state {
+            case .ready: ready = true
+            case .failed(let error): problem = error.localizedDescription
+            default: break
+            }
+            condition.broadcast()
         }
-        return released && !cancelled
+        listener.newConnectionHandler = { [weak self] connection in
+            guard let self, !stopped, self.connection == nil else { connection.cancel(); return }
+            self.connection = connection
+            connection.start(queue: queue)
+            receiveHead(connection, buffer: Data())
+            // Bound an abandoned connection; this is local teardown, not evidence
+            // that the client cancelled it.
+            queue.asyncAfter(deadline: .now() + 5) { [weak self] in self?.stopOnQueue() }
+        }
+        listener.start(queue: queue)
+        condition.lock()
+        let deadline = Date().addingTimeInterval(2)
+        while !ready && problem == nil {
+            if !condition.wait(until: deadline) { break }
+        }
+        let started = ready
+        let message = problem ?? "listener did not become ready"
+        condition.unlock()
+        guard started, let port = listener.port else {
+            stop()
+            throw NSError(domain: "HeldBody", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+        }
+        return URL(string: "http://127.0.0.1:\(port.rawValue)/reply")!
     }
 
-    func waitForCancellation() -> Bool {
+    private func receiveHead(_ connection: NWConnection, buffer: Data) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { [weak self] data, _, complete, error in
+            guard let self, !stopped else { return }
+            var buffer = buffer
+            if let data { buffer.append(data) }
+            guard buffer.count <= 32_768 else { fail("request head too large"); return }
+            if buffer.range(of: Data("\r\n\r\n".utf8)) != nil {
+                let reason = status == 503 ? "Service Unavailable" : (status == 201 ? "Created" : "OK")
+                let head = "HTTP/1.1 \(status) \(reason)\r\nX-Fixture: ready\r\nContent-Type: application/octet-stream\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n"
+                connection.send(content: Data(head.utf8), completion: .contentProcessed { [weak self] error in
+                    if let error { self?.fail("send head: \(error)") }
+                })
+                receiveClose(connection)
+            } else if complete || error != nil {
+                fail("request ended before its head: \(String(describing: error))")
+            } else {
+                receiveHead(connection, buffer: buffer)
+            }
+        }
+    }
+
+    private func receiveClose(_ connection: NWConnection) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 1) { [weak self] data, _, complete, error in
+            guard let self, !stopped else { return }
+            let reset: Bool
+            if case .posix(.ECONNRESET)? = error { reset = true } else { reset = false }
+            if complete || reset {
+                condition.lock()
+                peerClosed = true
+                condition.broadcast()
+                condition.unlock()
+            } else if error != nil || data?.isEmpty == false {
+                fail("unexpected data/error after request head: \(String(describing: error))")
+            } else {
+                receiveClose(connection)
+            }
+        }
+    }
+
+    func release() {
+        condition.lock()
+        released = true
+        condition.unlock()
+        queue.async { [weak self] in
+            guard let self, !stopped, let connection else { return }
+            connection.send(content: body, contentContext: .finalMessage, isComplete: true,
+                            completion: .contentProcessed { [weak self] error in
+                if let error { self?.fail("send body: \(error)") }
+            })
+        }
+    }
+
+    func waitForPeerClose() -> Bool {
         condition.lock(); defer { condition.unlock() }
         let deadline = Date().addingTimeInterval(2)
-        while !cancelled {
+        while !peerClosed && problem == nil {
             if !condition.wait(until: deadline) { return false }
         }
-        return true
+        return peerClosed
     }
-}
 
-private final class HeadGateProtocol: URLProtocol, @unchecked Sendable {
-    private static let lock = NSLock()
-    nonisolated(unsafe) private static var replies: [URL: HeldBody] = [:]
+    private func stopOnQueue() {
+        stopped = true
+        listener.stateUpdateHandler = nil
+        listener.newConnectionHandler = nil
+        listener.cancel()
+        connection?.cancel()
+        connection = nil
+    }
 
-    static func install(_ reply: HeldBody, at url: URL) {
-        lock.lock(); defer { lock.unlock() }
-        replies[url] = reply
-    }
-    static func remove(_ url: URL) {
-        lock.lock(); defer { lock.unlock() }
-        replies[url] = nil
-    }
-    static func reply(at url: URL) -> HeldBody? {
-        lock.lock(); defer { lock.unlock() }
-        return replies[url]
-    }
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-    override func startLoading() {
-        guard let url = request.url, let reply = Self.reply(at: url) else {
-            client?.urlProtocol(self, didFailWithError: URLError(.cannotConnectToHost))
-            return
-        }
-        let response = HTTPURLResponse(url: url, statusCode: reply.status, httpVersion: "HTTP/1.1",
-                                       headerFields: ["X-Fixture": "ready", "Content-Length": String(reply.body.count)])!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        DispatchQueue.global().async { [self] in
-            guard reply.waitForBody() else { return }
-            client?.urlProtocol(self, didLoad: reply.body)
-            client?.urlProtocolDidFinishLoading(self)
-        }
-    }
-    override func stopLoading() {
-        guard let url = request.url else { return }
-        Self.reply(at: url)?.cancel()
-    }
+    func stop() { queue.sync { stopOnQueue() } }
 }
 
 @Suite("Core stream response heads")
@@ -100,21 +163,23 @@ struct CoreStreamHeadTests {
     }
 
     private func open(status: Int) throws -> (CoreStreamHost, Int64, URL, HeldBody) {
-        let url = URL(string: "https://head-\(UUID().uuidString.lowercased()).test/reply")!
-        let reply = HeldBody(status: status)
-        HeadGateProtocol.install(reply, at: url)
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.protocolClasses = [HeadGateProtocol.self]
-        let transport = URLSessionTransport(cookies: CookieJars(file: nil), defaultUserAgent: "nk-test/1",
-                                            timeout: 5, configuration: configuration)
-        let host = CoreStreamHost(transport: transport)
-        let wire = try JSONSerialization.data(withJSONObject: ["id": 1, "method": "GET",
-                                                               "url": url.absoluteString, "partition": "magpie"])
-        var failure: NSError?
-        let raw = host.streamOpen(String(decoding: wire, as: UTF8.self), error: &failure)
-        if let failure { throw failure }
-        let id = try JSONDecoder().decode(Opened.self, from: Data(raw.utf8)).id
-        return (host, id, url, reply)
+        let reply = try HeldBody(status: status)
+        let url = try reply.start()
+        do {
+            let transport = URLSessionTransport(cookies: CookieJars(file: nil), defaultUserAgent: "nk-test/1",
+                                                timeout: 5, configuration: .ephemeral)
+            let host = CoreStreamHost(transport: transport)
+            let wire = try JSONSerialization.data(withJSONObject: ["id": 1, "method": "GET",
+                                                                   "url": url.absoluteString, "partition": "magpie"])
+            var failure: NSError?
+            let raw = host.streamOpen(String(decoding: wire, as: UTF8.self), error: &failure)
+            if let failure { throw failure }
+            let id = try JSONDecoder().decode(Opened.self, from: Data(raw.utf8)).id
+            return (host, id, url, reply)
+        } catch {
+            reply.stop()
+            throw error
+        }
     }
 
     private func next(_ host: CoreStreamHost, _ id: Int64) async throws -> Chunk {
@@ -143,9 +208,9 @@ struct CoreStreamHeadTests {
 
     private func verifyHead(status: Int) async throws {
         let (host, id, url, reply) = try open(status: status)
-        defer { host.streamClose(id); reply.cancel(); HeadGateProtocol.remove(url) }
+        defer { host.streamClose(id); reply.stop() }
         let head = try await next(host, id)
-        try #require(!head.done)
+        try #require(!head.done, "first chunk: \(head); \(reply.summary)")
         #expect(head.chunkBase64 == nil)
         #expect(head.status == status)
         #expect(head.finalUrl == url.absoluteString)
@@ -170,12 +235,12 @@ struct CoreStreamHeadTests {
     }
 
     @Test func cancellationAfterHeadStopsHeldBody() async throws {
-        let (host, id, url, reply) = try open(status: 200)
-        defer { host.streamClose(id); reply.cancel(); HeadGateProtocol.remove(url) }
+        let (host, id, _, reply) = try open(status: 200)
+        defer { host.streamClose(id); reply.stop() }
         let head = try await next(host, id)
-        try #require(!head.done && head.status == 200)
+        try #require(!head.done && head.status == 200, "first chunk: \(head); \(reply.summary)")
         host.streamClose(id)
-        #expect(reply.waitForCancellation())
+        #expect(reply.waitForPeerClose(), "\(reply.summary)")
         #expect(!reply.wasReleased)
     }
 }
