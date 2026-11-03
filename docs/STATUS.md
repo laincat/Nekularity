@@ -2,7 +2,13 @@
 
 [English](STATUS.en.md) | 简体中文
 
-**iOS Magpie 定向 UI 已通过(2026-11-04)**:Orca Worker 在 d3672a8/Core3be57b5 基础上用专用模拟器 72DFD602-9D8E-40BB-8F96-DA3668ABE7C7 完成1项/1通过(78.729秒)。首次无登录按钮来自未签名测试的Keychain -34018,改用 CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- 后读取正常;随后真实产品缺陷是登录仅保存凭据、没有绑定当前Core,导致模型仍访问默认18797而非输入的52970。修复在立即/轮询登录保存成功后调用core.setAuth,旧实现2条绑定回归失败,修复后Mac相关15/15及App/UITests构建通过。UI实际完成登录、模型目录、尾部未释放前显示第一段、停止请求3并获peer_closed、App重启仍已登录且完成第一段 第二段🐾,refresh总数1。产品文件SHA-256 7b54e432e5d4fa37fa4e359c53f078a125078310aaf4e8ee17638e1d1328bd8b 已与Lead候选逐字节核对;测试源码待交接。证据 `/tmp/nk-d367-acceptance/ios-diagnostic/` 的 binding-fixed.log、ui-binding-fixed.log、ui-binding-fixed.xcresult、events.jsonl;Lead回执 `E:/Temp/nk-magpie-binding/receipt.json`。这是模拟器App自身认证持久化,不是宿主Keychain或真机;registry仅预置包,不算UI导入包。旧失败日志保留,既有CI d367产物不包含此后续修复。
+## 标准 AI 签名模拟器 HTTP/UI 闭环通过(2026-11-04)
+
+Orca Worker 在 d3672a8/Core3be57b5 加已核对的 Magpie 绑定修复上,仅用专用模拟器72DFD602-9D8E-40BB-8F96-DA3668ABE7C7和fixture-key完成1项/1通过(183.049秒)。Chat/Responses/Messages分别显示预期Fixture回答,界面明确标为整包。UI停止慢回答使同请求22出现peer_closed,无expired;模型目录401精确显示错误,既有Chat答复数量不变(不扩称单独的回答401用例)。App terminate/launch后未输入密钥,仍显示清除密钥,恢复18796/v1基址,请求24/25授权成功。最终请求16–25均授权且无Cookie,证明模拟器App自身Keychain恢复,不是宿主Keychain或真实账号/refresh验证。
+
+前三次失败分别为驱动插入/v1v1、waiting事件误要求mode、401断言误匹配旧历史,修正驱动后通过,标准AI产品源码未改。日志/xcresult/截图在 `/tmp/nk-standardai-acceptance/evidence/`,Lead回执 `E:/Temp/nk-standardai-ui-acceptance/receipt.json`。未重跑完整Kit或Magpie UI;早期ad8地址候选没有并入本次通过组合。MagpieSignInBindingTests.swift已精确收回:2713字节,SHA-256 4ebc5f612ac17b4c5c8d5c74335c356a52984207ef46a832c865f496ca6eef6e,与Mac已通过的两条真实Core绑定回归一致。
+
+**iOS Magpie 定向 UI 已通过(2026-11-04)**:Orca Worker 在 d3672a8/Core3be57b5 基础上用专用模拟器 72DFD602-9D8E-40BB-8F96-DA3668ABE7C7 完成1项/1通过(78.729秒)。首次无登录按钮来自未签名测试的Keychain -34018,改用 CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- 后读取正常;随后真实产品缺陷是登录仅保存凭据、没有绑定当前Core,导致模型仍访问默认18797而非输入的52970。修复在立即/轮询登录保存成功后调用core.setAuth,旧实现2条绑定回归失败,修复后Mac相关15/15及App/UITests构建通过。UI实际完成登录、模型目录、尾部未释放前显示第一段、停止请求3并获peer_closed、App重启仍已登录且完成第一段 第二段🐾,refresh总数1。产品文件SHA-256 7b54e432e5d4fa37fa4e359c53f078a125078310aaf4e8ee17638e1d1328bd8b 已与Lead候选逐字节核对;两条回归测试源码已按字节/SHA核对并纳入候选。证据 `/tmp/nk-d367-acceptance/ios-diagnostic/` 的 binding-fixed.log、ui-binding-fixed.log、ui-binding-fixed.xcresult、events.jsonl;Lead回执 `E:/Temp/nk-magpie-binding/receipt.json`。这是模拟器App自身认证持久化,不是宿主Keychain或真机;registry仅预置包,不算UI导入包。旧失败日志保留,既有CI d367产物不包含此后续修复。
 
 **新 pin 的 Mac 真 HTTP 组合验收(2026-11-03)**:Orca Worker mac-validate-2 在 Nekularity `d3672a8`/Core `3be57b5` 上,经真实 URLSessionTransport→CoreHost/CoreStreamHost→gomobile CoreMagpie→loopback HTTP 完成 1 test/1 suite。模型目录、尾部释放前首段「第一段 」到达、取消后同一请求 ID 3 的 peer_closed、SavedAuth 原样保存到临时文件并重建实例后完整回答「第一段 第二段🐾」均通过;刷新总数为 1,四个供应商请求均授权且无 Cookie。SDK 来自精确干净 Core 检出,macOS 切片 SHA-256 24c00ca89b47cd80529063924f56d6a39f5304481174dca12712d0115e71f366。
 
