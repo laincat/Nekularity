@@ -2,7 +2,7 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
-**iOS Magpie 定向 UI(2026-11-04)**:Orca Worker 在专用模拟器 72DFD602-9D8E-40BB-8F96-DA3668ABE7C7、d3672a8/Core 3be57b5 执行 1 项,1 项失败。预置夹具包的供应商行显示未登录且只有卸载,没有登录按钮;服务器 events 为空。失败停在登录入口,尚未输入地址或验证模型、首段、停止和 App 重启。包 registry 预置不计 UI 包导入。产品源码未改;需要捕获 runner/auth 声明读取被吞掉的实际错误后再判断原因。证据 `/tmp/nk-d367-acceptance/ios-evidence/ui-run.xcresult`、`ui-run.log`;Lead 回执 `E:/Temp/nk-ios-d367-ci/ui-login-failure.json`。
+**iOS Magpie 定向 UI 已通过(2026-11-04)**:Orca Worker 在 d3672a8/Core3be57b5 基础上用专用模拟器 72DFD602-9D8E-40BB-8F96-DA3668ABE7C7 完成1项/1通过(78.729秒)。首次无登录按钮来自未签名测试的Keychain -34018,改用 CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- 后读取正常;随后真实产品缺陷是登录仅保存凭据、没有绑定当前Core,导致模型仍访问默认18797而非输入的52970。修复在立即/轮询登录保存成功后调用core.setAuth,旧实现2条绑定回归失败,修复后Mac相关15/15及App/UITests构建通过。UI实际完成登录、模型目录、尾部未释放前显示第一段、停止请求3并获peer_closed、App重启仍已登录且完成第一段 第二段🐾,refresh总数1。产品文件SHA-256 7b54e432e5d4fa37fa4e359c53f078a125078310aaf4e8ee17638e1d1328bd8b 已与Lead候选逐字节核对;测试源码待交接。证据 `/tmp/nk-d367-acceptance/ios-diagnostic/` 的 binding-fixed.log、ui-binding-fixed.log、ui-binding-fixed.xcresult、events.jsonl;Lead回执 `E:/Temp/nk-magpie-binding/receipt.json`。这是模拟器App自身认证持久化,不是宿主Keychain或真机;registry仅预置包,不算UI导入包。旧失败日志保留,既有CI d367产物不包含此后续修复。
 
 **新 pin 的 Mac 真 HTTP 组合验收(2026-11-03)**:Orca Worker mac-validate-2 在 Nekularity `d3672a8`/Core `3be57b5` 上,经真实 URLSessionTransport→CoreHost/CoreStreamHost→gomobile CoreMagpie→loopback HTTP 完成 1 test/1 suite。模型目录、尾部释放前首段「第一段 」到达、取消后同一请求 ID 3 的 peer_closed、SavedAuth 原样保存到临时文件并重建实例后完整回答「第一段 第二段🐾」均通过;刷新总数为 1,四个供应商请求均授权且无 Cookie。SDK 来自精确干净 Core 检出,macOS 切片 SHA-256 24c00ca89b47cd80529063924f56d6a39f5304481174dca12712d0115e71f366。
 
