@@ -7,6 +7,11 @@ Updated 2026-11-03.
 ## Core pin tooling preserves historical evidence (2026-11-03)
 
 The old `set-core-pin.sh` globally replaced the old Core hash in both STATUS files, making prior test records appear to have used the new Core. A temporary repository reproduced both incorrect rewrites; log `E:/Temp/nk-pin-evidence-before.log`. The script now changes only `scripts/core-version` and `CoreVersion.pinned`, reuses `check-core-pin.sh`, and leaves historical documents intact. New candidates and acceptance records should be added explicitly through `update-pair.py`. Regression checks preserve document bytes and Swift line endings, prove repeated updates are idempotent, pass `--check` and reject invalid input without writes; log `E:/Temp/nk-pin-evidence-after.log`. This tooling fix does not upgrade the client pin itself.
+## Candidate standard-interface HTTP error fix (2026-11-03)
+
+Branch `fix/standard-ai-http-errors` fixes the reply path: `StandardAI.reply` previously returned HTTP 401/503 and provider errors inside HTTP 200 as ordinary assistant replies. It now throws to the screen's error state rather than appending an assistant message. Four new tests use real Core and URLSessionTransport with URLProtocol replacing the network. They cover successful replies/credential headers/disabled cookies in all three protocols, HTTP errors, in-band errors and catalogs. Each request owns a host and temporary store, without Keychain access. These four tests have not been compiled or run on Mac; static totals are 425 tests/78 suites.
+
+`UITests/Fixtures/standard-ai/serve.py` is a loopback-only whole-response HTTP fixture with normal/held bodies, HTTP 401/503 and in-band errors. Windows has exercised actual catalogs, all three replies, errors, TCP peer closure and body release; logs `E:/Temp/nk-ai-fixture/verification.log`, `events.jsonl`. Logs omit credentials and prompt bodies. This implements neither streaming nor credential refresh and does not establish Swift-client/UI acceptance. UI automation still needs isolated test settings and Keychain namespaces.
 
 ## Standard-interface cancellation fix integrated (2026-11-03)
 

@@ -7,6 +7,11 @@
 ## Core pin 工具保留历史证据(2026-11-03)
 
 旧 `set-core-pin.sh` 会全局替换两份 STATUS 中的旧 Core 哈希,使已有测试记录看起来使用了新 Core。已用临时仓库复现两份文档均被错误改写,日志 `E:/Temp/nk-pin-evidence-before.log`。脚本现在只改 `scripts/core-version` 与 `CoreVersion.pinned`,复用 `check-core-pin.sh` 校验,不改历史文档;新候选和新验收应单独通过 `update-pair.py` 记录。修复后验证历史文档与 Swift 原行尾不变、重复设置幂等、`--check` 通过、非法参数不写文件,日志 `E:/Temp/nk-pin-evidence-after.log`。这次修复本身不升级客户端 pin。
+## 标准接口 HTTP 错误修复候选(2026-11-03)
+
+分支 `fix/standard-ai-http-errors` 修复回答路径:旧 `StandardAI.reply` 会把 HTTP 401/503 或 HTTP 200 中的供应商错误当正常助手回复,现在抛出错误交给页面的错误状态,不追加为助手消息。新增四条测试通过真实 Core 与 URLSessionTransport、URLProtocol 替代网络,覆盖三种协议的成功回答/鉴权头/禁用 Cookie、HTTP 错误、200 内嵌错误和模型目录。每条请求使用独立主机与临时资料,不读写 Keychain;这四条尚未在 Mac 编译执行,静态总数为 425/78 suites。
+
+新增 `UITests/Fixtures/standard-ai/serve.py` 是只监听 loopback 的整包 HTTP 服务,支持正常/慢响应/401/503/200 内嵌错误。Windows 已实际验证模型目录、三协议回答、错误、TCP peer close、控制接口释放正文,日志 `E:/Temp/nk-ai-fixture/verification.log`、`events.jsonl`。日志不含鉴权值或提示正文。它不实现流式或凭据刷新,也不证明 Swift 客户端/界面通过;页面自动化还需隔离测试设置和 Keychain 命名空间。
 
 ## 标准接口取消修复已整合(2026-11-03)
 
