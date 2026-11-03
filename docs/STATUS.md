@@ -4,7 +4,7 @@
 
 ## Core 3be57b5 消费端候选(2026-11-03)
 
-本分支 `update/core-3be57b5` 从当前 main 建立,将 scripts/core-version 与 CoreVersion.swift 同步到已发布 `3be57b5ceb848bb9623c090abc463764add14de4`。Core 的功能源码 `6129f59` 已过 CI `41631619233` 四个作业,发布收拢前后完整 tree 一致。Windows pin/Swift 解析/Kit 调用名称契约检查通过,不等于 Mac 编译。此候选尚未合入独立响应头分支 `65eba9f`,旧 Swift 宿主的 Magpie 交付时序仍延后,标准 AI 页面仍整包。验证分支 push 触发既有 Mac CI,UI/真机尚未执行,main pin 保持 `4f213ff`。日志 `E:/Temp/nk-3be-candidates/ios-*.log`。
+本分支 `update/core-3be57b5` 从当前 main 建立,将 scripts/core-version 与 CoreVersion.swift 同步到已发布 `3be57b5ceb848bb9623c090abc463764add14de4`。Core 的功能源码 `6129f59` 已过 CI `41631619233` 四个作业,发布收拢前后完整 tree 一致。Windows pin/Swift 解析/Kit 调用名称契约检查通过,不等于 Mac 编译。此候选尚未合入独立响应头分支 `65eba9f`,旧 Swift 宿主的 Magpie 交付时序仍延后,标准 AI 页面仍整包。候选 `ea87eb5` 的 Mac CI `41638119772` 完成 Kit 单测及 App/UI 测试编译;未签名 IPA 已核验摘要、双层 ZIP CRC、App/Widget 0.3.2/14 和 Core marker,回执 `E:/Temp/nk-3be-candidates/ios-ipa-receipt.json`。UI/真机未执行,main pin 保持 `4f213ff`。日志 `E:/Temp/nk-3be-candidates/ios-*.log`。
 
 **桌面主线整合(2026-11-03)**:先前把 Nekophage 工作分支称作 main 的口径已更正;整合前真正 main 为 `28be4bd`/Core `214e778`,核对日志 `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`。现已将 `fix/subtitle-record-cap` 快进整合为真正 main 的 `67fc877`,pin 为 `4f213ff`,原分支保留;同时带回 WebView 探针隔离修复并移除误入版本控制的 Python 缓存。七项检查与 Windows 隔离阅读回归通过:两页解码、双页、55% 进度、重开恢复 1200,仅有本次章节存储键。回执 `E:/Temp/nk-desktop-integration/receipt.json`。`a079ce7`/Core `b55c1a4` 的 Windows 包仍属于独立候选,新 pin 的 macOS 消费端尚未验收;Nekularity main 仍 pin `4f213ff`。
 
