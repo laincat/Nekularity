@@ -12,7 +12,7 @@ Core 取消修复 `696a504` 的三个 Go 平台与 Apple job 全过(CI `41606605
 
 旧 pin 客户端候选 `af48d65` 的 CI `41607054742` 已全部通过,包括 Kit、设备 App、UITests 编译和 IPA 打包。诊断 artifact 中生成的工程没有 `serve.py in Resources`,仍有 `clip.mp4 in Resources`。实际 IPA 29,436,243 字节,SHA-256 `1f4586d96bc9754f6161432df30d548e4e2ba161d5028ea0849b55941eb254c0`,CRC 通过;App/Widget 均为 0.3.2/14、最低 iOS 26.0,App 二进制含 Core `2c9c83b`。它只是分支验证包,未发布或更新 AltStore,也未运行 UI 套件。回执 `E:/Temp/nk-ios-core-2c9-ci/ipa-receipt.json`。资源排除与构建诊断配置已单独整合到 main,Git 暂存内容与受测 `af48d65` 两文件逐字相同(工作区行尾不同),不借此升级 main pin。
 
-两端新候选均为 `update/core-b55c1a4`:Nekularity `b39e6b0` 已过 Windows 解析/pin/调用契约检查并启动 CI `41612614917`,结果待验;Nekophage `e21b04c` 已过七项检查,实际构建二进制的 `-version` 报告该提交和 Core `b55c1a4`,新 pin 窗口/macOS 验收待补。回执 `E:/Temp/nk-b55-candidates/candidates.json`,检查与版本日志在同目录。两端 main pin 仍为 `4f213ff`,不把旧 pin 的窗口或 UI 结果复用到新候选。
+两端新候选均为 `update/core-b55c1a4`:Nekularity `b39e6b0` 的 CI `41612614917` 已成功,Kit 测试、App 与 UITests 编译、IPA 打包通过;实际 IPA 29,441,095 字节,SHA-256 `860c8cf01a8031097e5d321f7c13ffb5ac176d22c9b1a615b2859e5ae61aba7e`,CRC/下载摘要通过,App/Widget 均 0.3.2/14、最低 iOS 26.0,App 二进制含 b55c1a4 pin。回执 `E:/Temp/nk-ios-core-b55-ci/receipt.json`;未执行 UI、未发布或更新 AltStore。桌面从 `e21b04c` 修正开发探针 WebView 隔离后形成 `a079ce7`,七项检查通过;同提交 Windows 安装包已完成原生搜索→HLS/字幕→跨进程恢复 2.977162 秒、鉴权/精确 Range 与正常关闭卸载,回执 `E:/Temp/nk-b55-candidates/installed-media-587be532/receipt.json`。macOS 新 pin 消费端仍待验收。回执 `E:/Temp/nk-b55-candidates/candidates.json`,检查与版本日志在同目录。两端 main pin 仍为 `4f213ff`,不把旧 pin 的窗口或 UI 结果复用到新候选。
 
 ## 新 Core pin 的客户端编译候选(2026-11-03)
 

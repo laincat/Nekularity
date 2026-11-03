@@ -6,7 +6,7 @@
 
 **标准接口输入与请求配置仍有分歧**:`ad8e191` 已经 Mac 编译,Orca Worker 报告五个显示/清空/重启读回用例通过,但模型目录仍报 `no host`、夹具 0 请求;后续回答/取消/错误态未验收。离线 plist 读值与应用读回不一致,根因待逐层字节对照,不能认定是滞后快照。Lead 的同 pin Go 边界复现区分了完整地址、单斜杠和 `/v1` 三种输入,见 STATUS。
 
-**新 pin 与增量交付仍待验收**:Core `b55c1a4` 已整合真实连接取消修复,两端候选为 iOS `b39e6b0`、桌面 `e21b04c`,main pin 未变。旧 pin `af48d65` 的 CI/IPA 已核对通过,不算新 pin UI 结果。Magpie 传输虽收到分块,插件文字仍等到正文结束才交付,已在 loopback 复现,不能声称界面流式。详见 STATUS。
+**新 pin 与增量交付仍待验收**:Core `b55c1a4` 已整合真实连接取消修复,两端候选为 iOS `b39e6b0`、桌面功能源码 `a079ce7`,main pin 未变。新 pin iOS CI/IPA 已通过,但 UI 未运行;Windows 安装版本地 HLS、字幕、跨进程续播、鉴权与 Range 已验收,macOS 新 pin、音频/真机仍待验收。Magpie 传输虽收到分块,插件文字仍等到正文结束才交付,已在 loopback 复现,不能声称界面流式。详见 STATUS。
 
 **Magpie 聊天取消已修复,但未进客户端**:`2c9c83b` 的 `ChatCancel` 原先只删句柄,阻塞中的 `Host.HTTP`/`StreamOpen`/`StreamNext` 不会停止;分支 `fix/magpie-chat-cancel` 让每个聊天独立运行时并关闭它,五条定向 race 与带夹具的全套(22 包、559 PASS/0 FAIL/1 SKIP)通过。证据在 Windows 假宿主,不是 iOS UI、真机或真实供应商;两端 pin 未变。
 
