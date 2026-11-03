@@ -9,11 +9,11 @@
 旧 `set-core-pin.sh` 会全局替换两份 STATUS 中的旧 Core 哈希,使已有测试记录看起来使用了新 Core。已用临时仓库复现两份文档均被错误改写,日志 `E:/Temp/nk-pin-evidence-before.log`。脚本现在只改 `scripts/core-version` 与 `CoreVersion.pinned`,复用 `check-core-pin.sh` 校验,不改历史文档;新候选和新验收应单独通过 `update-pair.py` 记录。修复后验证历史文档与 Swift 原行尾不变、重复设置幂等、`--check` 通过、非法参数不写文件,日志 `E:/Temp/nk-pin-evidence-after.log`。这次修复本身不升级客户端 pin。
 ## 标准接口地址输入被吞字符的修复候选(2026-11-03)
 
-Mac 上的真实 App UI 发现:`我的 → 标准接口` 的基础地址输入框会丢一个字符,持久化的值分别是 `http:/127.0.0.1:60649/v1`、`http:/127.0.0.1:60649/v1`、`http://27.0.0.1:60649/v1`,Core 因此报 `aiapi: the API root has no host`,夹具侧收到 0 个请求。快速输入、30 ms 逐字、分段停顿与整段粘贴均复现,丢失点落在一次重绘边界;这使自定义 API 根在界面上不可用,不只影响合成输入。
+Mac 上 `44786f2` 的复测显示地址输入仍不可用:字段内显示与输入一致(`http://127.0.0.1:62389/v1`,30 字符),持久化的 `config.baseURL` 却只有前缀 `http:/127.0.0.1`(16 字符,少一个 `/`);250 ms 逐字更慢输入仍被截断为 `http:/127.0.0.1:62`;整段粘贴没有覆盖旧值,得到 `v1http:/127.0.0.1:62389/denied/v1`;改回 `/v1` 后残留成 `…/v1/denied/v1`;重启读回为 `…/v1v1`。夹具收到 0 个请求。结论是与输入速度无关的两个独立症状:显示正确但保存落后,以及清空/改写不彻底。
 
-原因在 `App/StandardAIView.swift`:地址每变一个字符,`onChange(of: config.baseURL)` 都清空 `models`/`modelsNote` 并在有请求时 `stop()`,在文本编辑中改动可观察状态触发重绘。分支 `fix/standard-ai-endpoint-edit` 记下模型目录属于哪个根(`modelsEndpoint`),列表与提示改为按当前地址计算显示,输入时不再清空状态,只在确实有请求运行时才停止。清空/保存密钥与切换协议仍会重置目录。
+前一轮定位到的重绘竞争只解释了一部分:地址字段直接绑定 `$config.baseURL`,同时 `onChange(of: config)` 每次按键都同步写 UserDefaults,字段的事实来源与保存互相竞争——字段可以显示新字符,而绑定值和保存下来的仍是旧前缀。分支 `fix/standard-ai-endpoint-edit` 现在让地址与模型名各持有一份 `String` 状态,`config` 跟随之;保存改为 400 ms 去抖,并在失焦、`onSubmit`、进入后台与离开页面时立即落盘;地址行提供一个显式的「清空地址」按钮,一次重置整个值,不再依赖逐字符删除。`44786f2` 已有的 `modelsEndpoint` 计算显示保持不变。
 
-Windows 只做了 Swift 解析与树检查,分支尚未在 Mac 编译或经 UI 复测;输入是否真的不再丢字符,必须以 Mac 上的实际输入与持久化值为准。
+Windows 只做了 Swift 解析与树检查,该分支尚未在 Mac 编译或经 UI 复测;显示值与持久化值是否一致、清空是否彻底,必须以 Mac 上的逐字输入、整段粘贴、显式清空与重启读回为准。
 
 ## 标准接口 HTTP 错误修复候选(2026-11-03)
 

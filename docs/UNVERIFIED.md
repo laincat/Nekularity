@@ -2,7 +2,7 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
-**标准接口地址输入丢字符已定位,修复待 Mac 复测**:真实 UI 中 `http://127.0.0.1:<port>/v1` 会少一个字符,导致自定义 API 根不可用;已确认与 `onChange` 中清空状态有关。分支 `fix/standard-ai-endpoint-edit` 改为计算显示,尚未 Mac 编译或复测。详见 STATUS。
+**标准接口地址输入仍不可用,新修复待 Mac 复测**:`44786f2` 在 Mac 上复测仍失败——字段显示 `http://127.0.0.1:62389/v1` 时,持久化的 `config.baseURL` 只有前缀 `http:/127.0.0.1`;250 ms 输入、整段粘贴覆盖、改回以及重启读回同样失败,夹具 0 请求。分支 `fix/standard-ai-endpoint-edit` 改为字段自持文本、400 ms 去抖加失焦/后台落盘,并提供显式清空;尚未 Mac 编译或复测。详见 STATUS。
 
 **标准接口 HTTP 错误候选待 Mac 验证**:`fix/standard-ai-http-errors` 增加 HTTP 状态与内嵌错误校验,新增四条 Core/传输整合测试尚未运行。loopback 夹具已在 Windows 通过真实 HTTP 与 TCP 关闭检查,不能据此声明 Swift 或界面通过;详见 STATUS。
 

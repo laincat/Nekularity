@@ -2,7 +2,7 @@
 
 [简体中文](UNVERIFIED.md) | English
 
-**A dropped character in the standard-interface address field is located; the fix awaits Mac retest**: in the real UI `http://127.0.0.1:<port>/v1` loses one character, making a custom API root unusable, and clearing state inside `onChange` is implicated. Branch `fix/standard-ai-endpoint-edit` derives the display instead; it is not yet compiled or re-tested on the Mac. See STATUS.
+**The standard-interface address field is still unusable; a new fix awaits Mac retest**: the Mac retest of `44786f2` still fails — with `http://127.0.0.1:62389/v1` displayed, the persisted `config.baseURL` is only the prefix `http:/127.0.0.1`. 250 ms typing, whole-string paste replacement, rewriting and a relaunch read-back all fail as well, and the fixture receives zero requests. Branch `fix/standard-ai-endpoint-edit` now gives the fields their own text state, debounces saving, flushes on focus loss/background, and adds explicit clearing; it is not yet compiled or re-tested on the Mac. See STATUS.
 
 **Standard-interface HTTP error candidate awaits Mac validation**: `fix/standard-ai-http-errors` validates HTTP status and in-band errors, with four new Core/transport integration tests not yet run. The loopback fixture passes actual HTTP and TCP-close checks on Windows; this does not establish Swift or UI acceptance. See STATUS.
 

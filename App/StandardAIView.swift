@@ -10,6 +10,7 @@ import SwiftUI
 /// which of the two paths will work on a fresh install.
 struct StandardAIView: View {
     @Environment(SourceLibrary.self) private var library
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var config = StandardAISettingsStore().load()
     @State private var apiKey = ""
@@ -26,6 +27,19 @@ struct StandardAIView: View {
     @State private var error: String?
     @State private var request = StandardAIRequest()
 
+    /// The text fields own their text, and `config` follows it.
+    ///
+    /// Binding a field straight to `$config.baseURL` and saving on every
+    /// `config` change made the field's source of truth race the save: the
+    /// field showed what was typed while the saved value stayed a prefix, and
+    /// rewrites kept the old tail. A plain `String` state per field has no such
+    /// feedback loop, so display and storage read the same value.
+    @State private var addressDraft = ""
+    @State private var modelDraft = ""
+    @State private var draftsLoaded = false
+    @State private var saveTask: Task<Void, Never>?
+    @FocusState private var editingAddress: Bool
+
     private let keys = StandardAIKeyStore()
     private let settings = StandardAISettingsStore()
 
@@ -35,12 +49,30 @@ struct StandardAIView: View {
                 Picker("接口", selection: $config.protocol) {
                     ForEach(StandardProtocol.allCases) { Text($0.title).tag($0) }
                 }
-                TextField(config.protocol.defaultBaseURL, text: $config.baseURL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.URL)
+                HStack(spacing: 6) {
+                    TextField(config.protocol.defaultBaseURL, text: $addressDraft)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                        .focused($editingAddress)
+                        .onSubmit { flushSave() }
+                    // Clearing character by character left the old tail in
+                    // place. This resets the whole value in one step. The button
+                    // keeps its slot so the row does not re-flow under the caret
+                    // when the first character arrives.
+                    Button {
+                        applyAddress("")
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(addressDraft.isEmpty)
+                    .opacity(addressDraft.isEmpty ? 0 : 1)
+                    .accessibilityLabel("清空地址")
+                }
                 LabeledContent("模型") {
-                    TextField("模型名", text: $config.model)
+                    TextField("模型名", text: $modelDraft)
                         .multilineTextAlignment(.trailing)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -119,7 +151,18 @@ struct StandardAIView: View {
         }
         .navigationTitle("标准接口")
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: config) { settings.save(config) }
+        // Saving waits for a pause instead of running on every keystroke.
+        .onChange(of: config) { scheduleSave() }
+        .onChange(of: addressDraft) { _, new in
+            if config.baseURL != new { config.baseURL = new }
+        }
+        .onChange(of: modelDraft) { _, new in
+            if config.model != new { config.model = new }
+        }
+        // Picking a catalog model writes `config`; the field follows it.
+        .onChange(of: config.model) { _, new in
+            if modelDraft != new { modelDraft = new }
+        }
         // Editing the address must not clear models or stop requests on every
         // keystroke: mutating observable state inside onChange re-renders the
         // field mid-edit and used to drop the next character. The catalog is
@@ -127,13 +170,58 @@ struct StandardAIView: View {
         .onChange(of: config.baseURL) {
             if request.isRunning { stop() }
         }
+        .onChange(of: editingAddress) { _, focused in
+            // Leaving the field commits without waiting for the debounce.
+            if !focused { flushSave() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Killing or backgrounding the app must not discard what is on
+            // screen just because the debounce has not fired yet.
+            if phase != .active { flushSave() }
+        }
         .onChange(of: config.protocol) { loadKey() }
-        .task { loadKey() }
-        .onDisappear { stop() }
+        .task {
+            if !draftsLoaded {
+                addressDraft = config.baseURL
+                modelDraft = config.model
+                draftsLoaded = true
+            }
+            loadKey()
+        }
+        .onDisappear {
+            flushSave()
+            stop()
+        }
     }
 
     private var client: StandardAI { StandardAI(core: library.core) }
     private var busy: Bool { request.isRunning }
+
+    /// Sets the address field and its stored value together, cancelling the
+    /// pending debounce so the two cannot end up describing different values.
+    private func applyAddress(_ text: String) {
+        saveTask?.cancel()
+        saveTask = nil
+        addressDraft = text
+        config.baseURL = text
+        settings.save(config)
+    }
+
+    private func scheduleSave() {
+        saveTask?.cancel()
+        saveTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            settings.save(config)
+            saveTask = nil
+        }
+    }
+
+    private func flushSave() {
+        saveTask?.cancel()
+        saveTask = nil
+        settings.save(config)
+    }
 
     private func loadKey() {
         stop()
