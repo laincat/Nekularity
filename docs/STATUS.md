@@ -82,6 +82,10 @@ Mac 单测按提交记录:`2317ea7`(仅新增复现用例)2 例全失败、共 6
 
 **最新完整回归(2026-11-02,提交 `5d9a5a1dfd5ce0e9d58fead6371d5cc4b3f842c4`,Orca Worker / Mac 模拟器)**:在专用 iPhone 17 Pro 上卸载旧 App、重新安装、生成独立 profile 并补种;启动前 Themes 目录为空。完整 UI 套件 **24 条 / PASS 24 / FAIL 0 / SKIP 0**,日志 `/tmp/nk-ui-full-5d9a5a1.log`。无效主题保留选择、HTTPS 安装/选中/重启、HTTP 拒绝三个用例全部通过,三列几何用例也通过。无效主题用例已自行安装基线,不依赖前一次运行。临时服务与主题已清理;新增 CA 有效 1 天,约 2026-11-03 失效,仍在专用模拟器信任库中。这是一轮完整执行,不叠加早期单项结果;不证明真机、后台、真实账号或三列完整视觉。
 
+**被跳过的视频 UI 用例已单独跑通(2026-11-03,`95818c5` 构建)**:根因确认是种子缺视频源。把仓内 `UITests/Fixtures/video_probe.js` 一起灌进种子后(`--replace`,落盘 `plugins.json` 131,692 字节、5 条源,`video_probe` 的 `type = video-js`,`check-seed.sh` 报 `callback_probe matches … 5 source(s) seeded`),`testVideoPlaysTheSourcesClip` **passed(29.600 秒)**、`Executed 1 test, with 0 failures`,路径是 `在线源 → video.source → Video Probe → 搜索 probe → Probe Clip → Episode 1 → 播放页`。这是**定向单独复确认**,不是整包重跑:完整套件的 23 通过 / 4 跳过仍以 `95818c5` 那轮为准,下一轮整包应变为 24 通过 / 3 跳过。一处如实交代:种子是复用了 8 月前用 `seedgen` 生成的那份(逐项核过 body 与仓内 fixture 逐字一致),不是现场重新生成。
+
+**主题链接 3 条:可行,但需要一次决策**。评估结论(基于早前那轮实际跑通的 3/3,不是纸面推演):`simctl keychain add-root-cert` 写的是**该模拟器自己的** `TrustStore.sqlite3`,不碰宿主机钥匙串、不需要 `sudo`;叶子证书必须带 `subjectAltName = IP:127.0.0.1` 与 `extendedKeyUsage = serverAuth`;夹具服务器**不在仓库里**,仓内 `LocalImageServer` 是 18731 的图片夹具,与 18791/18792 无关。证书建议 **30 天**而不是上一轮的 1 天——过期后这套用例会从「跳过」变成不可解释的失败。另外 `simctl keychain reset` 会清空整台模拟器的钥匙串,复跑时应改用「记录指纹再核对」而不是直接 reset。
+
 **发布后完整 UI 套件(2026-11-03,`95818c5`)**:干净起点(卸载重装 + 播种,img=0、`failures.json`=0、`manifest.json`=0、`plugins.json` 129,992 字节,`check-seed.sh` 报 `callback_probe matches`、4 源、18731 端口空闲)上执行 **27 例:23 通过 / 4 跳过 / 0 失败**,617 秒,日志 `/tmp/nk-95818c5-ui-fullsuite.log`。分组:`NekularityUITests` 23 例(22 通过 / 1 跳过)、`ZZThemeLinkTests` 3 例(3 跳过)、`ZZThreeColumnTests` 1 例(通过)——完整套件是 23+3+1,不是 23。
 
 4 条跳过都是前置条件,不是产品失败:视频那条是种子里 4 个源没有视频源(`the 视频 tab has no source picker`);主题链接 3 条需要仓库外的 HTTPS/HTTP 夹具与已装入模拟器信任库的测试 CA(`theme fixture is not listening on 127.0.0.1:[18791, 18792]`),而 UNVERIFIED 早已写明缺夹具或证书过期不能记为通过——所以按跳过记录,没有伪造夹具凑数。
