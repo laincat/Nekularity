@@ -18,6 +18,10 @@ Orca Worker 在 d3672a8/Core3be57b5 加已核对的 Magpie 绑定修复上,仅�
 
 本分支 `update/core-3be57b5` 从当前 main 建立,将 scripts/core-version 与 CoreVersion.swift 同步到已发布 `3be57b5ceb848bb9623c090abc463764add14de4`。Core 的功能源码 `6129f59` 已过 CI `41631619233` 四个作业,发布收拢前后完整 tree 一致。Windows pin/Swift 解析/Kit 调用名称契约检查通过,不等于 Mac 编译。本分支现接入 Swift 响应元数据与分块转发实现:产品文件与已受测 77c2c6 一致,真实 SSE 测试的 Git blob SHA-256 为 a53f3bdabed91f1812282d7c7502541a96142f32f32ebb0bf4013bfe63a68e01,与 Orca Worker 在 Core 4f213ff 上通过 428 tests/79 suites 的文件一致。该旧 pin 结果不能替代本次 Core 3be57b5 组合验收;真实 URLSession→Core Magpie→HTTP 闭环已由本页顶部的 Mac 定向结果确认,分支 CI 与 IPA 已通过核对;加入登录绑定修复后的 Magpie 定向 UI 已通过,见页首分范围记录。scripts/fixtures/magpie-http 同步自 main 62cfde6,仅供主机夹具使用。标准 AI 页面仍整包。候选 `ea87eb5` 的 Mac CI `41638119772` 完成 Kit 单测及 App/UI 测试编译;未签名 IPA 已核验摘要、双层 ZIP CRC、App/Widget 0.3.2/14 和 Core marker,回执 `E:/Temp/nk-3be-candidates/ios-ipa-receipt.json`。UI/真机未执行,main pin 保持 `4f213ff`。日志 `E:/Temp/nk-3be-candidates/ios-*.log`。
 
+**Magpie 本地 HTTP 夹具(2026-11-03)**:新增 `scripts/fixtures/magpie-http/`，包括仅绑定 127.0.0.1 的服务与可导入供应商包；支持模型目录、假凭据刷新、可扣住后半段的 SSE、指定请求释放、对端关闭和 HTTP 503。Lead 使用发布 Core `3be57b5` 的公开 mobile Magpie API 经真实 HTTP 验证：首段先于正文完成、取消令服务端观察到 peer_closed、SavedAuth 文件保存后重建实例继续可用且刷新次数保持一次、Unicode 回答与错误传播均通过。包内文件也经 ReadPackageArchive/LoadPackage/Auth 核对。日志与 ZIP 在 `E:/Temp/nk-magpie-http-evidence/`，使用方法见 [夹具说明](../scripts/fixtures/magpie-http/README.md)。这是 Windows Go 宿主的接口验收，不是 Swift URLSession、Keychain、App 重启或 iOS UI 通过；main pin 仍为 4f213ff，后续客户端需自行保存刷新结果并真实重启读取。
+
+**Core 发布与消费端候选更新(2026-11-03)**:Core main 已发布 `3be57b5`,功能源码与通过 CI `41631619233` 四个作业的 `6129f59` 相同,保树收拢回执见 `E:/Temp/core-stream-release/publish-receipt.json`。新的独立 pin 候选为 Nekularity `ea87eb5` 与 Nekophage `f7b99d1`,均指向 3be57b5;桌面七项检查与实际二进制版本核对通过,iOS 候选 `ea87eb5` 的 Mac CI `41638119772` 通过 Kit 单测、App 与 UI 测试编译;下载的未签名 IPA 的 SHA-256、ZIP CRC、App/Widget 0.3.2/14、最低 iOS 26.0 和 Core marker 已核对,UI 未执行。Swift 提前响应头候选 `65eba9f` 的 CI `41635149850` 在 Kit 单测失败;后续 `77c2c6` 的 Mac 定向三项断言也失败,首个结束原因正在诊断,尚未并入新 pin 候选。Core 可在响应头提前交付的宿主上增量返回文字,但旧客户端宿主仍延后,标准 AI 页面仍整包;新 pin 的窗口、Mac 消费端、UI 与真机结果不能借用旧版本。两端 main pin 均保持 4f213ff。
+
 **桌面主线整合(2026-11-03)**:先前把 Nekophage 工作分支称作 main 的口径已更正;整合前真正 main 为 `28be4bd`/Core `214e778`,核对日志 `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`。现已将 `fix/subtitle-record-cap` 快进整合为真正 main 的 `67fc877`,pin 为 `4f213ff`,原分支保留;同时带回 WebView 探针隔离修复并移除误入版本控制的 Python 缓存。七项检查与 Windows 隔离阅读回归通过:两页解码、双页、55% 进度、重开恢复 1200,仅有本次章节存储键。回执 `E:/Temp/nk-desktop-integration/receipt.json`。`a079ce7`/Core `b55c1a4` 的 Windows 包仍属于独立候选,新 pin 的 macOS 消费端尚未验收;Nekularity main 仍 pin `4f213ff`。
 
 更新:2026-11-03。
@@ -68,6 +72,8 @@ Core 取消修复 `696a504` 的三个 Go 平台与 Apple job 全过(CI `41606605
 `bb77b5d` 的回答错误修复已通过 `9af6148` 整合 main:旧 `StandardAI.reply` 会把 HTTP 401/503 或 HTTP 200 内嵌供应商错误当正常助手回复,现在抛出 `StandardAIError`。Orca Worker 在 Mac 通过 `swift build --build-tests`、四条定向测试及全套 **425 tests / 78 suites**;恢复旧实现的负向对照使两条错误用例失败。证据在 Mac `/tmp/nk-ai-http-evidence/`,包括 `full-swift-test.log`、`negctl-filter.log`。四条测试使用真实 Core/URLSessionTransport,以 URLProtocol 替代网络,覆盖三协议成功回答、鉴权头、禁用 Cookie、HTTP/内嵌错误及模型目录;每条请求独立主机和临时资料,不访问 Keychain。这是 Kit 回归证据,不代表标准接口页面的 HTTP/UI 闭环通过,也不在已发布 v0.3.2 中。
 
 新增 `UITests/Fixtures/standard-ai/serve.py` 是只监听 loopback 的整包 HTTP 服务,支持正常/慢响应/401/503/200 内嵌错误。Windows 已实际验证模型目录、三协议回答、错误、TCP peer close、控制接口释放正文,日志 `E:/Temp/nk-ai-fixture/verification.log`、`events.jsonl`。日志不含鉴权值或提示正文。它不实现流式或凭据刷新,也不证明 Swift 客户端/界面通过;页面自动化还需隔离测试设置和 Keychain 命名空间。
+
+**新 pin 标准 API 真 HTTP(2026-11-04)**:Lead 以干净 Core 3be57b5、公开 BuildAIModelsRequest/SendAIRequest/Cancel 和真实 Go HTTP 宿主运行现有 loopback 夹具,go run -race 通过。chat/responses/messages 三协议各验证目录、正确鉴权头、整包回答、401/503及200内嵌错误的状态/JSON原样透传、慢响应取消与随后新请求成功。共21个已授权且无Cookie的请求;取消请求6、13、20均被服务端记为同ID peer_closed,无expired。日志/回执 `E:/Temp/nk-standard-ai-core-http/run.log`、`receipt.json`,可复用客户端 `client.go`。这不验证Swift错误展示、URLSession、iOS UI、密钥持久化或流式;错误处理仍由客户端负责。
 
 ## 标准接口地址输入与请求路径的分歧(2026-11-03)
 
