@@ -2,6 +2,14 @@
 
 English | [简体中文](STATUS.md)
 
+## Release 0.3.3/build15 and subscription verified (2026-11-04)
+
+Tag `v0.3.3` identifies 736e3645b8786f75c23845ca928cfde7dbc5072c. CI 41720810029 attempt 2 passed: Kit tests executed, device App built, UITests compiled and IPA published. Attempt 1 acquired no hosted macOS runner and ran zero build steps; it was not treated as a source failure. The public IPA returned HTTP 200 and 29,457,850 bytes, SHA-256 cb1ab0ca717b7e0a7181bda12e02f7b09a970974f818d16c84edbf2fe51b3a0d. ZIP CRC passed; App/Widget are 0.3.3/15, minimum iOS 26.0, with Core 3be57b5ceb848bb9623c090abc463764add14de4 in the App. Receipt: `E:/Temp/nk-ios-033-evidence/release-accepted.json`; local copy: `E:/Code/deliveries/2026-11-04-nekularity-033/`.
+
+The first green AltStore refresh retained 0.3.2. Missing GH_TOKEN injection in the generation step was corrected by a516cd2, with existing tests/validation passing. Refresh 41731222405 succeeded and produced main 6ce4eb68699b15bb218f4e3f699c6c32fc8e5a32. The repository entry and all three public endpoints—GitHub Raw, CNB mirror and fixed Release—actually return 0.3.3/15. Stable, flat and legacy versions agree, with 29,457,850 bytes, minimum 26.0 and the matching IPA URL. Public endpoints return HTTP 200; receipt: `E:/Temp/nk-ios-033-evidence/altstore-accepted.json`. Plugin address validation blocked log download, so the diagnosis is limited to the confirmed configuration omission and observed post-fix results; no rate-limit error is invented.
+
+CI compiled UI tests only; UI acceptance belongs to separate Orca Worker results. A later targeted offline-page comparison passed with valid image, HTTP 200 corrupt image and restored image cases, including the actual cyan page and AX Image. Product code was unchanged; the tested patch is being recovered for integration. Historical full-suite counts remain unchanged. Signing/device behavior, background/lock screen, Live Activity, PiP, speakers and real accounts remain external items; one release does not complete the roadmap.
+
 ## Offline downloaded-page assertion needs strengthening (2026-11-04)
 
 Review found that `testDownloadedChapterReadsWithNoServer` only waits for the Keep Page button after stopping the loopback server. ReaderView's toolbar exists before image decoding, and its enabled state only reflects the URL list. The earlier test pass therefore does not independently prove decoded downloaded images. Historical 27/0/0 counts remain unchanged; same-title download navigation is not promoted to image-rendering acceptance.

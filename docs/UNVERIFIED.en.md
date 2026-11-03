@@ -2,6 +2,10 @@
 
 [简体中文](UNVERIFIED.md) | English
 
+## Release 0.3.3 acceptance update (2026-11-04)
+
+0.3.3/15 at 736e364 is published: CI attempt 2 passed; IPA HTTP 200/29,457,850 bytes, digest, App/Widget metadata and Core pin verified. After the generation-step authentication repair, AltStore repository data and all three public endpoints agree on 0.3.3/15. See [STATUS](STATUS.en.md) for receipts. Orca Worker accepted valid/corrupt/restored offline-page cases without product changes; tested patch recovery is pending. Other delegated Mac tasks require their own terminal reports; device/background/account items remain external.
+
 ## Offline downloaded-page assertion needs strengthening (2026-11-04)
 
 Review found that `testDownloadedChapterReadsWithNoServer` only waits for the Keep Page button after stopping the loopback server. ReaderView's toolbar exists before image decoding, and its enabled state only reflects the URL list. The earlier test pass therefore does not independently prove decoded downloaded images. Historical 27/0/0 counts remain unchanged; same-title download navigation is not promoted to image-rendering acceptance.

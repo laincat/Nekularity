@@ -2,6 +2,14 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## 0.3.3/build15 发布与订阅已核验(2026-11-04)
+
+正式tag `v0.3.3` 指向736e3645b8786f75c23845ca928cfde7dbc5072c。CI41720810029第二次尝试成功,实际执行Kit单测、构建设备App、编译UITests并发布IPA;第一次未取得托管macOS runner,零构建步骤,没有伪报为源码失败。公开IPA返回HTTP200、29,457,850字节,SHA-256 cb1ab0ca717b7e0a7181bda12e02f7b09a970974f818d16c84edbf2fe51b3a0d;ZIP CRC通过,App/Widget均0.3.3/15、最低iOS26.0,App含Core3be57b5ceb848bb9623c090abc463764add14de4标识。回执 `E:/Temp/nk-ios-033-evidence/release-accepted.json`,本地副本 `E:/Code/deliveries/2026-11-04-nekularity-033/`。
+
+AltStore首次刷新虽为绿色却仍保留0.3.2。确认生成步骤遗漏GH_TOKEN后,以a516cd2补齐,既有测试/结构检查通过;刷新41731222405成功,产出main6ce4eb68699b15bb218f4e3f699c6c32fc8e5a32。仓库条目、GitHub Raw、CNB镜像、固定Release三个公开入口均实际为0.3.3/15,稳定轨道/扁平版本/旧式version一致,大小29,457,850、最低26.0和IPA地址匹配。公开入口均HTTP200,回执 `E:/Temp/nk-ios-033-evidence/altstore-accepted.json`。刷新日志下载被插件地址校验拦截,根因表述限于已确认配置缺口及修复后实际结果,不补造限流错误。
+
+CI只编译UI;界面验收归属于原Orca Worker的独立结果。断网页图随后已完成正常图片/HTTP200坏图片/恢复图片的定向对照,真实青色图片与AX Image证据通过,产品源码无改动,测试补丁回收整合中。完整UI历史计数不改。真机签名、后台/锁屏、Live Activity、PiP、扬声器及真实账号仍单列外部条件;一次发版不代表全路线图完成。
+
 ## 离线下载页图的断言待加强(2026-11-04)
 
 复核发现既有 `testDownloadedChapterReadsWithNoServer` 在停止loopback服务后只等待“收藏本页”按钮存在。ReaderView工具栏在图片尚未解码时也存在,其enabled状态也只反映图片URL列表。因此旧用例通过不能独立证明下载页图已经解码;历史27/0/0计数保留,同名下载条目可进入的结果也不扩称图片呈现通过。

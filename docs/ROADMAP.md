@@ -2,6 +2,10 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+## 0.3.3发布验收更新(2026-11-04)
+
+736e364的0.3.3/15已发布:CI第二次成功,IPA HTTP200/29,457,850字节、摘要、App/Widget元数据与Core pin通过;AltStore修复生成步骤认证后,仓库及三个公开入口均0.3.3/15。详细回执见[STATUS](STATUS.md)。断网页图正/负/恢复对照已过Orca Worker实测,产品未改,测试补丁待回收。其余已派Mac任务仍按各自终态记录;真机、后台、账号等外部项不计通过。
+
 ## 30秒 HLS 续播定向通过(2026-11-04)
 
 Orca Worker 在专用签名模拟器上用30秒本地素材,真实播放后分别下滑和点关闭按钮。关闭前位置7.24/7.30秒,均落盘7秒/30秒、23%;自动重开时未点暂停、播放或字幕,起点均为7.00秒,早期App/engine/source时钟分别为9.60/9.50秒。两次CoreMedia均记录postSeekPosition 7.000000,经过的约2.5秒包括自动播放和UI采样。临时只读诊断移除后App重新编译安装,最终VideoPlayerView SHA为0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37,与先前受测源码一致。素材Git原始主清单为LF/110字节,Windows CRLF副本114字节,其余素材按摘要核对。日志 `/tmp/nk-hls30-resume-evidence/`,回执 `E:/Temp/nk-ios-033-evidence/hls30-mac-receipt.json`。原10秒失败日志仍保留:晚期交互接近片尾可能触发正常重播,本次不据此断言其调用原因。本次通过仅覆盖模拟器页面关闭与重开,不涵盖跨进程、后台或真机。
@@ -22,7 +26,7 @@ Lead 已构建并实际安装 0.2.7/`bf9cbd9`(Core `4f213ff`)。ZIP 21,566,978 b
 
 | 项目 | 当前事实 | 主要缺口 |
 |---|---|---|
-| Nekularity | **0.3.2/build 14 已发布并核对**(tag `v0.3.2`、CI `41578147149`、IPA 29,418,522 字节、App/Widget 均 0.3.2/14、包内 pin `4f213ff`、AltStore `468761a`);合并树 `9498b4c` 已过 Mac 416 单测/76 suites 与完整 UI 27/0/0 | main已整合6eab317/3be57b5,两条AI签名模拟器闭环与3574346 CI/IPA已验;已发布0.3.2仍为旧pin。真机、后台/锁屏、PiP、Live Activity及真实账号/服务仍待外部条件 |
+| Nekularity | **0.3.3/build15已发布并核验**:736e364、Core3be57b5,CI第二次成功;IPA29,457,850字节、App/Widget0.3.3/15及最低26.0通过;AltStore三个公开入口一致 | 定向HLS字幕/续播、AI、辅助字号及下载分组已验;断网页图正反例已过且测试补丁待收回。真机、后台/锁屏、PiP、Live Activity和真实账号仍需外部条件 |
 | Nekophage | MyGo 原生主窗口 + WebView 阅读/播放;main c545212/Core 3be57b5;当前 Windows 构建为0.2.7/c545212 | 当前整合树七项检查和关闭恢复探针通过;安装版97e24b6的字幕/续播证据单列;Mac阅读/解码已验,正常关窗受screen_locked限制;真实扬声器和签名/公证待外部条件,无Git远端 |
 | VeneraCat Core | 共享漫画/视频/备份/AI 协议逻辑;网络与系统能力交给客户端 | JS 引擎的少量兼容限制、客户端边界契约仍需维护;Sender 没有生产调用方 |
 

@@ -2,6 +2,10 @@
 
 [简体中文](ROADMAP.md) | English
 
+## Release 0.3.3 acceptance update (2026-11-04)
+
+0.3.3/15 at 736e364 is published: CI attempt 2 passed; IPA HTTP 200/29,457,850 bytes, digest, App/Widget metadata and Core pin verified. After the generation-step authentication repair, AltStore repository data and all three public endpoints agree on 0.3.3/15. See [STATUS](STATUS.en.md) for receipts. Orca Worker accepted valid/corrupt/restored offline-page cases without product changes; tested patch recovery is pending. Other delegated Mac tasks require their own terminal reports; device/background/account items remain external.
+
 ## Targeted thirty-second HLS resume accepted (2026-11-04)
 
 Orca Worker played thirty-second local media on the dedicated signed simulator and closed it by swipe and button. Positions before closure were 7.24/7.30 seconds; both persisted 7 seconds of 30, or 23%. On automatic reopening, without touching pause, play or subtitle controls, both started at 7.00; early App/engine/source clocks were 9.60/9.50 seconds. CoreMedia reported postSeekPosition 7.000000 in both cases; the approximately 2.5 seconds elapsed includes autoplay and UI sampling. After temporary read-only diagnostics were removed, the app was rebuilt and installed with VideoPlayerView SHA 0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37, matching the previously tested source. The Git master playlist uses LF/110 bytes; the Windows CRLF copy uses 114 bytes; remaining media digests matched. Logs: `/tmp/nk-hls30-resume-evidence/`; receipt: `E:/Temp/nk-ios-033-evidence/hls30-mac-receipt.json`. The original ten-second failure logs remain: later actions near the end may trigger normal replay, but its precise caller is not established. This acceptance covers simulator page dismissal and reopening, not cross-process, background or device behavior.
@@ -22,7 +26,7 @@ Updated 2026-11-03. Covers Nekularity, Nekophage and VeneraCat Core. At the user
 
 | Project | Current facts | Main gaps |
 |---|---|---|
-| Nekularity | **0.3.2/build 14 published and verified** (tag `v0.3.2`, CI `41578147149`, 29,418,522-byte IPA, App/Widget both 0.3.2/14, packaged pin `4f213ff`, AltStore `468761a`); combined tree `9498b4c` passes Mac 416 tests/76 suites and full UI 27/0/0 | Main integrates 6eab317/Core 3be57b5, with both signed-simulator AI loops and 3574346 CI/IPA accepted; published 0.3.2 retains its older pin. Devices, background/lock screen, PiP, Live Activity and real accounts/services require external conditions |
+| Nekularity | **0.3.3/build15 published and verified**:736e364/Core3be57b5, CI attempt2 success; IPA29,457,850 bytes, App/Widget0.3.3/15 and minimum26.0 verified; all three public AltStore endpoints agree | Targeted HLS captions/resume, AI, accessibility layout and download identity accepted; offline-image positive/negative cases passed and tested patch awaits recovery. Device/background/lock screen/PiP/Live Activity and real accounts need external conditions |
 | Nekophage | MyGo native main window + WebView reader/player; main c545212/Core 3be57b5; current Windows build 0.2.7/c545212 | Integrated tree passes seven checks and off-restoration probe; installed 97e24b6 subtitle/resume evidence is separate; Mac reading/decoding pass, normal closure is blocked by screen_locked; speaker output and signing/notarization need external conditions, no Git remote |
 | VeneraCat Core | Shared comic, video, backup and AI protocol logic; clients own networking and platform facilities | A few JS engine compatibility limits and ongoing client contracts; Sender has no production caller |
 

@@ -8,11 +8,11 @@
 
 | 构建 | 状态与用途 |
 |---|---|
-| 已发布 `v0.3.2` / build14 / Core4f213ff | AltStore 的当前已核版本;不能用于证明后续 Core3be 或 Magpie 登录绑定修复 |
+| 历史 `v0.3.2` / build14 / Core4f213ff | 旧发布包;不能用于证明后续 Core3be 或 Magpie 登录绑定修复 |
 | 候选3574346 / 0.3.2 build14 / 3be57b5 | 未签名 IPA 已核验,产品/测试源码已整合 main6eab317;与公开0.3.2同版本号但不是同一包,尚不含后续下载/字号/手势修复 |
-| 准备中的0.3.3 / build15 | 本地候选,尚未发布;待定向回执收齐并核对最终CI/IPA后,才用于验证本轮全部修复 |
+| 已发布0.3.3 / build15 / Core 3be57b5 | 736e364;CI及正式IPA身份通过,29,457,850字节,App/Widget均0.3.3/15;AltStore仓库和三个公开入口均已核对 |
 
-订阅入口为 `https://raw.githubusercontent.com/laincat/AltStore/main/apps.json`。安装前核对实际订阅版本,不要把准备中的版本当成已上线。当前候选 IPA 与 Windows 产物的本地清单位于 `E:/Code/deliveries/2026-11-04-core-3be57b5/README.md`。
+订阅入口为 `https://raw.githubusercontent.com/laincat/AltStore/main/apps.json`。安装前核对实际订阅版本。本轮正式IPA与回执位于 `E:/Code/deliveries/2026-11-04-nekularity-033/README.md`;Windows产物保留在 `E:/Code/deliveries/2026-11-04-core-3be57b5/README.md`,新版10/30秒本地夹具见 `E:/Code/deliveries/2026-11-04-hls30/README.md`。
 
 真机最低系统为 iOS26.0。签名由用户选用的侧载工具/签名流程完成,账号授权在其原生界面中输入。每项记录设备型号、系统、App版本/build、Core pin、安装方式、动作、期望和实际结果;模拟器通过不能替代真机证据。
 

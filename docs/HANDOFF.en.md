@@ -8,11 +8,11 @@ Updated 2026-11-04. These items need the user's device, account or publication c
 
 | Build | Status and use |
 |---|---|
-| Published `v0.3.2` / build 14 / Core 4f213ff | Current verified AltStore version; it does not establish later Core 3be behavior or the Magpie sign-in binding fix |
+| Historical `v0.3.2` / build 14 / Core 4f213ff | Older release; it does not establish later Core 3be behavior or the Magpie sign-in binding fix |
 | Candidate 3574346 / 0.3.2 build 14 / Core 3be57b5 | Unsigned IPA identity verified; product/test sources integrated at main 6eab317. It shares the public version number but is a different package and lacks later download/layout/gesture fixes |
-| Prepared 0.3.3 / build 15 | Local candidate, not yet published. Use it to verify this round's fixes only after targeted receipts and final CI/IPA checks |
+| Published 0.3.3 / build 15 / Core 3be57b5 | 736e364; CI and public IPA identity accepted, 29,457,850 bytes, App/Widget both 0.3.3/15; AltStore repository and all three public endpoints verified |
 
-The subscription entry is `https://raw.githubusercontent.com/laincat/AltStore/main/apps.json`. Check the actual subscribed version before installation; a prepared version is not automatically live. The local manifest for the current candidate IPA and Windows artifacts is `E:/Code/deliveries/2026-11-04-core-3be57b5/README.md`.
+The subscription entry is `https://raw.githubusercontent.com/laincat/AltStore/main/apps.json`. Check the actual subscribed version before installation. The public IPA copy and receipt are at `E:/Code/deliveries/2026-11-04-nekularity-033/README.md`; Windows artifacts remain at `E:/Code/deliveries/2026-11-04-core-3be57b5/README.md`, and the updated ten/thirty-second local fixture is at `E:/Code/deliveries/2026-11-04-hls30/README.md`.
 
 Minimum device OS is iOS 26.0. Signing is completed by the user's chosen sideloading tool or signing flow, with account authorization entered in its native interface. Record device model, OS, App version/build, Core pin, installation method, action, expected result and observed result. Simulator acceptance does not replace device evidence.
 
