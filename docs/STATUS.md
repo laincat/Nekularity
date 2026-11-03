@@ -7,11 +7,15 @@
 ## Core pin 工具保留历史证据(2026-11-03)
 
 旧 `set-core-pin.sh` 会全局替换两份 STATUS 中的旧 Core 哈希,使已有测试记录看起来使用了新 Core。已用临时仓库复现两份文档均被错误改写,日志 `E:/Temp/nk-pin-evidence-before.log`。脚本现在只改 `scripts/core-version` 与 `CoreVersion.pinned`,复用 `check-core-pin.sh` 校验,不改历史文档;新候选和新验收应单独通过 `update-pair.py` 记录。修复后验证历史文档与 Swift 原行尾不变、重复设置幂等、`--check` 通过、非法参数不写文件,日志 `E:/Temp/nk-pin-evidence-after.log`。这次修复本身不升级客户端 pin。
-## 标准接口地址输入仍待验收(2026-11-03)
+## 标准接口地址输入与请求路径的分歧(2026-11-03)
 
-Orca Worker 在 `44786f2411cafaf38a3049490910574ee7c1a133` 上通过 Kit 与 App/UITests 编译,但专用模拟器的五次输入检查仍失败。报告包含字段显示目标 URL 而持久化值仅为 `http:/127.0.0.1`、250 ms 逐字输入仍得到前缀、替换残留与重启后 `…/v1v1` 的现象;夹具 0 请求,后续模型目录、三协议回答、取消、401 与假密钥持久化未执行。证据在 Mac `/tmp/nk-fix-evidence/`: `build-tests.log`、`app-build.log` 与 `urlA`/`urlB`/`urlBack`/`urlSlow`/`urlPersist` 的日志及 xcresult。
+`44786f2` 的 Orca Worker 回执为 Kit/App/UITests 编译通过、五次输入检查失败、夹具 0 请求;日志在 Mac `/tmp/nk-fix-evidence/`。后续 `ad8e19143bc346d09bbd6211bfce374cb6815611` 同样通过 `swift build --build-tests`(13.95 秒)及 App/UITests 构建。Worker 报告逐字输入、清空后粘贴、改回、慢速输入与重启读回五例在应用视角通过,但离线读取 plist 的 JSON 均少一个 `/`。这些是不同观测,仍未确定差异发生在应用、偏好读取还是测试驱动;不能据此认定 cfprefsd 是原因或把磁盘观测作废。
 
-这些现象尚不能证明逐键保存或重绘是原因,也不能仅凭较慢输入和延时读回排除自动化清空/输入、偏好读取时序等影响。前文及旧提交说明中关于“已定位保存竞争”的断言撤回。候选 `ad8e191` 使用独立文本状态、400 ms 去抖、失焦/提交/非活跃场景/离开页面保存和显式清空按钮,已交给同一 Orca Worker 复测;本条不声称其 Mac 编译或 UI 通过,强制终止也不保证触发生命周期保存。复测应区分字段、绑定/请求配置、持久化值与测试驱动期望值。
+`ad8e191` 的模型目录请求仍失败:页面显示目标 `http://127.0.0.1:63640/v1`,保存假密钥后点击读取目录报 `aiapi: the API root has no host`,夹具 0 请求。后续三协议回答、取消/peer_closed、401 与假密钥重启读目录均未验收。Mac 证据 `/tmp/nk-fix2-evidence/` 包括 `build-tests.log`、`app-build4.log`、五个 `url*.log`/xcresult 以及 `full.log`/`full.xcresult`;临时驱动 SHA-256 `28ba5e27ba723a4d80ea6361913188acb6a0afc2ed94f59429b43d519e7c4f5c`。目前的通过范围限于该驱动报告的显示/清空/重启读回,不等于请求配置正确。
+
+Lead 在 Windows 使用同一 `4f213ff` 源码的公开 `mobile.Core.BuildAIModelsRequest` 做了 18 个组合检查(三协议 × 三种地址 × 普通/转义斜杠 JSON)。完整地址均生成正确的 `/models`;`http:/127.0.0.1:63640/v1` 精确复现 `no host`;`/v1` 报的是 `must be http or https`,与此次错误不同。日志 `E:/Temp/nk-ai-root-diagnostic/core-4f-boundary.log`,临时复现源码 `main.go` 位于同一目录。该结果验证 Go 构造边界,不替代 Apple bridge 或 UI 验证。
+
+“逐键保存/重绘竞争”以及“按钮读取了最短的中间快照”均未被直接测量证实。下一步在同一专用模拟器检查临时驱动的输入、清空和重启流程,并对照字段文本、addressDraft、config/snapshot、wireJSON 中 baseUrl 的 UTF-8 字节,寻找首次分歧。只记录本地假地址,不记录密钥或完整配置 JSON;不靠注入偏好或放宽 URL 校验让用例通过。
 
 ## 标准接口 HTTP 错误修复已整合(2026-11-03)
 

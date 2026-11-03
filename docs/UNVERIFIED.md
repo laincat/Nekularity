@@ -2,9 +2,9 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
-**地址候选尚未验收**:`44786f2` 的五次输入检查失败;`ad8e191` 已交同一 Orca Worker 复测,不重复派发。保存竞争并未被证实为根因,详见 STATUS。
+**标准接口输入与请求配置仍有分歧**:`ad8e191` 已经 Mac 编译,Orca Worker 报告五个显示/清空/重启读回用例通过,但模型目录仍报 `no host`、夹具 0 请求;后续回答/取消/错误态未验收。离线 plist 读值与应用读回不一致,根因待逐层字节对照,不能认定是滞后快照。Lead 的同 pin Go 边界复现区分了完整地址、单斜杠和 `/v1` 三种输入,见 STATUS。
 
-**标准接口 HTTP 错误修复已过 Mac Kit 回归,页面待验**:`bb77b5d` 已经 `9af6148` 整合 main,Orca Worker 的四条定向测试与全套 425/78 suites 通过,恢复旧实现的负向对照使两条错误用例失败。Windows loopback 夹具和 Mac URLProtocol 测试各有证据,不替代页面真实 HTTP/UI 结果。地址候选 `44786f2` 的输入检查失败;后续 `ad8e191` 尚待 Mac 回执,根因未证实。详见 STATUS。
+**标准接口 HTTP 错误修复已过 Mac Kit 回归,页面待验**:`bb77b5d` 已经 `9af6148` 整合 main,Orca Worker 的四条定向测试与全套 425/78 suites 通过,恢复旧实现的负向对照使两条错误用例失败。Windows loopback 夹具和 Mac URLProtocol 测试各有证据,不替代页面真实 HTTP/UI 结果。地址候选 `ad8e191` 已有 Mac 回执,模型目录仍失败,根因未证实。详见 STATUS。
 
 **标准接口取消修复已过编译与单元回归**:`77b969f` 的代码已整合 main,Mac Kit 421/77 suites、五条定向回归、App/UITests 编译通过;负向对照与日志见 STATUS。标准接口页面的真实 HTTP/界面闭环、真实账号与网络首块时序仍未验证,当前路径仍整包返回。已发布 v0.3.2 不含该修复。
 

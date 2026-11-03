@@ -2,9 +2,9 @@
 
 [简体中文](UNVERIFIED.md) | English
 
-**Address candidate not yet accepted**: five input checks fail at `44786f2`; the same Orca Worker is retesting `ad8e191` without duplicate dispatch. A saving race is not an established cause; see STATUS.
+**Standard-interface entry still disagrees with request configuration**: `ad8e191` compiles on Mac and the Orca Worker reports five display/clear/relaunch passes, but catalogs still fail with `no host` and zero fixture requests; replies/cancellation/error UI remain unaccepted. Offline plist reads disagree with app read-back. Layer-by-layer byte comparison is needed; a stale snapshot is not an established cause. The Lead's same-pin Go reproduction distinguishes complete, single-slash and `/v1` inputs; see STATUS.
 
-**Standard-interface HTTP errors pass Mac Kit regression; the screen remains pending**: `bb77b5d` is integrated through `9af6148`. The Orca Worker passed four targeted cases and the full 425/78 suites, and restoring the old implementation failed two error cases. Windows loopback checks and Mac URLProtocol tests have separate evidence, neither replacing real HTTP/UI screen results. Address checks fail at `44786f2`; subsequent `ad8e191` awaits a Mac receipt and the cause is unproven. See STATUS.
+**Standard-interface HTTP errors pass Mac Kit regression; the screen remains pending**: `bb77b5d` is integrated through `9af6148`. The Orca Worker passed four targeted cases and the full 425/78 suites, and restoring the old implementation failed two error cases. Windows loopback checks and Mac URLProtocol tests have separate evidence, neither replacing real HTTP/UI screen results. A Mac receipt is available for address candidate `ad8e191`; model listing still fails and the cause is unproven. See STATUS.
 
 **Standard-interface cancellation passes compilation and unit regression**: code from `77b969f` is integrated into main; Mac Kit 421/77 suites, five targeted cases and App/UITests compilation pass. Negative controls and logs are in STATUS. Real HTTP/UI behavior on the standard-interface screen, real accounts and first-network-chunk timing remain unverified; this path still returns whole responses. Published v0.3.2 does not contain the fix.
 
