@@ -3,6 +3,7 @@ name: Build iOS IPA
 on:
   workflow_dispatch:
   push:
+    branches: ['update/core-3be57b5']
     tags:
       - 'v*'
 
