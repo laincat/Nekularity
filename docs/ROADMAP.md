@@ -8,11 +8,11 @@
 
 | 项目 | 当前事实 | 主要缺口 |
 |---|---|---|
-| Nekularity | SwiftUI + NekularityKit + gomobile Core;0.3.1/build 13 与 AltStore 已发布并核对,发布 CI 为 415 例/76 套件 | main 的完整 UI 复跑仍由现有 Orca Worker 执行;下载库引用环修复 `ed09c82` 与 Core 升 pin 分支 `98e2e76` 均待 Mac 编译/运行验收,未合入 main;真机、后台、账号与服务仍单列交接 |
+| Nekularity | SwiftUI + NekularityKit + gomobile Core;0.3.1/build 13 与 AltStore 已发布并核对;当前源码 pin `4f213ff` 已在 `98e2e76` 上通过 Mac 构建、415 例/76 suites 与四例定向 UI | 完整 27 条 UI 与下载库引用环分支 `ed09c82` 的结果仍待各自原始回执核对;本地搜索回归被错误跳过的问题单独修正;真机、后台、账号与服务仍单列交接 |
 | Nekophage | MyGo 原生主窗口 + WebView 阅读/播放;Core pin `4f213ff`;Windows 本地包为 0.2.7/`87e2ffc` | `c36875d` 窗口套件 19/0/0;新包已实看 HLS/中文字幕、验证鉴权/Range 和页面进度落盘,包内英文切换与关闭重开续播因前台输入被拒绝仍待验;macOS 阅读主线的新 pin 验收与扬声器实际输出待验;无 Git 远端 |
 | VeneraCat Core | 共享漫画/视频/备份/AI 协议逻辑;网络与系统能力交给客户端 | JS 引擎的少量兼容限制、客户端边界契约仍需维护;Sender 没有生产调用方 |
 
-证据按提交和执行渠道分别记录;不声称重新跑过三个项目的全部测试。当前 main 的 pin 分开记录:Nekularity 为 `8e14aade75f563a95f50d4ec80be27bae0d02c63`,Nekophage 为 `4f213ffbd51cfa22ef032a4279a04efb71b36283`;iOS 分支 `98e2e76` 已准备升到后者,待 Mac 验证。Core 仓库的后续文档提交不自动改变客户端 pin,发布产物也按包内实际值记录。
+证据按提交和执行渠道分别记录,不声称重新跑过三个项目的全部测试。两个客户端当前源码 pin 均为 `4f213ffbd51cfa22ef032a4279a04efb71b36283`;iOS 受测分支 `98e2e76` 已由 Orca Worker 重建 xcframework、通过 415 单测与四例定向 UI 后整合。已发布 Nekularity 0.3.1 的包内 pin 仍为 `8e14aad`,Nekophage macOS 阅读主线已验的也是旧 pin。Core 后续文档提交不自动改变客户端 pin。
 
 Nekularity 早期完整 UI 验证提交 `5d9a5a1dfd5ce0e9d58fead6371d5cc4b3f842c4`:Orca Worker 在专用 iPhone 17 Pro 上卸载旧 App、重新安装并补种,启动前 Themes 为空,完整 **24 条 / PASS 24 / FAIL 0 / SKIP 0**。HTTPS 安装/选中/重启、坏 JSON 保留原主题、HTTP 拒绝三条均通过,三列几何也通过;日志 `/tmp/nk-ui-full-5d9a5a1.log`。这是一轮完整执行,不由早期单项结果拼合。三列完整视觉仍需重拍,真机/后台/账号不在该证据范围。
 

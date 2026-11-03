@@ -4,6 +4,14 @@
 
 更新:2026-11-02。
 
+## Core pin `4f213ff` 的 Mac 验收
+
+Orca Worker `mac-validate-2` 在分支提交 `98e2e76f16c42b097a263cd6f0d1227708da8440` 上重新运行 `scripts/fetch-core.sh`,生成的 xcframework、`build/core` HEAD 与 `scripts/core-version`/`CoreVersion.pinned` 均为 `4f213ffbd51cfa22ef032a4279a04efb71b36283`。`swift build --build-tests` 通过(15.68 秒),`swift test` **415 例 / 76 suites 全过**,`xcodebuild build-for-testing` 通过。415 而非 416 的原因是该分支没有包含 `ed09c82` 的下载库生命周期新用例,不能据此声称那一修复已经验收。
+
+五源种子经 `make-seed.py` 重建与 `check-seed.sh` 核对后,模拟器四例均通过、无跳过:`testSearchReachesDetailWithTags` 23.090 秒、`testCategoryPageListsItsPartsAndComics` 27.658 秒、`testBrowseLoadsSections` 25.720 秒、`testVideoPlaysTheSourcesClip` 29.073 秒。日志分别在 `/tmp/nk-98e-evidence/fetch-core.log`、`build-tests.log`、`full-swift-test.log`、`app-build.log`、`core-ui.log`。受测提交是 `98e2e76`,整合时主线相对它仅有文档差异;这四例不替代完整 27 条回归,也不是真机/账号验证。已发布 0.3.1 的包内 pin 仍是 `8e14aad`,本次未发布新版。
+
+Worker 还在临时夹具中直接调用 `URL`/`URLSearchParams`:新 Core 通过(22.561 秒),旧 `8e14aad` 下原夹具通过(21.983 秒),加入 URL 调用后却被搜索用例的 guard 记成 `XCTSkip`「network or site limit」(112.395 秒)。这是测试把本地回归当成站点问题的缺陷,不是旧 Core 兼容通过。日志 `/tmp/nk-98e-evidence/urlprobe-4f213ff.log`、`plainprobe-8e14aad.log`、`urlprobe-8e14aad.log`。探针改动已恢复,最终 Core/Vendor 为 `4f213ff`,工作树干净,恢复态搜索再过(21.623 秒)。搜索用例的跳过条件将单独修正,不改写本次计数。
+
 ## 宿主接口形状已核对
 
 `CoreHost` 的 21 个方法逐个比过 Core 里 `apple/CoreSmoke` 的 Swift 宿主实现(那份在 CI 里真的编译并跑过):返回对象的方法由 Clang 导入成 `(参数…, error: NSErrorPointer) -> String`,返回 `void`/`Bool` 的方法导入成 `throws`。例如 `http(_:error:) -> String`、`saveData(_:dataKey:valueJSON:) throws`、`writeClipboard(_:) throws`、`readClipboard(_:) -> String`,Nekularity 的写法与之一致。这只是签名对得上,不等于编译通过——真正的类型检查仍要等 Mac 上那次 `swift build`。

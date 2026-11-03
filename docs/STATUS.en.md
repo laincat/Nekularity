@@ -4,6 +4,14 @@ English | [简体中文](STATUS.md)
 
 Updated 2026-10-31.
 
+## Mac acceptance of Core pin `4f213ff`
+
+Orca Worker `mac-validate-2` reran `scripts/fetch-core.sh` at branch commit `98e2e76f16c42b097a263cd6f0d1227708da8440`. The generated xcframework and `build/core` HEAD match `scripts/core-version`/`CoreVersion.pinned`: `4f213ffbd51cfa22ef032a4279a04efb71b36283`. `swift build --build-tests` passes in 15.68 seconds, `swift test` passes **415 tests in 76 suites**, and `xcodebuild build-for-testing` passes. The count is 415 rather than 416 because this branch does not include the download lifetime test from `ed09c82`; that fix is not accepted by this result.
+
+After rebuilding the five-source seed with `make-seed.py` and checking it with `check-seed.sh`, four simulator cases pass without skips: `testSearchReachesDetailWithTags` 23.090 seconds, `testCategoryPageListsItsPartsAndComics` 27.658 seconds, `testBrowseLoadsSections` 25.720 seconds, and `testVideoPlaysTheSourcesClip` 29.073 seconds. Logs under `/tmp/nk-98e-evidence/`: `fetch-core.log`, `build-tests.log`, `full-swift-test.log`, `app-build.log` and `core-ui.log`. The tested commit is `98e2e76`; integration differs from it only in documentation. These four cases do not replace the full 27-case regression or device/account validation. Published 0.3.1 still contains pin `8e14aad`; no new release was made.
+
+The Worker also invoked `URL`/`URLSearchParams` from a temporary fixture: the new Core passes in 22.561 seconds; the original fixture passes on old `8e14aad` in 21.983 seconds, but adding the URL call is reported as `XCTSkip` with “network or site limit” by the search guard in 112.395 seconds. This is a test defect that treats a local regression as a site problem, not compatibility success on old Core. Logs: `/tmp/nk-98e-evidence/urlprobe-4f213ff.log`, `plainprobe-8e14aad.log` and `urlprobe-8e14aad.log`. The probe was restored, Core/Vendor returned to `4f213ff`, the worktree is clean, and the restored search passes in 21.623 seconds. The search skip condition will be fixed separately without changing these counts.
+
 ## Host signatures cross-checked
 
 All 21 `CoreHost` methods were compared against the Swift host implementation in Core's `apple/CoreSmoke`, which CI really compiles and runs: methods returning an object import as `(params…, error: NSErrorPointer) -> String`, while `void`/`Bool` methods import as `throws`. So `http(_:error:) -> String`, `saveData(_:dataKey:valueJSON:) throws`, `writeClipboard(_:) throws` and `readClipboard(_:) -> String` are the shapes Nekularity already uses. Matching signatures is not compiling, though — the real type check still waits for `swift build` on the Mac.
