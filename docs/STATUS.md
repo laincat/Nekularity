@@ -2,13 +2,21 @@
 
 [English](STATUS.en.md) | 简体中文
 
-更新:2026-11-02。
+更新:2026-11-03。
+
+## 0.3.2/build 14 已发布并核对
+
+tag `v0.3.2` 指向 `76a1ccd68b4834d169e58610a339322e1c7e29b4`,与受测 `9498b4c` 只差验收文档。发布 CI `41578147149` 的 13 个步骤全部成功:Build pinned Core、Check the tree、Kit 单测、Generate project、Build unsigned device app、Compile the interface tests、Package unsigned IPA、upload-artifact、Publish IPA 均 `success`,整轮 04:26:35–04:50:49 UTC。GitHub 插件拒绝下载整体 job 日志(地址安全校验指向内网/特殊地址),未绕过;本轮对 CI 的结论只依据 job/step 的 API 状态,不声称读到日志正文。
+
+发布资源核对(本地直连下载,`E:/Temp/nk-ios-032-release/ipa-verification.log`):HTTP 200、**29,418,522 字节**、SHA-256 `f59afe889def90131a8994a59a92571b6acc823679431d37c16c032f29bc8737`,与 GitHub 记录的 asset size/digest 一致;zip CRC 通过;`Payload/Nekularity.app/Info.plist` 与 `NekularityWidgets.appex/Info.plist` 均为 **0.3.2/14、最低 iOS 26.0**;App 主二进制含 Core pin `4f213ffbd51cfa22ef032a4279a04efb71b36283`,旧的 `8e14aade75f5` 已不在包内。回执 `E:/Temp/nk-ios-032-release/ipa-receipt.json`。包未签名,签名安装与真机仍不在核对范围。
+
+AltStore 工作流 `41582051344`(手动触发 `update-source.yml`)整轮成功,提交 `468761a5d267292d5742aa11de676e6052fb917c` 的 `apps.json` 已把 Nekularity 稳定轨道与扁平首版都更新为 **0.3.2/14**、29,418,522 字节,下载与图标均指向 `v0.3.2`;IPA 分段请求 206、`Content-Range: bytes 0-1023/29418522`,图标 HTTP 200(443,517 字节,`image/png`)。cnb.cool 镜像与 `releases/download/latest` 入口已读到 0.3.2;`raw.githubusercontent.com` 在核对时仍返回 0.3.1,是同域 CDN 缓存滞后,不是仓库内容不一致。证据 `E:/Temp/nk-ios-032-release/altstore-after.json`、`apps-468761a.json`。
 
 ## 0.3.2/build 14 合并树验收
 
 合并树 `9498b4c7c80ce6e4edcdf5c0b5e9afc5c065d4bd` 已由 Orca Worker `mac-validate-2` 在 Mac 上验收并整合到 main:Core `4f213ff`、下载库释放修复和严格本地搜索回归在同一提交上通过。`swift build --build-tests` 14.30 秒通过,`swift test` **416 例 / 76 suites** 通过;完整 UI 一次执行 **27 PASS / 0 FAIL / 0 SKIP**,722.577 秒,主类 23、主题 3、三列 1,xcresult 摘要一致。日志 `/tmp/nk-949-evidence/build-tests.log`、`swift-test.log`、`app-build.log`、`full-ui.log`、`counts.log`、`xcresult-summary.json`。这是一轮合并树执行,不是把下述单独分支结果相加。
 
-实际模拟器构建的 App/Widget 均为 **0.3.2/14、最低 iOS 26.0**,Bundle ID 分别为 `com.laincat.nekularity` 与 `com.laincat.nekularity.widgets`。本机 `xcodegen generate` 因命令缺失未执行成功,Worker 复用既有生成工程并只同步八个版本设置值,App/UITests 编译与上述运行均成功。发布 CI 仍需从 `project.yml` 全新生成工程,做设备 Release 构建、IPA 打包和产物核对;IPA 下载/大小/包内版本/Core pin 及 AltStore 尚待本轮发布结果,最新已核发布仍是 0.3.1。当前 main 相对受测 `9498b4c` 只有验收文档差异。
+实际模拟器构建的 App/Widget 均为 **0.3.2/14、最低 iOS 26.0**,Bundle ID 分别为 `com.laincat.nekularity` 与 `com.laincat.nekularity.widgets`。本机 `xcodegen generate` 因命令缺失未执行成功,Worker 复用既有生成工程并只同步八个版本设置值,App/UITests 编译与上述运行均成功。发布 CI 已从 `project.yml` 全新生成工程并完成设备 Release 构建与 IPA 打包,下载/大小/包内版本/Core pin 与 AltStore 均已核对见上一节。当前 main 相对受测 `9498b4c` 只有验收文档差异。
 
 Core 实际 HEAD/pin 均为 `4f213ffbd51cfa22ef032a4279a04efb71b36283`,Vendor 与 98e 原产物整树摘要一致(`83158a56862851cac804695c720c3a14ea553f1efdb9c17e2461d81cf456efbb`)。macOS 切片 SHA-256 `69284254554cbec08a35860a8cb50c86a439c030a26dd0e1fd65343ade6b4840`,模拟器切片 `ca54af50dad6e26d1b0931c6627ec8611df45942b2630594a0717e77312d76bf`,完整记录 `/tmp/nk-949-evidence/vendor-sha256.log`。主题服务复用原 CA,未新增或删除信任项;HTTPS 4 次请求(含预检),HTTP 0 次。旧三张 CA 不在册,保留的 `C0E33FBD155EF2C9…` 到期时间为 2026-12-03 02:52:02 GMT;服务已停,证书目录保留。
 
