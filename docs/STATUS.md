@@ -2,6 +2,12 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## 离线下载页图的断言待加强(2026-11-04)
+
+复核发现既有 `testDownloadedChapterReadsWithNoServer` 在停止loopback服务后只等待“收藏本页”按钮存在。ReaderView工具栏在图片尚未解码时也存在,其enabled状态也只反映图片URL列表。因此旧用例通过不能独立证明下载页图已经解码;历史27/0/0计数保留,同名下载条目可进入的结果也不扩称图片呈现通过。
+
+本候选把该用例改为等待ReaderPage成功CGImage分支提供的页图元素并附图。仍需原Mac Worker在专用模拟器上执行正常图片正例和坏图片负例;当前仅Windows语法解析,没有新增UI通过结论。网络停止、页面进入和图片解码必须分别有证据。
+
 ## 30秒 HLS 续播定向通过(2026-11-04)
 
 Orca Worker 在专用签名模拟器上用30秒本地素材,真实播放后分别下滑和点关闭按钮。关闭前位置7.24/7.30秒,均落盘7秒/30秒、23%;自动重开时未点暂停、播放或字幕,起点均为7.00秒,早期App/engine/source时钟分别为9.60/9.50秒。两次CoreMedia均记录postSeekPosition 7.000000,经过的约2.5秒包括自动播放和UI采样。临时只读诊断移除后App重新编译安装,最终VideoPlayerView SHA为0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37,与先前受测源码一致。素材Git原始主清单为LF/110字节,Windows CRLF副本114字节,其余素材按摘要核对。日志 `/tmp/nk-hls30-resume-evidence/`,回执 `E:/Temp/nk-ios-033-evidence/hls30-mac-receipt.json`。原10秒失败日志仍保留:晚期交互接近片尾可能触发正常重播,本次不据此断言其调用原因。本次通过仅覆盖模拟器页面关闭与重开,不涵盖跨进程、后台或真机。

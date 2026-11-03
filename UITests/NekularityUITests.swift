@@ -1195,8 +1195,19 @@ final class NekularityUITests: XCTestCase {
         // the source for a chapter list with the server gone would be asking the
         // network to prove that the network is not needed.
         firstElement(app, containing: "Probe Comic").tap()
-        XCTAssertTrue(app.buttons["收藏本页"].waitForExistence(timeout: 90),
-                      "the reader drew nothing with the server down, so the download did not serve the pages")
+        // The toolbar exists even with no image. ReaderPage exposes this image
+        // label only after ImageLoader has produced a CGImage.
+        let page = app.images.matching(
+            NSPredicate(format: "label BEGINSWITH '第 ' AND label ENDSWITH ' 页'")
+        ).firstMatch
+        guard page.waitForExistence(timeout: 90) else {
+            XCTFail("no decoded page image appeared with the server stopped")
+            return
+        }
+        let screenshot = XCTAttachment(screenshot: page.screenshot())
+        screenshot.name = "downloaded-page-with-server-stopped"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
     }
 
     /// A chapter that failed has to be visible and retryable. Before this, a
