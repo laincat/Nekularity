@@ -3,8 +3,8 @@ import Network
 import Testing
 @testable import NekularityKit
 
-/// Real HTTP headers with a body held until the test releases it. Network state
-/// belongs to `queue`; cross-thread observations are protected by `condition`.
+/// Sends one real SSE event immediately and holds the remaining events. Network
+/// state belongs to `queue`; observations are protected by `condition`.
 private final class HeldBody: @unchecked Sendable {
     private let listener: NWListener
     private let queue = DispatchQueue(label: "held-http-body")
@@ -16,7 +16,9 @@ private final class HeldBody: @unchecked Sendable {
     private var peerClosed = false
     private var problem: String?
     let status: Int
-    let body = Data("body released by the test".utf8)
+    let firstEvent = Data("data: {\"choices\":[{\"delta\":{\"content\":\"第一段 \"}}]}\n\n".utf8)
+    let tail = Data("data: {\"choices\":[{\"delta\":{\"content\":\"第二段\"}}]}\n\ndata: [DONE]\n\n".utf8)
+    var body: Data { firstEvent + tail }
 
     init(status: Int) throws {
         self.status = status
@@ -33,6 +35,11 @@ private final class HeldBody: @unchecked Sendable {
     var summary: String {
         condition.lock(); defer { condition.unlock() }
         return "released=\(released), peerClosed=\(peerClosed), error=\(problem ?? "none")"
+    }
+
+    var wasPeerClosed: Bool {
+        condition.lock(); defer { condition.unlock() }
+        return peerClosed
     }
 
     private func fail(_ message: String) {
@@ -122,7 +129,7 @@ private final class HeldBody: @unchecked Sendable {
         condition.unlock()
         queue.async { [weak self] in
             guard let self, !stopped, let connection else { return }
-            connection.send(content: body, contentContext: .finalMessage, isComplete: true,
+            connection.send(content: tail, contentContext: .finalMessage, isComplete: true,
                             completion: .contentProcessed { [weak self] error in
                 if let error { self?.fail("send body: \(error)") }
             })
@@ -150,7 +157,7 @@ private final class HeldBody: @unchecked Sendable {
     func stop() { queue.sync { stopOnQueue() } }
 }
 
-@Suite("Core stream response heads")
+@Suite("Core stream SSE response and first event")
 struct CoreStreamHeadTests {
     private struct Opened: Decodable { var id: Int64 }
     private struct Chunk: Decodable, Sendable {
@@ -184,7 +191,7 @@ struct CoreStreamHeadTests {
 
     private func next(_ host: CoreStreamHost, _ id: Int64) async throws -> Chunk {
         // streamNext blocks by contract. The watchdog closes that exact stream
-        // if the response head is accidentally held until the body completes.
+        // if the response or first event is held until the stream completes.
         let watchdog = Task.detached {
             try await Task.sleep(nanoseconds: 2_000_000_000)
             host.streamClose(id)
@@ -198,11 +205,11 @@ struct CoreStreamHeadTests {
         }.value
     }
 
-    @Test func responseHeadPrecedesHeldBody() async throws {
+    @Test func responseAndFirstEventPrecedeHeldTail() async throws {
         try await verifyHead(status: 201)
     }
 
-    @Test func errorResponseHeadPrecedesHeldBody() async throws {
+    @Test func errorResponseAndFirstEventPrecedeHeldTail() async throws {
         try await verifyHead(status: 503)
     }
 
@@ -217,8 +224,12 @@ struct CoreStreamHeadTests {
         #expect(head.headers?.first { $0.key.lowercased() == "x-fixture" }?.value == ["ready"])
         #expect(!reply.wasReleased)
 
+        let first = try await readFirstEvent(host, id, reply)
+        #expect(first == reply.firstEvent)
+        #expect(!reply.wasReleased)
+
         reply.release()
-        var body = Data()
+        var body = first
         for _ in 0..<8 {
             let chunk = try await next(host, id)
             if let encoded = chunk.chunkBase64 { body.append(try #require(Data(base64Encoded: encoded))) }
@@ -231,14 +242,28 @@ struct CoreStreamHeadTests {
                 return
             }
         }
-        Issue.record("stream did not end after the held body was released")
+        Issue.record("stream did not end after the held tail was released")
     }
 
-    @Test func cancellationAfterHeadStopsHeldBody() async throws {
+    private func readFirstEvent(_ host: CoreStreamHost, _ id: Int64, _ reply: HeldBody) async throws -> Data {
+        var bytes = Data()
+        for _ in 0..<8 {
+            let chunk = try await next(host, id)
+            try #require(!chunk.done, "stream ended before the first event: \(chunk); \(reply.summary)")
+            if let encoded = chunk.chunkBase64 { bytes.append(try #require(Data(base64Encoded: encoded))) }
+            if bytes.count >= reply.firstEvent.count { return bytes }
+        }
+        Issue.record("stream did not deliver the first event")
+        return bytes
+    }
+
+    @Test func cancellationAfterFirstEventStopsHeldTail() async throws {
         let (host, id, _, reply) = try open(status: 200)
         defer { host.streamClose(id); reply.stop() }
-        let head = try await next(host, id)
-        try #require(!head.done && head.status == 200, "first chunk: \(head); \(reply.summary)")
+        let first = try await readFirstEvent(host, id, reply)
+        #expect(first == reply.firstEvent)
+        #expect(!reply.wasReleased)
+        try #require(!reply.wasPeerClosed, "peer closed before streamClose; \(reply.summary)")
         host.streamClose(id)
         #expect(reply.waitForPeerClose(), "\(reply.summary)")
         #expect(!reply.wasReleased)
