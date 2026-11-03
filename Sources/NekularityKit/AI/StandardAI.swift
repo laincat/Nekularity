@@ -133,6 +133,17 @@ public final class StandardAI: @unchecked Sendable {
         guard !trimmedModel.isEmpty else { throw StandardAIError("先填一个模型名") }
         let body = try Self.requestBody(config: config, model: trimmedModel, messages: messages)
         let answer = try await core.sendAIRequest(configJSON: try config.wireJSON(apiKey: apiKey), bodyJSON: body)
+        let providerError: String?
+        if case .object(let root) = try? JSONValue.parse(answer.bodyText) {
+            providerError = Self.errorMessage(root)
+        } else {
+            providerError = nil
+        }
+        guard (200..<300).contains(answer.status) else {
+            let detail = providerError.map { ": " + $0 } ?? ""
+            throw StandardAIError("接口返回 HTTP \(answer.status)\(detail)")
+        }
+        if let providerError { throw StandardAIError(providerError) }
         return StandardAIReply(status: answer.status, text: Self.text(from: answer, protocol: config.protocol),
                                raw: answer.bodyText, streamed: answer.streamed)
     }
