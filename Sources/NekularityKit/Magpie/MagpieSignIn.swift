@@ -134,7 +134,10 @@ public final class MagpieSignIn: @unchecked Sendable {
            let immediateText = try? JSONSerialization.data(withJSONObject: result, options: [.sortedKeys]) {
             immediate = try MagpieAuthShape.stored(from: String(decoding: immediateText, as: UTF8.self),
                                                   inputs: inputs)
-            if let immediate { try store.saveAuthJSON(provider: provider, json: immediate) }
+            if let immediate {
+                try store.saveAuthJSON(provider: provider, json: immediate)
+                try core.setAuth(provider: provider, authJSON: immediate)
+            }
         }
         let start = MagpieSignInStart(
             id: decoded.id,
@@ -166,6 +169,7 @@ public final class MagpieSignIn: @unchecked Sendable {
                 let answer = try core.poll(id: start.id)
                 if let stored = try MagpieAuthShape.stored(from: answer, inputs: inputs) {
                     try store.saveAuthJSON(provider: provider, json: stored)
+                    try core.setAuth(provider: provider, authJSON: stored)
                     return .success(authJSON: stored)
                 }
                 // An empty or `null` answer means the package has nothing to say
