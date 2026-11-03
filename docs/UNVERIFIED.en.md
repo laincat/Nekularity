@@ -2,9 +2,9 @@
 
 [简体中文](UNVERIFIED.md) | English
 
-**The standard-interface address field is still unusable; a new fix awaits Mac retest**: the Mac retest of `44786f2` still fails — with `http://127.0.0.1:62389/v1` displayed, the persisted `config.baseURL` is only the prefix `http:/127.0.0.1`. 250 ms typing, whole-string paste replacement, rewriting and a relaunch read-back all fail as well, and the fixture receives zero requests. Branch `fix/standard-ai-endpoint-edit` now gives the fields their own text state, debounces saving, flushes on focus loss/background, and adds explicit clearing; it is not yet compiled or re-tested on the Mac. See STATUS.
+**Address candidate not yet accepted**: five input checks fail at `44786f2`; the same Orca Worker is retesting `ad8e191` without duplicate dispatch. A saving race is not an established cause; see STATUS.
 
-**Standard-interface HTTP error candidate awaits Mac validation**: `fix/standard-ai-http-errors` validates HTTP status and in-band errors, with four new Core/transport integration tests not yet run. The loopback fixture passes actual HTTP and TCP-close checks on Windows; this does not establish Swift or UI acceptance. See STATUS.
+**Standard-interface HTTP errors pass Mac Kit regression; the screen remains pending**: `bb77b5d` is integrated through `9af6148`. The Orca Worker passed four targeted cases and the full 425/78 suites, and restoring the old implementation failed two error cases. Windows loopback checks and Mac URLProtocol tests have separate evidence, neither replacing real HTTP/UI screen results. Address checks fail at `44786f2`; subsequent `ad8e191` awaits a Mac receipt and the cause is unproven. See STATUS.
 
 **Standard-interface cancellation passes compilation and unit regression**: code from `77b969f` is integrated into main; Mac Kit 421/77 suites, five targeted cases and App/UITests compilation pass. Negative controls and logs are in STATUS. Real HTTP/UI behavior on the standard-interface screen, real accounts and first-network-chunk timing remain unverified; this path still returns whole responses. Published v0.3.2 does not contain the fix.
 

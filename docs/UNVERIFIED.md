@@ -2,9 +2,9 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
-**标准接口地址输入仍不可用,新修复待 Mac 复测**:`44786f2` 在 Mac 上复测仍失败——字段显示 `http://127.0.0.1:62389/v1` 时,持久化的 `config.baseURL` 只有前缀 `http:/127.0.0.1`;250 ms 输入、整段粘贴覆盖、改回以及重启读回同样失败,夹具 0 请求。分支 `fix/standard-ai-endpoint-edit` 改为字段自持文本、400 ms 去抖加失焦/后台落盘,并提供显式清空;尚未 Mac 编译或复测。详见 STATUS。
+**地址候选尚未验收**:`44786f2` 的五次输入检查失败;`ad8e191` 已交同一 Orca Worker 复测,不重复派发。保存竞争并未被证实为根因,详见 STATUS。
 
-**标准接口 HTTP 错误候选待 Mac 验证**:`fix/standard-ai-http-errors` 增加 HTTP 状态与内嵌错误校验,新增四条 Core/传输整合测试尚未运行。loopback 夹具已在 Windows 通过真实 HTTP 与 TCP 关闭检查,不能据此声明 Swift 或界面通过;详见 STATUS。
+**标准接口 HTTP 错误修复已过 Mac Kit 回归,页面待验**:`bb77b5d` 已经 `9af6148` 整合 main,Orca Worker 的四条定向测试与全套 425/78 suites 通过,恢复旧实现的负向对照使两条错误用例失败。Windows loopback 夹具和 Mac URLProtocol 测试各有证据,不替代页面真实 HTTP/UI 结果。地址候选 `44786f2` 的输入检查失败;后续 `ad8e191` 尚待 Mac 回执,根因未证实。详见 STATUS。
 
 **标准接口取消修复已过编译与单元回归**:`77b969f` 的代码已整合 main,Mac Kit 421/77 suites、五条定向回归、App/UITests 编译通过;负向对照与日志见 STATUS。标准接口页面的真实 HTTP/界面闭环、真实账号与网络首块时序仍未验证,当前路径仍整包返回。已发布 v0.3.2 不含该修复。
 
