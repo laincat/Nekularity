@@ -59,6 +59,18 @@ public actor ImageLoader {
         shared.task.cancel()
     }
 
+    /// Connects archive lookup and retries without retaining the environment in
+    /// a cycle. The archive keeps the loader alive for retrying a saved failure;
+    /// the loader must therefore borrow the archive for offline reads.
+    @MainActor
+    public static func forDownloads(core: CoreClient, downloads: DownloadStore) -> ImageLoader {
+        let images = ImageLoader(core: core, offline: { [weak downloads] key in
+            await downloads?.bytes(for: key)
+        })
+        downloads.fallbackFetch = { try await images.raw($0) }
+        return images
+    }
+
     public init(core: CoreClient, memoryLimitBytes: Int = 128 << 20,
                 offline: (@Sendable (Key) async -> Data?)? = nil) {
         self.core = core

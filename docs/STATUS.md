@@ -4,6 +4,18 @@
 
 更新:2026-11-02。
 
+## 0.3.2/build 14 合并候选与已核回执
+
+候选分支 `release/0.3.2-validation` 将下载库引用环修复 `ed09c82`、搜索测试修复 `61197f8` 与已验收的 Core pin `4f213ff` 放到同一提交,App/Widget 版本均为 **0.3.2/14**。这棵合并树尚待一次 Mac 构建、416 单测和完整 27 条 UI;尚未合入 main、打 tag、发布 IPA 或更新 AltStore。下述分支结果各自归属原提交,不拼成合并树通过。
+
+Orca Worker 从旧日志核实 `1888cd3` 完整 UI:**27 PASS / 0 FAIL / 0 SKIP**,共 722.784 秒,其中主类 23、主题类 3、三列类 1。`xcresult` 摘要同为 total 27/passed 27/failed 0/skipped 0。日志 `/tmp/nk-1888-evidence/full-ui.log`、`counts.log`、`xcresult-summary.json`。同提交的单独主题 3/3 仍单列,不加到 27 中。此前 `95818c5` 的 23/4 是历史记录,不再充当最新完整回归。
+
+`ed09c82` 的 `swift build --build-tests` 通过(14.87 秒),完整单测 **416/76 suites** 通过,共享加载 3 例、下载写盘 14 例通过;把弱引用临时改回强引用后,归档/加载器未释放的两条断言如期失败,恢复后该例通过、diff 0 字节。两条下载 UI 均通过且无跳过:失败下载重试 50.642 秒、无服务离线阅读 36.928 秒。证据在 `/tmp/nk-ed09-evidence/`: `build-tests.log`、`full-swift-test.log`、`negctl-test.log`、`negctl-restored-test.log`、`downloads-ui.log`。
+
+`61197f8` 在 Core `4f213ff` 上通过 Swift 构建(14.62 秒)和 App/UITests 编译。有效夹具下搜索用例通过(24.823 秒);故意抛出搜索错误后退出 65、用例 FAIL(80.121 秒),断言为 `Callback Probe is local and must return Probe Comic`,没有 SKIP 或环境/编译错误。恢复后的种子与初始有效种子逐字节一致,同例再通过(23.027 秒),工作树干净。日志 `/tmp/nk-611-evidence/valid.log`、`negctl.log`、`fixture-search-failure-tree.txt`、`restored.log`。这已验证旧的站点限制跳过条件得到修正。
+
+CA 状态也已按指纹核实:三张旧 CA(sha256 前缀 `3D1895C2E4984B91`、`FBCE77CD0660BC0E`、`38C95A8619A02359`)已从该专用模拟器生效的 trustd 存库移除;`simctl keychain reset` 本身未移除它们,不能作为清理成功的证据。当前库为 5 条系统根加 `1888cd3` 新 CA(前缀 `C0E33FBD155EF2C9`,2026-12-03 到期),因此不宣称测试 CA 已全部清空。旧 CA 移除后请求失败、夹具 0 请求,日志 `/tmp/nk-theme-after-removal.log`;原库备份 `/tmp/nk-truststore-backup-102519.sqlite3` 保留。合并回归优先复用现有有效证书,不重置整个钥匙串。
+
 ## Core pin `4f213ff` 的 Mac 验收
 
 Orca Worker `mac-validate-2` 在分支提交 `98e2e76f16c42b097a263cd6f0d1227708da8440` 上重新运行 `scripts/fetch-core.sh`,生成的 xcframework、`build/core` HEAD 与 `scripts/core-version`/`CoreVersion.pinned` 均为 `4f213ffbd51cfa22ef032a4279a04efb71b36283`。`swift build --build-tests` 通过(15.68 秒),`swift test` **415 例 / 76 suites 全过**,`xcodebuild build-for-testing` 通过。415 而非 416 的原因是该分支没有包含 `ed09c82` 的下载库生命周期新用例,不能据此声称那一修复已经验收。

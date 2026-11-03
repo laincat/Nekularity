@@ -4,6 +4,18 @@ English | [简体中文](STATUS.md)
 
 Updated 2026-10-31.
 
+## 0.3.2/build 14 candidate and reconciled receipts
+
+Candidate branch `release/0.3.2-validation` combines download lifetime fix `ed09c82`, search-test fix `61197f8` and accepted Core pin `4f213ff` in one commit, with App/Widget both at **0.3.2/14**. The combined tree still needs a Mac build, 416 unit tests and one full 27-case UI run. It is not merged into main, tagged, released as an IPA or added to AltStore. Results below remain attributed to their individual commits rather than combined into a passing candidate result.
+
+The Orca Worker reconciled the old `1888cd3` full UI logs: **27 PASS / 0 FAIL / 0 SKIP**, 722.784 seconds, comprising 23 main-class cases, three theme cases and one three-column case. The xcresult summary agrees: total 27/passed 27/failed 0/skipped 0. Logs: `/tmp/nk-1888-evidence/full-ui.log`, `counts.log`, `xcresult-summary.json`. A separate theme 3/3 run at the same commit remains separate, not added to 27. The earlier 23/4 at `95818c5` is historical rather than the latest full regression.
+
+At `ed09c82`, `swift build --build-tests` passes in 14.87 seconds, the complete **416 tests/76 suites** pass, and sharing 3/3 plus download-write 14/14 pass. Temporarily restoring the strong capture fails the two archive/loader-release assertions as expected; restoration passes with a zero-byte diff. Both download UI cases pass without skips: failure retry in 50.642 seconds and offline reading without a server in 36.928 seconds. Evidence under `/tmp/nk-ed09-evidence/`: `build-tests.log`, `full-swift-test.log`, `negctl-test.log`, `negctl-restored-test.log`, `downloads-ui.log`.
+
+At `61197f8`, Core `4f213ff` passes the Swift build in 14.62 seconds and App/UITests compilation. Valid-fixture search passes in 24.823 seconds; deliberately throwing a fixture search error exits 65 and FAILS in 80.121 seconds with `Callback Probe is local and must return Probe Comic`, without SKIP or environment/build errors. The restored seed matches the original valid seed byte-for-byte, the case passes again in 23.027 seconds and the worktree is clean. Logs: `/tmp/nk-611-evidence/valid.log`, `negctl.log`, `fixture-search-failure-tree.txt`, `restored.log`. This verifies correction of the old site-limitation skip condition.
+
+CA state is reconciled by fingerprint: the three old CAs (SHA-256 prefixes `3D1895C2E4984B91`, `FBCE77CD0660BC0E`, `38C95A8619A02359`) are absent from this dedicated simulator's active trustd store. `simctl keychain reset` did not remove them and is not evidence of successful cleanup. The current store contains five system roots plus the new `1888cd3` CA (prefix `C0E33FBD155EF2C9`, expiring 2026-12-03), so it is not described as free of test CAs. Removing the old CAs made the request fail with zero fixture requests; log `/tmp/nk-theme-after-removal.log`, original store backup `/tmp/nk-truststore-backup-102519.sqlite3`. The combined regression will prefer reusing the existing valid certificate without resetting the entire keychain.
+
 ## Mac acceptance of Core pin `4f213ff`
 
 Orca Worker `mac-validate-2` reran `scripts/fetch-core.sh` at branch commit `98e2e76f16c42b097a263cd6f0d1227708da8440`. The generated xcframework and `build/core` HEAD match `scripts/core-version`/`CoreVersion.pinned`: `4f213ffbd51cfa22ef032a4279a04efb71b36283`. `swift build --build-tests` passes in 15.68 seconds, `swift test` passes **415 tests in 76 suites**, and `xcodebuild build-for-testing` passes. The count is 415 rather than 416 because this branch does not include the download lifetime test from `ed09c82`; that fix is not accepted by this result.

@@ -40,7 +40,17 @@ class CallbackProbe extends ComicSource {
     // a site answering. The tag carries an action, which is what makes a tag a
     // control rather than a word: `comic.onClickTag` says what tapping it means.
     search = {
-        load: async () => ({comics: [{id: "1", title: "Probe Comic"}], maxPage: 1}),
+        load: async () => {
+            // Exercise the source realm's URL classes through the client, as real
+            // sources do when parsing addresses and editing request queries.
+            const address = new URL("HTTPS://Probe.Example.COM/s?q=Probe%20Comic&page=1")
+            address.searchParams.set("page", "2")
+            const query = new URLSearchParams(address.search)
+            if (address.host !== "probe.example.com" || query.get("q") !== "Probe Comic" || query.get("page") !== "2") {
+                throw new Error("Core URL compatibility regression")
+            }
+            return {comics: [{id: "1", title: "Probe Comic"}], maxPage: 1}
+        },
     }
 
     // A browse section as well: the browse tab draws a source's own sections, and

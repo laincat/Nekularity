@@ -416,22 +416,18 @@ final class NekularityUITests: XCTestCase {
         field.typeText("love")
         app.typeText("\n")
 
-        // Counting characters inside an NSPredicate is rejected by XCTest
-        // (`XCTElementQueryInvalidPredicate`), so the first labelled element is
-        // chosen here instead. Cards are buttons; a source that draws a list still
-        // gives cells, so both are tried.
-        var firstResult: XCUIElement?
-        let deadline = Date().addingTimeInterval(90)
-        while Date() < deadline {
-            firstResult = app.scrollViews.buttons.allElementsBoundByIndex.first { $0.label.count > 4 }
-            if firstResult == nil {
-                firstResult = app.cells.allElementsBoundByIndex.first { !$0.label.isEmpty }
-            }
-            if firstResult != nil { break }
-            Thread.sleep(forTimeInterval: 1)
-        }
-        guard let firstResult else {
-            throw XCTSkip("the source returned no results: network or site limit")
+        // This local fixture always returns this comic. An error or another
+        // labelled control cannot stand in for its result, and a missing result
+        // is a regression rather than an unavailable external site.
+        let firstResult = app.scrollViews.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'Probe Comic'")).firstMatch
+        guard firstResult.waitForExistence(timeout: 60) else {
+            let tree = XCTAttachment(string: app.debugDescription)
+            tree.name = "fixture-search-failure"
+            tree.lifetime = .keepAlways
+            add(tree)
+            XCTFail("Callback Probe is local and must return Probe Comic; inspect the fixture or Core error")
+            return
         }
         firstResult.tap()
 
