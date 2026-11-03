@@ -133,8 +133,15 @@ struct CoreStreamHeadTests {
         }.value
     }
 
-    @Test(arguments: [201, 503])
-    func responseHeadPrecedesHeldBody(status: Int) async throws {
+    @Test func responseHeadPrecedesHeldBody() async throws {
+        try await verifyHead(status: 201)
+    }
+
+    @Test func errorResponseHeadPrecedesHeldBody() async throws {
+        try await verifyHead(status: 503)
+    }
+
+    private func verifyHead(status: Int) async throws {
         let (host, id, url, reply) = try open(status: status)
         defer { host.streamClose(id); reply.cancel(); HeadGateProtocol.remove(url) }
         let head = try await next(host, id)
