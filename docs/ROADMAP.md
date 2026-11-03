@@ -14,7 +14,7 @@
 
 证据按提交和执行渠道分别记录,不声称重新跑过三个项目的全部测试。两个客户端当前源码 pin 均为 `4f213ffbd51cfa22ef032a4279a04efb71b36283`;iOS 受测分支 `98e2e76` 已由 Orca Worker 重建 xcframework、通过 415 单测与四例定向 UI 后整合。已发布 Nekularity 0.3.2 的包内 pin 核到 `4f213ff`(旧 `8e14aad` 已不在包内),Nekophage `90e784f` 的 macOS 本地夹具搜索、阅读、进度恢复与双页现已在 `4f213ff` 验证;`c387e3f` 打包 App 已实际开窗,正常关闭因 `screen_locked` 待验。Core 后续文档提交不自动改变客户端 pin。
 
-**下一 Core 候选已准备**:`2c9c83b` 的 CI `41590287663` 四个 job 全成功(含 Apple xcframework 与双平台 Swift smoke);SDK 下载哈希和三类切片已核对。两端独立候选分支均为 `update/core-2c9c83b`:Nekularity `0ea786f` 已配置 SDK 但尚未客户端编译,Nekophage `db024bd` 已过七项检查,Windows 开发路径实测 HLS 解码/鉴权/页面进度重开恢复、MP4 206 范围响应及英文/关闭字幕持久化。另已生成同提交 ZIP/setup,实际临时安装后主窗可见、正常关闭并卸载保留资料;安装包内媒体仍需单列验证。日志与回执在 `E:/Temp/nk-core-2c9-runtime/`,候选文档提交 `755ea28`。它们尚未合入两端 main,不复用旧 pin 的 UI 证据。
+**下一 Core 候选已准备**:`2c9c83b` 的 CI `41590287663` 四个 job 全成功(含 Apple xcframework 与双平台 Swift smoke);SDK 下载哈希和三类切片已核对。两端独立候选分支均为 `update/core-2c9c83b`:Nekularity `0ea786f` 已配置 SDK 但尚未客户端编译,Nekophage `db024bd` 已过七项检查,Windows 开发路径实测 HLS 解码/鉴权/页面进度重开恢复、MP4 206 范围响应及英文/关闭字幕持久化。另已生成同提交 ZIP/setup,实际临时安装后主窗可见、正常关闭并卸载保留资料;随后同一 `db024bd` 安装包已在独立资料下完成原生搜索→HLS/中英字幕与关闭选择、鉴权/Range 和跨进程续播,恢复视频区域逐像素一致且关闭字幕状态保留;通过原生搜索重新建立夹具登录,不声称自动登录。回执 `E:/Temp/nk-core-2c9-runtime/media-installed-0c334515/receipt.json`。日志与回执在 `E:/Temp/nk-core-2c9-runtime/`,候选文档提交 `755ea28`。它们尚未合入两端 main,不复用旧 pin 的 UI 证据。
 
 Nekularity 早期完整 UI 验证提交 `5d9a5a1dfd5ce0e9d58fead6371d5cc4b3f842c4`:Orca Worker 在专用 iPhone 17 Pro 上卸载旧 App、重新安装并补种,启动前 Themes 为空,完整 **24 条 / PASS 24 / FAIL 0 / SKIP 0**。HTTPS 安装/选中/重启、坏 JSON 保留原主题、HTTP 拒绝三条均通过,三列几何也通过;日志 `/tmp/nk-ui-full-5d9a5a1.log`。这是一轮完整执行,不由早期单项结果拼合。三列完整视觉仍需重拍,真机/后台/账号不在该证据范围。
 

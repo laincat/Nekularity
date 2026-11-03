@@ -7,11 +7,17 @@
 ## Core pin 工具保留历史证据(2026-11-03)
 
 旧 `set-core-pin.sh` 会全局替换两份 STATUS 中的旧 Core 哈希,使已有测试记录看起来使用了新 Core。已用临时仓库复现两份文档均被错误改写,日志 `E:/Temp/nk-pin-evidence-before.log`。脚本现在只改 `scripts/core-version` 与 `CoreVersion.pinned`,复用 `check-core-pin.sh` 校验,不改历史文档;新候选和新验收应单独通过 `update-pair.py` 记录。修复后验证历史文档与 Swift 原行尾不变、重复设置幂等、`--check` 通过、非法参数不写文件,日志 `E:/Temp/nk-pin-evidence-after.log`。这次修复本身不升级客户端 pin。
-## 标准接口 HTTP 错误修复候选(2026-11-03)
+## 标准接口 HTTP 错误修复已整合(2026-11-03)
 
-分支 `fix/standard-ai-http-errors` 修复回答路径:旧 `StandardAI.reply` 会把 HTTP 401/503 或 HTTP 200 中的供应商错误当正常助手回复,现在抛出错误交给页面的错误状态,不追加为助手消息。新增四条测试通过真实 Core 与 URLSessionTransport、URLProtocol 替代网络,覆盖三种协议的成功回答/鉴权头/禁用 Cookie、HTTP 错误、200 内嵌错误和模型目录。每条请求使用独立主机与临时资料,不读写 Keychain;这四条尚未在 Mac 编译执行,静态总数为 425/78 suites。
+`bb77b5d` 的回答错误修复已通过 `9af6148` 整合 main:旧 `StandardAI.reply` 会把 HTTP 401/503 或 HTTP 200 内嵌供应商错误当正常助手回复,现在抛出 `StandardAIError`。Orca Worker 在 Mac 通过 `swift build --build-tests`、四条定向测试及全套 **425 tests / 78 suites**;恢复旧实现的负向对照使两条错误用例失败。证据在 Mac `/tmp/nk-ai-http-evidence/`,包括 `full-swift-test.log`、`negctl-filter.log`。四条测试使用真实 Core/URLSessionTransport,以 URLProtocol 替代网络,覆盖三协议成功回答、鉴权头、禁用 Cookie、HTTP/内嵌错误及模型目录;每条请求独立主机和临时资料,不访问 Keychain。这是 Kit 回归证据,不代表标准接口页面的 HTTP/UI 闭环通过,也不在已发布 v0.3.2 中。
 
 新增 `UITests/Fixtures/standard-ai/serve.py` 是只监听 loopback 的整包 HTTP 服务,支持正常/慢响应/401/503/200 内嵌错误。Windows 已实际验证模型目录、三协议回答、错误、TCP peer close、控制接口释放正文,日志 `E:/Temp/nk-ai-fixture/verification.log`、`events.jsonl`。日志不含鉴权值或提示正文。它不实现流式或凭据刷新,也不证明 Swift 客户端/界面通过;页面自动化还需隔离测试设置和 Keychain 命名空间。
+
+## 标准接口地址输入仍待验收(2026-11-03)
+
+Orca Worker 在 `44786f2411cafaf38a3049490910574ee7c1a133` 上通过 Kit 与 App/UITests 编译,但专用模拟器的五次输入检查仍失败。报告包含字段显示目标 URL 而持久化值仅为 `http:/127.0.0.1`、250 ms 逐字输入仍得到前缀、替换残留与重启后 `…/v1v1` 的现象;夹具 0 请求,后续模型目录、三协议回答、取消、401 与假密钥持久化未执行。证据在 Mac `/tmp/nk-fix-evidence/`: `build-tests.log`、`app-build.log` 与 `urlA`/`urlB`/`urlBack`/`urlSlow`/`urlPersist` 的日志及 xcresult。
+
+这些现象尚不能证明逐键保存或重绘是原因,也不能仅凭较慢输入和延时读回排除自动化清空/输入、偏好读取时序等影响。前文及旧提交说明中关于“已定位保存竞争”的断言撤回。候选 `ad8e191` 使用独立文本状态、400 ms 去抖、失焦/提交/非活跃场景/离开页面保存和显式清空按钮,已交给同一 Orca Worker 复测;本条不声称其 Mac 编译或 UI 通过,强制终止也不保证触发生命周期保存。复测应区分字段、绑定/请求配置、持久化值与测试驱动期望值。
 
 ## 标准接口取消修复已整合(2026-11-03)
 
