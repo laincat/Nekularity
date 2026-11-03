@@ -26,7 +26,9 @@ CI compiled UI tests only; UI acceptance belongs to separate Orca Worker results
 
 Review found that `testDownloadedChapterReadsWithNoServer` only waits for the Keep Page button after stopping the loopback server. ReaderView's toolbar exists before image decoding, and its enabled state only reflects the URL list. The earlier test pass therefore does not independently prove decoded downloaded images. Historical 27/0/0 counts remain unchanged; same-title download navigation is not promoted to image-rendering acceptance.
 
-Test branch e36b171 waits for the page image exposed by ReaderPage's successful CGImage branch and attaches its screenshot; it is not yet integrated into main. The existing Mac Worker still needs to exercise valid-image and corrupt-image cases on the dedicated simulator. Only Windows syntax parsing is available so far; no new UI pass is claimed. Server shutdown, reader navigation and image decoding need distinct evidence.
+The tested change is integrated: after server shutdown it waits for the page image exposed by ReaderPage's successful CGImage branch, and the negative control returns HTTP 200 with undecodable bytes. On the dedicated simulator, Orca Worker passed the positive case in39.920s, the negative control in61.470s (toolbar assertion held while the image predicate failed within8s), and the restored-image rerun in40.572s.
+
+Review then found that the negative case's corrupt chapter made the following positive case skip downloading. A single serial invocation reproduced FAIL at NekularityUITests.swift:1204 (2 tests/1 failure). Calling the existing removeDownloadedProbeChapter at the start of the positive case made both pass in one invocation (63.733s and53.172s). Both final test files match the Mac-tested SHA byte-for-byte with LF endings; product code is unchanged and the historical full-UI27/0/0 count remains unchanged. Logs: `/tmp/nk-offline-image-evidence/`; Lead receipt: `E:/Temp/nk-offline-image-evidence/mac-receipt.json`. This covers only the targeted simulator case, not a device or full-suite rerun.
 
 ## Targeted thirty-second HLS resume accepted (2026-11-04)
 

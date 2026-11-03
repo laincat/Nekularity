@@ -1155,6 +1155,10 @@ final class NekularityUITests: XCTestCase {
         defer { server.stop() }
 
         let app = launch()
+        // A corrupt control run leaves a chapter on disk. Downloads are
+        // deliberately not re-fetched, so this case must start clean or it would
+        // read the previous run's bytes instead of downloading the real image.
+        removeDownloadedProbeChapter(app)
         try openSearch(app)
         try chooseSource(app, "Callback Probe")
 
@@ -1195,8 +1199,84 @@ final class NekularityUITests: XCTestCase {
         // the source for a chapter list with the server gone would be asking the
         // network to prove that the network is not needed.
         firstElement(app, containing: "Probe Comic").tap()
+        // The toolbar exists even with no image. ReaderPage exposes this image
+        // label only after ImageLoader has produced a CGImage.
+        let page = app.images.matching(
+            NSPredicate(format: "label BEGINSWITH '第 ' AND label ENDSWITH ' 页'")
+        ).firstMatch
+        guard page.waitForExistence(timeout: 90) else {
+            XCTFail("no decoded page image appeared with the server stopped")
+            return
+        }
+        let screenshot = XCTAttachment(screenshot: page.screenshot())
+        screenshot.name = "downloaded-page-with-server-stopped"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        let tree = XCTAttachment(string: app.debugDescription)
+        tree.name = "downloaded-page-with-server-stopped-tree"
+        tree.lifetime = .keepAlways
+        add(tree)
+    }
+
+    /// Negative control for the assertion above: HTTP 200 bytes that are not an
+    /// image still form a download, and the reader toolbar still exists. Only the
+    /// decoded-page element distinguishes the two.
+    func testDownloadedChapterCorruptImageNegative() throws {
+        let server = try LocalImageServer(corruptPages: true)
+        try server.start()
+        defer { server.stop() }
+
+        let app = launch()
+        removeDownloadedProbeChapter(app)
+        try openSearch(app)
+        try chooseSource(app, "Callback Probe")
+
+        let field = element(app, "search.field")
+        XCTAssertTrue(field.waitForExistence(timeout: 20), "the search tab has no field")
+        field.tap()
+        field.typeText("probe")
+        app.typeText("\n")
+
+        let card = app.scrollViews.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'Probe Comic'")).firstMatch
+        guard card.waitForExistence(timeout: 60) else {
+            throw XCTSkip("the source did not answer search")
+        }
+        card.tap()
+
+        let chapter = firstElement(app, containing: "Chapter 1")
+        XCTAssertTrue(chapter.waitForExistence(timeout: 30), "the detail page lists no chapter")
+        chapter.press(forDuration: 1.2)
+        let keep = app.buttons["下载这一话"].firstMatch
+        guard keep.waitForExistence(timeout: 10) else {
+            throw XCTSkip("no download action on a chapter row")
+        }
+        keep.tap()
+
+        tab(app, "我的")
+        let entry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '下载'")).firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 15), "我的 has no downloads entry")
+        entry.tap()
+        XCTAssertTrue(firstElement(app, containing: "Probe Comic").waitForExistence(timeout: 90),
+                      "the corrupt page never formed a download")
+
+        server.stop()
+        firstElement(app, containing: "Probe Comic").tap()
         XCTAssertTrue(app.buttons["收藏本页"].waitForExistence(timeout: 90),
-                      "the reader drew nothing with the server down, so the download did not serve the pages")
+                      "the reader toolbar is missing; this is not the toolbar-vs-image control")
+        let page = app.images.matching(
+            NSPredicate(format: "label BEGINSWITH '第 ' AND label ENDSWITH ' 页'")
+        ).firstMatch
+        XCTAssertFalse(page.waitForExistence(timeout: 8),
+                       "corrupt bytes unexpectedly produced a decoded page image")
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = "corrupt-page-reader"
+        shot.lifetime = .keepAlways
+        add(shot)
+        let tree = XCTAttachment(string: app.debugDescription)
+        tree.name = "corrupt-page-reader-tree"
+        tree.lifetime = .keepAlways
+        add(tree)
     }
 
     /// A chapter that failed has to be visible and retryable. Before this, a

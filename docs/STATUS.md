@@ -26,7 +26,9 @@ CI只编译UI;界面验收归属于原Orca Worker的独立结果。断网页图�
 
 复核发现既有 `testDownloadedChapterReadsWithNoServer` 在停止loopback服务后只等待“收藏本页”按钮存在。ReaderView工具栏在图片尚未解码时也存在,其enabled状态也只反映图片URL列表。因此旧用例通过不能独立证明下载页图已经解码;历史27/0/0计数保留,同名下载条目可进入的结果也不扩称图片呈现通过。
 
-测试分支e36b171已把该用例改为等待ReaderPage成功CGImage分支提供的页图元素并附图,尚未整合主线。仍需原Mac Worker在专用模拟器上执行正常图片正例和坏图片负例;当前仅Windows语法解析,没有新增UI通过结论。网络停止、页面进入和图片解码必须分别有证据。
+受测修改已整合主线:停服后等待ReaderPage成功CGImage分支暴露的页图元素并附图,坏字节用HTTP200不可解码响应做负例。Orca Worker在专用模拟器实测正例39.920秒通过、负例61.470秒(旧工具栏断言成立而页图谓词8秒内不成立)、恢复图片后40.572秒通过。
+
+随后发现负例留下的坏章节会让紧随其后的正例跳过重新下载:同一次调用串行运行复现FAIL(NekularityUITests.swift:1204,2 tests/1 failure)。正例开始调用既有removeDownloadedProbeChapter清理后再连续运行,两例0失败(63.733秒、53.172秒)。最终两个测试文件与Mac受测SHA逐字节一致,LF换行;产品源码未改,历史完整UI27/0/0计数不变。日志 `/tmp/nk-offline-image-evidence/`,Lead回执 `E:/Temp/nk-offline-image-evidence/mac-receipt.json`。范围仅限模拟器该定向用例,不含真机或完整套件重跑。
 
 ## 30秒 HLS 续播定向通过(2026-11-04)
 

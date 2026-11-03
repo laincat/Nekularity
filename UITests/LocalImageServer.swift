@@ -62,6 +62,9 @@ final class LocalImageServer: @unchecked Sendable {
     /// Page requests to fail before answering, so a download can be made to fail
     /// once and then succeed on retry. Zero means answer normally.
     private var pagesToFail = 0
+    /// Answer page requests with HTTP 200 and bytes that are not an image.
+    /// Downloads still record the chapter; only decoding can tell the difference.
+    let corruptPages: Bool
 
     /// Makes the next `count` page requests fail, so the retry path can be driven.
     func failNextPageRequests(_ count: Int) {
@@ -85,8 +88,9 @@ final class LocalImageServer: @unchecked Sendable {
         clipLock.unlock()
     }
 
-    init(port: UInt16 = LocalImageServer.fixturePort) throws {
+    init(port: UInt16 = LocalImageServer.fixturePort, corruptPages: Bool = false) throws {
         self.port = port
+        self.corruptPages = corruptPages
         // Drawn rather than pasted as base64: a hand-typed blob is exactly the kind
         // of thing that decodes to nothing and looks like a client bug.
         let side: CGFloat = 8
@@ -267,6 +271,10 @@ final class LocalImageServer: @unchecked Sendable {
             clipLock.unlock()
             if failing {
                 reply(connection, status: "500 Internal Server Error", body: Data())
+                return
+            }
+            if corruptPages, route == "/page.png" {
+                reply(connection, status: "200 OK", body: Data("not a decodable image".utf8), type: "image/png")
                 return
             }
             reply(connection, status: "200 OK", body: png, type: "image/png")
