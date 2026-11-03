@@ -6,6 +6,8 @@
 
 **标准接口输入与请求配置仍有分歧**:`ad8e191` 已经 Mac 编译,Orca Worker 报告五个显示/清空/重启读回用例通过,但模型目录仍报 `no host`、夹具 0 请求;后续回答/取消/错误态未验收。离线 plist 读值与应用读回不一致,根因待逐层字节对照,不能认定是滞后快照。Lead 的同 pin Go 边界复现区分了完整地址、单斜杠和 `/v1` 三种输入,见 STATUS。
 
+**Magpie 聊天取消已修复,但未进客户端**:`2c9c83b` 的 `ChatCancel` 原先只删句柄,阻塞中的 `Host.HTTP`/`StreamOpen`/`StreamNext` 不会停止;分支 `fix/magpie-chat-cancel` 让每个聊天独立运行时并关闭它,五条定向 race 与带夹具的全套(22 包、559 PASS/0 FAIL/1 SKIP)通过。证据在 Windows 假宿主,不是 iOS UI、真机或真实供应商;两端 pin 未变。
+
 **标准接口取消修复已过编译与单元回归**:`77b969f` 的代码已整合 main,Mac Kit 421/77 suites、五条定向回归、App/UITests 编译通过;负向对照与日志见 STATUS。标准接口页面的真实 HTTP/界面闭环、真实账号与网络首块时序仍未验证,当前路径仍整包返回。已发布 v0.3.2 不含该修复。
 
 **发布已核对,真机仍待验**:`v0.3.2` 发布 CI `41578147149` 13 步全成功;IPA 下载 HTTP 200、29,418,522 字节、SHA-256 `f59afe889def90131a8994a59a92571b6acc823679431d37c16c032f29bc8737`,包内 App/Widget 均为 0.3.2/14、最低 iOS 26.0,并含 pin `4f213ff`(旧 `8e14aad` 已不在包内)。AltStore `468761a` 的稳定轨道与扁平首版均为 0.3.2/14,图标 200、IPA 分段 206,cnb 镜像与 release 入口已生效;首次核对时 `raw.githubusercontent.com` 仍回 0.3.1,约 12 分钟后已是 0.3.2,属 CDN 缓存滞后(三个入口现均 0.3.2)。CI 整体日志下载被插件地址安全校验拒绝,未绕过,故 CI 结论只依据 job/step 状态。合并树 `9498b4c` 的 Mac 验收(416 单测/76 suites、完整 UI 27/0/0)见 STATUS。真机、后台/锁屏、PiP、Live Activity 与真实账号仍未验收。

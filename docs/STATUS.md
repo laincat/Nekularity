@@ -10,6 +10,28 @@
 
 通过 GitHub 插件触发分支工作流 `41599831561`,回执确认 HEAD 为 `5bc5b67`、event 为 `workflow_dispatch`;将运行 Kit 单测、App 和 UITests 编译并生成未签名 IPA。该分支不满足发布步骤的 tag 条件,不会创建 release 或更新 AltStore。提交与本地检查日志在 `E:/Temp/nk-ios-core-2c9-ci/`,CI 回执 `build/receipts/core-2c9-consumer-runs.json`。本条仍是待验候选,不声称 CI 完成或 UI 通过;地址实验 `ad8e191` 保留给现有 Orca Worker 独立复测,未合入此候选。
 
+## Magpie 聊天取消只停了句柄(2026-11-03)
+
+`2c9c83b` 上的真实缺口:`Magpie.ChatCancel` 只删掉会话句柄并取消聊天自己的上下文,而 `Instance.Chat` 发请求时用的是实例上下文。因此取消之后,阻塞中的整包 `Host.HTTP`、`StreamOpen` 与 `StreamNext` 都不会停止。原有 `TestMagpieChatCancelEndsIt` 只检查句柄消失,证明不了请求被关。
+
+隔离分支 `fix/magpie-chat-cancel` 的最终候选为 `696a5049a372e22ca0e639c103258bf38cfffb55`,CI `41606605713` 已核对该 HEAD 并启动,结果待验。先写公开入口的负向回归:`mobile/magpie_chat_cancel_test.go` 用 Core 自己的 `openai-compatible` 模板和真实 `mobile` API,让宿主阻塞在 HTTP 或 `StreamOpen`,确认修复前两条都收不到 `CancelHTTP`/`StreamClose`(`E:/Temp/nk-magpie-cancel-evidence/before.log`)。修复内容:
+
+- 每个聊天使用独立运行时,`ChatCancel` 取消它的上下文并 `Close` 该实例,不再借用共享实例上下文。共享实例仍服务 `Models`、登录与用量。
+- 刷新后的凭据写回 `Magpie.auth`,独立聊天的下一次 `auth.get`、后续聊天以及已存在的模型/登录钩子都能看到新值;运行时绑定的 provider 必须仍匹配。
+- 实例创建改为不持锁构建,并在注册时复查 `closed` 与已有实例,并发创建时只保留一个共享实例,关闭后不再写入。`ChatStart` 先登记句柄再启动 goroutine,`Close` 能看见并停止它;写事件也响应取消,不再向无人读取的通道阻塞。
+
+修复后五条定向 race 用例通过:`mobile/magpie_chat_lifecycle_test.go` 覆盖取消一个聊天不影响另一个、后续聊天继续、已存在的模型钩子复用刷新后的凭据(仅刷新一次),以及阻塞的 `StreamNext` 被关闭(日志 `focused-after.log`、`chat-lifecycle-fixed-host.log`)。这条覆盖整包、打开、读取三个阻塞阶段,并把刷新与隔离放在真实包模板上。补充用例初次失败是测试宿主按大小写精确匹配 `Authorization`,已按 HTTP 头语义修正;原失败日志 `chat-lifecycle.log` 保留。
+
+全套 `go vet ./...` 与带真实包夹具的 `go test -race -count=1 -json ./...` 通过:22 个包,顶层 559 PASS / 0 FAIL / 1 SKIP(`race.log`、`race-summary.json`;SKIP 是未设置 `VC_WNACG_JS` 的 `TestRealSourceWnacg`,不是通过)。执行渠道是 Windows 假宿主与本地第三方包夹具,不是 iOS UI、真机或真实供应商;客户端 pin 未变。
+
+## 新增 Core pin 的分支 CI 只通过到 App 构建(2026-11-03)
+
+`5bc5b674d1477ac311a0470338e185e769fd1291` 的分支工作流 `41599831561` 有终态结论:**失败**。通过的是 checkout、Go、XcodeGen、pinned Core 构建、仓库检查、Kit 单测、工程生成与未签名设备 App 构建;失败步骤是“Compile the interface tests”,退出码 65,导致 IPA 打包与产物上传跳过,发布步骤因非 tag 未运行。
+
+整体 job 日志下载被 GitHub 插件地址安全校验拒绝(未绕过),check-run 注释只有 Node 20 弃用、退出码 65、Go 缓存缺失与 macOS 队列提示,没有编译器错误行。因此失败点确定为 UITests 的 `xcodebuild build-for-testing`,但**具体编译错误未取得**:不能推断是候选代码、测试源码还是 CI 环境问题。Kit 单测与设备 App 构建通过,说明失败不在 Kit 或 App 编译。
+
+该候选不满足“回归通过后才能发布”的条件,main 与已发布包仍用 `4f213ff`。随后源码核对发现 UITests 递归收进 `Fixtures/theme/serve.py` 与 `Fixtures/standard-ai/serve.py`;XcodeGen 默认把 `.py` 归为资源,两份文件会有同一扁平输出名。候选 `af48d652f260b4a8e58e0f6b86c4237d6717ce3c` 排除这两个宿主脚本并保留 `clip.mp4`,同时将 UITests 构建日志、xcresult 和生成工程作为 artifact 保留,用 pipefail 传递真实退出码。YAML/文档检查通过,日志 `E:/Temp/nk-ios-core-2c9-ci/resource-fix-checks.log`。新 CI `41607054742` 已核对该 HEAD 并启动,不声称原 exit 65 的原因已由日志证明或新编译已通过。
+
 ## Core pin 工具保留历史证据(2026-11-03)
 
 旧 `set-core-pin.sh` 会全局替换两份 STATUS 中的旧 Core 哈希,使已有测试记录看起来使用了新 Core。已用临时仓库复现两份文档均被错误改写,日志 `E:/Temp/nk-pin-evidence-before.log`。脚本现在只改 `scripts/core-version` 与 `CoreVersion.pinned`,复用 `check-core-pin.sh` 校验,不改历史文档;新候选和新验收应单独通过 `update-pair.py` 记录。修复后验证历史文档与 Swift 原行尾不变、重复设置幂等、`--check` 通过、非法参数不写文件,日志 `E:/Temp/nk-pin-evidence-after.log`。这次修复本身不升级客户端 pin。
