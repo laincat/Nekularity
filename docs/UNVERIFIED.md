@@ -2,6 +2,10 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
+**新 pin 的 Mac 真 HTTP 组合验收(2026-11-03)**:Orca Worker mac-validate-2 在 Nekularity `d3672a8`/Core `3be57b5` 上,经真实 URLSessionTransport→CoreHost/CoreStreamHost→gomobile CoreMagpie→loopback HTTP 完成 1 test/1 suite。模型目录、尾部释放前首段「第一段 」到达、取消后同一请求 ID 3 的 peer_closed、SavedAuth 原样保存到临时文件并重建实例后完整回答「第一段 第二段🐾」均通过;刷新总数为 1,四个供应商请求均授权且无 Cookie。SDK 来自精确干净 Core 检出,macOS 切片 SHA-256 24c00ca89b47cd80529063924f56d6a39f5304481174dca12712d0115e71f366。
+
+定向日志 `/tmp/nk-d367-acceptance/evidence/acceptance-test-02.log`,事件 `events-final.json`,SDK 来源 `sdk-identity.log`;Lead 汇总 `E:/Temp/nk-3be-candidates/mac-http-acceptance.json`。第一次仅测试代码编译失败(Thread.isMainThread 的 Swift 6 异步上下文限制),修正后通过;产品 Sources/ 无差异。未运行本轮 503、完整 Kit、App 构建、iOS UI 或 Keychain 验收。CI 41661859155 查询时仍在执行,不能把此定向结果当作 CI 或 iOS 界面通过。
+
 **桌面主线整合(2026-11-03)**:先前把 Nekophage 工作分支称作 main 的口径已更正;整合前真正 main 为 `28be4bd`/Core `214e778`,核对日志 `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`。现已将 `fix/subtitle-record-cap` 快进整合为真正 main 的 `67fc877`,pin 为 `4f213ff`,原分支保留;同时带回 WebView 探针隔离修复并移除误入版本控制的 Python 缓存。七项检查与 Windows 隔离阅读回归通过:两页解码、双页、55% 进度、重开恢复 1200,仅有本次章节存储键。回执 `E:/Temp/nk-desktop-integration/receipt.json`。`a079ce7`/Core `b55c1a4` 的 Windows 包仍属于独立候选,新 pin 的 macOS 消费端尚未验收;Nekularity main 仍 pin `4f213ff`。
 
 **标准接口 HTTP 错误修复已过 Mac Kit 回归,页面待验**:`bb77b5d` 已经 `9af6148` 整合 main,Orca Worker 的四条定向测试与全套 425/78 suites 通过,恢复旧实现的负向对照使两条错误用例失败。Windows loopback 夹具和 Mac URLProtocol 测试各有证据,不替代页面真实 HTTP/UI 结果。地址候选 `ad8e191` 已有 Mac 回执,模型目录仍失败,根因未证实。详见 STATUS。
