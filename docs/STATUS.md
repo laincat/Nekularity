@@ -2,6 +2,10 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## Core测试与兼容说明已整合(2026-11-04)
+
+经用户确认,Core main按单初始提交约定更新为c0f0dfa00c8a4daf7ce58fea5b615bc24eab88b7,文件树与通过完整CI41722875239的8922993完全一致,PR #3已关闭。只有测试与文档差异,生产转换实现未变;Nekularity/Nekophage仍使用功能pin3be57b5。保树/远端/两端pin回执 `E:/Temp/core-gbk-differential/main-published.json`。新主线SHA与已有CI受测SHA分别记录,不把旧CI改记为新SHA执行。
+
 ## Mac补验终态已收齐(2026-11-04)
 
 Orca Worker用12张本地封面完成浅/深色×竖/横屏四组合:截图实际可见解码封面,长标题省略而不溢出,末项可滚到并进入详情。详情提示“漫画源还未安装”,不宣称完整内容加载。深色设置页“当前环境”和“AI供应商与标准接口”两处字形内部RGB为10/132/255,背景28/28/30,对比度4.6648016304:1;Lead按sRGB公式独立复算一致,仅代表这两处。没有产品修改,证据 `/tmp/nk-cover-visual-evidence/`,回执 `E:/Temp/nk-theme-matrix-review/populated-receipt.json`。初次驱动folder missing失败与后续通过日志均保留。

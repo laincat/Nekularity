@@ -2,6 +2,10 @@
 
 English | [简体中文](STATUS.md)
 
+## Core tests and compatibility documentation integrated (2026-11-04)
+
+With user approval, Core main is now the single root commit c0f0dfa00c8a4daf7ce58fea5b615bc24eab88b7, with the exact tree of 8922993 accepted by complete CI 41722875239. PR #3 is closed. Only tests/documentation differ; production conversion is unchanged and both clients retain functional pin 3be57b5. Tree/remote/pin receipt: `E:/Temp/core-gbk-differential/main-published.json`. The new main SHA and prior CI-tested SHA remain distinct; the prior run is not relabeled as execution of the new commit.
+
 ## Mac follow-up terminal results received (2026-11-04)
 
 Orca Worker used twelve local covers for light/dark × portrait/landscape. Actual screenshots show decoded covers, long titles ellipsized without overflow, and the final item reachable for detail navigation. Details reported source not installed, so full content loading is not accepted. Two dark settings labels used interior foreground RGB 10/132/255 on background 28/28/30, giving 4.6648016304:1 contrast; Lead independently reproduced the sRGB calculation. This covers only those two labels. No product changes; evidence: `/tmp/nk-cover-visual-evidence/`, receipt: `E:/Temp/nk-theme-matrix-review/populated-receipt.json`. The initial driver folder-missing failure and subsequent passing logs are retained.

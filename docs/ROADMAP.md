@@ -2,6 +2,10 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+## Core测试与兼容说明已整合(2026-11-04)
+
+经用户确认,Core main按单初始提交约定更新为c0f0dfa00c8a4daf7ce58fea5b615bc24eab88b7,文件树与通过完整CI41722875239的8922993完全一致,PR #3已关闭。只有测试与文档差异,生产转换实现未变;Nekularity/Nekophage仍使用功能pin3be57b5。保树/远端/两端pin回执 `E:/Temp/core-gbk-differential/main-published.json`。新主线SHA与已有CI受测SHA分别记录,不把旧CI改记为新SHA执行。
+
 ## Mac主题与构建补验更新(2026-11-04)
 
 原Orca Worker已回传12张本地封面的明暗/横竖四组合、两处深色蓝字4.665:1、精确736e364本机430 tests/80 suites与IPA终态。详情进入只证明导航,源未安装不算内容加载;本机Xcode27.2/SDK27.2的IPA与正式CI发布包分别记录。详见[STATUS](STATUS.md)。离线图片正/负/恢复已验,完整受测测试patch仍在压缩回收,历史完整UI计数不变。

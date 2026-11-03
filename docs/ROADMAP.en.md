@@ -2,6 +2,10 @@
 
 [简体中文](ROADMAP.md) | English
 
+## Core tests and compatibility documentation integrated (2026-11-04)
+
+With user approval, Core main is now the single root commit c0f0dfa00c8a4daf7ce58fea5b615bc24eab88b7, with the exact tree of 8922993 accepted by complete CI 41722875239. PR #3 is closed. Only tests/documentation differ; production conversion is unchanged and both clients retain functional pin 3be57b5. Tree/remote/pin receipt: `E:/Temp/core-gbk-differential/main-published.json`. The new main SHA and prior CI-tested SHA remain distinct; the prior run is not relabeled as execution of the new commit.
+
 ## Mac theme and build follow-up (2026-11-04)
 
 The original Orca Worker reported all four populated-cover appearance/orientation cases, two dark-label contrast ratios of 4.665:1, and the exact 736e364 local 430-test/80-suite build and IPA. Detail entry proves navigation only: its missing source prevents full content-loading acceptance. The local Xcode 27.2/SDK 27.2 IPA is recorded separately from the public CI artifact. See [STATUS](STATUS.en.md). Valid/corrupt/restored offline-image cases pass; compressed recovery of the complete tested patch is pending, with historical full-suite counts unchanged.
