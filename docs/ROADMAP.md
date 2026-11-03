@@ -18,7 +18,7 @@ Lead 已构建并实际安装 0.2.7/`bf9cbd9`(Core `4f213ff`)。ZIP 21,566,978 b
 
 | 项目 | 当前事实 | 主要缺口 |
 |---|---|---|
-| Nekularity | **0.3.2/build 14 已发布并核对**(tag `v0.3.2`、CI `41578147149`、IPA 29,418,522 字节、App/Widget 均 0.3.2/14、包内 pin `4f213ff`、AltStore `468761a`);合并树 `9498b4c` 已过 Mac 416 单测/76 suites 与完整 UI 27/0/0 | 真机、后台/锁屏、PiP、Live Activity、真实账号与服务继续单列交接;标准接口取消修复 `77b969f` 已整合 main,Mac Kit 421/77 与 App/UITests 编译通过,HTTP/界面闭环待验 |
+| Nekularity | **0.3.2/build 14 已发布并核对**(tag `v0.3.2`、CI `41578147149`、IPA 29,418,522 字节、App/Widget 均 0.3.2/14、包内 pin `4f213ff`、AltStore `468761a`);合并树 `9498b4c` 已过 Mac 416 单测/76 suites 与完整 UI 27/0/0 | main已整合6eab317/Core3be57b5,两条AI签名模拟器闭环与3574346 CI/IPA已验;已发布0.3.2仍为旧pin。真机、后台/锁屏、PiP、Live Activity及真实账号/服务仍待外部条件 |
 | Nekophage | MyGo 原生主窗口 + WebView 阅读/播放;main c545212/Core 3be57b5;当前 Windows 构建为0.2.7/c545212 | 当前整合树七项检查和关闭恢复探针通过;安装版97e24b6的字幕/续播证据单列;Mac阅读/解码已验,正常关窗受screen_locked限制;真实扬声器和签名/公证待外部条件,无Git远端 |
 | VeneraCat Core | 共享漫画/视频/备份/AI 协议逻辑;网络与系统能力交给客户端 | JS 引擎的少量兼容限制、客户端边界契约仍需维护;Sender 没有生产调用方 |
 
