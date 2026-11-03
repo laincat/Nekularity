@@ -21,8 +21,7 @@ struct StandardAIView: View {
     @State private var messages: [StandardMessage] = []
     @State private var reply: StandardAIReply?
     @State private var error: String?
-    @State private var busy = false
-    @State private var task: Task<Void, Never>?
+    @State private var request = StandardAIRequest()
 
     private let keys = StandardAIKeyStore()
     private let settings = StandardAISettingsStore()
@@ -93,8 +92,8 @@ struct StandardAIView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(config.protocol.vendor).font(.caption).foregroundStyle(.secondary)
                         Text(reply.text).textSelection(.enabled)
-                        // Core cannot stream yet, so this says so instead of
-                        // letting a whole-body answer look incremental.
+                        // This standard-protocol path returns a whole reply;
+                        // keep its delivery mode explicit.
                         Text(reply.streamed ? "流式" : "整包返回 · 流式尚未接通")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
@@ -116,14 +115,21 @@ struct StandardAIView: View {
         .navigationTitle("标准接口")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: config) { settings.save(config) }
+        .onChange(of: config.baseURL) {
+            stop()
+            models = []
+            modelsNote = nil
+        }
         .onChange(of: config.protocol) { loadKey() }
         .task { loadKey() }
         .onDisappear { stop() }
     }
 
     private var client: StandardAI { StandardAI(core: library.core) }
+    private var busy: Bool { request.isRunning }
 
     private func loadKey() {
+        stop()
         do {
             apiKey = try keys.load(vendor: config.protocol.vendor) ?? ""
             keyLoaded = !apiKey.isEmpty
@@ -136,6 +142,7 @@ struct StandardAIView: View {
     }
 
     private func saveKey() {
+        stop()
         do {
             try keys.save(vendor: config.protocol.vendor, key: apiKey)
             keyLoaded = true
@@ -146,6 +153,7 @@ struct StandardAIView: View {
     }
 
     private func clearKey() {
+        stop()
         do {
             try keys.remove(vendor: config.protocol.vendor)
             apiKey = ""
@@ -158,24 +166,20 @@ struct StandardAIView: View {
     }
 
     private func loadModels() {
-        busy = true
+        guard !busy else { return }
         let snapshot = config
         let key = apiKey
-        Task {
-            defer { busy = false }
-            do {
-                let list = try await Task.detached { [client, snapshot, key] in
-                    try await client.models(config: snapshot, apiKey: key)
-                }.value
-                models = list
-                modelsNote = list.isEmpty ? "这家没有列出模型" : "共 \(list.count) 个模型"
-                if config.model.isEmpty, let first = list.first { config.model = first }
-            } catch {
-                models = []
-                modelsNote = nil
-                self.error = error.localizedDescription
-            }
-        }
+        request.start(operation: { [client, snapshot, key] in
+            try await client.models(config: snapshot, apiKey: key)
+        }, receive: { list in
+            self.models = list
+            self.modelsNote = list.isEmpty ? "这家没有列出模型" : "共 \(list.count) 个模型"
+            if self.config.model.isEmpty, let first = list.first { self.config.model = first }
+        }, failure: { error in
+            self.models = []
+            self.modelsNote = nil
+            self.error = error.localizedDescription
+        })
     }
 
     private func send() {
@@ -188,24 +192,17 @@ struct StandardAIView: View {
         let history = messages
         let snapshot = config
         let key = apiKey
-        busy = true
-        task = Task {
-            defer { busy = false }
-            do {
-                let answer = try await Task.detached { [client, snapshot, key, history] in
-                    try await client.reply(config: snapshot, apiKey: key, messages: history)
-                }.value
-                reply = answer
-                messages.append(StandardMessage(role: "assistant", content: answer.text))
-            } catch {
-                self.error = error.localizedDescription
-            }
-        }
+        request.start(operation: { [client, snapshot, key, history] in
+            try await client.reply(config: snapshot, apiKey: key, messages: history)
+        }, receive: { answer in
+            self.reply = answer
+            self.messages.append(StandardMessage(role: "assistant", content: answer.text))
+        }, failure: { error in
+            self.error = error.localizedDescription
+        })
     }
 
     private func stop() {
-        task?.cancel()
-        task = nil
-        busy = false
+        request.cancel()
     }
 }

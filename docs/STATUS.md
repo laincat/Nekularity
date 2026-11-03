@@ -4,6 +4,14 @@
 
 更新:2026-11-03。
 
+## 标准接口取消修复已整合(2026-11-03)
+
+main 已整合 `77b969f` 的三份 Swift 文件,与 Mac 受测版本逐字一致,其余整合差异仅文档。Orca Worker 在该提交上通过 `swift build --build-tests`(14.79 秒)、`swift test` **421 tests / 77 suites** 与五条定向回归;之后 App + UITests 的 `xcodebuild build-for-testing` 通过,日志明确编译了 `App/StandardAIView.swift` 与 `StandardAIRequest.swift`。工程复用已有生成项目,`project.yml` 与 `9498b4c` 一致,没有声称重跑 XcodeGen。
+
+修复让模型目录和回答请求共用可取消任务,停止、切换接口/地址、更新密钥或离开页面时取消实际操作,迟到结果不覆盖新请求状态。负向对照的边界已核清:单删成功 guard 仍 5/5,因为代际检查继续生效;同时删 guard 与取消时的代际推进后,迟到答案断言失败;去掉代际提交校验后两条替代请求用例失败。恢复后 diff 0 字节、五条复跑通过。日志 `/tmp/nk-77b-evidence/` 下的 `build-tests.log`、`swift-test.log`、`app-build.log`、`build-evidence.log`、`diag2-filter.log`、`diag3-filter.log`、`filter-restored.log`。
+
+这是 Kit 执行与 App 编译证据,未执行标准接口页面的真实 HTTP/界面闭环,也未使用真实账号。该修复不在已发布 `v0.3.2` 中;该版本的 416/76 与完整 UI 27/0/0 保留原提交归属,不改写成当前 main 的 UI 结果。标准接口仍整包返回。
+
 ## 0.3.2/build 14 已发布并核对
 
 tag `v0.3.2` 指向 `76a1ccd68b4834d169e58610a339322e1c7e29b4`,与受测 `9498b4c` 只差验收文档。发布 CI `41578147149` 的 13 个步骤全部成功:Build pinned Core、Check the tree、Kit 单测、Generate project、Build unsigned device app、Compile the interface tests、Package unsigned IPA、upload-artifact、Publish IPA 均 `success`,整轮 04:26:35–04:50:49 UTC。GitHub 插件拒绝下载整体 job 日志(地址安全校验指向内网/特殊地址),未绕过;本轮对 CI 的结论只依据 job/step 的 API 状态,不声称读到日志正文。
@@ -16,7 +24,7 @@ AltStore 工作流 `41582051344`(手动触发 `update-source.yml`)整轮成功,�
 
 合并树 `9498b4c7c80ce6e4edcdf5c0b5e9afc5c065d4bd` 已由 Orca Worker `mac-validate-2` 在 Mac 上验收并整合到 main:Core `4f213ff`、下载库释放修复和严格本地搜索回归在同一提交上通过。`swift build --build-tests` 14.30 秒通过,`swift test` **416 例 / 76 suites** 通过;完整 UI 一次执行 **27 PASS / 0 FAIL / 0 SKIP**,722.577 秒,主类 23、主题 3、三列 1,xcresult 摘要一致。日志 `/tmp/nk-949-evidence/build-tests.log`、`swift-test.log`、`app-build.log`、`full-ui.log`、`counts.log`、`xcresult-summary.json`。这是一轮合并树执行,不是把下述单独分支结果相加。
 
-实际模拟器构建的 App/Widget 均为 **0.3.2/14、最低 iOS 26.0**,Bundle ID 分别为 `com.laincat.nekularity` 与 `com.laincat.nekularity.widgets`。本机 `xcodegen generate` 因命令缺失未执行成功,Worker 复用既有生成工程并只同步八个版本设置值,App/UITests 编译与上述运行均成功。发布 CI 已从 `project.yml` 全新生成工程并完成设备 Release 构建与 IPA 打包,下载/大小/包内版本/Core pin 与 AltStore 均已核对见上一节。当前 main 相对受测 `9498b4c` 只有验收文档差异。
+实际模拟器构建的 App/Widget 均为 **0.3.2/14、最低 iOS 26.0**,Bundle ID 分别为 `com.laincat.nekularity` 与 `com.laincat.nekularity.widgets`。本机 `xcodegen generate` 因命令缺失未执行成功,Worker 复用既有生成工程并只同步八个版本设置值,App/UITests 编译与上述运行均成功。发布 CI 已从 `project.yml` 全新生成工程并完成设备 Release 构建与 IPA 打包,下载/大小/包内版本/Core pin 与 AltStore 均已核对见上一节。发布提交 `76a1ccd` 相对受测 `9498b4c` 只有验收文档差异;后续 main 新增标准接口取消修复,该修复的证据见本文对应章节。
 
 Core 实际 HEAD/pin 均为 `4f213ffbd51cfa22ef032a4279a04efb71b36283`,Vendor 与 98e 原产物整树摘要一致(`83158a56862851cac804695c720c3a14ea553f1efdb9c17e2461d81cf456efbb`)。macOS 切片 SHA-256 `69284254554cbec08a35860a8cb50c86a439c030a26dd0e1fd65343ade6b4840`,模拟器切片 `ca54af50dad6e26d1b0931c6627ec8611df45942b2630594a0717e77312d76bf`,完整记录 `/tmp/nk-949-evidence/vendor-sha256.log`。主题服务复用原 CA,未新增或删除信任项;HTTPS 4 次请求(含预检),HTTP 0 次。旧三张 CA 不在册,保留的 `C0E33FBD155EF2C9…` 到期时间为 2026-12-03 02:52:02 GMT;服务已停,证书目录保留。
 
