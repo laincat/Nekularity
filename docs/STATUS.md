@@ -8,7 +8,9 @@
 
 独立分支 `update/core-2c9c83b` 将两处构建 pin 指向 `2c9c83b409a7fa5933bf34b5773c31a67df944bd`,未改下面各历史验收的 Core 归属。CI `41590287663` 的三平台 Go job 与 Apple job 全部成功,包括 xcframework、macOS 和 iOS 模拟器 Swift smoke test。下载的 `apple-build.zip` 为 72,755,594 字节,SHA-256 `15e16329406cac3dafa2a912b411fb610e7d9d96740565763a6192c2252cda3a`,CRC 通过。设备 arm64、macOS arm64/x86_64、模拟器 arm64/x86_64 三类切片与新增 API 头文件已核对;详细摘要 `E:/Temp/core-2c9-apple/verified-sdk.json`。Vendor 已放入该隔离工作树。
 
-这是 Core SDK 的 CI 证据,尚未用此 SDK 编译 Nekularity Kit/App 或运行其界面,不把 CoreSmoke 当客户端验收。主线与已发布包仍使用已验的 `4f213ff`;候选需继续消费端验证后整合。
+客户端候选 `5bc5b67` 的 CI `41599831561` 已通过 Kit 单测与设备 App 构建,但 UITests 构建步骤退出 65,没有 IPA 产物;不等于消费端回归通过。整体日志下载被插件地址校验拒绝,check-run 注释未提供编译器错误行。主线与已发布包仍用 `4f213ff`,候选等待复验。
+
+源码核对发现两个仅供宿主运行的 `Fixtures/theme/serve.py`、`Fixtures/standard-ai/serve.py` 被 UITests 的递归 source 条目收集;XcodeGen 对 `.py` 默认分配 resources,两者在扁平资源输出中同名。当前候选把这两份宿主脚本排除,保留 `clip.mp4` 等测试需要的资源。另在既有 UITests 构建步骤保留 `xcodebuild` 日志、xcresult 与生成的 pbxproj 为独立 artifact,并用 pipefail 保留真实退出码。此时只确认资源配置冲突,原 exit 65 是否由它引起仍需 CI 重跑或原始错误行证明。
 
 初始候选 `0ea786f` 未包含标准接口 HTTP 错误修复。当前候选已整合 main `bf9d93d`,因此包含已验的 `bb77b5d` 修复与四条回归;地址输入实验分支 `ad8e191` 未整合。接下来在此分支运行既有 iOS 工作流,执行 Kit 单测、App 与 UITests 编译并生成 CI 产物;分支运行不会执行仅限版本 tag 的发布步骤。Windows 预检与整合日志在 `E:/Temp/nk-ios-core-2c9-ci/`,不代替 Mac 编译或 UI 执行。
 
