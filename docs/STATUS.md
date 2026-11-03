@@ -4,9 +4,13 @@
 
 更新:2026-11-02。
 
-## 0.3.2/build 14 合并候选与已核回执
+## 0.3.2/build 14 合并树验收
 
-候选分支 `release/0.3.2-validation` 将下载库引用环修复 `ed09c82`、搜索测试修复 `61197f8` 与已验收的 Core pin `4f213ff` 放到同一提交,App/Widget 版本均为 **0.3.2/14**。这棵合并树尚待一次 Mac 构建、416 单测和完整 27 条 UI;尚未合入 main、打 tag、发布 IPA 或更新 AltStore。下述分支结果各自归属原提交,不拼成合并树通过。
+合并树 `9498b4c7c80ce6e4edcdf5c0b5e9afc5c065d4bd` 已由 Orca Worker `mac-validate-2` 在 Mac 上验收并整合到 main:Core `4f213ff`、下载库释放修复和严格本地搜索回归在同一提交上通过。`swift build --build-tests` 14.30 秒通过,`swift test` **416 例 / 76 suites** 通过;完整 UI 一次执行 **27 PASS / 0 FAIL / 0 SKIP**,722.577 秒,主类 23、主题 3、三列 1,xcresult 摘要一致。日志 `/tmp/nk-949-evidence/build-tests.log`、`swift-test.log`、`app-build.log`、`full-ui.log`、`counts.log`、`xcresult-summary.json`。这是一轮合并树执行,不是把下述单独分支结果相加。
+
+实际模拟器构建的 App/Widget 均为 **0.3.2/14、最低 iOS 26.0**,Bundle ID 分别为 `com.laincat.nekularity` 与 `com.laincat.nekularity.widgets`。本机 `xcodegen generate` 因命令缺失未执行成功,Worker 复用既有生成工程并只同步八个版本设置值,App/UITests 编译与上述运行均成功。发布 CI 仍需从 `project.yml` 全新生成工程,做设备 Release 构建、IPA 打包和产物核对;IPA 下载/大小/包内版本/Core pin 及 AltStore 尚待本轮发布结果,最新已核发布仍是 0.3.1。当前 main 相对受测 `9498b4c` 只有验收文档差异。
+
+Core 实际 HEAD/pin 均为 `4f213ffbd51cfa22ef032a4279a04efb71b36283`,Vendor 与 98e 原产物整树摘要一致(`83158a56862851cac804695c720c3a14ea553f1efdb9c17e2461d81cf456efbb`)。macOS 切片 SHA-256 `69284254554cbec08a35860a8cb50c86a439c030a26dd0e1fd65343ade6b4840`,模拟器切片 `ca54af50dad6e26d1b0931c6627ec8611df45942b2630594a0717e77312d76bf`,完整记录 `/tmp/nk-949-evidence/vendor-sha256.log`。主题服务复用原 CA,未新增或删除信任项;HTTPS 4 次请求(含预检),HTTP 0 次。旧三张 CA 不在册,保留的 `C0E33FBD155EF2C9…` 到期时间为 2026-12-03 02:52:02 GMT;服务已停,证书目录保留。
 
 Orca Worker 从旧日志核实 `1888cd3` 完整 UI:**27 PASS / 0 FAIL / 0 SKIP**,共 722.784 秒,其中主类 23、主题类 3、三列类 1。`xcresult` 摘要同为 total 27/passed 27/failed 0/skipped 0。日志 `/tmp/nk-1888-evidence/full-ui.log`、`counts.log`、`xcresult-summary.json`。同提交的单独主题 3/3 仍单列,不加到 27 中。此前 `95818c5` 的 23/4 是历史记录,不再充当最新完整回归。
 
@@ -14,7 +18,7 @@ Orca Worker 从旧日志核实 `1888cd3` 完整 UI:**27 PASS / 0 FAIL / 0 SKIP**
 
 `61197f8` 在 Core `4f213ff` 上通过 Swift 构建(14.62 秒)和 App/UITests 编译。有效夹具下搜索用例通过(24.823 秒);故意抛出搜索错误后退出 65、用例 FAIL(80.121 秒),断言为 `Callback Probe is local and must return Probe Comic`,没有 SKIP 或环境/编译错误。恢复后的种子与初始有效种子逐字节一致,同例再通过(23.027 秒),工作树干净。日志 `/tmp/nk-611-evidence/valid.log`、`negctl.log`、`fixture-search-failure-tree.txt`、`restored.log`。这已验证旧的站点限制跳过条件得到修正。
 
-CA 状态也已按指纹核实:三张旧 CA(sha256 前缀 `3D1895C2E4984B91`、`FBCE77CD0660BC0E`、`38C95A8619A02359`)已从该专用模拟器生效的 trustd 存库移除;`simctl keychain reset` 本身未移除它们,不能作为清理成功的证据。当前库为 5 条系统根加 `1888cd3` 新 CA(前缀 `C0E33FBD155EF2C9`,2026-12-03 到期),因此不宣称测试 CA 已全部清空。旧 CA 移除后请求失败、夹具 0 请求,日志 `/tmp/nk-theme-after-removal.log`;原库备份 `/tmp/nk-truststore-backup-102519.sqlite3` 保留。合并回归优先复用现有有效证书,不重置整个钥匙串。
+CA 状态也已按指纹核实:三张旧 CA(sha256 前缀 `3D1895C2E4984B91`、`FBCE77CD0660BC0E`、`38C95A8619A02359`)已从该专用模拟器生效的 trustd 存库移除;`simctl keychain reset` 本身未移除它们,不能作为清理成功的证据。当前库为 5 条系统根加 `1888cd3` 新 CA(前缀 `C0E33FBD155EF2C9`,2026-12-03 到期),因此不宣称测试 CA 已全部清空。旧 CA 移除后请求失败、夹具 0 请求,日志 `/tmp/nk-theme-after-removal.log`;原库备份 `/tmp/nk-truststore-backup-102519.sqlite3` 保留。本轮合并回归已复用该有效证书,没有 reset 或修改 trustdb。
 
 ## Core pin `4f213ff` 的 Mac 验收
 
