@@ -2,6 +2,8 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
+**iOS Magpie 定向 UI(2026-11-04)**:Orca Worker 在专用模拟器 72DFD602-9D8E-40BB-8F96-DA3668ABE7C7、d3672a8/Core 3be57b5 执行 1 项,1 项失败。预置夹具包的供应商行显示未登录且只有卸载,没有登录按钮;服务器 events 为空。失败停在登录入口,尚未输入地址或验证模型、首段、停止和 App 重启。包 registry 预置不计 UI 包导入。产品源码未改;需要捕获 runner/auth 声明读取被吞掉的实际错误后再判断原因。证据 `/tmp/nk-d367-acceptance/ios-evidence/ui-run.xcresult`、`ui-run.log`;Lead 回执 `E:/Temp/nk-ios-d367-ci/ui-login-failure.json`。
+
 **新 pin 的 Mac 真 HTTP 组合验收(2026-11-03)**:Orca Worker mac-validate-2 在 Nekularity `d3672a8`/Core `3be57b5` 上,经真实 URLSessionTransport→CoreHost/CoreStreamHost→gomobile CoreMagpie→loopback HTTP 完成 1 test/1 suite。模型目录、尾部释放前首段「第一段 」到达、取消后同一请求 ID 3 的 peer_closed、SavedAuth 原样保存到临时文件并重建实例后完整回答「第一段 第二段🐾」均通过;刷新总数为 1,四个供应商请求均授权且无 Cookie。SDK 来自精确干净 Core 检出,macOS 切片 SHA-256 24c00ca89b47cd80529063924f56d6a39f5304481174dca12712d0115e71f366。
 
 定向日志 `/tmp/nk-d367-acceptance/evidence/acceptance-test-02.log`,事件 `events-final.json`,SDK 来源 `sdk-identity.log`;Lead 汇总 `E:/Temp/nk-3be-candidates/mac-http-acceptance.json`。第一次仅测试代码编译失败(Thread.isMainThread 的 Swift 6 异步上下文限制),修正后通过;产品 Sources/ 无差异。未运行本轮 503、完整 Kit、App 构建、iOS UI 或 Keychain 验收。CI 41661859155 现已在精确 d3672a8 上成功:Core 构建、Kit 单测执行、App 与 UITests 编译、IPA 打包均通过。2026-11-04 下载核对未签名 IPA 29,455,876 bytes,SHA-256 7590d8ebcdf67b4fed8bd191e187f0337ba144cde6baf7f5fe033229fcd4f77c;App/Widget 均为 0.3.2/14,最低 iOS 26.0,App 二进制含 Core 3be57b5 pin。artifact 摘要与两层 ZIP CRC 通过,回执及日志 `E:/Temp/nk-ios-d367-ci/receipt.json`、`verify.log`。UI 在该 CI 中仅编译,未执行;发布步骤跳过,未更新 AltStore,不代表真机或 iOS 界面已验。
