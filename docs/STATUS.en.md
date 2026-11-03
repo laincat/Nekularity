@@ -4,6 +4,12 @@ English | [简体中文](STATUS.md)
 
 Updated 2026-11-03.
 
+## Candidate standard-interface HTTP error fix (2026-11-03)
+
+Branch `fix/standard-ai-http-errors` fixes the reply path: `StandardAI.reply` previously returned HTTP 401/503 and provider errors inside HTTP 200 as ordinary assistant replies. It now throws to the screen's error state rather than appending an assistant message. Four new tests use real Core and URLSessionTransport with URLProtocol replacing the network. They cover successful replies/credential headers/disabled cookies in all three protocols, HTTP errors, in-band errors and catalogs. Each request owns a host and temporary store, without Keychain access. These four tests have not been compiled or run on Mac; static totals are 425 tests/78 suites.
+
+`UITests/Fixtures/standard-ai/serve.py` is a loopback-only whole-response HTTP fixture with normal/held bodies, HTTP 401/503 and in-band errors. Windows has exercised actual catalogs, all three replies, errors, TCP peer closure and body release; logs `E:/Temp/nk-ai-fixture/verification.log`, `events.jsonl`. Logs omit credentials and prompt bodies. This implements neither streaming nor credential refresh and does not establish Swift-client/UI acceptance. UI automation still needs isolated test settings and Keychain namespaces.
+
 ## Standard-interface cancellation fix integrated (2026-11-03)
 
 Main incorporates the three Swift files from `77b969f`, byte-identical to the Mac-tested code; other integration differences are documentation only. The Orca Worker passed `swift build --build-tests` (14.79 seconds), **421 tests / 77 suites**, and five targeted regressions at that commit. App + UITests then passed `xcodebuild build-for-testing`, with explicit compile records for `App/StandardAIView.swift` and `StandardAIRequest.swift`. The existing generated project was reused; `project.yml` matches `9498b4c`, without claiming a fresh XcodeGen run.

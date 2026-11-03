@@ -4,6 +4,12 @@
 
 更新:2026-11-03。
 
+## 标准接口 HTTP 错误修复候选(2026-11-03)
+
+分支 `fix/standard-ai-http-errors` 修复回答路径:旧 `StandardAI.reply` 会把 HTTP 401/503 或 HTTP 200 中的供应商错误当正常助手回复,现在抛出错误交给页面的错误状态,不追加为助手消息。新增四条测试通过真实 Core 与 URLSessionTransport、URLProtocol 替代网络,覆盖三种协议的成功回答/鉴权头/禁用 Cookie、HTTP 错误、200 内嵌错误和模型目录。每条请求使用独立主机与临时资料,不读写 Keychain;这四条尚未在 Mac 编译执行,静态总数为 425/78 suites。
+
+新增 `UITests/Fixtures/standard-ai/serve.py` 是只监听 loopback 的整包 HTTP 服务,支持正常/慢响应/401/503/200 内嵌错误。Windows 已实际验证模型目录、三协议回答、错误、TCP peer close、控制接口释放正文,日志 `E:/Temp/nk-ai-fixture/verification.log`、`events.jsonl`。日志不含鉴权值或提示正文。它不实现流式或凭据刷新,也不证明 Swift 客户端/界面通过;页面自动化还需隔离测试设置和 Keychain 命名空间。
+
 ## 标准接口取消修复已整合(2026-11-03)
 
 main 已整合 `77b969f` 的三份 Swift 文件,与 Mac 受测版本逐字一致,其余整合差异仅文档。Orca Worker 在该提交上通过 `swift build --build-tests`(14.79 秒)、`swift test` **421 tests / 77 suites** 与五条定向回归;之后 App + UITests 的 `xcodebuild build-for-testing` 通过,日志明确编译了 `App/StandardAIView.swift` 与 `StandardAIRequest.swift`。工程复用已有生成项目,`project.yml` 与 `9498b4c` 一致,没有声称重跑 XcodeGen。
