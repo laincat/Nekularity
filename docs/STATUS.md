@@ -63,6 +63,8 @@ Core 取消修复 `696a504` 的三个 Go 平台与 Apple job 全过(CI `41606605
 
 新增 `UITests/Fixtures/standard-ai/serve.py` 是只监听 loopback 的整包 HTTP 服务,支持正常/慢响应/401/503/200 内嵌错误。Windows 已实际验证模型目录、三协议回答、错误、TCP peer close、控制接口释放正文,日志 `E:/Temp/nk-ai-fixture/verification.log`、`events.jsonl`。日志不含鉴权值或提示正文。它不实现流式或凭据刷新,也不证明 Swift 客户端/界面通过;页面自动化还需隔离测试设置和 Keychain 命名空间。
 
+**新 pin 标准 API 真 HTTP(2026-11-04)**:Lead 以干净 Core 3be57b5、公开 BuildAIModelsRequest/SendAIRequest/Cancel 和真实 Go HTTP 宿主运行现有 loopback 夹具,go run -race 通过。chat/responses/messages 三协议各验证目录、正确鉴权头、整包回答、401/503及200内嵌错误的状态/JSON原样透传、慢响应取消与随后新请求成功。共21个已授权且无Cookie的请求;取消请求6、13、20均被服务端记为同ID peer_closed,无expired。日志/回执 `E:/Temp/nk-standard-ai-core-http/run.log`、`receipt.json`,可复用客户端 `client.go`。这不验证Swift错误展示、URLSession、iOS UI、密钥持久化或流式;错误处理仍由客户端负责。
+
 ## 标准接口地址输入与请求路径的分歧(2026-11-03)
 
 `44786f2` 的 Orca Worker 回执为 Kit/App/UITests 编译通过、五次输入检查失败、夹具 0 请求;日志在 Mac `/tmp/nk-fix-evidence/`。后续 `ad8e19143bc346d09bbd6211bfce374cb6815611` 同样通过 `swift build --build-tests`(13.95 秒)及 App/UITests 构建。Worker 报告逐字输入、清空后粘贴、改回、慢速输入与重启读回五例在应用视角通过,但离线读取 plist 的 JSON 均少一个 `/`。这些是不同观测,仍未确定差异发生在应用、偏好读取还是测试驱动;不能据此认定 cfprefsd 是原因或把磁盘观测作废。
