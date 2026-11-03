@@ -2,6 +2,10 @@
 
 [简体中文](UNVERIFIED.md) | English
 
+## Mac closure and Core main results (2026-11-04)
+
+After user unlock, Orca Worker started the verified c545212 package with isolated data and closed its native window once; the original process exited 0 without a signal. Core single-root main c0f0dfa passed all three-OS Go and Apple SDK/Swift CI jobs on its own SHA. See [STATUS](STATUS.en.md); device, account and distribution choices remain external.
+
 ## Mac theme and build follow-up (2026-11-04)
 
 The original Orca Worker reported all four populated-cover appearance/orientation cases, two dark-label contrast ratios of 4.665:1, and the exact 736e364 local 430-test/80-suite build and IPA. Detail entry proves navigation only: its missing source prevents full content-loading acceptance. The local Xcode 27.2/SDK 27.2 IPA is recorded separately from the public CI artifact. See [STATUS](STATUS.en.md). Valid/corrupt/restored offline-image cases pass; the complete tested files and serial-isolation repair are integrated at a7b5fbd, with historical full-suite counts unchanged.

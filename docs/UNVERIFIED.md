@@ -2,6 +2,10 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
+## Mac关窗与Core主线结果(2026-11-04)
+
+Orca Worker在用户解锁后,以隔离资料启动已核验c545212包,原生关闭按钮一次点击后窗口消失、原进程退出0,无信号终止。Core单提交main c0f0dfa在自身SHA完成三平台Go和Apple SDK/Swift四作业CI。详见[STATUS](STATUS.md);用户设备、账号与分发选择仍单列。
+
 ## Mac主题与构建补验更新(2026-11-04)
 
 原Orca Worker已回传12张本地封面的明暗/横竖四组合、两处深色蓝字4.665:1、精确736e364本机430 tests/80 suites与IPA终态。详情进入只证明导航,源未安装不算内容加载;本机Xcode27.2/SDK27.2的IPA与正式CI发布包分别记录。详见[STATUS](STATUS.md)。离线图片正/负/恢复已验,完整受测文件与串行隔离修复已随a7b5fbd整合,历史完整UI计数不变。

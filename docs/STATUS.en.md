@@ -2,6 +2,12 @@
 
 English | [简体中文](STATUS.md)
 
+## Packaged Mac window closure and Core main revalidation (2026-11-04)
+
+After the user confirmed Laincat-Mini was unlocked, Orca Worker accepted an isolated instance of the verified c545212/Core 3be 0.2.7 arm64 package: archive SHA bb39921a…, binary SHA d955c9ab… and strict ad-hoc signature passed. PID 78539/window 11481 used isolated `-data-dir /tmp/nk-c545-close-only/data`; one AX click on the native close button removed the window and the original process exited 0 without a termination signal. Its isolated data directory contained no files before or after. Remote logs: `/tmp/nk-c545-close-only/`; Lead receipt: `E:/Temp/nk-c545-mac-transfer/normal-close-accepted.json`. This does not establish Gatekeeper/notarization, other-machine behavior or the full packaged media suite.
+
+Core single-root main c0f0dfa also passed all four jobs on its own exact SHA in [CI 41734985028](https://github.com/laincat/VeneraCat-Core/actions/runs/41734985028): three-OS Go, Apple xcframework and macOS/iOS-simulator Swift smoke. Receipt: `E:/Temp/core-gbk-differential/main-ci-accepted.json`. This Core change is tests/documentation only; both client functional pins remain 3be57b5. CI executions on different commits are recorded separately.
+
 ## Core tests and compatibility documentation integrated (2026-11-04)
 
 With user approval, Core main is now the single root commit c0f0dfa00c8a4daf7ce58fea5b615bc24eab88b7, with the exact tree of 8922993 accepted by complete CI 41722875239. PR #3 is closed. Only tests/documentation differ; production conversion is unchanged and both clients retain functional pin 3be57b5. Tree/remote/pin receipt: `E:/Temp/core-gbk-differential/main-published.json`. The new main SHA and prior CI-tested SHA remain distinct; the prior run is not relabeled as execution of the new commit.

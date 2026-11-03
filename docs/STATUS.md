@@ -2,6 +2,12 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## Mac包装窗口正常关闭与Core主线复验(2026-11-04)
+
+用户确认Laincat-Mini已解锁后,Orca Worker对已核验c545212/Core3be的0.2.7 arm64包做隔离验收:包SHA bb39921a…、二进制SHA d955c9ab…及ad-hoc严格签名复核通过,以独立 `-data-dir /tmp/nk-c545-close-only/data` 启动PID78539/窗口11481;原生关闭按钮一次AX点击后窗口消失、原进程退出码0,未发终止信号。独立资料目录前后无文件。原始日志 `/tmp/nk-c545-close-only/`,Lead回执 `E:/Temp/nk-c545-mac-transfer/normal-close-accepted.json`。这不代替Gatekeeper/公证、其他机器运行或完整包装媒体流程。
+
+Core单提交主线c0f0dfa的[CI41734985028](https://github.com/laincat/VeneraCat-Core/actions/runs/41734985028)也在该精确SHA完成三平台Go、Apple xcframework及macOS/iOS模拟器Swift冒烟四作业通过,回执 `E:/Temp/core-gbk-differential/main-ci-accepted.json`。本轮Core变动仅测试/文档,两端功能pin仍为3be57b5;不将不同提交的CI执行记录混同。
+
 ## Core测试与兼容说明已整合(2026-11-04)
 
 经用户确认,Core main按单初始提交约定更新为c0f0dfa00c8a4daf7ce58fea5b615bc24eab88b7,文件树与通过完整CI41722875239的8922993完全一致,PR #3已关闭。只有测试与文档差异,生产转换实现未变;Nekularity/Nekophage仍使用功能pin3be57b5。保树/远端/两端pin回执 `E:/Temp/core-gbk-differential/main-published.json`。新主线SHA与已有CI受测SHA分别记录,不把旧CI改记为新SHA执行。

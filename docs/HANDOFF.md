@@ -38,8 +38,6 @@
 
 ## 四、桌面外部条件
 
-**Mac正常关窗**:上次输入被 `screen_locked` 拒绝。用户现已确认 Laincat-Mini 已解锁并显示桌面,助手已安排一次隔离验证,结果回传中。用独立 `-data-dir` 启动 `/tmp/nk-c545-acceptance/repo/build/macos/Nekophage.app` 内的程序,通过原生窗口关闭操作核对进程结束。SIGTERM、截图、Windows退出或签名检查都不替代这一步。无需因此提供真实账号。
-
 **macOS分发**:当前c545212的0.2.7 arm64包已验证版本、归档往返和ad-hoc签名,回执 `/tmp/nk-c545-acceptance/packages/receipt.json`。这些检查不保证目标机器的Gatekeeper接受或运行体验。Developer ID签名/公证需要用户选择该分发方式并提供相应签名条件,当前未做。
 
 **Windows分发**:c545212安装、原生启动、正常关闭、卸载和资料保留已验收;包未做发布者代码签名。目标系统的下载信誉/发布者体验未被该本地安装测试覆盖,不能预言每台机器都会或都不会出现提示。
@@ -50,4 +48,4 @@
 
 完整iOS UI **27 PASS / 0 FAIL / 0 SKIP** 属于9498b4c/Core4f213ff,同时有416单测/76 suites;较早23/4的跳过记录不再作为当前基线。Core3be组合3574346的CI/IPA与两条AI签名模拟器闭环另有独立证据。主题三项链接用例和八张明暗/横竖空状态截图已记录。随后最大辅助字号单列修复、发现/设置末端可达、普通字号两列/顺序以及同名下载条目区分/删除均获定向通过,已随受测源码整合main。30秒HLS两种关闭与重开7秒恢复已通过;12张封面明暗/横竖四组合及两处深色蓝字4.665:1已实测。断网页图正反例及同调用负→正串行隔离也已通过,精确受测测试文件已随a7b5fbd整合。详情见STATUS,不增加历史完整套件通过计数。
 
-桌面当前pin为Core 3be57b5。c545212的Windows安装启动退出、Mac播放器race与两进程关闭字幕恢复、Mac包归档/签名已分别验证;旧版本完整媒体/阅读结果保留各自提交归属。Core GBK回归PR#3已通过三平台Go、xcframework构建及macOS/iOS模拟器Swift冒烟,并经用户确认保树整合至单提交主线c0f0dfa、关闭PR。只有测试和说明变化,功能版本与客户端pin未变。
+桌面当前pin为Core 3be57b5。c545212的Windows安装启动退出、Mac播放器race与两进程关闭字幕恢复、Mac包归档/签名及独立实例原生正常关窗均已分别验证;关窗是一次AX点击后PID78539退出0,回执 `E:/Temp/nk-c545-mac-transfer/normal-close-accepted.json`;旧版本完整媒体/阅读结果保留各自提交归属。Core GBK回归PR#3已通过三平台Go、xcframework构建及macOS/iOS模拟器Swift冒烟,并经用户确认保树整合至单提交主线c0f0dfa、关闭PR。只有测试和说明变化,功能版本与客户端pin未变。
