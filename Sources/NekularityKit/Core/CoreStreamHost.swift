@@ -4,8 +4,8 @@ import VeneraCatCore
 /// The client's chunked transport, as Core's `HostStream` sees it.
 ///
 /// Core cannot call back into the client, so the protocol is a poll: open the
-/// stream, then ask for one piece at a time. The pieces arrive in the order the
-/// server sent them, and the last one carries the status and the final URL.
+/// stream, then ask for one piece at a time. A head-only piece precedes body
+/// pieces; the last piece repeats the metadata for older Core versions.
 ///
 /// This type only moves data; the request itself goes through the same
 /// `URLSessionTransport` as every other request, so the cookie partitions and
@@ -13,50 +13,63 @@ import VeneraCatCore
 public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecked Sendable {
     /// One open stream: the pieces that arrived and the head of the reply.
     ///
-    /// `@unchecked Sendable`: the buffer is guarded by its own `NSCondition`,
-    /// and the status/headers/finalURL fields are written by the transfer task
-    /// before `finish()` and read by Core's poll only after it. That ordering is
-    /// what the condition variable establishes; there is no other shared state.
+    /// `@unchecked Sendable`: all mutable state, including response metadata
+    /// and failures, is protected by the same condition as the body queue.
     private final class Stream: @unchecked Sendable {
-        /// The pieces the server sent, in order.
         private let lock = NSCondition()
         private var pending: [Data] = []
         private var ended = false
-        /// The status of the reply.
-        var status = 0
-        /// The reply's headers.
-        var headers: [String: [String]] = [:]
-        /// The URL the reply came from.
-        var finalURL = ""
-        /// Why the stream ended, when it ended badly.
-        var failure: Error?
-        /// The request id, so the stream can be aborted.
+        private var head: URLSessionTransport.Response?
+        private var headPending = false
+        private var failure: Error?
         let requestID: Int64
 
         init(requestID: Int64) {
             self.requestID = requestID
         }
 
-        /// Takes the next piece, waiting for one to arrive.
-        func next() -> Data? {
+        func next() -> StreamChunk {
             lock.lock(); defer { lock.unlock() }
-            while pending.isEmpty && !ended {
+            while pending.isEmpty && !headPending && !ended {
                 lock.wait()
             }
-            if pending.isEmpty { return nil }
-            return pending.removeFirst()
+            if headPending {
+                headPending = false
+                return StreamChunk(done: false, chunkBase64: nil, status: head?.status,
+                                   headers: head?.headers, finalUrl: head?.finalURL.absoluteString, error: nil)
+            }
+            if !pending.isEmpty {
+                return StreamChunk(done: false, chunkBase64: pending.removeFirst().base64EncodedString(),
+                                   status: nil, headers: nil, finalUrl: nil, error: nil)
+            }
+            return StreamChunk(done: true, chunkBase64: nil, status: head?.status ?? 0,
+                               headers: head?.headers ?? [:], finalUrl: head?.finalURL.absoluteString ?? "",
+                               error: failure?.localizedDescription)
         }
 
-        /// Hands over a piece and wakes the reader.
+        func received(_ response: URLSessionTransport.Response) {
+            lock.lock(); defer { lock.unlock() }
+            guard !ended, head == nil else { return }
+            head = response
+            headPending = true
+            lock.broadcast()
+        }
+
         func append(_ data: Data) {
             lock.lock(); defer { lock.unlock() }
+            guard !ended, !data.isEmpty else { return }
             pending.append(data)
             lock.signal()
         }
 
-        /// Ends the stream: the reader sees the end after the pieces it has.
-        func finish() {
+        func finish(_ error: Error? = nil, discardingBody: Bool = false) {
             lock.lock(); defer { lock.unlock() }
+            if discardingBody {
+                pending.removeAll()
+                headPending = false
+            }
+            guard !ended else { return }
+            failure = error
             ended = true
             lock.broadcast()
         }
@@ -118,16 +131,15 @@ public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecke
             // asks for the next one.
             Task {
                 do {
-                    let response = try await transport.sendStreaming(request) { data in
+                    _ = try await transport.sendStreaming(request, onResponse: { response in
+                        stream.received(response)
+                    }) { data in
                         stream.append(data)
                     }
-                    stream.status = response.status
-                    stream.headers = response.headers
-                    stream.finalURL = response.finalURL.absoluteString
+                    stream.finish()
                 } catch {
-                    stream.failure = error
+                    stream.finish(error)
                 }
-                stream.finish()
             }
             return "{\"id\":\(id)}"
         } catch let e {
@@ -146,21 +158,12 @@ public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecke
                                      userInfo: [NSLocalizedDescriptionKey: "no stream under \(id_)"])
             return ""
         }
-        guard let piece = stream.next() else {
+        let chunk = stream.next()
+        if chunk.done {
             lock.lock()
             streams[id_] = nil
             lock.unlock()
-            var chunk = StreamChunk(done: true, chunkBase64: nil, status: nil, headers: nil, finalUrl: nil, error: nil)
-            chunk.status = stream.status
-            chunk.headers = stream.headers
-            chunk.finalUrl = stream.finalURL
-            if let failure = stream.failure {
-                chunk.error = failure.localizedDescription
-            }
-            return Self.json(chunk)
         }
-        let chunk = StreamChunk(done: false, chunkBase64: piece.base64EncodedString(),
-                                status: nil, headers: nil, finalUrl: nil, error: nil)
         return Self.json(chunk)
     }
 
@@ -170,7 +173,7 @@ public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecke
         lock.unlock()
         if let stream {
             transport.cancel(id: stream.requestID)
-            stream.finish()
+            stream.finish(CancellationError(), discardingBody: true)
         }
     }
 
