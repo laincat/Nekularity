@@ -10,7 +10,7 @@ tag `v0.3.2` 指向 `76a1ccd68b4834d169e58610a339322e1c7e29b4`,与受测 `9498b4
 
 发布资源核对(本地直连下载,`E:/Temp/nk-ios-032-release/ipa-verification.log`):HTTP 200、**29,418,522 字节**、SHA-256 `f59afe889def90131a8994a59a92571b6acc823679431d37c16c032f29bc8737`,与 GitHub 记录的 asset size/digest 一致;zip CRC 通过;`Payload/Nekularity.app/Info.plist` 与 `NekularityWidgets.appex/Info.plist` 均为 **0.3.2/14、最低 iOS 26.0**;App 主二进制含 Core pin `4f213ffbd51cfa22ef032a4279a04efb71b36283`,旧的 `8e14aade75f5` 已不在包内。回执 `E:/Temp/nk-ios-032-release/ipa-receipt.json`。包未签名,签名安装与真机仍不在核对范围。
 
-AltStore 工作流 `41582051344`(手动触发 `update-source.yml`)整轮成功,提交 `468761a5d267292d5742aa11de676e6052fb917c` 的 `apps.json` 已把 Nekularity 稳定轨道与扁平首版都更新为 **0.3.2/14**、29,418,522 字节,下载与图标均指向 `v0.3.2`;IPA 分段请求 206、`Content-Range: bytes 0-1023/29418522`,图标 HTTP 200(443,517 字节,`image/png`)。cnb.cool 镜像与 `releases/download/latest` 入口已读到 0.3.2;`raw.githubusercontent.com` 在核对时仍返回 0.3.1,是同域 CDN 缓存滞后,不是仓库内容不一致。证据 `E:/Temp/nk-ios-032-release/altstore-after.json`、`apps-468761a.json`。
+AltStore 工作流 `41582051344`(手动触发 `update-source.yml`)整轮成功,提交 `468761a5d267292d5742aa11de676e6052fb917c` 的 `apps.json` 已把 Nekularity 稳定轨道与扁平首版都更新为 **0.3.2/14**、29,418,522 字节,下载与图标均指向 `v0.3.2`;IPA 分段请求 206、`Content-Range: bytes 0-1023/29418522`,图标 HTTP 200(443,517 字节,`image/png`)。cnb.cool 镜像与 `releases/download/latest` 入口已读到 0.3.2;`raw.githubusercontent.com` 首次核对时仍返回 0.3.1,约 12 分钟后再读已是 0.3.2,属同域 CDN 缓存滞后而不是仓库内容不一致(三个入口现都读到 0.3.2)。证据 `E:/Temp/nk-ios-032-release/altstore-after.json`、`apps-468761a.json`。
 
 ## 0.3.2/build 14 合并树验收
 
