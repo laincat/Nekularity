@@ -2,7 +2,7 @@
 
 [简体中文](HANDOFF.md) | English
 
-Updated 2026-11-04. These items need the user's device, account or publication choice. Download identity, accessibility layout, HLS subtitles and player-sheet resume remain under the existing Orca Worker's acceptance and are not marked complete by this handoff. Engineering records are in [STATUS](STATUS.en.md) and [UNVERIFIED](UNVERIFIED.en.md).
+Updated 2026-11-04. These items need the user's device, account or publication choice. Orca Worker accepted targeted download identity, accessibility layout and HLS Chinese/English/off behavior; three tested product repairs are in main fda33d1. Swipe/button exit persistence and page reopening with thirty-second HLS both pass targeted acceptance on the dedicated simulator; cross-process, background and physical-device behavior remain outside that scope. Engineering records are in [STATUS](STATUS.en.md) and [UNVERIFIED](UNVERIFIED.en.md).
 
 ## 1. Choose the correct build first
 
@@ -48,6 +48,6 @@ Existing loopback fixtures are available only to processes on the same computer.
 
 ## 5. Boundaries of existing engineering evidence
 
-The complete iOS UI result **27 PASS / 0 FAIL / 0 SKIP** belongs to 9498b4c/Core 4f213ff, with 416 tests/76 suites. The earlier 23/4 skipped-test record is not the current baseline. Core 3be combination 3574346 has separate CI/IPA evidence, and its two signed-simulator AI loops have separate receipts. Three theme-link cases and eight light/dark portrait/landscape empty-state screenshots are recorded; the largest-text repair and later targeted receipts still await integration.
+The complete iOS UI result **27 PASS / 0 FAIL / 0 SKIP** belongs to 9498b4c/Core 4f213ff, with 416 tests/76 suites. The earlier 23/4 skipped-test record is not the current baseline. Core 3be combination 3574346 has separate CI/IPA evidence, and its two signed-simulator AI loops have separate receipts. Three theme-link cases and eight light/dark portrait/landscape empty-state screenshots are recorded. Later targeted acceptance covers the single-column accessibility repair, reachable discovery/settings endpoints, ordinary two-column order and distinct same-title download entries after deletion; tested sources are integrated into main. HLS subtitles and progress persistence have separate receipts, while reopening still awaits the thirty-second-media check.
 
 The current desktop pin is Core 3be57b5. c545212 has separate evidence for Windows installation/startup/exit, Mac player race tests, two-process saved-off restoration, and Mac archive/signature checks. Older full media/reading results retain their own commit attribution. Core GBK regression PR #3 passes three-platform Go, xcframework build and macOS/iOS simulator Swift smoke tests. It changes tests and documentation only; functional release and client pins remain unchanged.

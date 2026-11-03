@@ -2,13 +2,17 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
+## 30秒 HLS 续播定向通过(2026-11-04)
+
+Orca Worker 在专用签名模拟器上用30秒本地素材,真实播放后分别下滑和点关闭按钮。关闭前位置7.24/7.30秒,均落盘7秒/30秒、23%;自动重开时未点暂停、播放或字幕,起点均为7.00秒,早期App/engine/source时钟分别为9.60/9.50秒。两次CoreMedia均记录postSeekPosition 7.000000,经过的约2.5秒包括自动播放和UI采样。临时只读诊断移除后App重新编译安装,最终VideoPlayerView SHA为0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37,与先前受测源码一致。素材Git原始主清单为LF/110字节,Windows CRLF副本114字节,其余素材按摘要核对。日志 `/tmp/nk-hls30-resume-evidence/`,回执 `E:/Temp/nk-ios-033-evidence/hls30-mac-receipt.json`。原10秒失败日志仍保留:晚期交互接近片尾可能触发正常重播,本次不据此断言其调用原因。本次通过仅覆盖模拟器页面关闭与重开,不涵盖跨进程、后台或真机。
+
 ## Mac定向修复已收回;HLS重开仍需复核(2026-11-04)
 
 Orca Worker完成下载同名分组、辅助字号与HLS字幕三项定向验收。DownloadsView保留源/漫画ID作为分组身份:旧版两条均显示“甲章”,修复后同名条目正确区分,删除一条后另一条仍在并可进入。DiscoverView在辅助字号下显示单列:“收藏”不再逐字换行,发现/设置末端可达底栏上方并操作,普通字号仍为原两列与顺序。HLS实际播放中选择中文/英文均有文字截图,关闭后消失,媒体Referer与Range206正确;不据此推断默认轨自动选择、音频或真机通过。
 
-播放器onDisappear统一进度回写后,手势与按钮均保存seconds=7、percent=70;旧手势未生成shelf.json。此前重开验收仍是FAIL:传入start=7却观察pos=1.5和seek completion target=0。补充日志显示从7s播放约2.7s后暂停,后续选择字幕并再次播放,可能触发10秒片尾的正常重播;根因尚未确认。已准备30秒同源夹具,将按实际初始位置复核,不把这个可能解释当成通过。严格大于5s才可续播的现行规则保留,没有改成从3s也恢复。
+播放器onDisappear统一进度回写后,手势与按钮均保存seconds=7、percent=70;旧手势未生成shelf.json。此前重开验收仍是FAIL:传入start=7却观察pos=1.5和seek completion target=0。补充日志显示从7s播放约2.7s后暂停,后续选择字幕并再次播放,可能触发10秒片尾的正常重播;根因尚未确认。后续30秒同源夹具的实际初始位置复核已通过,见本页最新记录;不能倒推原10秒调用原因。严格大于5s才可续播的现行规则保留,没有改成从3s也恢复。
 
-三份源码已逐字节收回并整合main,与Mac受测SHA一致。组合App/UITests的Mac增量build-for-testing成功日志 `/tmp/nk-downloads-identity-evidence/ios-build.log`。分别的运行证据位于 `/tmp/nk-downloads-identity-evidence/`、`/tmp/nk-largetext-fix-evidence/`、`/tmp/nk-ios-hls-evidence/`、`/tmp/nk-ios-evidence-resume/`;Lead回执 `E:/Temp/nk-ios-033-evidence/mac-ui-receipt.json`。没有重跑完整UI。删除重复play的实验候选尚未采用;0.3.3/15仍未发布,需先收口恢复结果和最终CI/IPA。
+三份源码已逐字节收回并整合main,与Mac受测SHA一致。组合App/UITests的Mac增量build-for-testing成功日志 `/tmp/nk-downloads-identity-evidence/ios-build.log`。分别的运行证据位于 `/tmp/nk-downloads-identity-evidence/`、`/tmp/nk-largetext-fix-evidence/`、`/tmp/nk-ios-hls-evidence/`、`/tmp/nk-ios-evidence-resume/`;Lead回执 `E:/Temp/nk-ios-033-evidence/mac-ui-receipt.json`。没有重跑完整UI。删除重复play的实验候选未采用;0.3.3/15仍未发布,恢复已完成定向复核,最终CI/IPA仍待验收。
 
 ## 主题矩阵补验:空状态已查看,最大字号布局待修(2026-11-04)
 
