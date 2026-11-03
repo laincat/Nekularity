@@ -2,7 +2,7 @@
 
 English | [简体中文](STATUS.md)
 
-**Branch terminology correction (2026-11-03)**: earlier references loosely calling the current Nekophage working branch main were inaccurate. `E:/Code/Nekophage` is on `fix/subtitle-record-cap`/`c7c0d90`, pinned to `4f213ff`; actual main is `28be4bd`, pinned to `214e778`. Latest Windows acceptance belongs to functional source `a079ce7`/Core `b55c1a4` on the separate `update/core-b55c1a4` candidate. Nekularity main is indeed pinned to `4f213ff`. Remaining client-main integration therefore includes the desktop working branch; its acceptance is not evidence of a main-branch update. Inspection log: `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`.
+**Desktop main integration (2026-11-03)**: the earlier confusion between Nekophage's working branch and main has been corrected. Before integration, actual main was `28be4bd`/Core `214e778`; inspection log `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`. The `fix/subtitle-record-cap` branch has now fast-forwarded actual main to `67fc877`, pinned to `4f213ff`, with the source branch retained. WebView probe isolation was ported and accidentally tracked Python bytecode removed. Seven checks and isolated Windows reading pass: two decoded pages, double-page layout, 55% progress and reopening at 1200, with only the current chapter's storage key. Receipt `E:/Temp/nk-desktop-integration/receipt.json`. The `a079ce7`/Core `b55c1a4` Windows package remains a separate candidate, pending new-pin macOS consumer acceptance. Nekularity main remains pinned to `4f213ff`.
 
 Updated 2026-11-03.
 

@@ -2,7 +2,7 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
-**分支口径更正(2026-11-03)**:此前将 Nekophage 当前工作分支笼统写成 main 并不准确。实际 `E:/Code/Nekophage` 在 `fix/subtitle-record-cap`/`c7c0d90`,pin 为 `4f213ff`;真正 main 是 `28be4bd`,pin 为 `214e778`。最新 Windows 验收属于独立 `update/core-b55c1a4` 候选的功能源码 `a079ce7`/Core `b55c1a4`。Nekularity main 的 pin 则确为 `4f213ff`。因此“客户端 main pin 未升级”还包含桌面工作分支整合,不能把工作分支验收当成已经进入 main。核对日志 `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`。
+**桌面主线整合(2026-11-03)**:先前把 Nekophage 工作分支称作 main 的口径已更正;整合前真正 main 为 `28be4bd`/Core `214e778`,核对日志 `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`。现已将 `fix/subtitle-record-cap` 快进整合为真正 main 的 `67fc877`,pin 为 `4f213ff`,原分支保留;同时带回 WebView 探针隔离修复并移除误入版本控制的 Python 缓存。七项检查与 Windows 隔离阅读回归通过:两页解码、双页、55% 进度、重开恢复 1200,仅有本次章节存储键。回执 `E:/Temp/nk-desktop-integration/receipt.json`。`a079ce7`/Core `b55c1a4` 的 Windows 包仍属于独立候选,新 pin 的 macOS 消费端尚未验收;Nekularity main 仍 pin `4f213ff`。
 
 **标准接口 HTTP 错误修复已过 Mac Kit 回归,页面待验**:`bb77b5d` 已经 `9af6148` 整合 main,Orca Worker 的四条定向测试与全套 425/78 suites 通过,恢复旧实现的负向对照使两条错误用例失败。Windows loopback 夹具和 Mac URLProtocol 测试各有证据,不替代页面真实 HTTP/UI 结果。地址候选 `ad8e191` 已有 Mac 回执,模型目录仍失败,根因未证实。详见 STATUS。
 
