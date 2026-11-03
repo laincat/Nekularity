@@ -35,6 +35,8 @@ The first real compile found four errors that no static check of mine could see,
 
 ## Still unverified
 
+The archive/image-loader lifetime fix awaits Mac validation: the 0.3.1 retry fetcher creates a strong cycle, `DownloadStore → fallbackFetch → ImageLoader → offline → DownloadStore`, preventing the old graph from releasing on a profile switch. The fix assembles both in `ImageLoader.forDownloads` with a weak archive lookup while the archive retains its retry fetcher. Its regression requires a live archive to retain the loader and both to release once the archive is dropped. This branch is not merged into main; local Swift parsing does not stand in for macOS compilation or execution.
+
 | Commit | What changed | Where it stands | What is left |
 |---|---|---|---|
 | Truncation notice | Reads `outcome` from Core's events and shows "hit the length limit" in the chat screen | **Compiled and tested** (build `381f2a6` is green) | Make a model answer to its max_tokens and see the notice appear |

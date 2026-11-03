@@ -74,6 +74,10 @@ struct ImageLoaderSharingTests {
     """.trimmingCharacters(in: .whitespacesAndNewlines))!
 
     private func loader() throws -> ImageLoader {
+        ImageLoader(core: try core())
+    }
+
+    private func core() throws -> CoreClient {
         let jars = CookieJars(file: nil)
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [SlowImageStub.self]
@@ -81,9 +85,28 @@ struct ImageLoaderSharingTests {
                                            timeout: 5, configuration: config)
         let root = URL(filePath: NSTemporaryDirectory()).appending(path: UUID().uuidString)
         let host = CoreHost(store: try SourceStore(root: root), cookies: jars, transport: transport)
-        let core = try CoreClient(config: CoreConfig(appVersion: "1.0", locale: "zh_CN",
-                                                     defaultUserAgent: "nk-test/1"), host: host)
-        return ImageLoader(core: core)
+        return try CoreClient(config: CoreConfig(appVersion: "1.0", locale: "zh_CN",
+                                                defaultUserAgent: "nk-test/1"), host: host)
+    }
+
+    /// A profile switch drops both environment owners. The retry fetcher keeps
+    /// the loader alive while the archive exists, but dropping the archive must
+    /// release both objects, including the loader's cache and Core reference.
+    @MainActor
+    @Test func droppingTheArchiveReleasesItsRetryLoader() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "loader-lifetime-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        var downloads: DownloadStore? = DownloadStore(root: root)
+        var images: ImageLoader? = ImageLoader.forDownloads(core: try core(), downloads: downloads!)
+        weak var archive = downloads
+        weak var loader = images
+
+        #expect(downloads?.fallbackFetch != nil)
+        images = nil
+        #expect(loader != nil, "the archive must keep its retry fetcher usable")
+        downloads = nil
+        #expect(archive == nil, "the loader's offline lookup must not retain the old archive")
+        #expect(loader == nil, "dropping the environment must release its image cache")
     }
 
     /// Every image request in this test file uses its own host, because the stub's
