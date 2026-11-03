@@ -8,11 +8,11 @@ With user approval, Core main is now the single root commit c0f0dfa00c8a4daf7ce5
 
 ## Mac theme and build follow-up (2026-11-04)
 
-The original Orca Worker reported all four populated-cover appearance/orientation cases, two dark-label contrast ratios of 4.665:1, and the exact 736e364 local 430-test/80-suite build and IPA. Detail entry proves navigation only: its missing source prevents full content-loading acceptance. The local Xcode 27.2/SDK 27.2 IPA is recorded separately from the public CI artifact. See [STATUS](STATUS.en.md). Valid/corrupt/restored offline-image cases pass; compressed recovery of the complete tested patch is pending, with historical full-suite counts unchanged.
+The original Orca Worker reported all four populated-cover appearance/orientation cases, two dark-label contrast ratios of 4.665:1, and the exact 736e364 local 430-test/80-suite build and IPA. Detail entry proves navigation only: its missing source prevents full content-loading acceptance. The local Xcode 27.2/SDK 27.2 IPA is recorded separately from the public CI artifact. See [STATUS](STATUS.en.md). Valid/corrupt/restored offline-image cases pass; the complete tested files and serial-isolation repair are integrated at a7b5fbd, with historical full-suite counts unchanged.
 
 ## Release 0.3.3 acceptance update (2026-11-04)
 
-0.3.3/15 at 736e364 is published: CI attempt 2 passed; IPA HTTP 200/29,457,850 bytes, digest, App/Widget metadata and Core pin verified. After the generation-step authentication repair, AltStore repository data and all three public endpoints agree on 0.3.3/15. See [STATUS](STATUS.en.md) for receipts. Orca Worker accepted valid/corrupt/restored offline-page cases without product changes; tested patch recovery is pending. Other delegated Mac tasks require their own terminal reports; device/background/account items remain external.
+0.3.3/15 at 736e364 is published: CI attempt 2 passed; IPA HTTP 200/29,457,850 bytes, digest, App/Widget metadata and Core pin verified. After the generation-step authentication repair, AltStore repository data and all three public endpoints agree on 0.3.3/15. See [STATUS](STATUS.en.md) for receipts. Orca Worker accepted valid/corrupt/restored offline-page cases without product changes; the tests are integrated at a7b5fbd, with a serial negative→positive run passing 2/0. Other delegated Mac tasks require their own terminal reports; device/background/account items remain external.
 
 ## Targeted thirty-second HLS resume accepted (2026-11-04)
 
@@ -34,7 +34,7 @@ Updated 2026-11-03. Covers Nekularity, Nekophage and VeneraCat Core. At the user
 
 | Project | Current facts | Main gaps |
 |---|---|---|
-| Nekularity | **0.3.3/build15 published and verified**:736e364/Core3be57b5, CI attempt2 success; IPA29,457,850 bytes, App/Widget0.3.3/15 and minimum26.0 verified; all three public AltStore endpoints agree | Targeted HLS captions/resume, AI, accessibility layout and download identity accepted; offline-image positive/negative cases passed and tested patch awaits recovery. Device/background/lock screen/PiP/Live Activity and real accounts need external conditions |
+| Nekularity | **0.3.3/build15 published and verified**:736e364/Core3be57b5, CI attempt2 success; IPA29,457,850 bytes, App/Widget0.3.3/15 and minimum26.0 verified; all three public AltStore endpoints agree | Targeted HLS captions/resume, AI, accessibility layout and download identity accepted; offline-image and serial-isolation cases passed; tests are integrated at a7b5fbd. Device/background/lock screen/PiP/Live Activity and real accounts need external conditions |
 | Nekophage | MyGo native main window + WebView reader/player; main c545212/Core 3be57b5; current Windows build 0.2.7/c545212 | Integrated tree passes seven checks and off-restoration probe; installed 97e24b6 subtitle/resume evidence is separate; Mac reading/decoding pass, normal closure is blocked by screen_locked; speaker output and signing/notarization need external conditions, no Git remote |
 | VeneraCat Core | Shared comic, video, backup and AI protocol logic; clients own networking and platform facilities | A few JS engine compatibility limits and ongoing client contracts; Sender has no production caller |
 

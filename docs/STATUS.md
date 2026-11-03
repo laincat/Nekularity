@@ -12,7 +12,7 @@ Orca Worker用12张本地封面完成浅/深色×竖/横屏四组合:截图实�
 
 同一Orca Worker在干净736e364/Core3be的独立检出上完成本机Release App与UITests编译,`swift test --no-parallel`为430 tests/80 suites/0 failures。工具链为Xcode27.2(27B52)、iPhoneOS SDK27.2;tree-sitter因Language15与支持13–14不兼容而跳过,不算解析通过。本机IPA29,457,750字节,SHA a1210ec1db47a6c0c7b33888b27cbe8ada81e894195e71def9ef7ba91182ddeb,与正式CI发布IPA的29,457,850字节/cb1ab0ca…分开。两者均0.3.3/15、最低26.0;本机结果不改写CI或新增UI/真机结论。回执 `E:/Temp/nk-ios-033-evidence/local-mac-build-receipt.json`。
 
-离线页图正常/坏字节/恢复三项也已通过:坏字节负例是XCTAssertFalse通过,不是XCTest红灯。它证明旧工具栏断言仍成立而实际图片谓词不成立。受测patch回信被截断,已请求压缩传输,未凭片段重建或整合。原完整UI27/0/0不变;各项自有服务/测试资料已清理,不宣称先前fixture CA全被移除。
+离线页图正常/坏字节/恢复三项也已通过:坏字节负例是XCTAssertFalse通过,不是XCTest红灯。它证明旧工具栏断言仍成立而实际图片谓词不成立。完整patch经压缩传输与SHA核对收回,串行隔离修复后以a7b5fbd整合主线。原完整UI27/0/0不变;各项自有服务/测试资料已清理,不宣称先前fixture CA全被移除。
 
 ## 0.3.3/build15 发布与订阅已核验(2026-11-04)
 
@@ -20,9 +20,9 @@ Orca Worker用12张本地封面完成浅/深色×竖/横屏四组合:截图实�
 
 AltStore首次刷新虽为绿色却仍保留0.3.2。确认生成步骤遗漏GH_TOKEN后,以a516cd2补齐,既有测试/结构检查通过;刷新41731222405成功,产出main6ce4eb68699b15bb218f4e3f699c6c32fc8e5a32。仓库条目、GitHub Raw、CNB镜像、固定Release三个公开入口均实际为0.3.3/15,稳定轨道/扁平版本/旧式version一致,大小29,457,850、最低26.0和IPA地址匹配。公开入口均HTTP200,回执 `E:/Temp/nk-ios-033-evidence/altstore-accepted.json`。刷新日志下载被插件地址校验拦截,根因表述限于已确认配置缺口及修复后实际结果,不补造限流错误。
 
-CI只编译UI;界面验收归属于原Orca Worker的独立结果。断网页图随后已完成正常图片/HTTP200坏图片/恢复图片的定向对照,真实青色图片与AX Image证据通过,产品源码无改动,测试补丁回收整合中。完整UI历史计数不改。真机签名、后台/锁屏、Live Activity、PiP、扬声器及真实账号仍单列外部条件;一次发版不代表全路线图完成。
+CI只编译UI;界面验收归属于原Orca Worker的独立结果。断网页图随后已完成正常图片/HTTP200坏图片/恢复图片的定向对照,真实青色图片与AX Image证据通过,产品源码无改动,受测文件已按SHA核对并随a7b5fbd整合。完整UI历史计数不改。真机签名、后台/锁屏、Live Activity、PiP、扬声器及真实账号仍单列外部条件;一次发版不代表全路线图完成。
 
-## 离线下载页图的断言待加强(2026-11-04)
+## 离线页图断言与串行隔离已验证(2026-11-04)
 
 复核发现既有 `testDownloadedChapterReadsWithNoServer` 在停止loopback服务后只等待“收藏本页”按钮存在。ReaderView工具栏在图片尚未解码时也存在,其enabled状态也只反映图片URL列表。因此旧用例通过不能独立证明下载页图已经解码;历史27/0/0计数保留,同名下载条目可进入的结果也不扩称图片呈现通过。
 

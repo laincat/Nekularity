@@ -4,17 +4,19 @@
 
 ## Mac theme and build follow-up (2026-11-04)
 
-The original Orca Worker reported all four populated-cover appearance/orientation cases, two dark-label contrast ratios of 4.665:1, and the exact 736e364 local 430-test/80-suite build and IPA. Detail entry proves navigation only: its missing source prevents full content-loading acceptance. The local Xcode 27.2/SDK 27.2 IPA is recorded separately from the public CI artifact. See [STATUS](STATUS.en.md). Valid/corrupt/restored offline-image cases pass; compressed recovery of the complete tested patch is pending, with historical full-suite counts unchanged.
+The original Orca Worker reported all four populated-cover appearance/orientation cases, two dark-label contrast ratios of 4.665:1, and the exact 736e364 local 430-test/80-suite build and IPA. Detail entry proves navigation only: its missing source prevents full content-loading acceptance. The local Xcode 27.2/SDK 27.2 IPA is recorded separately from the public CI artifact. See [STATUS](STATUS.en.md). Valid/corrupt/restored offline-image cases pass; the complete tested files and serial-isolation repair are integrated at a7b5fbd, with historical full-suite counts unchanged.
 
 ## Release 0.3.3 acceptance update (2026-11-04)
 
-0.3.3/15 at 736e364 is published: CI attempt 2 passed; IPA HTTP 200/29,457,850 bytes, digest, App/Widget metadata and Core pin verified. After the generation-step authentication repair, AltStore repository data and all three public endpoints agree on 0.3.3/15. See [STATUS](STATUS.en.md) for receipts. Orca Worker accepted valid/corrupt/restored offline-page cases without product changes; tested patch recovery is pending. Other delegated Mac tasks require their own terminal reports; device/background/account items remain external.
+0.3.3/15 at 736e364 is published: CI attempt 2 passed; IPA HTTP 200/29,457,850 bytes, digest, App/Widget metadata and Core pin verified. After the generation-step authentication repair, AltStore repository data and all three public endpoints agree on 0.3.3/15. See [STATUS](STATUS.en.md) for receipts. Orca Worker accepted valid/corrupt/restored offline-page cases without product changes; the tests are integrated at a7b5fbd, with a serial negative→positive run passing 2/0. Other delegated Mac tasks require their own terminal reports; device/background/account items remain external.
 
-## Offline downloaded-page assertion needs strengthening (2026-11-04)
+## Offline-page assertion and serial isolation verified (2026-11-04)
 
 Review found that `testDownloadedChapterReadsWithNoServer` only waits for the Keep Page button after stopping the loopback server. ReaderView's toolbar exists before image decoding, and its enabled state only reflects the URL list. The earlier test pass therefore does not independently prove decoded downloaded images. Historical 27/0/0 counts remain unchanged; same-title download navigation is not promoted to image-rendering acceptance.
 
-Test branch e36b171 waits for the page image exposed by ReaderPage's successful CGImage branch and attaches its screenshot; it is not yet integrated into main. The existing Mac Worker still needs to exercise valid-image and corrupt-image cases on the dedicated simulator. Only Windows syntax parsing is available so far; no new UI pass is claimed. Server shutdown, reader navigation and image decoding need distinct evidence.
+The tested change is integrated: after server shutdown it waits for the page image exposed by ReaderPage's successful CGImage branch, and the negative control returns HTTP 200 with undecodable bytes. On the dedicated simulator, Orca Worker passed the positive case in39.920s, the negative control in61.470s (toolbar assertion held while the image predicate failed within8s), and the restored-image rerun in40.572s.
+
+Review then found that the negative case's corrupt chapter made the following positive case skip downloading. A single serial invocation reproduced FAIL at NekularityUITests.swift:1204 (2 tests/1 failure). Calling the existing removeDownloadedProbeChapter at the start of the positive case made both pass in one invocation (63.733s and53.172s). Both final test files match the Mac-tested SHA byte-for-byte with LF endings; product code is unchanged and the historical full-UI27/0/0 count remains unchanged. Logs: `/tmp/nk-offline-image-evidence/`; Lead receipt: `E:/Temp/nk-offline-image-evidence/mac-receipt.json`. This covers only the targeted simulator case, not a device or full-suite rerun.
 
 ## Targeted thirty-second HLS resume accepted (2026-11-04)
 
