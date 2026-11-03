@@ -4,6 +4,12 @@
 
 更新:2026-11-03。
 
+## Core b55c1a4 消费端候选(2026-11-03)
+
+当前分支 `update/core-b55c1a4` 将两处构建 pin 指向已发布的 `b55c1a488746efc1454e4f4781e4e83dc577d187`,包含 Magpie 聊天实际取消修复。Core 收拢历史前后的完整 tree 一致,与受测 `696a504` 的功能源码一致,差异仅证据文档。基线是 `af48d65`:它在 Core `2c9c83b` 上已通过 Kit、设备 App、UITests 编译并生成实际核对过的 IPA;两个宿主 serve.py 的资源排除也保留。
+
+新 pin 的 Nekularity 客户端编译与界面仍需独立验证,不把旧 pin 的通过移作此候选结果。下面的 Core SDK、旧候选与发布记录保持原提交归属;本分支未发布版本,未更新 AltStore。
+
 ## Core 2c9c83b 升级候选(2026-11-03)
 
 独立分支 `update/core-2c9c83b` 将两处构建 pin 指向 `2c9c83b409a7fa5933bf34b5773c31a67df944bd`,未改下面各历史验收的 Core 归属。CI `41590287663` 的三平台 Go job 与 Apple job 全部成功,包括 xcframework、macOS 和 iOS 模拟器 Swift smoke test。下载的 `apple-build.zip` 为 72,755,594 字节,SHA-256 `15e16329406cac3dafa2a912b411fb610e7d9d96740565763a6192c2252cda3a`,CRC 通过。设备 arm64、macOS arm64/x86_64、模拟器 arm64/x86_64 三类切片与新增 API 头文件已核对;详细摘要 `E:/Temp/core-2c9-apple/verified-sdk.json`。Vendor 已放入该隔离工作树。

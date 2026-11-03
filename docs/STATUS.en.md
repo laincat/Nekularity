@@ -4,6 +4,12 @@ English | [简体中文](STATUS.md)
 
 Updated 2026-11-03.
 
+## Core b55c1a4 consumer candidate (2026-11-03)
+
+Branch `update/core-b55c1a4` points both build pins at published `b55c1a488746efc1454e4f4781e4e83dc577d187`, including actual Magpie chat cancellation. Core history folding preserves the full tree, and functional source matches tested `696a504`, differing only in evidence documentation. The baseline is `af48d65`, which passed Kit, device App and UITests compilation with Core `2c9c83b` and produced an inspected IPA. Both host serve.py resource exclusions remain.
+
+Nekularity compilation and UI at the new pin need independent validation; old-pin passes are not reused for this candidate. SDK, earlier-candidate and release evidence below keeps its original commit attribution. This branch publishes no version and does not update AltStore.
+
 ## Candidate Core 2c9c83b upgrade (2026-11-03)
 
 Isolated branch `update/core-2c9c83b` points both build pins at `2c9c83b409a7fa5933bf34b5773c31a67df944bd`, leaving historical Core attribution below intact. CI `41590287663` passes its three Go platforms and Apple job, including xcframework generation plus macOS and iOS simulator Swift smoke tests. Downloaded `apple-build.zip` is 72,755,594 bytes with SHA-256 `15e16329406cac3dafa2a912b411fb610e7d9d96740565763a6192c2252cda3a` and valid CRC. Device arm64, macOS arm64/x86_64 and simulator arm64/x86_64 slices and new API headers were checked; detailed receipt `E:/Temp/core-2c9-apple/verified-sdk.json`. Vendor is installed in this isolated worktree.
