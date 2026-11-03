@@ -16,6 +16,7 @@ struct DiscoverView: View {
     @Environment(SourceLibrary.self) private var library
     @Environment(MetadataStore.self) private var metadata
     @Environment(LocalComicStore.self) private var local
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var editing = false
     /// Which card the size dialog is for, and whether it is up.
@@ -28,7 +29,9 @@ struct DiscoverView: View {
     /// device name: a folding screen, split view and iPad all differ here.
     @State private var gridWidth: CGFloat = 0
 
-    private var gridColumns: Int { HomeGrid.columns(forWidth: gridWidth) }
+    private var gridColumns: Int {
+        dynamicTypeSize.isAccessibilitySize ? 1 : HomeGrid.columns(forWidth: gridWidth)
+    }
     @State private var searching = false
     @State private var browsing = false
     @State private var adding = false

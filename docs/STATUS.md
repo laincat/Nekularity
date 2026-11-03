@@ -2,6 +2,14 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## Mac定向修复已收回;HLS重开仍需复核(2026-11-04)
+
+Orca Worker完成下载同名分组、辅助字号与HLS字幕三项定向验收。DownloadsView保留源/漫画ID作为分组身份:旧版两条均显示“甲章”,修复后同名条目正确区分,删除一条后另一条仍在并可进入。DiscoverView在辅助字号下显示单列:“收藏”不再逐字换行,发现/设置末端可达底栏上方并操作,普通字号仍为原两列与顺序。HLS实际播放中选择中文/英文均有文字截图,关闭后消失,媒体Referer与Range206正确;不据此推断默认轨自动选择、音频或真机通过。
+
+播放器onDisappear统一进度回写后,手势与按钮均保存seconds=7、percent=70;旧手势未生成shelf.json。此前重开验收仍是FAIL:传入start=7却观察pos=1.5和seek completion target=0。补充日志显示从7s播放约2.7s后暂停,后续选择字幕并再次播放,可能触发10秒片尾的正常重播;根因尚未确认。已准备30秒同源夹具,将按实际初始位置复核,不把这个可能解释当成通过。严格大于5s才可续播的现行规则保留,没有改成从3s也恢复。
+
+三份源码已逐字节收回并整合main,与Mac受测SHA一致。组合App/UITests的Mac增量build-for-testing成功日志 `/tmp/nk-downloads-identity-evidence/ios-build.log`。分别的运行证据位于 `/tmp/nk-downloads-identity-evidence/`、`/tmp/nk-largetext-fix-evidence/`、`/tmp/nk-ios-hls-evidence/`、`/tmp/nk-ios-evidence-resume/`;Lead回执 `E:/Temp/nk-ios-033-evidence/mac-ui-receipt.json`。没有重跑完整UI。删除重复play的实验候选尚未采用;0.3.3/15仍未发布,需先收口恢复结果和最终CI/IPA。
+
 ## 主题矩阵补验:空状态已查看,最大字号布局待修(2026-11-04)
 
 Orca Worker 完成三项主题链接用例,并逐张 read 查看浅/深色 × 竖/横屏的发现页与设置页共8张图及AX树。竖屏 app.frame 为402×874 pt、图1206×2622像素;横屏为874×402 pt、图2622×1206像素。四种状态无空白或方向错误,初次XCTest横屏裁切图未计入。横屏仅为同一iPhone模拟器的更宽视口,不是iPad或折叠设备。证据 `/tmp/nk-theme-matrix-evidence/visual-review.md`,Lead范围回执 `E:/Temp/nk-theme-matrix-review/receipt.json`。

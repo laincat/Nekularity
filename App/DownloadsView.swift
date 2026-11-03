@@ -10,12 +10,12 @@ import SwiftUI
 struct DownloadsView: View {
     @Environment(DownloadStore.self) private var downloads
 
-    private var groups: [(comic: String, chapters: [DownloadStore.Chapter])] {
+    private var groups: [(id: String, comic: String, chapters: [DownloadStore.Chapter])] {
         Dictionary(grouping: downloads.chapters.values, by: { "\($0.sourceKey)|\($0.comicID)" })
-            .map { _, chapters in
-                (comic: chapters.first?.comicTitle ?? "", chapters: chapters.sorted { $0.chapterTitle < $1.chapterTitle })
+            .map { id, chapters in
+                (id: id, comic: chapters.first?.comicTitle ?? "", chapters: chapters.sorted { $0.chapterTitle < $1.chapterTitle })
             }
-            .sorted { $0.comic < $1.comic }
+            .sorted { ($0.comic, $0.id) < ($1.comic, $1.id) }
     }
 
     var body: some View {
@@ -41,7 +41,7 @@ struct DownloadsView: View {
                         }
                     }
                     Section {
-                        ForEach(groups, id: \.comic) { group in
+                        ForEach(groups, id: \.id) { group in
                             ForEach(group.chapters) { chapter in
                                 // A downloaded chapter is readable with no network,
                                 // but until now the only way in was back through a

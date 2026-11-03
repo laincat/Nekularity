@@ -2,6 +2,14 @@
 
 [简体中文](UNVERIFIED.md) | English
 
+## Mac targeted fixes recovered; HLS reopening still needs review (2026-11-04)
+
+Orca Worker completed targeted acceptance of downloaded-comic identity, accessibility layout and HLS subtitles. DownloadsView retains source/comic identity: both old rows displayed “甲章”; after repair the same-title entries are distinct and deleting one leaves the other present and navigable. DiscoverView uses one column at accessibility sizes: Favorites no longer wraps character by character, discovery/settings endpoints are accessible above the bar, and ordinary text retains two columns/order. Actual HLS playback shows selected Chinese/English text and removes it when off, with correct media Referer and Range 206. This does not establish automatic default selection, audio or device acceptance.
+
+With progress reporting centralized in onDisappear, swipe and button exits both persist seconds 7/percent 70; the old swipe created no shelf.json. Earlier reopening acceptance remains FAIL: start 7 was passed, but pos 1.5 and a seek completion target 0 were observed. Additional logs show about 2.7 seconds of playback from seven seconds before pausing, then subtitle selection and another play request. This may invoke normal replay near the ten-second clip's end; the cause is not confirmed. A thirty-second version of the same clip is prepared for an actual initial-position check, without treating this explanation as a pass. The existing strict greater-than-five-second resume rule remains unchanged.
+
+All three files were recovered byte-for-byte and integrated into main, matching the Mac-tested SHA values. The combined App/UITests incremental Mac build-for-testing passed at `/tmp/nk-downloads-identity-evidence/ios-build.log`. Individual runtime evidence is under `/tmp/nk-downloads-identity-evidence/`, `/tmp/nk-largetext-fix-evidence/`, `/tmp/nk-ios-hls-evidence/` and `/tmp/nk-ios-evidence-resume/`; Lead receipt: `E:/Temp/nk-ios-033-evidence/mac-ui-receipt.json`. No full UI rerun occurred. The experimental removal of the second play call is not adopted; 0.3.3/15 is not published and awaits resume resolution plus final CI/IPA verification.
+
 ## Theme matrix follow-up: empty states reviewed, largest text layout needs repair (2026-11-04)
 
 Orca Worker completed three theme-link cases and individually read all eight discovery/settings images and AX trees across light/dark and portrait/landscape. Portrait app.frame is 402×874 pt with 1206×2622-pixel images; landscape is 874×402 pt with 2622×1206-pixel images. All four states have correct orientation and nonblank captures; initially cropped XCTest landscape captures were excluded. Landscape is a wider viewport on the same iPhone simulator, not iPad or foldable hardware. Evidence: `/tmp/nk-theme-matrix-evidence/visual-review.md`; Lead scope receipt: `E:/Temp/nk-theme-matrix-review/receipt.json`.

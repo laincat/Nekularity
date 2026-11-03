@@ -204,11 +204,7 @@ struct VideoPlayerView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("关闭") {
-                        onClose?(model.position, model.duration ?? 0)
-                        model.stop()
-                        dismiss()
-                    }
+                    Button("关闭") { dismiss() }
                         .accessibilityIdentifier("video.close")
                 }
             }
@@ -221,7 +217,12 @@ struct VideoPlayerView: View {
                           allowedContentTypes: [.xml, .json, .plainText]) { result in
                 loadDanmaku(result)
             }
-            .onDisappear { model.stop() }
+            .onDisappear {
+                // Button dismissal and the sheet's swipe gesture share one exit.
+                // Capture progress before stopping the engine resets its clock.
+                onClose?(model.position, model.duration ?? 0)
+                model.stop()
+            }
         }
     }
 
