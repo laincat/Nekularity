@@ -7,6 +7,14 @@
 ## Core pin 工具保留历史证据(2026-11-03)
 
 旧 `set-core-pin.sh` 会全局替换两份 STATUS 中的旧 Core 哈希,使已有测试记录看起来使用了新 Core。已用临时仓库复现两份文档均被错误改写,日志 `E:/Temp/nk-pin-evidence-before.log`。脚本现在只改 `scripts/core-version` 与 `CoreVersion.pinned`,复用 `check-core-pin.sh` 校验,不改历史文档;新候选和新验收应单独通过 `update-pair.py` 记录。修复后验证历史文档与 Swift 原行尾不变、重复设置幂等、`--check` 通过、非法参数不写文件,日志 `E:/Temp/nk-pin-evidence-after.log`。这次修复本身不升级客户端 pin。
+## 标准接口地址输入被吞字符的修复候选(2026-11-03)
+
+Mac 上的真实 App UI 发现:`我的 → 标准接口` 的基础地址输入框会丢一个字符,持久化的值分别是 `http:/127.0.0.1:60649/v1`、`http:/127.0.0.1:60649/v1`、`http://27.0.0.1:60649/v1`,Core 因此报 `aiapi: the API root has no host`,夹具侧收到 0 个请求。快速输入、30 ms 逐字、分段停顿与整段粘贴均复现,丢失点落在一次重绘边界;这使自定义 API 根在界面上不可用,不只影响合成输入。
+
+原因在 `App/StandardAIView.swift`:地址每变一个字符,`onChange(of: config.baseURL)` 都清空 `models`/`modelsNote` 并在有请求时 `stop()`,在文本编辑中改动可观察状态触发重绘。分支 `fix/standard-ai-endpoint-edit` 记下模型目录属于哪个根(`modelsEndpoint`),列表与提示改为按当前地址计算显示,输入时不再清空状态,只在确实有请求运行时才停止。清空/保存密钥与切换协议仍会重置目录。
+
+Windows 只做了 Swift 解析与树检查,分支尚未在 Mac 编译或经 UI 复测;输入是否真的不再丢字符,必须以 Mac 上的实际输入与持久化值为准。
+
 ## 标准接口 HTTP 错误修复候选(2026-11-03)
 
 分支 `fix/standard-ai-http-errors` 修复回答路径:旧 `StandardAI.reply` 会把 HTTP 401/503 或 HTTP 200 中的供应商错误当正常助手回复,现在抛出错误交给页面的错误状态,不追加为助手消息。新增四条测试通过真实 Core 与 URLSessionTransport、URLProtocol 替代网络,覆盖三种协议的成功回答/鉴权头/禁用 Cookie、HTTP 错误、200 内嵌错误和模型目录。每条请求使用独立主机与临时资料,不读写 Keychain;这四条尚未在 Mac 编译执行,静态总数为 425/78 suites。

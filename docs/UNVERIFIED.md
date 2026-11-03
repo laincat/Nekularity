@@ -2,6 +2,8 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
+**标准接口地址输入丢字符已定位,修复待 Mac 复测**:真实 UI 中 `http://127.0.0.1:<port>/v1` 会少一个字符,导致自定义 API 根不可用;已确认与 `onChange` 中清空状态有关。分支 `fix/standard-ai-endpoint-edit` 改为计算显示,尚未 Mac 编译或复测。详见 STATUS。
+
 **标准接口 HTTP 错误候选待 Mac 验证**:`fix/standard-ai-http-errors` 增加 HTTP 状态与内嵌错误校验,新增四条 Core/传输整合测试尚未运行。loopback 夹具已在 Windows 通过真实 HTTP 与 TCP 关闭检查,不能据此声明 Swift 或界面通过;详见 STATUS。
 
 **标准接口取消修复已过编译与单元回归**:`77b969f` 的代码已整合 main,Mac Kit 421/77 suites、五条定向回归、App/UITests 编译通过;负向对照与日志见 STATUS。标准接口页面的真实 HTTP/界面闭环、真实账号与网络首块时序仍未验证,当前路径仍整包返回。已发布 v0.3.2 不含该修复。

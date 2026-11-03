@@ -7,6 +7,14 @@ Updated 2026-11-03.
 ## Core pin tooling preserves historical evidence (2026-11-03)
 
 The old `set-core-pin.sh` globally replaced the old Core hash in both STATUS files, making prior test records appear to have used the new Core. A temporary repository reproduced both incorrect rewrites; log `E:/Temp/nk-pin-evidence-before.log`. The script now changes only `scripts/core-version` and `CoreVersion.pinned`, reuses `check-core-pin.sh`, and leaves historical documents intact. New candidates and acceptance records should be added explicitly through `update-pair.py`. Regression checks preserve document bytes and Swift line endings, prove repeated updates are idempotent, pass `--check` and reject invalid input without writes; log `E:/Temp/nk-pin-evidence-after.log`. This tooling fix does not upgrade the client pin itself.
+## Candidate fix for a dropped character in the standard-interface address field (2026-11-03)
+
+The real App UI on the Mac showed that the base-address field under `我的 → 标准接口` loses one character: the persisted values were `http:/127.0.0.1:60649/v1`, the same again, and `http://27.0.0.1:60649/v1`, so Core reported `aiapi: the API root has no host` and the fixture received zero requests. Fast entry, 30 ms per character, segmented pauses, and whole-string paste all reproduced it, with the loss at a redraw boundary. A custom API root is therefore unusable in the UI, not just under synthetic input.
+
+The cause is in `App/StandardAIView.swift`: every character change of the address ran `onChange(of: config.baseURL)`, which cleared `models`/`modelsNote` and called `stop()`, mutating observable state during text editing. Branch `fix/standard-ai-endpoint-edit` records which root the catalog belongs to (`modelsEndpoint`) and derives whether to show the list and note from the current address, so typing touches no state and only a running request is stopped. Clearing/saving a key and switching protocol still reset the catalog.
+
+Windows has only parsed Swift and checked the tree; the branch is neither compiled nor re-tested through the UI on the Mac. Whether characters survive must be established from real Mac input and persisted values.
+
 ## Candidate standard-interface HTTP error fix (2026-11-03)
 
 Branch `fix/standard-ai-http-errors` fixes the reply path: `StandardAI.reply` previously returned HTTP 401/503 and provider errors inside HTTP 200 as ordinary assistant replies. It now throws to the screen's error state rather than appending an assistant message. Four new tests use real Core and URLSessionTransport with URLProtocol replacing the network. They cover successful replies/credential headers/disabled cookies in all three protocols, HTTP errors, in-band errors and catalogs. Each request owns a host and temporary store, without Keychain access. These four tests have not been compiled or run on Mac; static totals are 425 tests/78 suites.

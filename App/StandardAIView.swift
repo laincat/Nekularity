@@ -16,6 +16,9 @@ struct StandardAIView: View {
     @State private var keyLoaded = false
 
     @State private var models: [String] = []
+    /// The endpoint the catalog was fetched for. The list belongs to that root:
+    /// editing the address hides it without touching state on every keystroke.
+    @State private var modelsEndpoint: String?
     @State private var modelsNote: String?
     @State private var prompt = ""
     @State private var messages: [StandardMessage] = []
@@ -42,7 +45,7 @@ struct StandardAIView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 }
-                if !models.isEmpty {
+                if modelsEndpoint == config.effectiveBaseURL, !models.isEmpty {
                     Picker("目录里的模型", selection: $config.model) {
                         Text("（自己填）").tag(config.model)
                         ForEach(models, id: \.self) { Text($0).tag($0) }
@@ -73,7 +76,9 @@ struct StandardAIView: View {
                 }
                 Button("读取模型目录") { loadModels() }
                     .disabled(busy || !keyLoaded)
-                if let modelsNote { Text(modelsNote).font(.footnote).foregroundStyle(.secondary) }
+                if let modelsNote, modelsEndpoint == config.effectiveBaseURL {
+                    Text(modelsNote).font(.footnote).foregroundStyle(.secondary)
+                }
             } header: {
                 Text("密钥")
             } footer: {
@@ -115,10 +120,12 @@ struct StandardAIView: View {
         .navigationTitle("标准接口")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: config) { settings.save(config) }
+        // Editing the address must not clear models or stop requests on every
+        // keystroke: mutating observable state inside onChange re-renders the
+        // field mid-edit and used to drop the next character. The catalog is
+        // filtered by its own endpoint in the body instead.
         .onChange(of: config.baseURL) {
-            stop()
-            models = []
-            modelsNote = nil
+            if request.isRunning { stop() }
         }
         .onChange(of: config.protocol) { loadKey() }
         .task { loadKey() }
@@ -138,6 +145,7 @@ struct StandardAIView: View {
             keyLoaded = false
         }
         models = []
+        modelsEndpoint = nil
         modelsNote = nil
     }
 
@@ -159,6 +167,7 @@ struct StandardAIView: View {
             apiKey = ""
             keyLoaded = false
             models = []
+            modelsEndpoint = nil
             modelsNote = nil
         } catch {
             self.error = error.localizedDescription
@@ -173,10 +182,12 @@ struct StandardAIView: View {
             try await client.models(config: snapshot, apiKey: key)
         }, receive: { list in
             self.models = list
+            self.modelsEndpoint = snapshot.effectiveBaseURL
             self.modelsNote = list.isEmpty ? "这家没有列出模型" : "共 \(list.count) 个模型"
             if self.config.model.isEmpty, let first = list.first { self.config.model = first }
         }, failure: { error in
             self.models = []
+            self.modelsEndpoint = nil
             self.modelsNote = nil
             self.error = error.localizedDescription
         })

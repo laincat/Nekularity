@@ -2,6 +2,8 @@
 
 [简体中文](UNVERIFIED.md) | English
 
+**A dropped character in the standard-interface address field is located; the fix awaits Mac retest**: in the real UI `http://127.0.0.1:<port>/v1` loses one character, making a custom API root unusable, and clearing state inside `onChange` is implicated. Branch `fix/standard-ai-endpoint-edit` derives the display instead; it is not yet compiled or re-tested on the Mac. See STATUS.
+
 **Standard-interface HTTP error candidate awaits Mac validation**: `fix/standard-ai-http-errors` validates HTTP status and in-band errors, with four new Core/transport integration tests not yet run. The loopback fixture passes actual HTTP and TCP-close checks on Windows; this does not establish Swift or UI acceptance. See STATUS.
 
 **Standard-interface cancellation passes compilation and unit regression**: code from `77b969f` is integrated into main; Mac Kit 421/77 suites, five targeted cases and App/UITests compilation pass. Negative controls and logs are in STATUS. Real HTTP/UI behavior on the standard-interface screen, real accounts and first-network-chunk timing remain unverified; this path still returns whole responses. Published v0.3.2 does not contain the fix.
