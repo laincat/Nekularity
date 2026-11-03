@@ -2,6 +2,14 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## Mac补验终态已收齐(2026-11-04)
+
+Orca Worker用12张本地封面完成浅/深色×竖/横屏四组合:截图实际可见解码封面,长标题省略而不溢出,末项可滚到并进入详情。详情提示“漫画源还未安装”,不宣称完整内容加载。深色设置页“当前环境”和“AI供应商与标准接口”两处字形内部RGB为10/132/255,背景28/28/30,对比度4.6648016304:1;Lead按sRGB公式独立复算一致,仅代表这两处。没有产品修改,证据 `/tmp/nk-cover-visual-evidence/`,回执 `E:/Temp/nk-theme-matrix-review/populated-receipt.json`。初次驱动folder missing失败与后续通过日志均保留。
+
+同一Orca Worker在干净736e364/Core3be的独立检出上完成本机Release App与UITests编译,`swift test --no-parallel`为430 tests/80 suites/0 failures。工具链为Xcode27.2(27B52)、iPhoneOS SDK27.2;tree-sitter因Language15与支持13–14不兼容而跳过,不算解析通过。本机IPA29,457,750字节,SHA a1210ec1db47a6c0c7b33888b27cbe8ada81e894195e71def9ef7ba91182ddeb,与正式CI发布IPA的29,457,850字节/cb1ab0ca…分开。两者均0.3.3/15、最低26.0;本机结果不改写CI或新增UI/真机结论。回执 `E:/Temp/nk-ios-033-evidence/local-mac-build-receipt.json`。
+
+离线页图正常/坏字节/恢复三项也已通过:坏字节负例是XCTAssertFalse通过,不是XCTest红灯。它证明旧工具栏断言仍成立而实际图片谓词不成立。受测patch回信被截断,已请求压缩传输,未凭片段重建或整合。原完整UI27/0/0不变;各项自有服务/测试资料已清理,不宣称先前fixture CA全被移除。
+
 ## 0.3.3/build15 发布与订阅已核验(2026-11-04)
 
 正式tag `v0.3.3` 指向736e3645b8786f75c23845ca928cfde7dbc5072c。CI41720810029第二次尝试成功,实际执行Kit单测、构建设备App、编译UITests并发布IPA;第一次未取得托管macOS runner,零构建步骤,没有伪报为源码失败。公开IPA返回HTTP200、29,457,850字节,SHA-256 cb1ab0ca717b7e0a7181bda12e02f7b09a970974f818d16c84edbf2fe51b3a0d;ZIP CRC通过,App/Widget均0.3.3/15、最低iOS26.0,App含Core3be57b5ceb848bb9623c090abc463764add14de4标识。回执 `E:/Temp/nk-ios-033-evidence/release-accepted.json`,本地副本 `E:/Code/deliveries/2026-11-04-nekularity-033/`。

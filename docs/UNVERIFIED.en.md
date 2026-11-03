@@ -2,6 +2,10 @@
 
 [简体中文](UNVERIFIED.md) | English
 
+## Mac theme and build follow-up (2026-11-04)
+
+The original Orca Worker reported all four populated-cover appearance/orientation cases, two dark-label contrast ratios of 4.665:1, and the exact 736e364 local 430-test/80-suite build and IPA. Detail entry proves navigation only: its missing source prevents full content-loading acceptance. The local Xcode 27.2/SDK 27.2 IPA is recorded separately from the public CI artifact. See [STATUS](STATUS.en.md). Valid/corrupt/restored offline-image cases pass; compressed recovery of the complete tested patch is pending, with historical full-suite counts unchanged.
+
 ## Release 0.3.3 acceptance update (2026-11-04)
 
 0.3.3/15 at 736e364 is published: CI attempt 2 passed; IPA HTTP 200/29,457,850 bytes, digest, App/Widget metadata and Core pin verified. After the generation-step authentication repair, AltStore repository data and all three public endpoints agree on 0.3.3/15. See [STATUS](STATUS.en.md) for receipts. Orca Worker accepted valid/corrupt/restored offline-page cases without product changes; tested patch recovery is pending. Other delegated Mac tasks require their own terminal reports; device/background/account items remain external.

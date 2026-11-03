@@ -2,6 +2,14 @@
 
 English | [简体中文](STATUS.md)
 
+## Mac follow-up terminal results received (2026-11-04)
+
+Orca Worker used twelve local covers for light/dark × portrait/landscape. Actual screenshots show decoded covers, long titles ellipsized without overflow, and the final item reachable for detail navigation. Details reported source not installed, so full content loading is not accepted. Two dark settings labels used interior foreground RGB 10/132/255 on background 28/28/30, giving 4.6648016304:1 contrast; Lead independently reproduced the sRGB calculation. This covers only those two labels. No product changes; evidence: `/tmp/nk-cover-visual-evidence/`, receipt: `E:/Temp/nk-theme-matrix-review/populated-receipt.json`. The initial driver folder-missing failure and subsequent passing logs are retained.
+
+The same Orca Worker built the Release App and compiled UITests from a clean 736e364/Core3be checkout. `swift test --no-parallel` passed 430 tests/80 suites/0 failures. Toolchain: Xcode 27.2(27B52), iPhoneOS SDK 27.2. Tree-sitter skipped due to Language 15 versus supported 13–14; this is not a parser pass. The local IPA is 29,457,750 bytes with SHA a1210ec1db47a6c0c7b33888b27cbe8ada81e894195e71def9ef7ba91182ddeb, separate from the public CI IPA at 29,457,850 bytes/cb1ab0ca…. Both are 0.3.3/15, minimum 26.0. Local results do not rewrite CI or establish new UI/device acceptance. Receipt: `E:/Temp/nk-ios-033-evidence/local-mac-build-receipt.json`.
+
+Valid/corrupt/restored offline-image cases also passed. The corrupt case passes an XCTAssertFalse assertion; it is not a red XCTest run. It demonstrates that the old toolbar condition still holds while the image predicate fails. The returned tested patch was truncated and compressed transfer has been requested; no partial reconstruction or integration occurred. Historical full UI 27/0/0 remains unchanged. Owned test servers/data were cleaned up; earlier fixture CA removal is not claimed.
+
 ## Release 0.3.3/build15 and subscription verified (2026-11-04)
 
 Tag `v0.3.3` identifies 736e3645b8786f75c23845ca928cfde7dbc5072c. CI 41720810029 attempt 2 passed: Kit tests executed, device App built, UITests compiled and IPA published. Attempt 1 acquired no hosted macOS runner and ran zero build steps; it was not treated as a source failure. The public IPA returned HTTP 200 and 29,457,850 bytes, SHA-256 cb1ab0ca717b7e0a7181bda12e02f7b09a970974f818d16c84edbf2fe51b3a0d. ZIP CRC passed; App/Widget are 0.3.3/15, minimum iOS 26.0, with Core 3be57b5ceb848bb9623c090abc463764add14de4 in the App. Receipt: `E:/Temp/nk-ios-033-evidence/release-accepted.json`; local copy: `E:/Code/deliveries/2026-11-04-nekularity-033/`.
