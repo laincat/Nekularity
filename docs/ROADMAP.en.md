@@ -4,7 +4,7 @@
 
 ## Current independent repairs (2026-11-04)
 
-The existing Orca Worker is reproducing and repairing Nekularity's duplicate offline onResponse and HTTP 200 invalid-image completion on Mac; see [STATUS](STATUS.en.md). No duplicate full UI suite is dispatched. Lead also reproduced and fixed retained POST bodies/pixel scripts across desktop image mirrors. Actual Core, loopback HTTP and PNG decoding passed the Windows race regression; evidence: `E:/Temp/nk-image-fallback/`. This is a desktop client contract fix; the functional Core pin remains 3be57b5 and old c545212 packages do not contain it. It does not extend Mac/GUI acceptance to a new version.
+The existing Orca Worker is reproducing and repairing Nekularity's duplicate offline onResponse and HTTP 200 invalid-image completion on Mac; see [STATUS](STATUS.en.md). No duplicate full UI suite is dispatched. Lead also reproduced and fixed retained POST bodies/pixel scripts across desktop image mirrors. Actual Core, loopback HTTP and PNG decoding passed the Windows race regression; evidence: `E:/Temp/nk-image-fallback/`. This is a desktop client contract fix. Commit 0db2ead has a Windows ZIP/installer with package contents and isolated installation/uninstallation verified; delivery: `E:/Code/deliveries/2026-11-04-image-mirror-fix/README.en.md`. The functional Core pin remains 3be57b5 and old c545212 packages do not contain it. It does not extend Mac/GUI acceptance to a new version.
 
 ## Mac closure and Core main results (2026-11-04)
 
