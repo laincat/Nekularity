@@ -4,7 +4,7 @@
 
 ## Core ccb6268 与 iOS 消费端整合（2026-11-04）
 
-Core ccb6268经四作业CI后按同一SHA发布main；iOS组合bac68cda的CI41780802099与候选IPA已核验，主线pin已更新，详见[STATUS](STATUS.md)。443/82 Swift Testing及31项XCTest通过，UI仅编译；公开0.3.4/AltStore仍为旧3be包。桌面ccb候选的Windows工程、阅读/媒体与安装已验，Mac既有Worker执行中；桌面主线pin暂未更新。
+Core ccb6268经四作业CI后按同一SHA发布main；iOS组合bac68cda的CI41780802099与候选IPA已核验，主线pin已更新，详见[STATUS](STATUS.md)。443/82 Swift Testing及31项XCTest通过，UI仅编译；公开0.3.4/AltStore仍为旧3be包。桌面ccb候选已由Windows工程/阅读媒体/安装与Orca Worker的macOS开发WebView分范围验收；桌面主线已整合到4d947098，功能pin同为ccb6268。
 
 ## 当前主线:先完成底层、架构与基建(2026-11-04)
 
@@ -63,10 +63,10 @@ Lead 已构建并实际安装 0.2.7/`bf9cbd9`(Core `4f213ff`)。ZIP 21,566,978 b
 | 项目 | 当前事实 | 主要缺口 |
 |---|---|---|
 | Nekularity | **0.3.4/build16已发布并核验**:66454e8/Core3be57b5,CI41749091496成功,IPA29,459,904字节;三个AltStore入口一致 | Mac436 tests/81 suites与下载定向UI2/2通过;历史完整UI27/0/0仍归9498b4c。真机、后台/锁屏、PiP、Live Activity和真实账号单列交接 |
-| Nekophage | MyGo原生主窗+WebView阅读/播放;功能含bfc3484/Core3be57b5;Windows本地包0.2.8/1de7f996 | 0.2.8七项工程检查、安装版主窗启动/正常关闭/卸载和隔离资料保留通过；开发镜像解码及旧0db包英文字幕/3.03秒恢复保留原范围;Mac同pin阅读和c545正常关窗已验,新镜像修复定向Go测试/编译通过。旧0db包前台字幕切换曾受USER_INPUT_ACTIVE限制,签名/公证与发布目的地单列 |
+| Nekophage | MyGo原生主窗+WebView阅读/播放;功能4d947098/Core ccb6268;Windows新Core候选包已隔离安装验收，正式本地包0.2.8/1de7f996仍用3be57b5 | 0.2.8七项工程检查、安装版主窗启动/正常关闭/卸载和隔离资料保留通过；开发镜像解码及旧0db包英文字幕/3.03秒恢复保留原范围;Mac同pin阅读和c545正常关窗已验,新镜像修复定向Go测试/编译通过。旧0db包前台字幕切换曾受USER_INPUT_ACTIVE限制,签名/公证与发布目的地单列 |
 | VeneraCat Core | 共享漫画/视频/备份/AI 协议逻辑;网络与系统能力交给客户端 | JS 引擎的少量兼容限制、客户端边界契约仍需维护;Sender 没有生产调用方 |
 
-证据按提交和执行渠道分别记录,不声称重新跑过三个项目的全部测试。Nekophage main 当前 pin 为 `3be57b5ceb848bb9623c090abc463764add14de4`,Nekularity main 已更新为 `ccb626825bc116dad3b3e9a082867fd22c09caf4`;iOS 受测分支 `98e2e76` 已由 Orca Worker 重建 xcframework、通过 415 单测与四例定向 UI 后整合。已发布 Nekularity 0.3.2 的包内 pin 核到 `4f213ff`(旧 `8e14aad` 已不在包内),Nekophage `90e784f` 的 macOS 本地夹具搜索、阅读、进度恢复与双页现已在 `4f213ff` 验证;`c387e3f` 打包 App 已实际开窗,正常关闭因 `screen_locked` 待验。Core 后续文档提交不自动改变客户端 pin。
+证据按提交和执行渠道分别记录,不声称重新跑过三个项目的全部测试。两端main功能pin均为 `ccb626825bc116dad3b3e9a082867fd22c09caf4`;iOS 受测分支 `98e2e76` 已由 Orca Worker 重建 xcframework、通过 415 单测与四例定向 UI 后整合。已发布 Nekularity 0.3.2 的包内 pin 核到 `4f213ff`(旧 `8e14aad` 已不在包内),Nekophage `90e784f` 的 macOS 本地夹具搜索、阅读、进度恢复与双页现已在 `4f213ff` 验证;`c387e3f` 打包 App 已实际开窗,正常关闭因 `screen_locked` 待验。Core 后续文档提交不自动改变客户端 pin。
 
 **此前 b55c1a4 候选记录**:Core 取消修复经 `696a504` 的四个 CI 作业与真实 loopback 验收后,按仓库约定保树收拢为主线 `b55c1a4`。iOS 候选 `b39e6b0` 的 CI `41612614917` 与 IPA 内容核验已通过,仅编译 UI 用例,未执行或发布;桌面 `a079ce7` 已过七项检查与 Windows 安装版 HLS/中英字幕/关闭字幕/跨进程续播/鉴权/Range/正常关闭卸载,详见两端 STATUS。macOS 新 pin 消费端仍待验收。两端 main 仍为 `4f213ff`。Magpie 插件文字尚不能在正文结束前交付,这一限制已单独复现,不与取消通过混算。
 
