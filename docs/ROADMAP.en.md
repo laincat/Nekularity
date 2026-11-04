@@ -2,6 +2,10 @@
 
 [简体中文](ROADMAP.md) | English
 
+## Current independent repairs (2026-11-04)
+
+The existing Orca Worker is reproducing and repairing Nekularity's duplicate offline onResponse and HTTP 200 invalid-image completion on Mac; see [STATUS](STATUS.en.md). No duplicate full UI suite is dispatched. Lead also reproduced and fixed retained POST bodies/pixel scripts across desktop image mirrors. Actual Core, loopback HTTP and PNG decoding passed the Windows race regression; evidence: `E:/Temp/nk-image-fallback/`. This is a desktop client contract fix; the functional Core pin remains 3be57b5 and old c545212 packages do not contain it. It does not extend Mac/GUI acceptance to a new version.
+
 ## Mac closure and Core main results (2026-11-04)
 
 After user unlock, Orca Worker started the verified c545212 package with isolated data and closed its native window once; the original process exited 0 without a signal. Core single-root main c0f0dfa passed all three-OS Go and Apple SDK/Swift CI jobs on its own SHA. See [STATUS](STATUS.en.md); device, account and distribution choices remain external.

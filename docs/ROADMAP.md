@@ -2,6 +2,10 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+## 当前独立修复(2026-11-04)
+
+Nekularity的离线onResponse二次转换及HTTP200坏图被记为完成两项问题,正由原Orca Worker在Mac定向复现/修复;详见[STATUS](STATUS.md),不重复派全套UI。Lead另在Nekophage复现并修复图片镜像回退遗留旧POST正文/像素脚本的问题,真实Core、loopback HTTP和PNG解码回归已通过Windows race测试,证据 `E:/Temp/nk-image-fallback/`。这属于桌面客户端契约修复,Core功能pin仍为3be57b5,旧c545212包不含该修复,Mac/GUI不因此提升为新版本通过。
+
 ## Mac关窗与Core主线结果(2026-11-04)
 
 Orca Worker在用户解锁后,以隔离资料启动已核验c545212包,原生关闭按钮一次点击后窗口消失、原进程退出0,无信号终止。Core单提交main c0f0dfa在自身SHA完成三平台Go和Apple SDK/Swift四作业CI。详见[STATUS](STATUS.md);用户设备、账号与分发选择仍单列。
