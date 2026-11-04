@@ -1218,10 +1218,12 @@ final class NekularityUITests: XCTestCase {
         add(tree)
     }
 
-    /// Negative control for the assertion above: HTTP 200 bytes that are not an
-    /// image still form a download, and the reader toolbar still exists. Only the
-    /// decoded-page element distinguishes the two.
-    func testDownloadedChapterCorruptImageNegative() throws {
+    /// HTTP 200 bytes that are not an image are a failed download, not a
+    /// completed chapter. The store must show a retry; after the fixture serves
+    /// a real PNG, retry saves it, and the reader decodes it with the server
+    /// stopped. This replaces the old negative control, which asserted the
+    /// incorrect "bad bytes still form a chapter" behaviour.
+    func testDownloadedChapterBadImageFailsThenRetries() throws {
         let server = try LocalImageServer(corruptPages: true)
         try server.start()
         defer { server.stop() }
@@ -1257,24 +1259,47 @@ final class NekularityUITests: XCTestCase {
         let entry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '下载'")).firstMatch
         XCTAssertTrue(entry.waitForExistence(timeout: 15), "我的 has no downloads entry")
         entry.tap()
-        XCTAssertTrue(firstElement(app, containing: "Probe Comic").waitForExistence(timeout: 90),
-                      "the corrupt page never formed a download")
+        let retry = app.buttons["download.retry"].firstMatch
+        XCTAssertTrue(retry.waitForExistence(timeout: 90),
+                      "HTTP 200 garbage did not produce a retryable download failure")
+        XCTAssertFalse(app.staticTexts["1 页"].exists,
+                       "undecodable bytes were recorded as a completed chapter")
+        let failure = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        failure.name = "bad-image-download-failure"
+        failure.lifetime = .keepAlways
+        add(failure)
+        let failureTree = XCTAttachment(string: app.debugDescription)
+        failureTree.name = "bad-image-download-failure-tree"
+        failureTree.lifetime = .keepAlways
+        add(failureTree)
+
+        // The fixture recovers, and the existing retry fetches the real bytes.
+        server.setCorruptPages(false)
+        retry.tap()
+        // A fresh download in this process still has its progress record, so the
+        // row reads "1/1"; after a relaunch it would read "1 页". The retry row
+        // disappearing is the state transition that matters.
+        XCTAssertTrue(app.staticTexts["1/1"].waitForExistence(timeout: 90),
+                      "retry did not save the recovered page")
+        XCTAssertFalse(retry.exists, "the failure row survived a successful retry")
 
         server.stop()
         firstElement(app, containing: "Probe Comic").tap()
         XCTAssertTrue(app.buttons["收藏本页"].waitForExistence(timeout: 90),
-                      "the reader toolbar is missing; this is not the toolbar-vs-image control")
+                      "the reader toolbar is missing after the retry")
         let page = app.images.matching(
             NSPredicate(format: "label BEGINSWITH '第 ' AND label ENDSWITH ' 页'")
         ).firstMatch
-        XCTAssertFalse(page.waitForExistence(timeout: 8),
-                       "corrupt bytes unexpectedly produced a decoded page image")
-        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        shot.name = "corrupt-page-reader"
-        shot.lifetime = .keepAlways
-        add(shot)
+        guard page.waitForExistence(timeout: 90) else {
+            XCTFail("no decoded page image appeared after the recovered download")
+            return
+        }
+        let screenshot = XCTAttachment(screenshot: page.screenshot())
+        screenshot.name = "retried-page-with-server-stopped"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
         let tree = XCTAttachment(string: app.debugDescription)
-        tree.name = "corrupt-page-reader-tree"
+        tree.name = "retried-page-with-server-stopped-tree"
         tree.lifetime = .keepAlways
         add(tree)
     }

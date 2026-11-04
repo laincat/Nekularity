@@ -2,11 +2,15 @@
 
 English | [简体中文](STATUS.md)
 
-## Download image integrity issues under repair (2026-11-04)
+## Candidate 0.3.4: download image integrity repair verified (2026-11-04)
 
-The 0.3.3 Orca Worker negative case actually showed that an HTTP 200 response with non-image bytes still creates a completed download entry, and the reader later reports a page-load failure. The current workaround is to delete that chapter from Downloads and download it again after the network/source is healthy; an entry alone does not prove decodability.
+Orca Worker fixed two actual defects on base ac8e2b6/Core 3be57b5: offline bytes no longer repeat source onResponse, while decoded modifyImage remains enabled; raw validates post-onResponse bytes with a 64-pixel thumbnail, following existing mirror fallback or DownloadStore failure/retry instead of completing a corrupt chapter. Valid PNG/JPEG bytes remain unchanged. Existing corrupt chapters are not deleted automatically and still require user removal and redownload.
 
-Source review also shows that download `raw` saves bytes after the source's `onResponse`, while the offline reader may call `onResponse` again on those saved bytes. Lead reproduced the data flow using an actual Core JS callback and local HTTP: one byte inversion yields a valid PNG, while applying the callback again to the saved PNG after server shutdown makes it undecodable. Log: `E:/Temp/nk-offline-transform/repro.log`. This is actual Core callback/byte-flow evidence plus Swift source review, not execution of Swift ImageLoader itself. Targeted Mac reproduction and repair are next. Pixel-level `modifyImage` must still run after decoding and must not be skipped merely because bytes are offline.
+Actual Core with isolated URLProtocol fixtures produced 4 tests/7 issues on the old implementation, covering duplicate-transform not an image, accepted HTTP 200 garbage and an unrequested mirror. All six new regressions passed. Xcode 27.2(27B52)/Swift 6.4.2 final `swift test --no-parallel` passed 436 tests/81 suites/0 failures. The final simulator build-for-testing passed, and serial BadImage→Reads passed 2/2 in one invocation(58.922/52.680s): actual local HTTP garbage produced a retry row, restored PNG retried successfully, and reopening the downloaded chapter after server shutdown exposed the actual 第 1 页 Image. Initial fixture actor compilation, incorrect 1 页 versus actual 1/1 waiting, and port-release failures remain recorded separately from the final product result.
+
+Original logs remain on Mac under `/tmp/nk-ac8-image-integrity/`: `swift-test-final.log`, `ui-build-final.log`, and `ui-targeted2.log`. Windows `E:/Temp/nk-ios-034-evidence/mac-image-integrity-report.json` is a Worker-reported receipt, not a copy of those logs. Mac lacked tree-sitter and ran rules across 173 files only; syntax parsing is not counted as passed.
+
+Lead recovered the 25575-byte patch with SHA256 691086b271d0a46cfc1cc9f11db1ffe8fe5bb961712240fd968f912cec7dee75; all four integrated Git file hashes exactly match the Mac-tested files. Receipt: `E:/Temp/nk-ios-034-evidence/patch-integrated.json`. Candidate App/Widget are 0.3.4/16 and retain Core 3be57b5; CI, public IPA and AltStore still require this version's own acceptance. This does not increase historical full UI 27/0/0 or cover devices/background/real accounts.
 
 ## Packaged Mac window closure and Core main revalidation (2026-11-04)
 

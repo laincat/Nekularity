@@ -63,14 +63,22 @@ final class LocalImageServer: @unchecked Sendable {
     /// once and then succeed on retry. Zero means answer normally.
     private var pagesToFail = 0
     /// Answer page requests with HTTP 200 and bytes that are not an image.
-    /// Downloads still record the chapter; only decoding can tell the difference.
-    let corruptPages: Bool
+    /// A case flips this back to the real PNG to exercise retry after recovery.
+    private var corruptPages: Bool
 
     /// Makes the next `count` page requests fail, so the retry path can be driven.
     func failNextPageRequests(_ count: Int) {
         clipLock.lock()
         defer { clipLock.unlock() }
         pagesToFail = count
+    }
+
+    /// Switches between HTTP 200 garbage and the real PNG. The lock is shared
+    /// with the request queue so a request cannot read a half-updated answer.
+    func setCorruptPages(_ enabled: Bool) {
+        clipLock.lock()
+        defer { clipLock.unlock() }
+        corruptPages = enabled
     }
 
     /// For a failure message: how many times the clip was asked for, and how each
@@ -273,7 +281,10 @@ final class LocalImageServer: @unchecked Sendable {
                 reply(connection, status: "500 Internal Server Error", body: Data())
                 return
             }
-            if corruptPages, route == "/page.png" {
+            clipLock.lock()
+            let corrupt = corruptPages
+            clipLock.unlock()
+            if corrupt, route == "/page.png" {
                 reply(connection, status: "200 OK", body: Data("not a decodable image".utf8), type: "image/png")
                 return
             }

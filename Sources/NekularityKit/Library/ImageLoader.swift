@@ -128,18 +128,21 @@ public actor ImageLoader {
                 do {
                     var body: Data
                     if let offline, let saved = await offline(key) {
+                        // The archive stores bytes after onResponse. They are
+                        // already final: running the source's transform again
+                        // would decrypt/rewrite a readable PNG a second time.
                         body = saved
                     } else {
                         body = try await Self.fetch(req, id: id, partition: partition, base: base, core: core)
-                    }
-                    if req.has("onLoadFailed"), Self.looksLikeHTML(body) {
-                        throw CoreError("image response is an HTML page")
-                    }
-                    if !req.handle.isEmpty, req.has("onResponse"),
-                       let rewritten = try await core.applyImageResponse(key: key.source, handle: req.handle, body: body) {
-                        // The bytes are the source's now, so nothing may assume
-                        // they are what the server described.
-                        body = rewritten
+                        if req.has("onLoadFailed"), Self.looksLikeHTML(body) {
+                            throw CoreError("image response is an HTML page")
+                        }
+                        if !req.handle.isEmpty, req.has("onResponse"),
+                           let rewritten = try await core.applyImageResponse(key: key.source, handle: req.handle, body: body) {
+                            // The bytes are the source's now, so nothing may assume
+                            // they are what the server described.
+                            body = rewritten
+                        }
                     }
                     guard let decoded = Self.decode(body, limit: limit) else { throw CoreError("not an image") }
                     // A source may ask for a pixel pass — jm reorders the blocks
@@ -192,7 +195,10 @@ public actor ImageLoader {
     ///
     /// The downloader needs exactly what the reader gets — the same request
     /// rules and the same response callback — but saves the file instead of
-    /// drawing it. A mirror that fails is still followed to the next one.
+    /// drawing it. The returned bytes are **after** `onResponse`; the archive
+    /// contract is that offline reads decode them directly and never run that
+    /// callback again. A mirror that fails, or a body that cannot decode, is
+    /// still followed to the next one.
     public func raw(_ key: Key) async throws -> Data {
         var req: ImageRequest
         if key.isThumbnail {
@@ -214,6 +220,10 @@ public actor ImageLoader {
                    let rewritten = try await core.applyImageResponse(key: key.source, handle: req.handle, body: body) {
                     body = rewritten
                 }
+                // Saving an undecodable body would mark a chapter complete that
+                // the reader cannot open. Validate with a tiny thumbnail, not a
+                // full-resolution bitmap; the bytes themselves stay untouched.
+                guard Self.isImage(body) else { throw CoreError("not an image") }
                 return body
             } catch {
                 lastError = error
@@ -249,6 +259,13 @@ public actor ImageLoader {
             useCookies: true, partition: partition))
         guard (200..<300).contains(resp.status) else { throw CoreError("image HTTP \(resp.status)") }
         return resp.body
+    }
+
+    /// Whether the body can produce a picture. A thumbnail decode is enough to
+    /// reject HTML, empty bodies and corrupt bytes without allocating the full
+    /// page; valid bytes are returned unchanged by `raw`.
+    static func isImage(_ data: Data) -> Bool {
+        decode(data, limit: .longerSide(64)) != nil
     }
 
     /// Whether a body is a web page rather than an image. A mirror that is out

@@ -4,7 +4,7 @@
 
 ## 当前独立修复(2026-11-04)
 
-Nekularity的离线onResponse二次转换及HTTP200坏图被记为完成两项问题,正由原Orca Worker在Mac定向复现/修复;详见[STATUS](STATUS.md),不重复派全套UI。Lead另在Nekophage复现并修复图片镜像回退遗留旧POST正文/像素脚本的问题,真实Core、loopback HTTP和PNG解码回归已通过Windows race测试,证据 `E:/Temp/nk-image-fallback/`。这属于桌面客户端契约修复,提交0db2ead的Windows ZIP/安装器已通过包内容及隔离安装卸载核验,交付 `E:/Code/deliveries/2026-11-04-image-mirror-fix/README.md`。Core功能pin仍为3be57b5,旧c545212包不含该修复,Mac/GUI不因此提升为新版本通过。
+Nekularity的离线onResponse二次转换及HTTP200坏图被记为完成两项问题已修复,四份Mac受测文件按SHA逐字节整合到0.3.4/16候选。Orca Worker完整单测436/81、最终build-for-testing和定向UI2/2通过;正式CI/IPA/AltStore仍待验收,详见[STATUS](STATUS.md)。Lead另在Nekophage复现并修复图片镜像回退遗留旧POST正文/像素脚本的问题,真实Core、loopback HTTP和PNG解码回归已通过Windows race测试,证据 `E:/Temp/nk-image-fallback/`。这属于桌面客户端契约修复,提交0db2ead的Windows ZIP/安装器已通过包内容及隔离安装卸载核验,交付 `E:/Code/deliveries/2026-11-04-image-mirror-fix/README.md`。Core功能pin仍为3be57b5,旧c545212包不含该修复,Mac/GUI不因此提升为新版本通过。
 
 ## Mac关窗与Core主线结果(2026-11-04)
 

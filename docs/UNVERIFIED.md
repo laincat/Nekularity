@@ -2,11 +2,15 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
-## 下载图片完整性问题待修复(2026-11-04)
+## 0.3.4候选:下载图片完整性修复已验(2026-11-04)
 
-`0.3.3` 的Orca Worker负向用例实际发现:服务返回HTTP200但正文不是图片时,下载条目仍形成,进入阅读页才显示加载失败。当前临时绕过方式是从下载页删除该章节,网络恢复后重新下载;不要把已形成条目当作解码成功。
+Orca Worker已在ac8e2b6基线/Core3be57b5修复两项实际缺陷:离线字节不再二次执行源的onResponse,解码后的modifyImage仍保留;raw在onResponse后以64像素缩略图验证可解码性,坏字节走既有镜像回退或DownloadStore失败/重试,不形成完成章节。有效PNG/JPEG原字节保持不变。此前已保存的坏章节不自动删除,仍需用户删除后重新下载。
 
-另由源码确认下载的 `raw` 路径保存了 `onResponse` 转换后的字节,而阅读的离线路径仍可能对这些字节调用一次 `onResponse`。Lead用真实Core JS回调及本地HTTP复现:一次字节反转得到有效PNG,停服后将保存的PNG再次传给回调则无法解码,日志 `E:/Temp/nk-offline-transform/repro.log`。这是Core回调与字节流实测及Swift源码审阅,尚未执行Swift ImageLoader本身;接下来进行Mac定向复现和修复。像素级 `modifyImage` 仍须在解码后执行,不能因离线而跳过。
+真实Core配合独立URLProtocol的旧实现负向用例为4 tests/7 issues,包含二次转换not an image、200坏字节被接受及镜像未请求。最终新增6条回归通过;Xcode27.2(27B52)/Swift6.4.2完整 `swift test --no-parallel` 为436 tests/81 suites/0 failures。模拟器最终build-for-testing通过,同次串行BadImage→Reads两例均通过(58.922/52.680秒):真实本地HTTP坏图产生重试项,恢复PNG后重试成功,停服再进入下载章节看到实际“第 1 页”Image。初次fixture actor编译错误、“1 页”与实际“1/1”等待错误及端口释放失败均保留,不记为最终产品失败。
+
+原日志仍在Mac `/tmp/nk-ac8-image-integrity/`,最终单测 `swift-test-final.log`、构建 `ui-build-final.log`、UI `ui-targeted2.log`。Windows的 `E:/Temp/nk-ios-034-evidence/mac-image-integrity-report.json` 是Worker回传回执,不冒充已复制原日志。Mac缺tree-sitter只跑173文件规则检查,不算语法解析通过。
+
+Lead已恢复25575字节补丁,SHA256为691086b271d0a46cfc1cc9f11db1ffe8fe5bb961712240fd968f912cec7dee75;四个整合Git文件逐字节SHA均与Mac受测文件一致,回执 `E:/Temp/nk-ios-034-evidence/patch-integrated.json`。候选App/Widget为0.3.4/16,Core pin仍3be57b5;CI、正式IPA和AltStore尚待该版本自己的验收。以上不增加历史完整UI27/0/0计数,不包含真机/后台/真实账号。
 
 ## Mac关窗与Core主线结果(2026-11-04)
 
