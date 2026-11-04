@@ -2,6 +2,16 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## 0.3.6 完整 UI 套件（Mac 回传，2026-11-04）
+
+tag `v0.3.6` 的 `9684c108f0ade6490b4209827f0525aed54e0853`（tree `fbcb0a7a…`）在专用 iPhone 17 模拟器上跑完整套件：`xcodebuild test-without-building` 执行 **28 个用例、5 跳过、0 失败**（752 秒）。其中 ZZThemeLinkTests 的 3 条因缺本地主题夹具而跳过，用仓库自带 `scripts/theme-fixture.sh` 起夹具后复跑 **3/3 通过**，合并为 **26 通过 / 2 跳过 / 0 失败**。
+
+剩余 2 条跳过是 `testSeededSourcesAppear` 与 `testSourceOffersInPageLogin`：它们要求真实站源 `nhentai` 与 `Komiic` 的种子，仓库内没有这两个脚本，本机种子只含 `callback_probe`，因此按设计 `XCTSkip`，不是缺陷。
+
+同一组合的 Kit 测试为 Swift Testing **444 tests / 82 suites**、XCTest 段 **31/0**，`scripts/verify-ios.sh` 20 个步骤全部 PASS。
+
+范围：结果属于 Mac 隔离副本与专用模拟器，没有覆盖真机、后台/锁屏、Live Activity、PiP、实际扬声器与真实账号；仓库内没有真实 `nhentai`/`Komiic` 种子。日志在 Mac `/tmp/nk-ios-v036-ui/`（`ui-summary.json`、`verify-ios-ui.log`、`theme-fixture.log`）。
+
 ## 失效登录句柄在 iOS 上结束等待（2026-11-04，候选）
 
 Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结构化错误。iOS 的网页登录原先用 `try?` 吞掉 `webviewStatus` 的错误，只会一直轮询；现在仅当错误确认为失效句柄时结束并报错，其他源错误仍然继续等待，避免把“这页不是登录页”当成失败。

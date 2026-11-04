@@ -2,6 +2,16 @@
 
 English | [简体中文](STATUS.md)
 
+## Full UI suite on0.3.6 (Mac report, 2026-11-04)
+
+Tag `v0.3.6` at `9684c108f0ade6490b4209827f0525aed54e0853` (tree `fbcb0a7a…`) ran the full suite on a dedicated iPhone17 simulator: `xcodebuild test-without-building` executed **28 tests with 5 skipped and 0 failures** in752 seconds. Three ZZThemeLinkTests cases skipped for a missing local theme fixture; after starting the repository's own `scripts/theme-fixture.sh` they passed **3/3**, giving **26 passed / 2 skipped / 0 failed** overall.
+
+The two remaining skips are `testSeededSourcesAppear` and `testSourceOffersInPageLogin`: they need seeds for the real `nhentai` and `Komiic` sources, whose scripts are not in the repository, and the local seed only holds `callback_probe`, so they skip by design rather than through a defect.
+
+Kit tests for the same combination were Swift Testing **444 tests / 82 suites** plus an XCTest section of **31/0**, and all20 steps of `scripts/verify-ios.sh` passed.
+
+Scope: these results belong to a Mac isolated copy and a dedicated simulator; devices, background/lock screen, Live Activity, PiP, real audio output and real accounts are not covered, and the repository holds no real `nhentai`/`Komiic` seeds. Logs live on the Mac at `/tmp/nk-ios-v036-ui/` (`ui-summary.json`, `verify-ios-ui.log`, `theme-fixture.log`).
+
 ## The expired login handle ends the wait on iOS (2026-11-04, candidate)
 
 Core `b882bf9` makes a stale handle — the source was updated or removed mid-login — report a structured error. iOS used to swallow `webviewStatus` errors with `try?`, so it only kept polling; it now stops and reports only when the error is confirmed to be the expired handle, and keeps waiting for other source errors so "this page is not the login page" is not treated as a failure.
