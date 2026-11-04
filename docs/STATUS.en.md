@@ -18,6 +18,16 @@ Core `b882bf9` makes a stale handle — the source was updated or removed mid-lo
 
 New Kit tests cover the recognition, that ordinary errors are not mistaken for it, and that Core's English does not reach the interface. The pin moves to `b882bf9`. macOS CI actually executed the three new cases at `d593b45`: Swift Testing recorded 444 tests / 82 suites and the XCTest section 34 tests / 0 failures (the previous 31 plus the new 3). The change was not reproduced by hand on a simulator and does not cover devices.
 
+## Release 0.3.7 / build 19 (2026-11-04)
+
+Tag `v0.3.7` points to `bf14135384677fb7955d543e3e11cd4e2a5a2376` (tree `b8c2eec0`), Core `b882bf9ebeb339eb596b3ddc59166bb3adfa7ef7`. GitHub Actions was officially degraded and the `macos-26` runner was unavailable four times (three runs cancelled with an empty ``runner_name``, the last queued for over an hour), so the release was built on the Mac validation machine with the same steps the workflow uses: eight repository checks passed, `swift test` recorded 444 tests / 82 suites with XCTest 34/0, and the unsigned device build was packaged.
+
+The public IPA returns HTTP200 at 29,483,547 bytes with SHA-256 `5ab46820836e5945b9bfbf0e1c0512dda12bac1e3cf4b9834cd5a41450f8a98a`, matching both the Mac build report and the GitHub asset digest; ZIP CRC, App/Widget 0.3.7/19, minimum iOS26.0, the full Core marker and 23 InstallComicEntry symbols passed.
+
+AltStore refresh 41870386695 succeeded; all three entry points return HTTP200 at 0.3.7/19, 29,483,547 bytes and minimum 26.0; the icon returns HTTP200 with a valid PNG.
+
+Delivery: [0.3.7 IPA and receipts](../../deliveries/2026-11-04-nekularity-037/README.en.md). The IPA was built on the Mac and has no CI attestation, so its bytes differ from what CI would produce. UI was not executed, and devices, background/PiP, real audio output and real accounts remain separate.
+
 ## Release 0.3.6 / build 18 (2026-11-04)
 
 Public tag `v0.3.6` points to `9684c108f0ade6490b4209827f0525aed54e0853`, Core `25e5ca35bc18f231c5628ffca7054e6a8b64b5d1`. Release CI41839540774 succeeded, covering the Core build, Kit tests, device App build, UI-test compilation, IPA packaging and publication; it did not execute UI tests.

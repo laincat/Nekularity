@@ -18,6 +18,16 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 新增 Kit 单测覆盖识别、普通错误不误判，以及界面文案不泄漏 Core 英文。pin 已更新到 `b882bf9`。macOS CI 已在提交 `d593b45` 上实际执行这三条用例：Swift Testing 444 tests / 82 suites、XCTest 段 34 tests / 0 failures（原 31 条加新增 3 条）。该改动尚未在模拟器上手动复现，也未涵盖真机。
 
+## 0.3.7 / build 19 正式发布（2026-11-04）
+
+tag `v0.3.7` 指向 `bf14135384677fb7955d543e3e11cd4e2a5a2376`（tree `b8c2eec0`），Core `b882bf9ebeb339eb596b3ddc59166bb3adfa7ef7`。GitHub Actions 当时官方状态为 degraded，`macos-26` 运行器四次未能分配（三次 ``runner_name`` 为空被取消，最后一次排队逾一小时），因此按发布工作流的同样步骤在 Mac 验证机上构建：8 项仓库检查通过，`swift test` 为 444 tests / 82 suites、XCTest 34/0，设备 App 未签名编译通过后打包。
+
+公开 IPA HTTP200、29,483,547字节，SHA-256 `5ab46820836e5945b9bfbf0e1c0512dda12bac1e3cf4b9834cd5a41450f8a98a` 与 Mac 构建报告及 GitHub 资产摘要三者一致；ZIP CRC、App/Widget0.3.7/19、最低iOS26.0、完整 Core 标记与 23 个 InstallComicEntry 符号通过。
+
+AltStore 刷新41870386695成功，三个入口均 HTTP200 且为0.3.7/19、29,483,547字节、最低26.0；图标 HTTP200 且 PNG 有效。
+
+交付：[0.3.7 IPA 与回执](../../deliveries/2026-11-04-nekularity-037/README.md)。该 IPA 由 Mac 本机构建、没有 CI 证明，与 CI 产物字节不会完全一致。UI 未执行，真机、后台/PiP、实际扬声器与真实账号仍单列。
+
 ## 0.3.6 / build 18 正式发布（2026-11-04）
 
 公开tag `v0.3.6` 指向 `9684c108f0ade6490b4209827f0525aed54e0853`，Core `25e5ca35bc18f231c5628ffca7054e6a8b64b5d1`。发布CI41839540774成功，含Core构建、Kit单测、设备App构建、UI测试编译、IPA打包与发布；未执行UI。
