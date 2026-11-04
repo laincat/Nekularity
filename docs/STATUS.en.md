@@ -22,7 +22,7 @@ New Kit tests cover the recognition, that ordinary errors are not mistaken for i
 
 Whether a theme forces light or dark used to be decided by a single ternary in `RootView`, so the meaning of an absent `dark` key could not be unit-tested. The model now answers with a three-state `ThemeAppearance` (system/light/dark) and the view only maps it to SwiftUI's `ColorScheme`, leaving the rule covered by Kit tests: absent follows the system, explicit true/false mean dark/light, and the built-in theme forces nothing.
 
-This is a refactor with no behaviour change. Whether the tests execute depends on macOS CI; this Windows machine only ran the syntax and documentation checks, so no pass is claimed yet.
+This is a refactor with no behaviour change. macOS CI 41894996744 actually executed on `d8471fb`: Swift Testing passed **447 tests / 83 suites** (the previous 444/82 plus the three new ones), and the device App build, UI-test compilation and IPA packaging all succeeded afterwards.
 
 ## Release 0.3.7 / build 19 (2026-11-04)
 

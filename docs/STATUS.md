@@ -22,7 +22,7 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 之前“主题是否强制明暗”只在 `RootView` 里用一行三元表达式决定，`dark` 为 nil 时跟随系统的含义无法被单测覆盖。现在模型给出三态 `ThemeAppearance`（system/light/dark），视图只负责把它映射成 SwiftUI 的 `ColorScheme`，规则本身由 Kit 单测覆盖：缺省跟随系统、显式 true/false 分别对应暗/亮、内置主题不强制。
 
-这是重构，行为不变；单测能否执行取决于 macOS CI，本机 Windows 只做了语法与文档检查，因此暂不声称通过。
+这是重构，行为不变。macOS CI 41894996744 已在 `d8471fb` 上实际执行：Swift Testing **447 tests / 83 suites** 通过（原 444/82 加新增 3 条），设备 App 构建、UI 测试编译与 IPA 打包随后全部成功。
 
 ## 0.3.7 / build 19 正式发布（2026-11-04）
 
