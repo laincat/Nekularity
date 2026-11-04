@@ -30,6 +30,10 @@ Not captured: the settings page scrolled to its 外观 section (the temporary te
 
 Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
 
+## Following Core 8b82378: a service can describe its methods (2026-11-04)
+
+Core main moves to `8b82378` (tree `06ac2e3a`): a service may export `describe()` to say what it can do, and a host draws buttons from it; the desktop panel already uses it to list and run methods. The iOS pin follows, and the Swift syntax, documentation and pin checks pass; iOS still calls none of the `service` entry points.
+
 ## Following Core d6b9f67: iOS entry points for service packages (2026-11-04)
 
 Core main moves to `d6b9f67` (tree `c1495fdb`): installing, listing, reading and removing a service package now live in Core, with new `mobile` entry points `ServiceInstall`, `ServiceList`, `ServiceRemove`, `ServiceManifest` and `ServiceSource` (base64 for binary, JSON for the rest). The iOS pin follows, and the Swift syntax, documentation and pin checks pass.

@@ -30,6 +30,10 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 日志与逐元素测量在 Mac `/tmp/nk-ios-037-visual/`（`visual-summary.json`、`element-contrast.json`）。
 
+## 跟随 Core 8b82378：服务可说明自己的方法（2026-11-04）
+
+Core 主线升到 `8b82378`（tree `06ac2e3a`）：服务可导出 `describe()` 说明自己能做什么，宿主据此画按钮；桌面面板已用它列出并运行方法。iOS pin 已跟随，Swift 语法、文档与 pin 检查通过；iOS 仍未调用 `service` 相关入口。
+
 ## 跟随 Core d6b9f67：服务包的 iOS 入口已就位（2026-11-04）
 
 Core 主线升到 `d6b9f67`（tree `c1495fdb`）：服务包安装/列表/读取/删除进入 Core，并新增 `mobile` 入口 `ServiceInstall`、`ServiceList`、`ServiceRemove`、`ServiceManifest`、`ServiceSource`（二进制 base64、其余 JSON）。iOS pin 已跟随，Swift 语法、文档与 pin 检查通过。
