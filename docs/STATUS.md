@@ -2,7 +2,7 @@
 
 [English](STATUS.en.md) | 简体中文
 
-## 0.3.4候选:下载图片完整性修复已验(2026-11-04)
+## 0.3.4发布与下载图片完整性修复已验(2026-11-04)
 
 Orca Worker已在ac8e2b6基线/Core3be57b5修复两项实际缺陷:离线字节不再二次执行源的onResponse,解码后的modifyImage仍保留;raw在onResponse后以64像素缩略图验证可解码性,坏字节走既有镜像回退或DownloadStore失败/重试,不形成完成章节。有效PNG/JPEG原字节保持不变。此前已保存的坏章节不自动删除,仍需用户删除后重新下载。
 
@@ -10,7 +10,7 @@ Orca Worker已在ac8e2b6基线/Core3be57b5修复两项实际缺陷:离线字节�
 
 原日志仍在Mac `/tmp/nk-ac8-image-integrity/`,最终单测 `swift-test-final.log`、构建 `ui-build-final.log`、UI `ui-targeted2.log`。Windows的 `E:/Temp/nk-ios-034-evidence/mac-image-integrity-report.json` 是Worker回传回执,不冒充已复制原日志。Mac缺tree-sitter只跑173文件规则检查,不算语法解析通过。
 
-Lead已恢复25575字节补丁,SHA256为691086b271d0a46cfc1cc9f11db1ffe8fe5bb961712240fd968f912cec7dee75;四个整合Git文件逐字节SHA均与Mac受测文件一致,回执 `E:/Temp/nk-ios-034-evidence/patch-integrated.json`。候选App/Widget为0.3.4/16,Core pin仍3be57b5;CI、正式IPA和AltStore尚待该版本自己的验收。以上不增加历史完整UI27/0/0计数,不包含真机/后台/真实账号。
+Lead已恢复25575字节补丁,SHA256为691086b271d0a46cfc1cc9f11db1ffe8fe5bb961712240fd968f912cec7dee75;四个整合Git文件逐字节SHA均与Mac受测文件一致,回执 `E:/Temp/nk-ios-034-evidence/patch-integrated.json`。App/Widget的0.3.4/16已正式发布,tag指向66454e86f4aa3e1bbba94f64cb29b56783513a82。CI41749091496首次运行成功,公开IPA HTTP200/29,459,904字节、SHA256 c31d240513f2f82d97a507d8255bf586a28a8e518eff03d3a027c16f6571454c,ZIP CRC、两端版本/最低26.0和Core3be标识均通过。AltStore刷新41752744406成功,仓库main e81249d及GitHub Raw/CNB/固定Release三个公开入口都核到0.3.4/16,版本、大小、最低系统和下载地址一致,图标HTTP200且实际解码。交付 `E:/Code/deliveries/2026-11-04-nekularity-034/README.md`,完整回执 `E:/Temp/nk-ios-034-evidence/release-accepted.json` 与 `altstore-accepted.json`。Core pin仍3be57b5。以上不增加历史完整UI27/0/0计数,不包含真机/后台/真实账号。
 
 ## Mac包装窗口正常关闭与Core主线复验(2026-11-04)
 

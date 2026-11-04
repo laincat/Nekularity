@@ -2,7 +2,7 @@
 
 [简体中文](UNVERIFIED.md) | English
 
-## Candidate 0.3.4: download image integrity repair verified (2026-11-04)
+## Release 0.3.4 and download image integrity repair verified (2026-11-04)
 
 Orca Worker fixed two actual defects on base ac8e2b6/Core 3be57b5: offline bytes no longer repeat source onResponse, while decoded modifyImage remains enabled; raw validates post-onResponse bytes with a 64-pixel thumbnail, following existing mirror fallback or DownloadStore failure/retry instead of completing a corrupt chapter. Valid PNG/JPEG bytes remain unchanged. Existing corrupt chapters are not deleted automatically and still require user removal and redownload.
 
@@ -10,7 +10,11 @@ Actual Core with isolated URLProtocol fixtures produced 4 tests/7 issues on the 
 
 Original logs remain on Mac under `/tmp/nk-ac8-image-integrity/`: `swift-test-final.log`, `ui-build-final.log`, and `ui-targeted2.log`. Windows `E:/Temp/nk-ios-034-evidence/mac-image-integrity-report.json` is a Worker-reported receipt, not a copy of those logs. Mac lacked tree-sitter and ran rules across 173 files only; syntax parsing is not counted as passed.
 
-Lead recovered the 25575-byte patch with SHA256 691086b271d0a46cfc1cc9f11db1ffe8fe5bb961712240fd968f912cec7dee75; all four integrated Git file hashes exactly match the Mac-tested files. Receipt: `E:/Temp/nk-ios-034-evidence/patch-integrated.json`. Candidate App/Widget are 0.3.4/16 and retain Core 3be57b5; CI, public IPA and AltStore still require this version's own acceptance. This does not increase historical full UI 27/0/0 or cover devices/background/real accounts.
+Lead recovered the 25575-byte patch with SHA256 691086b271d0a46cfc1cc9f11db1ffe8fe5bb961712240fd968f912cec7dee75; all four integrated Git file hashes exactly match the Mac-tested files. Receipt: `E:/Temp/nk-ios-034-evidence/patch-integrated.json`. App/Widget 0.3.4/16 are published at tag commit 66454e86f4aa3e1bbba94f64cb29b56783513a82. CI 41749091496 passed attempt 1. The public IPA returned HTTP 200/29,459,904 bytes with SHA256 c31d240513f2f82d97a507d8255bf586a28a8e518eff03d3a027c16f6571454c; ZIP CRC, both versions/minimum 26.0 and the Core 3be marker passed. AltStore refresh 41752744406 succeeded: repository main e81249d and GitHub Raw/CNB/fixed Release public endpoints all contain 0.3.4/16 with matching versions, size, minimum OS and URL; the icon returned HTTP 200 and actually decoded. Delivery: `E:/Code/deliveries/2026-11-04-nekularity-034/README.en.md`; receipts: `E:/Temp/nk-ios-034-evidence/release-accepted.json` and `altstore-accepted.json`. The Core pin remains 3be57b5. This does not increase historical full UI 27/0/0 or cover devices/background/real accounts.
+
+## Next local acceptance: resume across App processes in the simulator
+
+Thirty-second HLS page closure/reopening already restores seven seconds. Release0.3.4 will separately verify termination and relaunch of the App on the same dedicated simulator, without rewriting progress files or reseeding data, recording process identities, disk progress and early player clocks. It needs no real account and does not replace device/background acceptance; it remains incomplete until the result arrives.
 
 ## Mac closure and Core main results (2026-11-04)
 

@@ -10,9 +10,10 @@
 |---|---|
 | 历史 `v0.3.2` / build14 / Core4f213ff | 旧发布包;不能用于证明后续 Core3be 或 Magpie 登录绑定修复 |
 | 候选3574346 / 0.3.2 build14 / 3be57b5 | 未签名 IPA 已核验,产品/测试源码已整合 main6eab317;与公开0.3.2同版本号但不是同一包,尚不含后续下载/字号/手势修复 |
-| 已发布0.3.3 / build15 / Core 3be57b5 | 736e364;CI及正式IPA身份通过,29,457,850字节,App/Widget均0.3.3/15;AltStore仓库和三个公开入口均已核对 |
+| 历史0.3.3 / build15 / Core 3be57b5 | 736e364;旧公开包,不包含0.3.4的下载图片完整性修复 |
+| 已发布0.3.4 / build16 / Core 3be57b5 | 66454e8;CI、正式IPA与三个AltStore入口已验,29,459,904字节;Mac436/81及定向UI2/2对应修复文件逐字节整合 |
 
-订阅入口为 `https://raw.githubusercontent.com/laincat/AltStore/main/apps.json`。安装前核对实际订阅版本。本轮正式IPA与回执位于 `E:/Code/deliveries/2026-11-04-nekularity-033/README.md`;Windows产物保留在 `E:/Code/deliveries/2026-11-04-core-3be57b5/README.md`,新版10/30秒本地夹具见 `E:/Code/deliveries/2026-11-04-hls30/README.md`。
+订阅入口为 `https://raw.githubusercontent.com/laincat/AltStore/main/apps.json`。安装前核对实际订阅版本。本轮正式IPA与回执位于 `E:/Code/deliveries/2026-11-04-nekularity-034/README.md`;Windows产物保留在 `E:/Code/deliveries/2026-11-04-image-mirror-fix/README.md`,新版10/30秒本地夹具见 `E:/Code/deliveries/2026-11-04-hls30/README.md`。
 
 真机最低系统为 iOS26.0。签名由用户选用的侧载工具/签名流程完成,账号授权在其原生界面中输入。每项记录设备型号、系统、App版本/build、Core pin、安装方式、动作、期望和实际结果;模拟器通过不能替代真机证据。
 
@@ -40,12 +41,14 @@
 
 **macOS分发**:当前c545212的0.2.7 arm64包已验证版本、归档往返和ad-hoc签名,回执 `/tmp/nk-c545-acceptance/packages/receipt.json`。这些检查不保证目标机器的Gatekeeper接受或运行体验。Developer ID签名/公证需要用户选择该分发方式并提供相应签名条件,当前未做。
 
-**Windows分发**:c545212安装、原生启动、正常关闭、卸载和资料保留已验收;包未做发布者代码签名。目标系统的下载信誉/发布者体验未被该本地安装测试覆盖,不能预言每台机器都会或都不会出现提示。
+**Windows分发**:当前0db2ead包的安装/卸载与资料保留、原生搜索、英文字幕和既有3.03秒恢复已验;视频裁剪与旧保存位置逐像素一致。当前包的字幕切换/关闭前台点击被USER_INPUT_ACTIVE拒绝,未发送,因此未验收新的选择或跨进程关闭恢复;其正常关窗也不计通过,清理使用的是进程终止。旧c545212正常关闭仍保留原提交归属。包未做发布者代码签名。目标系统的下载信誉/发布者体验未被该本地安装测试覆盖,不能预言每台机器都会或都不会出现提示。
+
+**Windows前台交互条件**:需要Windows桌面空闲,或由用户操作当前测试包的字幕切换/关闭、正常退出并重启确认。仍用独立测试资料和本地夹具,不需要真实账号。已取得的当前包证据在 `E:/Temp/nk-0db-installed-media/run-a7f2d847/receipt.json`。
 
 **Nekophage发布目的地**:仓库没有remote。Windows包已在本地交付目录,Mac包保留在Laincat-Mini;没有公开上传源码或安装包。需要公开发布时再由用户指定目的地,本地工程验收可以独立完成。
 
 ## 五、已有工程证据的边界
 
-完整iOS UI **27 PASS / 0 FAIL / 0 SKIP** 属于9498b4c/Core4f213ff,同时有416单测/76 suites;较早23/4的跳过记录不再作为当前基线。Core3be组合3574346的CI/IPA与两条AI签名模拟器闭环另有独立证据。主题三项链接用例和八张明暗/横竖空状态截图已记录。随后最大辅助字号单列修复、发现/设置末端可达、普通字号两列/顺序以及同名下载条目区分/删除均获定向通过,已随受测源码整合main。30秒HLS两种关闭与重开7秒恢复已通过;12张封面明暗/横竖四组合及两处深色蓝字4.665:1已实测。断网页图正反例及同调用负→正串行隔离也已通过,精确受测测试文件已随a7b5fbd整合。详情见STATUS,不增加历史完整套件通过计数。
+完整iOS UI **27 PASS / 0 FAIL / 0 SKIP** 属于9498b4c/Core4f213ff,同时有416单测/76 suites;较早23/4的跳过记录不再作为当前基线。Core3be组合3574346的CI/IPA与两条AI签名模拟器闭环另有独立证据。主题三项链接用例和八张明暗/横竖空状态截图已记录。随后最大辅助字号单列修复、发现/设置末端可达、普通字号两列/顺序以及同名下载条目区分/删除均获定向通过,已随受测源码整合main。30秒HLS两种关闭与重开7秒恢复已通过;12张封面明暗/横竖四组合及两处深色蓝字4.665:1已实测。断网页图正反例及同调用负→正串行隔离也已通过,精确受测测试文件已随a7b5fbd整合。0.3.4另包含已匹配四文件SHA的图片完整性修复:Mac436 tests/81 suites、坏图重试后停服阅读定向UI2/2,且正式CI/IPA/AltStore三入口已核验。详情见STATUS,不增加历史完整套件通过计数。
 
 桌面当前pin为Core 3be57b5。c545212的Windows安装启动退出、Mac播放器race与两进程关闭字幕恢复、Mac包归档/签名及独立实例原生正常关窗均已分别验证;关窗是一次AX点击后PID78539退出0,回执 `E:/Temp/nk-c545-mac-transfer/normal-close-accepted.json`;旧版本完整媒体/阅读结果保留各自提交归属。Core GBK回归PR#3已通过三平台Go、xcframework构建及macOS/iOS模拟器Swift冒烟,并经用户确认保树整合至单提交主线c0f0dfa、关闭PR。只有测试和说明变化,功能版本与客户端pin未变。
