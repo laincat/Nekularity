@@ -121,28 +121,39 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable {
         let state = TaskState(limit: maxBodyBytes, partition: r.partition, useCookies: r.useCookies,
                               manualHeaders: manual, manualCookie: manualCookie,
                               cookies: cookies, origin: r.url, onResponse: onResponse, onChunk: onChunk)
+        // A failure, size refusal or cancellation used to skip both cleanup
+        // lines below; the delegate then kept the state (and its body/chunk
+        // closure) for the process lifetime.
+        defer { release(r.id, state: state) }
         let (data, http): (Data, HTTPURLResponse) = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { k in
                 state.attach(k)
+                // A task cancelled before this point already resumed the
+                // continuation. Do not create or resume a URLSession task for it.
+                if state.isCancelled { return }
                 let task = session.dataTask(with: req)
                 state.task = task
                 delegate.register(task: task, state: state)
                 lock.lock()
                 if cancelledEarly.remove(r.id) != nil {
                     lock.unlock()
-                    state.finish(.failure(CoreError("request cancelled before it started")))
+                    state.cancel()
                     task.cancel()
                     return
                 }
                 tasks[r.id] = task
                 lock.unlock()
+                // Cancellation can land between attach and resume. The task is
+                // still suspended here, so cancelling it prevents any bytes.
+                if state.isCancelled {
+                    task.cancel()
+                    return
+                }
                 task.resume()
             }
         } onCancel: {
             state.cancel()
         }
-        lock.withLock { tasks[r.id] = nil }
-        delegate.forget(state)
 
         var headers: [String: [String]] = [:]
         for (k, v) in http.allHeaderFields {
@@ -168,6 +179,17 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable {
     /// anything yet.
     public func scheme(partition: String) -> String {
         lock.withLock { partitionSchemes[partition] ?? "" }
+    }
+
+    /// Removes only this request's entries. A reused id may already name a new
+    /// task, so identity is checked before the map is changed.
+    private func release(_ id: Int64, state: TaskState) {
+        lock.lock()
+        if let task = tasks[id], task === state.task {
+            tasks[id] = nil
+        }
+        lock.unlock()
+        delegate.forget(state)
     }
 
     /// Aborts request id (Core no longer waits for it).
@@ -403,14 +425,20 @@ final class TaskState: @unchecked Sendable {
     /// transfer instead of leaving it running with nobody to read it.
     weak var task: URLSessionTask?
     var isFinished: Bool { lock.withLock { done } }
+    var isCancelled: Bool { lock.withLock { cancelled } }
 
     func attach(_ k: CheckedContinuation<(Data, HTTPURLResponse), Error>) {
+        // If cancel() ran before attach, `done` is already set and there is no
+        // continuation to finish. Resume this one directly instead of calling
+        // finish(), which would see done and leave the caller suspended forever.
         let finishNow: Error? = lock.withLock {
-            if done { return CoreError("request finished twice") }
+            if done {
+                return cancelled ? CancellationError() : CoreError("request finished twice")
+            }
             continuation = k
-            return cancelled ? CoreError("request cancelled") : nil
+            return cancelled ? CancellationError() : nil
         }
-        if let finishNow { finish(.failure(finishNow)) }
+        if let finishNow { k.resume(throwing: finishNow) }
     }
 
     func received(_ response: HTTPURLResponse) {
@@ -437,7 +465,7 @@ final class TaskState: @unchecked Sendable {
     /// transfer.
     func append(_ data: Data) -> Bool {
         let accepted: Bool = lock.withLock {
-            guard !done else { return true }
+            guard !done else { return false }
             if body.count + data.count > limit { return false }
             body.append(data)
             return true

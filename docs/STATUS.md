@@ -2,6 +2,12 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## URLSession传输生命周期修复（2026-11-04）
+
+请求失败、超限和取消后统一释放delegate状态；完成后不再派发chunk，预先取消时恢复continuation，并按task身份清理复用ID的映射。Mac Orca Worker在 `66454e86` / Core `3be57b5` 的独立worktree报告：旧实现复现失败、超限泄漏、完成后chunk、取消先于attach挂起及ID复用清理问题；修复后7项生命周期测试、18项transport/streaming测试、完整443 tests / 82 suites和iOS模拟器构建通过，未运行UI。原日志仅存Mac `/tmp/nk-transport-lifecycle/`，不标为本机日志。
+
+Windows已验证传回补丁SHA-256 `7a0ef66d647d01e8161bfd315afc62749aa65808891ca24b462c5271e5603ba6`，整合后的生产文件和测试文件与Mac受测文件逐字节一致；本机Swift语法、文档与Core pin检查通过。现有Core pin未变，未发布新包。日志 `E:/Temp/nk-transport-lifecycle-integration/`。
+
 ## 模拟器跨进程进度恢复(Orca Worker回传,2026-11-04)
 
 0.3.4/16、Core 3be57b5的专用模拟器定向测试中,第一App进程2020播放30秒HLS至7.211756秒,暂停并正常关闭播放器页,随后终止App。第二进程2099通过同一视频源的搜索和分集页重新进入,诊断起点7.000000秒,约2.08秒后自动播放至8.342057秒。修正测试PID千位逗号解析后,定向XCTest为1 test/0 failures。测试结束后磁盘历史为7秒/30秒/23%;这不是两次进程之间单独抓取的磁盘快照。

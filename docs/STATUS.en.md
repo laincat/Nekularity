@@ -2,6 +2,12 @@
 
 English | [简体中文](STATUS.md)
 
+## URLSession transport lifecycle repair (2026-11-04)
+
+Delegate state is released on failure, size limits and cancellation; completed tasks stop dispatching chunks, cancellation before attach resumes the continuation, and reused request IDs are cleaned up by task identity. The Mac Orca Worker reports reproduction of failure/limit retention, late chunks, cancel-before-attach hanging and ID reuse on an isolated `66454e86` / Core `3be57b5` worktree. After the fix, seven lifecycle tests, 18 transport/streaming tests, the full 443 tests / 82 suites and an iOS Simulator build passed; UI tests were not run. Original logs remain on Mac at `/tmp/nk-transport-lifecycle/`, not on this machine.
+
+Windows verified the returned patch SHA-256 `7a0ef66d647d01e8161bfd315afc62749aa65808891ca24b462c5271e5603ba6`; the integrated production and test files match the Mac-tested bytes. Local Swift syntax, documentation and Core pin checks passed. The existing Core pin is unchanged and no new package was released. Logs: `E:/Temp/nk-transport-lifecycle-integration/`.
+
 ## Simulator position restoration across App processes (Orca Worker report, 2026-11-04)
 
 On the dedicated simulator with 0.3.4/16 and Core 3be57b5, App PID 2020 played the 30-second HLS fixture to 7.211756 seconds, paused, and closed the player page normally before the App was terminated. PID 2099 reentered through search and the episode page for the same video source: its diagnostic start was 7.000000 seconds, and autoplay reached 8.342057 seconds about 2.08 seconds later. After correcting the test's PID thousands-separator parsing, the targeted XCTest passed 1 test/0 failures. Disk history read after the entire run was 7 seconds/30 seconds/23%; it was not a separately captured snapshot between the two processes.
