@@ -2,6 +2,12 @@
 
 English | [简体中文](STATUS.md)
 
+## Simulator position restoration across App processes (Orca Worker report, 2026-11-04)
+
+On the dedicated simulator with 0.3.4/16 and Core 3be57b5, App PID 2020 played the 30-second HLS fixture to 7.211756 seconds, paused, and closed the player page normally before the App was terminated. PID 2099 reentered through search and the episode page for the same video source: its diagnostic start was 7.000000 seconds, and autoplay reached 8.342057 seconds about 2.08 seconds later. After correcting the test's PID thousands-separator parsing, the targeted XCTest passed 1 test/0 failures. Disk history read after the entire run was 7 seconds/30 seconds/23%; it was not a separately captured snapshot between the two processes.
+
+This establishes simulator cross-process position restoration through that search/episode path. It does not establish direct entry from Continue Watching/local entries or device, background, or PiP behavior. The diagnostic build temporarily read PID, start position and player clock; product source was restored, rebuilt and installed, and the restored VideoPlayerView.swift SHA is 0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37. Original logs remain on Mac under `/tmp/nk-ios-cross-process-resume-evidence/`; `E:/Temp/nk-ios-034-evidence/cross-process-worker-report.json` is a Worker report, not a copy of those logs. Direct-entry UI validation is deferred to the planned UI/UX reconstruction.
+
 ## Release 0.3.4 and download image integrity repair verified (2026-11-04)
 
 Orca Worker fixed two actual defects on base ac8e2b6/Core 3be57b5: offline bytes no longer repeat source onResponse, while decoded modifyImage remains enabled; raw validates post-onResponse bytes with a 64-pixel thumbnail, following existing mirror fallback or DownloadStore failure/retry instead of completing a corrupt chapter. Valid PNG/JPEG bytes remain unchanged. Existing corrupt chapters are not deleted automatically and still require user removal and redownload.

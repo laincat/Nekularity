@@ -2,6 +2,12 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## 模拟器跨进程进度恢复(Orca Worker回传,2026-11-04)
+
+0.3.4/16、Core 3be57b5的专用模拟器定向测试中,第一App进程2020播放30秒HLS至7.211756秒,暂停并正常关闭播放器页,随后终止App。第二进程2099通过同一视频源的搜索和分集页重新进入,诊断起点7.000000秒,约2.08秒后自动播放至8.342057秒。修正测试PID千位逗号解析后,定向XCTest为1 test/0 failures。测试结束后磁盘历史为7秒/30秒/23%;这不是两次进程之间单独抓取的磁盘快照。
+
+该结果证明上述搜索/分集路径的模拟器跨进程位置恢复,不证明“继续观看/本地条目”直接入口,也不证明真机、后台或PiP。诊断构建临时读取PID、起始位置和时钟;产品源码已还原并重建安装,受测VideoPlayerView.swift还原SHA为0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37。原始日志在Mac `/tmp/nk-ios-cross-process-resume-evidence/`,本地 `E:/Temp/nk-ios-034-evidence/cross-process-worker-report.json` 仅是Worker回传记录,不是原日志副本。旧界面直接入口的UI验收按整体UI/UX重写计划后置。
+
 ## 0.3.4发布与下载图片完整性修复已验(2026-11-04)
 
 Orca Worker已在ac8e2b6基线/Core3be57b5修复两项实际缺陷:离线字节不再二次执行源的onResponse,解码后的modifyImage仍保留;raw在onResponse后以64像素缩略图验证可解码性,坏字节走既有镜像回退或DownloadStore失败/重试,不形成完成章节。有效PNG/JPEG原字节保持不变。此前已保存的坏章节不自动删除,仍需用户删除后重新下载。

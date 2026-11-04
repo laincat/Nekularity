@@ -12,9 +12,11 @@ Orca Worker已在ac8e2b6基线/Core3be57b5修复两项实际缺陷:离线字节�
 
 Lead已恢复25575字节补丁,SHA256为691086b271d0a46cfc1cc9f11db1ffe8fe5bb961712240fd968f912cec7dee75;四个整合Git文件逐字节SHA均与Mac受测文件一致,回执 `E:/Temp/nk-ios-034-evidence/patch-integrated.json`。App/Widget的0.3.4/16已正式发布,tag指向66454e86f4aa3e1bbba94f64cb29b56783513a82。CI41749091496首次运行成功,公开IPA HTTP200/29,459,904字节、SHA256 c31d240513f2f82d97a507d8255bf586a28a8e518eff03d3a027c16f6571454c,ZIP CRC、两端版本/最低26.0和Core3be标识均通过。AltStore刷新41752744406成功,仓库main e81249d及GitHub Raw/CNB/固定Release三个公开入口都核到0.3.4/16,版本、大小、最低系统和下载地址一致,图标HTTP200且实际解码。交付 `E:/Code/deliveries/2026-11-04-nekularity-034/README.md`,完整回执 `E:/Temp/nk-ios-034-evidence/release-accepted.json` 与 `altstore-accepted.json`。Core pin仍3be57b5。以上不增加历史完整UI27/0/0计数,不包含真机/后台/真实账号。
 
-## 下一本地验收:模拟器跨App进程续播
+## 模拟器跨进程进度恢复(Orca Worker回传,2026-11-04)
 
-30秒HLS的页面关闭/重开7秒恢复已通过。0.3.4将另做同一专用模拟器上退出App进程并重启的恢复验证,不重写进度文件、不重种资料,记录进程身份、磁盘进度及新播放器早期时钟。这项不需要真实账号,也不代替真机/后台验收;结果回传前仍属未完成。
+0.3.4/16、Core 3be57b5的专用模拟器定向测试中,第一App进程2020播放30秒HLS至7.211756秒,暂停并正常关闭播放器页,随后终止App。第二进程2099通过同一视频源的搜索和分集页重新进入,诊断起点7.000000秒,约2.08秒后自动播放至8.342057秒。修正测试PID千位逗号解析后,定向XCTest为1 test/0 failures。测试结束后磁盘历史为7秒/30秒/23%;这不是两次进程之间单独抓取的磁盘快照。
+
+该结果证明上述搜索/分集路径的模拟器跨进程位置恢复,不证明“继续观看/本地条目”直接入口,也不证明真机、后台或PiP。诊断构建临时读取PID、起始位置和时钟;产品源码已还原并重建安装,受测VideoPlayerView.swift还原SHA为0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37。原始日志在Mac `/tmp/nk-ios-cross-process-resume-evidence/`,本地 `E:/Temp/nk-ios-034-evidence/cross-process-worker-report.json` 仅是Worker回传记录,不是原日志副本。旧界面直接入口的UI验收按整体UI/UX重写计划后置。
 
 ## Mac关窗与Core主线结果(2026-11-04)
 

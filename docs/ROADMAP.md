@@ -8,6 +8,12 @@
 
 已有界面验收保留其历史证据,不再追加旧界面的布局、主题、视觉统一或截图矩阵。只保留证明底层行为所必需的触发与观察,例如跨App进程读取已保存播放位置。旧P0—P3编号用于追踪,后续执行服从本段顺序;UI/UX重写在上述基础工作之后启动。真实账号/设备和后置服务仍按既有边界交接。
 
+## 模拟器跨进程进度恢复(Orca Worker回传,2026-11-04)
+
+0.3.4/16、Core 3be57b5的专用模拟器定向测试中,第一App进程2020播放30秒HLS至7.211756秒,暂停并正常关闭播放器页,随后终止App。第二进程2099通过同一视频源的搜索和分集页重新进入,诊断起点7.000000秒,约2.08秒后自动播放至8.342057秒。修正测试PID千位逗号解析后,定向XCTest为1 test/0 failures。测试结束后磁盘历史为7秒/30秒/23%;这不是两次进程之间单独抓取的磁盘快照。
+
+该结果证明上述搜索/分集路径的模拟器跨进程位置恢复,不证明“继续观看/本地条目”直接入口,也不证明真机、后台或PiP。诊断构建临时读取PID、起始位置和时钟;产品源码已还原并重建安装,受测VideoPlayerView.swift还原SHA为0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37。原始日志在Mac `/tmp/nk-ios-cross-process-resume-evidence/`,本地 `E:/Temp/nk-ios-034-evidence/cross-process-worker-report.json` 仅是Worker回传记录,不是原日志副本。旧界面直接入口的UI验收按整体UI/UX重写计划后置。
+
 ## 当前独立修复(2026-11-04)
 
 Nekularity的离线onResponse二次转换及HTTP200坏图被记为完成两项问题已修复,四份Mac受测文件按SHA逐字节整合并随0.3.4/16发布。Orca Worker完整单测436/81、最终build-for-testing和定向UI2/2通过;正式CI/IPA/AltStore三个公开入口均已验收,详见[STATUS](STATUS.md)。Lead另在Nekophage复现并修复图片镜像回退遗留旧POST正文/像素脚本的问题,真实Core、loopback HTTP和PNG解码回归已通过Windows race测试,证据 `E:/Temp/nk-image-fallback/`。这属于桌面客户端契约修复,提交0db2ead的Windows ZIP/安装器已通过包内容及隔离安装卸载核验,交付 `E:/Code/deliveries/2026-11-04-image-mirror-fix/README.md`。Core功能pin仍为3be57b5,旧c545212包不含该修复,Mac/GUI不因此提升为新版本通过。
