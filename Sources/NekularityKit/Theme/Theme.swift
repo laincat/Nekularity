@@ -184,13 +184,6 @@ final class HTTPSOnlyRedirects: NSObject, URLSessionTaskDelegate, @unchecked Sen
     }
 }
 
-/// Installed themes plus which one is active.
-///
-/// Installed themes are files: `Themes/<id>.json` under Application Support.
-/// That is what makes a theme shareable — one JSON file, opened from Files,
-/// kept, and picked in settings.
-@MainActor
-@Observable
 /// What a theme asks the interface to do about light and dark.
 ///
 /// The model stores `dark: Bool?`, where nil means "follow the system". That
@@ -213,6 +206,13 @@ extension Theme {
     }
 }
 
+/// Installed themes plus which one is active.
+///
+/// Installed themes are files: `Themes/<id>.json` under Application Support.
+/// That is what makes a theme shareable — one JSON file, opened from Files,
+/// kept, and picked in settings.
+@MainActor
+@Observable
 public final class ThemeStore {
     public private(set) var themes: [Theme] = []
     public private(set) var active: Theme = BuiltinThemes.system
