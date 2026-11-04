@@ -88,7 +88,7 @@ Three things to keep in mind:
 - The PNG is **drawn at runtime**, not pasted as base64. A hand-typed blob that fails to decode looks exactly like a client bug.
 - The test target inherits `SWIFT_STRICT_CONCURRENCY: complete`, so that server has to deal with Sendable itself: `NWListener`'s handlers are `@Sendable`, and mutating a captured `var` or capturing a non-Sendable `self` inside them is a compile error. It now uses `@unchecked Sendable` (every stored property is a `let`) plus a locked `Signal` to carry the start result.
 
-Pick a criterion that can fail, too: the reader greys out 收藏本页 while it has no pages, so "the button became enabled" is what proves an image arrived; "the reader opened" proves nothing.
+Page-image acceptance must inspect an actually decoded image element or rendered content. The HTTP 200 invalid-byte control demonstrated that a chapter and an enabled 收藏本页 button can exist while the image remains undecodable, so an enabled button does not prove image arrival. For offline acceptance, stop the server, enter the downloaded chapter and check the actual `Image` element (such as 第 1 页). Invalid content must produce a retryable failure; restore a valid PNG and verify again after stopping the server. Adjacent cases must clean up their own fixture chapters so an old completed entry cannot stand in for a new download.
 
 ## Clear the build products before verifying
 
