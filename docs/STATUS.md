@@ -2,9 +2,11 @@
 
 [English](STATUS.en.md) | 简体中文
 
-## Core313951e消费候选（2026-11-04，尚未整合）
+## Core313951e主线整合与候选IPA验收（2026-11-04）
 
-独立分支update/core-duplicate-key将两个权威构建pin更新为 `313951e157a18e524f4c0c80c46d78abee662f2b`。Core候选提供结构化重复键错误，保留旧LoadError与ErrExists分类；本分支不改变Swift业务逻辑，App/Widget仍0.3.5/17。Mac构建、Kit和IPA检查将由本分支CI执行；尚未取得终态，不宣称UI或真机通过。公开0.3.5及主线仍使用ccb6268，本候选不是新版本发布。
+Core `313951e157a18e524f4c0c80c46d78abee662f2b` 已保留单提交及受测文件树发布main，两端源码主线pin一致；Core CI41814080991的Linux、Windows、macOS Go及Apple SDK/Swift smoke四作业通过。iOS受测提交c751085的CI41815696096成功，实际原始日志为443 tests/82 suites及XCTest31/0，设备App和UI测试编译通过。未签名候选IPA为29,478,302字节，SHA256 `9cebc4f5c07ab2f5de252d70ac446fd52e9e46dbe24880b1541980385e4742bd`；GitHub制品摘要、两层ZIP CRC、App/Widget0.3.5/17、最低26.0及包内完整Core313标记均通过。
+
+主线产品源码与受测c751085一致，仅补充本次文档。Swift业务逻辑未改，仍使用既有重复键文字兼容器，不宣称已消费Go结构化错误对象。UI只编译，没有新增UI/真机结果。公开0.3.5及AltStore仍为此前Coreccb包，候选IPA不替换正式版。回执及原日志：`E:/Temp/nk-313-consumer/ios-accepted.json`、`ios-ci-logs.zip`；交付目录 `E:/Code/deliveries/2026-11-04-core-313951e/`。
 
 ## 0.3.5 / build 17 正式发布与订阅验收（2026-11-04）
 

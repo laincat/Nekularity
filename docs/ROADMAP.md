@@ -2,13 +2,19 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+## Core313951e三条源码主线已整合（2026-11-04）
+
+Core313951e已按单提交保树发布，Nekophage4273e06与Nekularityc751085功能候选已整合，两端pin同步。Core四作业CI41814080991、iOS CI41815696096的443/82与31/0、App及UI编译、候选IPA内容/摘要均通过。桌面实际Core pin、七项工程及文件/URL重装、索引身份负例通过；新Windows exe另经五进程合集流程验证。产品源码保持受测提交，详见[STATUS](STATUS.md)及 `E:/Code/deliveries/2026-11-04-core-313951e/`。
+
+公开iOS0.3.5/17、AltStore和既有桌面0.2.9安装包仍属于此前Coreccb版本；新候选不覆盖正式包。iOS仍保留重复键文字兼容，结构化跨桥错误/索引安装身份需单独推进；Mac源码查看补丁仍待收齐与整合，不提升其旧Core证据到新组合。合集GUI/安装、受限传输桥和模块/服务生命周期仍有独立工作。
+
 ## Core ccb6268 与 iOS 消费端整合（2026-11-04）
 
-Core ccb6268已发布main，两端功能pin一致。iOS现已正式发布0.3.5/build17（7c0d61b）：CI41791891766、公开IPA HTTP200/29,478,760字节、摘要/CRC/App与Widget/最低26.0/Core标记，以及AltStore三个入口均通过，详见[STATUS](STATUS.md)。UI只编译；bac68cda组合的443/82及31项XCTest计数保留原执行归属。桌面本地包仍为0.2.9/fe101db/Core ccb6268；Windows安装媒体和Mac开发WebView证据按各自提交范围记录。
+此前Core ccb6268发布时，两端功能pin一致。iOS现已正式发布0.3.5/build17（7c0d61b）：CI41791891766、公开IPA HTTP200/29,478,760字节、摘要/CRC/App与Widget/最低26.0/Core标记，以及AltStore三个入口均通过，详见[STATUS](STATUS.md)。UI只编译；bac68cda组合的443/82及31项XCTest计数保留原执行归属。桌面本地包仍为0.2.9/fe101db/Core ccb6268；Windows安装媒体和Mac开发WebView证据按各自提交范围记录。
 
 ## 桌面统一合集客户端基础（2026-11-04）
 
-Nekophage当前源码已接Core ccb6268合集解析/能力匹配和独立订阅持久化，提供follow/list/refresh/unfollow命令入口。Windows七项工程和五个实际二进制进程验证7条目订阅、刷新、离线重开、取消订阅、安装记录保持及无制品请求；取消连接与失败保留由真实loopback/race回归覆盖。证据 `E:/Temp/nk-collection-client/`。尚未更新0.2.9安装包或验证Mac命令；目录GUI、条目安装、模块/服务宿主仍待推进。MyGo源码查看候选由已有Orca Worker继续，不能以此命令验收替代其Mac运行结果。
+Nekophage当前源码已接Core313951e合集解析/能力匹配和独立订阅持久化，提供follow/list/refresh/unfollow命令入口。Windows七项工程和五个实际二进制进程验证7条目订阅、刷新、离线重开、取消订阅、安装记录保持及无制品请求；取消连接与失败保留由真实loopback/race回归覆盖。证据 `E:/Temp/nk-collection-client/`。尚未更新0.2.9安装包或验证Mac命令；目录GUI、条目安装、模块/服务宿主仍待推进。MyGo源码查看候选由已有Orca Worker继续，不能以此命令验收替代其Mac运行结果。
 
 ## 当前主线:先完成底层、架构与基建(2026-11-04)
 

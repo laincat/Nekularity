@@ -2,13 +2,19 @@
 
 [简体中文](ROADMAP.md) | English
 
+## Core313951e integrated into all three source mains (2026-11-04)
+
+Core313951e was published with its single tested tree preserved. Functional consumer candidates Nekophage4273e06 and Nekularityc751085 are integrated with matching pins. Core four-job CI41814080991, iOS CI41815696096 with443/82 and31/0, App/UI compilation and candidate IPA content/digest checks passed. Desktop actual-pin checks, seven engineering checks, file/URL reinstall and index-identity controls passed; a new Windows executable also passed the five-process collection flow. Product source remains identical to tested commits. See [STATUS](STATUS.en.md) and `E:/Code/deliveries/2026-11-04-core-313951e/`.
+
+Public iOS0.3.5/17, AltStore and the existing desktop0.2.9 installer still belong to the previous Coreccb version; candidates do not replace releases. iOS retains duplicate-key text compatibility, leaving structured bridge errors/index-install identity for separate work. The Mac source-viewer patch still awaits complete receipt/integration, and its previous Core evidence does not cover the new combination. Collection GUI/install, constrained transport and module/service lifecycles remain independent tasks.
+
 ## Core ccb6268 and iOS consumer integration (2026-11-04)
 
-Core ccb6268 is published on main and both functional pins match. iOS0.3.5/build17 is now publicly released at7c0d61b: CI41791891766, public IPA HTTP200/29,478,760 bytes, digest/CRC/App and Widget/minimum26.0/Core marker, and all three AltStore endpoints passed. See [STATUS](STATUS.en.md). UI was compiled only; the bac68cda combination retains its original443/82 and31 XCTest execution attribution. The desktop local package remains0.2.9/fe101db/Core ccb6268; Windows installed media and Mac development-WebView evidence retain their respective commit scopes.
+At the previous Core ccb6268 publication, both functional pins matched. iOS0.3.5/build17 is now publicly released at7c0d61b: CI41791891766, public IPA HTTP200/29,478,760 bytes, digest/CRC/App and Widget/minimum26.0/Core marker, and all three AltStore endpoints passed. See [STATUS](STATUS.en.md). UI was compiled only; the bac68cda combination retains its original443/82 and31 XCTest execution attribution. The desktop local package remains0.2.9/fe101db/Core ccb6268; Windows installed media and Mac development-WebView evidence retain their respective commit scopes.
 
 ## Desktop shared-collection client foundations (2026-11-04)
 
-Current Nekophage source connects Core ccb6268 collection parsing/capability matching and separate subscription persistence through follow/list/refresh/unfollow commands. Seven Windows engineering checks and five actual binary processes verified a seven-entry subscription, refresh, offline reopening, unfollow, installed-record preservation and absence of artifact requests. Real loopback/race regressions cover connection cancellation and failure retention. Evidence: `E:/Temp/nk-collection-client/`. The0.2.9 installer and Mac command acceptance are not updated; catalogue GUI, entry installation and module/service hosts remain. The existing Orca Worker continues the MyGo source-viewer candidate, whose Mac execution cannot be replaced by this command acceptance.
+Current Nekophage source connects Core313951e collection parsing/capability matching and separate subscription persistence through follow/list/refresh/unfollow commands. Seven Windows engineering checks and five actual binary processes verified a seven-entry subscription, refresh, offline reopening, unfollow, installed-record preservation and absence of artifact requests. Real loopback/race regressions cover connection cancellation and failure retention. Evidence: `E:/Temp/nk-collection-client/`. The0.2.9 installer and Mac command acceptance are not updated; catalogue GUI, entry installation and module/service hosts remain. The existing Orca Worker continues the MyGo source-viewer candidate, whose Mac execution cannot be replaced by this command acceptance.
 
 ## Current focus: complete foundations, architecture and infrastructure first (2026-11-04)
 

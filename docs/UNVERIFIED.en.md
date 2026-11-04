@@ -2,9 +2,11 @@
 
 [简体中文](UNVERIFIED.md) | English
 
-## Core313951e consumer candidate (2026-11-04, not integrated)
+## Core313951e main integration and candidate IPA acceptance (2026-11-04)
 
-Isolated branch update/core-duplicate-key updates both authoritative build pins to `313951e157a18e524f4c0c80c46d78abee662f2b`. The Core candidate provides structured duplicate-key errors while retaining LoadError and ErrExists classification. Swift business logic is unchanged; App/Widget remain0.3.5/17. Branch CI will perform Mac builds, Kit execution and IPA checks; no terminal result exists yet and no UI/device acceptance is claimed. Public0.3.5 and main still useccb6268; this is not a version release.
+Core `313951e157a18e524f4c0c80c46d78abee662f2b` was published on main while retaining its single commit and tested tree. Both source-main pins match; Core CI41814080991 passed Linux, Windows, macOS Go and Apple SDK/Swift smoke jobs. iOS candidate c751085 passed CI41815696096. Original logs confirm443 tests/82 suites and XCTest31/0, with device App and UI-test compilation passed. The unsigned candidate IPA is29,478,302 bytes, SHA256 `9cebc4f5c07ab2f5de252d70ac446fd52e9e46dbe24880b1541980385e4742bd`. GitHub artifact digest, both ZIP CRC layers, App/Widget0.3.5/17, minimum26.0 and the full embedded Core313 marker passed.
+
+Main product source matches tested c751085; only this documentation is added. Swift business logic is unchanged and retains its existing duplicate-key text compatibility parser; consumption of Go's structured error object is not claimed. UI was compiled only, with no new UI/device execution. Public0.3.5 and AltStore retain the previous Coreccb package; this candidate does not replace the release. Receipt/original logs: `E:/Temp/nk-313-consumer/ios-accepted.json` and `ios-ci-logs.zip`. Delivery: `E:/Code/deliveries/2026-11-04-core-313951e/`.
 
 ## Release 0.3.5 / build 17 and subscription acceptance (2026-11-04)
 
