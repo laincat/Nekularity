@@ -2,6 +2,16 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## 0.3.6 / build 18 正式发布（2026-11-04）
+
+公开tag `v0.3.6` 指向 `9684c108f0ade6490b4209827f0525aed54e0853`，Core `25e5ca35bc18f231c5628ffca7054e6a8b64b5d1`。发布CI41839540774成功，含Core构建、Kit单测、设备App构建、UI测试编译、IPA打包与发布；未执行UI。
+
+公开IPA下载HTTP200、29,485,726字节，SHA-256 `9dfa95840c1b105a7f8ecf0a0aaf4abfaaf363614fbff8509d2c8c61622a0ff0` 与GitHub资产摘要一致；两层ZIP CRC、App/Widget0.3.6/18、最低iOS26.0与完整Core25e5ca3标记通过。双语Release说明已写入并回读一致。
+
+AltStore刷新41843074599成功，GitHub Raw、CNB镜像与固定Release三个入口均HTTP200，旧式字段、扁平列表与stable轨道均为0.3.6/18、29,485,726字节、最低26.0并指向v0.3.6；图标HTTP200且PNG签名有效。
+
+交付：[0.3.6未签名IPA及回执](../../deliveries/2026-11-04-nekularity-036/README.md)。Mac隔离副本的官方组合（客户端107286d，与主线产品代码逐文件一致）为13 tests/4 suites、0失败，索引身份用例实际执行并通过；设备App与UI测试编译通过。UI未执行，真机、后台/PiP、实际扬声器与真实账号仍单列。
+
 ## 索引入口进入正式主线与0.3.6候选（2026-11-04）
 
 Core `25e5ca35bc18f231c5628ffca7054e6a8b64b5d1` 已按单提交保树发布main（tree `db28866dfed0d3742e031787f37c26c6226252ed`，父提交 `313951e`，相对上一版只改4个文件：两份STATUS、`mobile/mobile.go`、`mobile/mobile_test.go`）。CI41835537014四作业全部通过：Linux、Windows、macOS Go，以及Apple xcframework加Swift smoke。

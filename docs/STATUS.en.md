@@ -2,6 +2,16 @@
 
 English | [简体中文](STATUS.md)
 
+## Release 0.3.6 / build 18 (2026-11-04)
+
+Public tag `v0.3.6` points to `9684c108f0ade6490b4209827f0525aed54e0853`, Core `25e5ca35bc18f231c5628ffca7054e6a8b64b5d1`. Release CI41839540774 succeeded, covering the Core build, Kit tests, device App build, UI-test compilation, IPA packaging and publication; it did not execute UI tests.
+
+The public IPA returns HTTP200 at29,485,726 bytes, SHA-256 `9dfa95840c1b105a7f8ecf0a0aaf4abfaaf363614fbff8509d2c8c61622a0ff0` matching the GitHub asset digest; both ZIP CRC layers, App/Widget0.3.6/18, minimum iOS26.0 and the full Core25e5ca3 marker passed. Bilingual release notes were written and read back unchanged.
+
+AltStore refresh41843074599 succeeded; the GitHub Raw, CNB mirror and fixed Release entry points all return HTTP200, with the legacy fields, flat list and stable track showing0.3.6/18,29,485,726 bytes, minimum26.0 and the v0.3.6 download URL; the icon returns HTTP200 with a valid PNG signature.
+
+Delivery:[0.3.6 unsigned IPA and receipts](../../deliveries/2026-11-04-nekularity-036/README.en.md). On the Mac isolated copy the official combination (client107286d, matching main product code file for file) recorded13 tests/4 suites with0 failures and the index identity case actually executed and passed; the device App and UI-test compilation passed. UI was not executed, and devices, background/PiP, real audio output and real accounts remain separate.
+
 ## The index entry reaches main, and the0.3.6 candidate (2026-11-04)
 
 Core `25e5ca35bc18f231c5628ffca7054e6a8b64b5d1` was published to main as a single commit with its tree preserved (tree `db28866dfed0d3742e031787f37c26c6226252ed`, parent `313951e`, four files changed against the previous main: the two STATUS files, `mobile/mobile.go` and `mobile/mobile_test.go`). CI41835537014 passed all four jobs: Linux, Windows and macOS Go, plus the Apple xcframework and Swift smoke.
