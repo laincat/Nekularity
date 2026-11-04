@@ -2,6 +2,10 @@
 
 English | [简体中文](STATUS.md)
 
+## Core ccb6268 consumer candidate (not integrated, 2026-11-04)
+
+Created from 10b3544e, this branch changes only the two build pins to ccb626825bc116dad3b3e9a082867fd22c09caf4 while preserving historical acceptance records. Windows pin, Swift syntax, Core method-name and documentation checks passed; these are not Swift type checks, App builds or UI results. Candidate CI will validate the Kit tests, device App and UITests compilation with the new Core. There is no release tag or new public IPA. The earlier transport443/82 result remains attributed to the Mac-tested Core3be57b5 combination. Log: `E:/Temp/nk-core-source-release/ios-candidate-precheck.log`.
+
 ## URLSession transport lifecycle repair (2026-11-04)
 
 Delegate state is released on failure, size limits and cancellation; completed tasks stop dispatching chunks, cancellation before attach resumes the continuation, and reused request IDs are cleaned up by task identity. The Mac Orca Worker reports reproduction of failure/limit retention, late chunks, cancel-before-attach hanging and ID reuse on an isolated `66454e86` / Core `3be57b5` worktree. After the fix, seven lifecycle tests, 18 transport/streaming tests, the full 443 tests / 82 suites and an iOS Simulator build passed; UI tests were not run. Original logs remain on Mac at `/tmp/nk-transport-lifecycle/`, not on this machine.

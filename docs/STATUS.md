@@ -2,6 +2,10 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## Core ccb6268 候选消费（未整合主线，2026-11-04）
+
+本分支从10b3544e创建，仅更新两个构建pin到ccb626825bc116dad3b3e9a082867fd22c09caf4，历史验收记录不改写。Windows上的pin、Swift语法、Core调用名和文档检查通过；这不是Swift类型检查、App构建或UI结果。将通过候选CI验证新Core组合的Kit测试、设备App与UITests编译；没有发布标签，也没有新公开IPA。此前transport443/82结果继续归Mac受测Core3be57b5组合。日志 `E:/Temp/nk-core-source-release/ios-candidate-precheck.log`。
+
 ## URLSession传输生命周期修复（2026-11-04）
 
 请求失败、超限和取消后统一释放delegate状态；完成后不再派发chunk，预先取消时恢复continuation，并按task身份清理复用ID的映射。Mac Orca Worker在 `66454e86` / Core `3be57b5` 的独立worktree报告：旧实现复现失败、超限泄漏、完成后chunk、取消先于attach挂起及ID复用清理问题；修复后7项生命周期测试、18项transport/streaming测试、完整443 tests / 82 suites和iOS模拟器构建通过，未运行UI。原日志仅存Mac `/tmp/nk-transport-lifecycle/`，不标为本机日志。
