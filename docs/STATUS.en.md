@@ -2,6 +2,12 @@
 
 English | [简体中文](STATUS.md)
 
+## The expired login handle ends the wait on iOS (2026-11-04, candidate)
+
+Core `b882bf9` makes a stale handle — the source was updated or removed mid-login — report a structured error. iOS used to swallow `webviewStatus` errors with `try?`, so it only kept polling; it now stops and reports only when the error is confirmed to be the expired handle, and keeps waiting for other source errors so "this page is not the login page" is not treated as a failure.
+
+New Kit tests cover the recognition, that ordinary errors are not mistaken for it, and that Core's English does not reach the interface. The pin moves to `b882bf9`. This change is not packaged, was not reproduced by hand on a simulator, and does not cover devices.
+
 ## Release 0.3.6 / build 18 (2026-11-04)
 
 Public tag `v0.3.6` points to `9684c108f0ade6490b4209827f0525aed54e0853`, Core `25e5ca35bc18f231c5628ffca7054e6a8b64b5d1`. Release CI41839540774 succeeded, covering the Core build, Kit tests, device App build, UI-test compilation, IPA packaging and publication; it did not execute UI tests.

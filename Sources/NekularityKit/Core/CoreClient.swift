@@ -22,6 +22,13 @@ public struct CoreError: Error, LocalizedError, Sendable {
     /// with what it already has rather than treat this as a failure.
     public var isCallbackAbsent: Bool { message.contains("no such callback") }
 
+    /// The login handle belonged to a runtime that no longer answers, because the
+    /// source was updated or removed while the login page was open. Waiting
+    /// longer cannot succeed, so the login has to say so.
+    public var isWebviewHandleGone: Bool {
+        message.lowercased().contains("webview login handle is no longer valid")
+    }
+
     /// Core speaks English and its text is what a developer needs; the
     /// interface is Chinese. Well-known failures get a Chinese sentence, and
     /// anything else keeps Core's own words after a Chinese prefix, so a
@@ -35,6 +42,9 @@ public struct CoreError: Error, LocalizedError, Sendable {
         }
         if has("no such source") || has("source not found") || has("unknown source") {
             return "找不到这个漫画源,可能已被删除"
+        }
+        if has("webview login handle is no longer valid") {
+            return "漫画源在登录过程中被更新或删除,这次登录已经失效"
         }
         if has("not installed") {
             return "漫画源还未安装"

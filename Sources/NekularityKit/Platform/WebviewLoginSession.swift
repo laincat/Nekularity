@@ -105,9 +105,20 @@ public final class WebviewLoginSession: NSObject, WKNavigationDelegate {
         guard let url = webView.url?.absoluteString else { return false }
         let title = (try? await webView.evaluateJavaScript("document.title") as? String) ?? ""
         guard !finished, mine == generation else { return true }
-        guard let done = try? await core.webviewStatus(key: key, handle: login.handle,
-                                                       pageURL: url, title: title),
-              done else { return false }
+        let status: Bool
+        do {
+            status = try await core.webviewStatus(key: key, handle: login.handle,
+                                                   pageURL: url, title: title)
+        } catch let error as CoreError where error.isWebviewHandleGone {
+            // The source was updated or removed while this page was open: the
+            // handle belongs to a runtime that is gone, and polling it can never
+            // succeed. Ordinary source errors keep the wait going.
+            finish(.failure(error))
+            return true
+        } catch {
+            return false
+        }
+        guard status else { return false }
         guard !finished, mine == generation else { return true }
         let count: Int
         do {
