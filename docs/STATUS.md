@@ -30,6 +30,12 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 日志与逐元素测量在 Mac `/tmp/nk-ios-037-visual/`（`visual-summary.json`、`element-contrast.json`）。
 
+## 跟随 Core d6b9f67：服务包的 iOS 入口已就位（2026-11-04）
+
+Core 主线升到 `d6b9f67`（tree `c1495fdb`）：服务包安装/列表/读取/删除进入 Core，并新增 `mobile` 入口 `ServiceInstall`、`ServiceList`、`ServiceRemove`、`ServiceManifest`、`ServiceSource`（二进制 base64、其余 JSON）。iOS pin 已跟随，Swift 语法、文档与 pin 检查通过。
+
+**iOS 侧尚未调用这些入口**：Swift 包装、安装界面与账号流程都还没写，因此这只是"底层入口就位"，不是 iOS 已支持服务插件。
+
 ## 跟随 Core e94b68c：权限拒绝文案（2026-11-04）
 
 Core 主线升到 `e94b68c`（tree `308a3f68`）：权限拒绝区分"服务没申请"与"宿主没授出"，前者指向清单，后者指向宿主的授权决定。iOS pin 已跟随，Swift 语法、文档与 pin 检查通过；iOS 仍未消费 `service` 包。

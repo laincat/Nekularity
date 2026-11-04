@@ -30,6 +30,12 @@ Not captured: the settings page scrolled to its 外观 section (the temporary te
 
 Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
 
+## Following Core d6b9f67: iOS entry points for service packages (2026-11-04)
+
+Core main moves to `d6b9f67` (tree `c1495fdb`): installing, listing, reading and removing a service package now live in Core, with new `mobile` entry points `ServiceInstall`, `ServiceList`, `ServiceRemove`, `ServiceManifest` and `ServiceSource` (base64 for binary, JSON for the rest). The iOS pin follows, and the Swift syntax, documentation and pin checks pass.
+
+**iOS does not call these yet**: the Swift wrapper, the install interface and the account flow are all unwritten, so this is the entry point being ready, not iOS supporting service plugins.
+
 ## Following Core e94b68c: the permission refusal message (2026-11-04)
 
 Core main moves to `e94b68c` (tree `308a3f68`): a permission refusal now distinguishes "the service never asked" from "the host did not grant", pointing at the manifest in one case and at the host's decision in the other. The iOS pin follows, and the Swift syntax, documentation and pin checks pass; iOS still does not consume the `service` package.
