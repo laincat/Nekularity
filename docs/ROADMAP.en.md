@@ -8,6 +8,10 @@ The user explicitly wants the UI/UX of all Nekularity and Nekophage clients rebu
 
 Preserve existing UI evidence with its original scope; add no old-interface layout, theme, visual-consistency or screenshot-matrix work. Keep only the interactions and observations needed to demonstrate underlying behavior, such as reading saved playback progress after App relaunch. Existing P0–P3 identifiers remain for tracking; this order controls further execution. UI/UX reconstruction starts after these foundation tasks. Real accounts/devices and deferred services retain their existing handoff boundaries.
 
+## Upstream reuse and optional service plugins(new direction,2026-11-04)
+
+The user requests maintained upstream reuse across JS engines,highlighting editors,Magpie compatibility/desktop design,themes and plugin formats; optional Trakt/TMDB/Bangumi service plugins; and an AI manga-colorization plan. A local[shared-source project](../../VeneraCat%20Sources/README.en.md) classifies the three projects without duplicate content ownership. Its publisher and actual Core install contract run successfully; tmdb-ts plus a standard polyfill executes one search endpoint in real Core,while the service host/client migration remains incomplete. Trakt protocol/plugin design is now foundation work despite the earlier deferred item; real accounts remain a separate condition. UI reconstruction still follows foundations.
+
 ## Simulator position restoration across App processes (Orca Worker report, 2026-11-04)
 
 On the dedicated simulator with 0.3.4/16 and Core 3be57b5, App PID 2020 played the 30-second HLS fixture to 7.211756 seconds, paused, and closed the player page normally before the App was terminated. PID 2099 reentered through search and the episode page for the same video source: its diagnostic start was 7.000000 seconds, and autoplay reached 8.342057 seconds about 2.08 seconds later. After correcting the test's PID thousands-separator parsing, the targeted XCTest passed 1 test/0 failures. Disk history read after the entire run was 7 seconds/30 seconds/23%; it was not a separately captured snapshot between the two processes.

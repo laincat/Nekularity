@@ -40,7 +40,7 @@ iOS 的 **Magpie 插件系统在 App 内集成并独立运行**,和漫画源的 
 
 当前目标是 **Core 内置 OpenAI Chat/Responses 与 Anthropic Messages 标准 API,其他供应商及路由、用量、内容脱敏等通过安装 Magpie 插件扩展**。Core 保留协议、流式/取消、插件宿主、事件和策略调用机制;具体业务策略不继续硬编码为标准调用的必经路径。详见 Core 的 [分层取舍](https://github.com/laincat/VeneraCat-Core/blob/main/docs/AI-CORE-BOUNDARY.md)。
 
-现阶段已实现的是下列供应商插件与客户端基础,以及未接入 iOS 的路由原型。标准 API 独立入口、通用策略/中间件扩展点仍需补齐并逐项验证,尚不能声称已完成 Magpie 全能力集成:
+2026-11-04状态校正:标准API独立入口、三协议Core/gomobile路径及iOS夹具闭环已经实现并分别验证,供应商插件基础也已有定向证据。通用策略/中间件扩展与完整Magpie能力仍未接齐;magpierouting仍是原型。iOS标准AI页面当前按整包展示响应,不冒充界面流式:
 
 
 ```
@@ -75,8 +75,9 @@ App/                         「AI 供应商」页、登录页、用量页、选
 ## 依赖
 
 - `VeneraCatCore.xcframework`:由 `scripts/fetch-core.sh` 调用 Core 仓库的 `scripts/mac-verify.sh` 生成,放在 `Vendor/`,不提交到仓库。
-- 不引入其他第三方依赖。
+- `AetherEngine 7.53.1`:由project.yml精确固定的Swift Package,App已直接使用其播放引擎。
+- 后续编辑器/插件SDK等直接复用选型见[生态调研](../../VeneraCat%20Sources/docs/ECOSYSTEM.md);候选未自动加入生产依赖。
 
 ## 验证
 
-本阶段代码还没有在 macOS 上编译过。Swift 中调用 Core 的方式,与 Core 仓库 `apple/CoreSmoke` 在 CI 上已验证通过的写法一致(`MobileNew`、`MobileHostProtocol`、带 `error: NSErrorPointer` 参数的方法)。
+早期“未在macOS编译”的记录已过时。0.3.4/16对应修复文件有Mac436 tests/81 suites、设备/模拟器编译和定向UI2/2证据,正式CI/IPA/AltStore也已核验;具体提交及范围见STATUS。后续网络生命周期修改另验,不继承旧结果。

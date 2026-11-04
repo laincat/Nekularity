@@ -40,7 +40,7 @@ The iOS **Magpie plugin system is integrated into the app and runs independently
 
 The current target is **built-in OpenAI Chat/Responses and Anthropic Messages standard APIs in Core, with other providers, routing, usage and content masking supplied through installed Magpie plugins**. Core retains protocols, streaming/cancellation, the plugin host, events and strategy execution. Business policies must not become mandatory hard-coded scheduling for standard calls. See Core's [boundary assessment](https://github.com/laincat/VeneraCat-Core/blob/main/docs/AI-CORE-BOUNDARY.en.md).
 
-The provider-plugin and client foundation below exists, along with a routing prototype not yet connected to iOS. Independent standard API entry points and generic strategy/middleware extensions still need implementation and verification; full Magpie integration is not established:
+Status correction2026-11-04: independent standard API entry points,three-protocol Core/gomobile paths and iOS fixture flows are implemented with distinct evidence; provider-plugin foundations also have targeted coverage. Generic strategy/middleware and full Magpie capabilities remain incomplete; magpierouting is still a prototype. The standard AI page presents whole responses,not verified incremental UI streaming:
 
 
 ```
@@ -87,8 +87,9 @@ Rules:
 ## Dependencies
 
 - `VeneraCatCore.xcframework`: built by `scripts/fetch-core.sh`, which runs `scripts/mac-verify.sh` in the Core repository, and placed in `Vendor/`; it is not committed.
-- No other third-party dependencies.
+- `AetherEngine7.53.1`: the Swift package pinned exactly in project.yml and already used by the App.
+- See the[ecosystem survey](../../VeneraCat%20Sources/docs/ECOSYSTEM.en.md) for future editor/plugin SDK reuse;candidates are not automatically production dependencies.
 
 ## Verification
 
-The code in this phase has not been compiled on macOS yet. It calls Core the same way as `apple/CoreSmoke` in the Core repository, which passes on CI (`MobileNew`, `MobileHostProtocol`, and methods with an `error: NSErrorPointer` parameter).
+The early uncompiled-on-macOS statement is obsolete. Files corresponding to0.3.4/16 have Mac436 tests/81 suites,device/simulator compilation and targeted UI2/2 evidence; public CI/IPA/AltStore were verified separately. See STATUS for exact revisions and scope. Subsequent transport-lifetime changes require their own evidence.
