@@ -18,6 +18,18 @@ Core `b882bf9` makes a stale handle — the source was updated or removed mid-lo
 
 New Kit tests cover the recognition, that ordinary errors are not mistaken for it, and that Core's English does not reach the interface. The pin moves to `b882bf9`. macOS CI actually executed the three new cases at `d593b45`: Swift Testing recorded 444 tests / 82 suites and the XCTest section 34 tests / 0 failures (the previous 31 plus the new 3). The change was not reproduced by hand on a simulator and does not cover devices.
 
+## Light and dark appearance measured (0.3.7, Mac report, 2026-11-04)
+
+The `v0.3.7` app was captured on a dedicated simulator under `appearance light` and `appearance dark` for discovery, settings and reader, all at 1206×2622. The change is a full re-skin, not just the status bar: 99.89% of discovery, 99.65% of settings and 99.90% of the reader sample points moved by more than 0.08 in RGB, and an independent `simctl` capture of discovery reproduced the same backgrounds (light `[248,248,248]`, dark `[24,24,24]`).
+
+Readability was measured from pixels inside each `StaticText` frame in the AX tree (58 elements after dropping 10 covered by the tab bar) using WCAG relative luminance: **no unreadable dark-on-dark or light-on-light combination exists, and every element is at least 3.0**. Dark mode worst is 4.61 (settings), with 6.16 on discovery and 5.97 on the reader.
+
+Light mode is systematically paler without becoming unreadable: the system `.secondary` grey `(136,136,136)` on `(248,248,248)` is **3.34**, section headers `(128,128,136)` on `(240,240,240)` are **3.44**, and the `#0A84FF` accent on white is **3.63**. All three are Apple semantic colours or the system blue rather than values this project chose; they fall below AA for body text but above the 3.0 large-text threshold, matching iOS itself, so the colours were left alone and the numbers recorded as a known boundary.
+
+Not captured: the settings page scrolled to its 外观 section (the temporary test change never reached the build, so only the three screens were produced — a process miss, not an error), accessibility large text, iPad, and devices. A chapter was read between runs, so the light discovery capture is an empty state while the dark one shows a card: that is content, not appearance. Page images themselves are not re-tinted (expected).
+
+Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
+
 ## The theme-to-appearance rule is testable (2026-11-04, candidate)
 
 Whether a theme forces light or dark used to be decided by a single ternary in `RootView`, so the meaning of an absent `dark` key could not be unit-tested. The model now answers with a three-state `ThemeAppearance` (system/light/dark) and the view only maps it to SwiftUI's `ColorScheme`, leaving the rule covered by Kit tests: absent follows the system, explicit true/false mean dark/light, and the built-in theme forces nothing.
