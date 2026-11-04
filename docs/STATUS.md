@@ -18,6 +18,12 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 新增 Kit 单测覆盖识别、普通错误不误判，以及界面文案不泄漏 Core 英文。pin 已更新到 `b882bf9`。macOS CI 已在提交 `d593b45` 上实际执行这三条用例：Swift Testing 444 tests / 82 suites、XCTest 段 34 tests / 0 failures（原 31 条加新增 3 条）。该改动尚未在模拟器上手动复现，也未涵盖真机。
 
+## 主题到外观的规则可测（2026-11-04，候选）
+
+之前“主题是否强制明暗”只在 `RootView` 里用一行三元表达式决定，`dark` 为 nil 时跟随系统的含义无法被单测覆盖。现在模型给出三态 `ThemeAppearance`（system/light/dark），视图只负责把它映射成 SwiftUI 的 `ColorScheme`，规则本身由 Kit 单测覆盖：缺省跟随系统、显式 true/false 分别对应暗/亮、内置主题不强制。
+
+这是重构，行为不变；单测能否执行取决于 macOS CI，本机 Windows 只做了语法与文档检查，因此暂不声称通过。
+
 ## 0.3.7 / build 19 正式发布（2026-11-04）
 
 tag `v0.3.7` 指向 `bf14135384677fb7955d543e3e11cd4e2a5a2376`（tree `b8c2eec0`），Core `b882bf9ebeb339eb596b3ddc59166bb3adfa7ef7`。GitHub Actions 当时官方状态为 degraded，`macos-26` 运行器四次未能分配（三次 ``runner_name`` 为空被取消，最后一次排队逾一小时），因此按发布工作流的同样步骤在 Mac 验证机上构建：8 项仓库检查通过，`swift test` 为 444 tests / 82 suites、XCTest 34/0，设备 App 未签名编译通过后打包。

@@ -40,7 +40,9 @@ struct RootView: View {
             }
         }
         .tint(accent)
-        .preferredColorScheme(themes.active.dark == nil ? nil : (themes.active.dark! ? .dark : .light))
+        // The theme answers with three states; only the view knows how to turn
+        // them into a SwiftUI value, which is why this mapping stays here.
+        .preferredColorScheme(themes.active.appearance.colorScheme)
         // The signature changes on every page written and when a chapter starts or
         // ends, which is exactly when the island has something to say.
         .onChange(of: downloads.activitySignature) { _, _ in
@@ -81,6 +83,16 @@ struct SourceImage: View {
                 guard !Task.isCancelled else { return }
                 failed = true
             }
+        }
+    }
+}
+
+private extension ThemeAppearance {
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
         }
     }
 }

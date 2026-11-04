@@ -18,6 +18,12 @@ Core `b882bf9` makes a stale handle — the source was updated or removed mid-lo
 
 New Kit tests cover the recognition, that ordinary errors are not mistaken for it, and that Core's English does not reach the interface. The pin moves to `b882bf9`. macOS CI actually executed the three new cases at `d593b45`: Swift Testing recorded 444 tests / 82 suites and the XCTest section 34 tests / 0 failures (the previous 31 plus the new 3). The change was not reproduced by hand on a simulator and does not cover devices.
 
+## The theme-to-appearance rule is testable (2026-11-04, candidate)
+
+Whether a theme forces light or dark used to be decided by a single ternary in `RootView`, so the meaning of an absent `dark` key could not be unit-tested. The model now answers with a three-state `ThemeAppearance` (system/light/dark) and the view only maps it to SwiftUI's `ColorScheme`, leaving the rule covered by Kit tests: absent follows the system, explicit true/false mean dark/light, and the built-in theme forces nothing.
+
+This is a refactor with no behaviour change. Whether the tests execute depends on macOS CI; this Windows machine only ran the syntax and documentation checks, so no pass is claimed yet.
+
 ## Release 0.3.7 / build 19 (2026-11-04)
 
 Tag `v0.3.7` points to `bf14135384677fb7955d543e3e11cd4e2a5a2376` (tree `b8c2eec0`), Core `b882bf9ebeb339eb596b3ddc59166bb3adfa7ef7`. GitHub Actions was officially degraded and the `macos-26` runner was unavailable four times (three runs cancelled with an empty ``runner_name``, the last queued for over an hour), so the release was built on the Mac validation machine with the same steps the workflow uses: eight repository checks passed, `swift test` recorded 444 tests / 82 suites with XCTest 34/0, and the unsigned device build was packaged.

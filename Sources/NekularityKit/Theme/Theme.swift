@@ -191,6 +191,28 @@ final class HTTPSOnlyRedirects: NSObject, URLSessionTaskDelegate, @unchecked Sen
 /// kept, and picked in settings.
 @MainActor
 @Observable
+/// What a theme asks the interface to do about light and dark.
+///
+/// The model stores `dark: Bool?`, where nil means "follow the system". That
+/// three-way answer used to live in a single line in the view, so nothing could
+/// test it and a reader had to decode an optional inside a ternary.
+public enum ThemeAppearance: String, CaseIterable, Sendable {
+    case system
+    case light
+    case dark
+}
+
+extension Theme {
+    /// This theme's answer, with nil resolved to `.system`.
+    public var appearance: ThemeAppearance {
+        switch dark {
+        case .some(true): return .dark
+        case .some(false): return .light
+        case .none: return .system
+        }
+    }
+}
+
 public final class ThemeStore {
     public private(set) var themes: [Theme] = []
     public private(set) var active: Theme = BuiltinThemes.system
