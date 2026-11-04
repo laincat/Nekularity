@@ -2,6 +2,12 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
+## 索引入口进入正式主线与0.3.6候选（2026-11-04）
+
+Core `25e5ca3` 已发布main，四作业CI通过；iOS主线 `e64847e` 的pin指向它，产品代码与Mac受测 `107286d` 逐文件一致。Mac隔离副本上 `swift test --filter SourceLibrary --no-parallel` 为13个测试/4个套件、0失败，索引身份用例实际执行并通过；设备App的Release编译与UI测试编译均exit0。
+
+仍未验证：UI测试只编译未执行；真机安装、后台/锁屏、Live Activity、PiP、实际扬声器与真实账号仍单列；本机Windows不能替Mac执行Swift测试，上述计数只属于Worker回传的日志范围。
+
 ## Core313951e主线整合与候选IPA验收（2026-11-04）
 
 Core `313951e157a18e524f4c0c80c46d78abee662f2b` 已保留单提交及受测文件树发布main，两端源码主线pin一致；Core CI41814080991的Linux、Windows、macOS Go及Apple SDK/Swift smoke四作业通过。iOS受测提交c751085的CI41815696096成功，实际原始日志为443 tests/82 suites及XCTest31/0，设备App和UI测试编译通过。未签名候选IPA为29,478,302字节，SHA256 `9cebc4f5c07ab2f5de252d70ac446fd52e9e46dbe24880b1541980385e4742bd`；GitHub制品摘要、两层ZIP CRC、App/Widget0.3.5/17、最低26.0及包内完整Core313标记均通过。

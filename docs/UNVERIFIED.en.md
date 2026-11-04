@@ -2,6 +2,12 @@
 
 [简体中文](UNVERIFIED.md) | English
 
+## The index entry reaches main, and the0.3.6 candidate (2026-11-04)
+
+Core `25e5ca3` is published on main with all four CI jobs passing; iOS main `e64847e` pins it, and its product code matches the Mac-tested `107286d` file for file. On the Mac isolated copy, `swift test --filter SourceLibrary --no-parallel` recorded13 tests/4 suites with0 failures and the index identity case actually executed and passed; the device App Release build and the UI-test compilation both exited0.
+
+Still unverified: UI tests were compiled only; device installation, background/lock screen, Live Activity, PiP, real audio output and real accounts remain separate; this Windows machine cannot run Swift tests for Mac, so those counts belong only to the logs the worker returned.
+
 ## Core313951e main integration and candidate IPA acceptance (2026-11-04)
 
 Core `313951e157a18e524f4c0c80c46d78abee662f2b` was published on main while retaining its single commit and tested tree. Both source-main pins match; Core CI41814080991 passed Linux, Windows, macOS Go and Apple SDK/Swift smoke jobs. iOS candidate c751085 passed CI41815696096. Original logs confirm443 tests/82 suites and XCTest31/0, with device App and UI-test compilation passed. The unsigned candidate IPA is29,478,302 bytes, SHA256 `9cebc4f5c07ab2f5de252d70ac446fd52e9e46dbe24880b1541980385e4742bd`. GitHub artifact digest, both ZIP CRC layers, App/Widget0.3.5/17, minimum26.0 and the full embedded Core313 marker passed.

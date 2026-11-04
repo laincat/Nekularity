@@ -2,6 +2,16 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## 索引入口进入正式主线与0.3.6候选（2026-11-04）
+
+Core `25e5ca35bc18f231c5628ffca7054e6a8b64b5d1` 已按单提交保树发布main（tree `db28866dfed0d3742e031787f37c26c6226252ed`，父提交 `313951e`，相对上一版只改4个文件：两份STATUS、`mobile/mobile.go`、`mobile/mobile_test.go`）。CI41835537014四作业全部通过：Linux、Windows、macOS Go，以及Apple xcframework加Swift smoke。
+
+iOS主线 `e64847e` 合入索引身份客户端改动，两个权威pin均为 `25e5ca3`。主线产品代码与Mac受测提交 `107286d` 逐文件一致（`Sources`、`App`、`Tests`、`Package.swift`、`project.yml`、`scripts` 差异为空），因此Mac结果按该范围继承。
+
+Mac隔离副本（`/tmp/nk-ios-index-identity/repo`，跟踪文件干净）：`fetch-core.sh` 检出同一提交且Core自身gofmt/vet/race与bind通过；`check-core-pin` 通过；清空`.build`后 `swift test --filter SourceLibrary --no-parallel` 为13个测试/4个套件、0失败，`anIndexEntryCannotRedirectIntoAnotherInstalledSource` 实际执行并通过；`xcodegen generate` 通过；设备App的Release编译exit0；UI测试`build-for-testing` exit0。构建出的`VeneraCatCore.xcframework`在ios-arm64切片头文件中`installComicEntry`出现1次。UI测试只编译未执行。
+
+本轮发布`0.3.6`/build 18，产品代码相对`0.3.5`只有索引入口与pin变化，其余非Markdown差异为`project.yml`的App/Widget版本元数据。
+
 ## 索引身份安装候选（2026-11-04，尚未编译）
 
 隔离分支将新索引条目改为调用Core候选 `c5ae195bb525d8e20a1519aa742e4e05f7cf4cd8` 的 `InstallComicEntry`。索引声明key与脚本执行身份不一致时，在发布前拒绝；已存在源保持不变。通用URL安装仍保留重复键更新回退。Windows已通过Core定向和mobile race，但本分支尚未经Mac编译或执行Swift测试，不宣称iOS行为通过。

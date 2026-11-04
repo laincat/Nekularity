@@ -2,6 +2,16 @@
 
 English | [简体中文](STATUS.md)
 
+## The index entry reaches main, and the0.3.6 candidate (2026-11-04)
+
+Core `25e5ca35bc18f231c5628ffca7054e6a8b64b5d1` was published to main as a single commit with its tree preserved (tree `db28866dfed0d3742e031787f37c26c6226252ed`, parent `313951e`, four files changed against the previous main: the two STATUS files, `mobile/mobile.go` and `mobile/mobile_test.go`). CI41835537014 passed all four jobs: Linux, Windows and macOS Go, plus the Apple xcframework and Swift smoke.
+
+iOS main `e64847e` merges the client-side index identity work, and both authoritative pins are `25e5ca3`. Main product code matches the Mac-tested commit `107286d` file for file (`Sources`, `App`, `Tests`, `Package.swift`, `project.yml`, `scripts` diff empty), so the Mac results carry over within that scope.
+
+On the Mac isolated copy (`/tmp/nk-ios-index-identity/repo`, tracked files clean): `fetch-core.sh` checked out the same commit and Core\'s own gofmt/vet/race and bind passed; `check-core-pin` passed; after clearing `.build`, `swift test --filter SourceLibrary --no-parallel` recorded13 tests/4 suites with0 failures, and `anIndexEntryCannotRedirectIntoAnotherInstalledSource` actually executed and passed; `xcodegen generate` passed; the device App Release build exited0; the UI-test `build-for-testing` exited0. The built `VeneraCatCore.xcframework` contains `installComicEntry` once in the ios-arm64 slice header. UI tests were compiled only, never executed.
+
+This round releases `0.3.6`/build18; product code against `0.3.5` changes only in the index entry and the pin, with the App/Widget version metadata in `project.yml` as the remaining non-Markdown difference.
+
 ## Index-identity installation candidate (2026-11-04, not compiled)
 
 The isolated branch routes new index entries through Core candidate `c5ae195bb525d8e20a1519aa742e4e05f7cf4cd8` `InstallComicEntry`. A mismatch between the index key and executed script identity is rejected before publication; existing sources remain unchanged. Generic URL installation retains duplicate-key update fallback. Windows targeted and mobile race tests passed, but this branch has not been compiled or Swift-tested on Mac and no iOS behavior is accepted.
