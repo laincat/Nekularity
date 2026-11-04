@@ -6,6 +6,10 @@
 
 Core ccb6268已发布main，两端功能pin一致。iOS现已正式发布0.3.5/build17（7c0d61b）：CI41791891766、公开IPA HTTP200/29,478,760字节、摘要/CRC/App与Widget/最低26.0/Core标记，以及AltStore三个入口均通过，详见[STATUS](STATUS.md)。UI只编译；bac68cda组合的443/82及31项XCTest计数保留原执行归属。桌面本地包仍为0.2.9/fe101db/Core ccb6268；Windows安装媒体和Mac开发WebView证据按各自提交范围记录。
 
+## 桌面统一合集客户端基础（2026-11-04）
+
+Nekophage当前源码已接Core ccb6268合集解析/能力匹配和独立订阅持久化，提供follow/list/refresh/unfollow命令入口。Windows七项工程和五个实际二进制进程验证7条目订阅、刷新、离线重开、取消订阅、安装记录保持及无制品请求；取消连接与失败保留由真实loopback/race回归覆盖。证据 `E:/Temp/nk-collection-client/`。尚未更新0.2.9安装包或验证Mac命令；目录GUI、条目安装、模块/服务宿主仍待推进。MyGo源码查看候选由已有Orca Worker继续，不能以此命令验收替代其Mac运行结果。
+
 ## 当前主线:先完成底层、架构与基建(2026-11-04)
 
 用户已明确:Nekularity与Nekophage各客户端的UI/UX后续都要整体重构重写。当前先收束Core与宿主/平台职责边界、源脚本和API/媒体契约,处理网络请求/流的取消与资源生命周期、源和账号隔离、存储/备份/迁移/跨进程恢复,以及固定依赖、构建打包和发布基建。

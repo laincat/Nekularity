@@ -6,6 +6,10 @@
 
 Core ccb6268 is published on main and both functional pins match. iOS0.3.5/build17 is now publicly released at7c0d61b: CI41791891766, public IPA HTTP200/29,478,760 bytes, digest/CRC/App and Widget/minimum26.0/Core marker, and all three AltStore endpoints passed. See [STATUS](STATUS.en.md). UI was compiled only; the bac68cda combination retains its original443/82 and31 XCTest execution attribution. The desktop local package remains0.2.9/fe101db/Core ccb6268; Windows installed media and Mac development-WebView evidence retain their respective commit scopes.
 
+## Desktop shared-collection client foundations (2026-11-04)
+
+Current Nekophage source connects Core ccb6268 collection parsing/capability matching and separate subscription persistence through follow/list/refresh/unfollow commands. Seven Windows engineering checks and five actual binary processes verified a seven-entry subscription, refresh, offline reopening, unfollow, installed-record preservation and absence of artifact requests. Real loopback/race regressions cover connection cancellation and failure retention. Evidence: `E:/Temp/nk-collection-client/`. The0.2.9 installer and Mac command acceptance are not updated; catalogue GUI, entry installation and module/service hosts remain. The existing Orca Worker continues the MyGo source-viewer candidate, whose Mac execution cannot be replaced by this command acceptance.
+
 ## Current focus: complete foundations, architecture and infrastructure first (2026-11-04)
 
 The user explicitly wants the UI/UX of all Nekularity and Nekophage clients rebuilt later. First finish Core/host/platform responsibilities, source-script and API/media contracts, request/stream cancellation and resource lifetimes, source/account isolation, storage/backup/migration/recovery across processes, and pinned dependencies, builds, packaging and publication infrastructure.
