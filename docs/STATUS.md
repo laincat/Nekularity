@@ -30,6 +30,10 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 日志与逐元素测量在 Mac `/tmp/nk-ios-037-visual/`（`visual-summary.json`、`element-contrast.json`）。
 
+## 跟随 Core 78826c8：取消会中断脚本（2026-11-04）
+
+Core 主线升到 `78826c8`（tree `1161a5e3`）：`Supervisor` 在调用方取消时也中断运行时，并按原因区分超时与取消；新增按服务的宿主与 `Supervisor.Describe`。iOS pin 已跟随，Swift 语法、文档与 pin 检查通过；iOS 仍未调用 `service` 入口。
+
 ## 跟随 Core 8b82378：服务可说明自己的方法（2026-11-04）
 
 Core 主线升到 `8b82378`（tree `06ac2e3a`）：服务可导出 `describe()` 说明自己能做什么，宿主据此画按钮；桌面面板已用它列出并运行方法。iOS pin 已跟随，Swift 语法、文档与 pin 检查通过；iOS 仍未调用 `service` 相关入口。

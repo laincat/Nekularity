@@ -30,6 +30,10 @@ Not captured: the settings page scrolled to its 外观 section (the temporary te
 
 Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
 
+## Following Core 78826c8: cancelling interrupts the script (2026-11-04)
+
+Core main moves to `78826c8` (tree `1161a5e3`): `Supervisor` interrupts the runtime when the caller cancels, not only on timeout, keeping the two reasons apart; it also gained a per-service host and `Supervisor.Describe`. The iOS pin follows, and the Swift syntax, documentation and pin checks pass; iOS still calls no `service` entry points.
+
 ## Following Core 8b82378: a service can describe its methods (2026-11-04)
 
 Core main moves to `8b82378` (tree `06ac2e3a`): a service may export `describe()` to say what it can do, and a host draws buttons from it; the desktop panel already uses it to list and run methods. The iOS pin follows, and the Swift syntax, documentation and pin checks pass; iOS still calls none of the `service` entry points.
