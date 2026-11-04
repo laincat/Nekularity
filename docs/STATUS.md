@@ -30,6 +30,10 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 日志与逐元素测量在 Mac `/tmp/nk-ios-037-visual/`（`visual-summary.json`、`element-contrast.json`）。
 
+## 跟随 Core d62fbc7：服务包 zip 读取（2026-11-04）
+
+Core 主线升到 `d62fbc7`（tree `84240f87`）：`service` 包新增 `ReadPackageZip`，从 zip 读清单与入口，按实际解压字节兜上限，拒绝 `../`、绝对路径与反斜杠文件名；桌面端已据此实现服务包安装。iOS 端 pin 已跟随，Swift 语法、文档与 pin 检查通过，但尚未消费该能力：iOS 侧的安装、界面与账号流程都还没做。
+
 ## 跟随 Core ec57f45：服务运行时与包加载（2026-11-04）
 
 Core 主线升到 `ec57f45`（tree `f382a2d3`）：`service` 包现在能真正运行一个服务——模块导出 `handle(method, payload)`，宿主按方法调用并按权限把住 `fetch`、`storageGet`、`storageSet`、`secret`、`log`；同时新增从磁盘目录读取服务包（清单 + 入口）的加载器。Core CI 41906638143 四作业全部通过。

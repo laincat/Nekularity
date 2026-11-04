@@ -30,6 +30,10 @@ Not captured: the settings page scrolled to its 外观 section (the temporary te
 
 Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
 
+## Following Core d62fbc7: reading service zip packages (2026-11-04)
+
+Core main moves to `d62fbc7` (tree `84240f87`): the `service` package gains `ReadPackageZip`, which reads the manifest and entry from a zip, bounds the bytes actually expanded, and refuses `../`, absolute paths and backslash names; the desktop already installs service packages with it. The iOS pin follows, and the Swift syntax, documentation and pin checks pass, but iOS does not consume the capability yet: install, the interface and the account flow are all still to do.
+
 ## Following Core ec57f45: service runtime and package loading (2026-11-04)
 
 Core main moves to `ec57f45` (tree `f382a2d3`): the `service` package can now run a service for real - the module exports `handle(method, payload)`, the host calls it per method and gates `fetch`, `storageGet`, `storageSet`, `secret` and `log` by permission - and a loader reads a service package (manifest plus entry) from a directory on disk. All four jobs of Core CI 41906638143 passed.
