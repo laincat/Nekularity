@@ -2,6 +2,14 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
+## Core ccb6268 已整合，CI 与候选 IPA 已核验（2026-11-04）
+
+当前iOS主线pin更新为 `ccb626825bc116dad3b3e9a082867fd22c09caf4`。受测组合 `bac68cdad3920ef76b299f59a2a8196e9b518add` 的CI41780802099通过Core构建、Kit单测、设备App构建、UITests编译和IPA打包。下载的原始日志确认Swift Testing为443 tests / 82 suites通过，另有XCTest31项、0失败；UI只编译，没有执行。
+
+候选未签名IPA为29478759字节，SHA-256 `27b901290665bda5731c04ddeb28270a086318f47d6375c0b061762ab1e33d2c`；GitHub artifact摘要、两层ZIP CRC、App/Widget0.3.4/16、最低iOS26.0及Core标识均核验通过。插件下载超时/地址校验失败后，使用同一laincat账号的GitHub CLI取回原日志并续传产物，HTTP206范围及最终artifact摘要一致。回执 `E:/Temp/nk-core-source-release/ios-accepted.json`。
+
+本次整合不修改受测产品/测试源码，后续只有证据文档差异。未创建新发布标签，公开0.3.4/AltStore仍是Core3be57b5版本；不提升历史UI、真机、后台、PiP或真实账号范围。桌面主线仍为3be57b5，ccb候选的Windows消费已过，Mac由既有Orca Worker验证。
+
 ## 0.3.4发布与下载图片完整性修复已验(2026-11-04)
 
 Orca Worker已在ac8e2b6基线/Core3be57b5修复两项实际缺陷:离线字节不再二次执行源的onResponse,解码后的modifyImage仍保留;raw在onResponse后以64像素缩略图验证可解码性,坏字节走既有镜像回退或DownloadStore失败/重试,不形成完成章节。有效PNG/JPEG原字节保持不变。此前已保存的坏章节不自动删除,仍需用户删除后重新下载。

@@ -2,9 +2,13 @@
 
 [English](STATUS.en.md) | 简体中文
 
-## Core ccb6268 候选消费（未整合主线，2026-11-04）
+## Core ccb6268 已整合，CI 与候选 IPA 已核验（2026-11-04）
 
-本分支从10b3544e创建，仅更新两个构建pin到ccb626825bc116dad3b3e9a082867fd22c09caf4，历史验收记录不改写。Windows上的pin、Swift语法、Core调用名和文档检查通过；这不是Swift类型检查、App构建或UI结果。将通过候选CI验证新Core组合的Kit测试、设备App与UITests编译；没有发布标签，也没有新公开IPA。此前transport443/82结果继续归Mac受测Core3be57b5组合。日志 `E:/Temp/nk-core-source-release/ios-candidate-precheck.log`。
+当前iOS主线pin更新为 `ccb626825bc116dad3b3e9a082867fd22c09caf4`。受测组合 `bac68cdad3920ef76b299f59a2a8196e9b518add` 的CI41780802099通过Core构建、Kit单测、设备App构建、UITests编译和IPA打包。下载的原始日志确认Swift Testing为443 tests / 82 suites通过，另有XCTest31项、0失败；UI只编译，没有执行。
+
+候选未签名IPA为29478759字节，SHA-256 `27b901290665bda5731c04ddeb28270a086318f47d6375c0b061762ab1e33d2c`；GitHub artifact摘要、两层ZIP CRC、App/Widget0.3.4/16、最低iOS26.0及Core标识均核验通过。插件下载超时/地址校验失败后，使用同一laincat账号的GitHub CLI取回原日志并续传产物，HTTP206范围及最终artifact摘要一致。回执 `E:/Temp/nk-core-source-release/ios-accepted.json`。
+
+本次整合不修改受测产品/测试源码，后续只有证据文档差异。未创建新发布标签，公开0.3.4/AltStore仍是Core3be57b5版本；不提升历史UI、真机、后台、PiP或真实账号范围。桌面主线仍为3be57b5，ccb候选的Windows消费已过，Mac由既有Orca Worker验证。
 
 ## URLSession传输生命周期修复（2026-11-04）
 

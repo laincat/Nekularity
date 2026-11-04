@@ -2,6 +2,14 @@
 
 [简体中文](UNVERIFIED.md) | English
 
+## Core ccb6268 integrated; CI and candidate IPA verified (2026-11-04)
+
+The iOS main pin is now `ccb626825bc116dad3b3e9a082867fd22c09caf4`. CI41780802099 passed Core build, Kit execution, device App build, UITests compilation and IPA packaging at `bac68cdad3920ef76b299f59a2a8196e9b518add`. Downloaded original logs confirm Swift Testing443 tests /82 suites passed, plus31 XCTest cases with0 failures. UI tests were compiled, not executed.
+
+The unsigned candidate IPA is 29478759 bytes, SHA-256 `27b901290665bda5731c04ddeb28270a086318f47d6375c0b061762ab1e33d2c`. GitHub artifact digest, both ZIP CRC layers, App/Widget0.3.4/16, iOS26.0 minimum and Core marker passed. After plugin download timeout/address validation failure, GitHub CLI using the same laincat account retrieved original logs and resumed the artifact; HTTP206 range and final artifact digest matched. Receipt: `E:/Temp/nk-core-source-release/ios-accepted.json`.
+
+Integration leaves tested product/test sources unchanged; subsequent differences are evidence documentation only. No new release tag was created: public0.3.4/AltStore still contain Core3be57b5. Historical UI, device, background, PiP and account scopes are not upgraded. Desktop main remains3be57b5; its ccb candidate passed Windows consumption and is under the existing Orca Worker for Mac.
+
 ## Release 0.3.4 and download image integrity repair verified (2026-11-04)
 
 Orca Worker fixed two actual defects on base ac8e2b6/Core 3be57b5: offline bytes no longer repeat source onResponse, while decoded modifyImage remains enabled; raw validates post-onResponse bytes with a 64-pixel thumbnail, following existing mirror fallback or DownloadStore failure/retry instead of completing a corrupt chapter. Valid PNG/JPEG bytes remain unchanged. Existing corrupt chapters are not deleted automatically and still require user removal and redownload.
