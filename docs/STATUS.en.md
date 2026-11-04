@@ -16,7 +16,7 @@ Scope: these results belong to a Mac isolated copy and a dedicated simulator; de
 
 Core `b882bf9` makes a stale handle — the source was updated or removed mid-login — report a structured error. iOS used to swallow `webviewStatus` errors with `try?`, so it only kept polling; it now stops and reports only when the error is confirmed to be the expired handle, and keeps waiting for other source errors so "this page is not the login page" is not treated as a failure.
 
-New Kit tests cover the recognition, that ordinary errors are not mistaken for it, and that Core's English does not reach the interface. The pin moves to `b882bf9`. This change is not packaged, was not reproduced by hand on a simulator, and does not cover devices.
+New Kit tests cover the recognition, that ordinary errors are not mistaken for it, and that Core's English does not reach the interface. The pin moves to `b882bf9`. macOS CI actually executed the three new cases at `d593b45`: Swift Testing recorded 444 tests / 82 suites and the XCTest section 34 tests / 0 failures (the previous 31 plus the new 3). The change was not reproduced by hand on a simulator and does not cover devices.
 
 ## Release 0.3.6 / build 18 (2026-11-04)
 
