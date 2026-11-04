@@ -153,6 +153,15 @@ public final class CoreClient: @unchecked Sendable {
         return try Self.decode(PluginRecord.self, out)
     }
 
+    /// Installs a new comic index entry after Core checks its executed identity.
+    public func installComicEntry(_ entry: IndexEntry, body: String, indexURL: URL) async throws -> PluginRecord {
+        let entryJSON = String(decoding: try JSONEncoder().encode(entry), as: UTF8.self)
+        let out = try await run { core, id in
+            try Self.call { core.installComicEntry(id, entryJSON: entryJSON, body: body, indexURL: indexURL.absoluteString, error: $0) }
+        }
+        return try Self.decode(PluginRecord.self, out)
+    }
+
     /// Replaces an installed plugin; the old version stays on failure.
     public func replace(key: String, type: String, body: String, origin: String, indexURL: String = "", sha256: String = "") async throws -> PluginRecord {
         let out = try await run { core, id in

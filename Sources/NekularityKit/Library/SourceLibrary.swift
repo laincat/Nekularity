@@ -68,7 +68,11 @@ public final class SourceLibrary {
             try await persist()
             return rec
         }
-        return try await installOrReplace(body: body, origin: url.absoluteString, indexURL: indexURL.absoluteString)
+        // Core validates the script's executed identity against the index key.
+        // A generic duplicate-key fallback must not update another installed source.
+        let rec = try await core.installComicEntry(entry, body: body, indexURL: indexURL)
+        try await persist()
+        return rec
     }
 
     /// Core is the only one that knows a script's key, so try to install

@@ -2,6 +2,10 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## 索引身份安装候选（2026-11-04，尚未编译）
+
+隔离分支将新索引条目改为调用Core候选 `c5ae195bb525d8e20a1519aa742e4e05f7cf4cd8` 的 `InstallComicEntry`。索引声明key与脚本执行身份不一致时，在发布前拒绝；已存在源保持不变。通用URL安装仍保留重复键更新回退。Windows已通过Core定向和mobile race，但本分支尚未经Mac编译或执行Swift测试，不宣称iOS行为通过。
+
 ## Core313951e主线整合与候选IPA验收（2026-11-04）
 
 Core `313951e157a18e524f4c0c80c46d78abee662f2b` 已保留单提交及受测文件树发布main，两端源码主线pin一致；Core CI41814080991的Linux、Windows、macOS Go及Apple SDK/Swift smoke四作业通过。iOS受测提交c751085的CI41815696096成功，实际原始日志为443 tests/82 suites及XCTest31/0，设备App和UI测试编译通过。未签名候选IPA为29,478,302字节，SHA256 `9cebc4f5c07ab2f5de252d70ac446fd52e9e46dbe24880b1541980385e4742bd`；GitHub制品摘要、两层ZIP CRC、App/Widget0.3.5/17、最低26.0及包内完整Core313标记均通过。
