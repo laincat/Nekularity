@@ -30,6 +30,12 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 日志与逐元素测量在 Mac `/tmp/nk-ios-037-visual/`（`visual-summary.json`、`element-contrast.json`）。
 
+## 跟随 Core 2380abd：服务清单与权限（2026-11-04）
+
+Core 主线升到 `2380abd`（tree `6be6739f`），新增 `service` 包：校验服务清单并把“服务请求的权限”与“宿主允许的权限”取交集，未知字段与未知权限都拒绝，`entry` 必须是包内相对路径。本轮只做清单与权限，不加载 JavaScript。Core CI 41900200233 四作业全部通过。
+
+两端 pin 均已更新到 `2380abd`：桌面端 `go build` 与七项工程检查通过；iOS 端 Swift 语法、文档与 pin 检查通过。两端都还没有消费 `service` 包，因此这只是 pin 跟随，不代表服务宿主已可用。
+
 ## 主题到外观的规则可测（2026-11-04，候选）
 
 之前“主题是否强制明暗”只在 `RootView` 里用一行三元表达式决定，`dark` 为 nil 时跟随系统的含义无法被单测覆盖。现在模型给出三态 `ThemeAppearance`（system/light/dark），视图只负责把它映射成 SwiftUI 的 `ColorScheme`，规则本身由 Kit 单测覆盖：缺省跟随系统、显式 true/false 分别对应暗/亮、内置主题不强制。

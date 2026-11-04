@@ -30,6 +30,12 @@ Not captured: the settings page scrolled to its 外观 section (the temporary te
 
 Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
 
+## Following Core 2380abd: service manifests and permissions (2026-11-04)
+
+Core main moves to `2380abd` (tree `6be6739f`), adding the `service` package: it validates a service manifest and intersects "what the service asks for" with "what the host allows", rejecting unknown fields and unknown permissions, with `entry` required to be a relative path inside the package. This round covers manifests and permissions only; no JavaScript is loaded. All four jobs of Core CI 41900200233 passed.
+
+Both pins now point at `2380abd`: the desktop passes `go build` and its seven engineering checks, and iOS passes the Swift syntax, documentation and pin checks. Neither consumer uses the `service` package yet, so this is pin maintenance, not a working service host.
+
 ## The theme-to-appearance rule is testable (2026-11-04, candidate)
 
 Whether a theme forces light or dark used to be decided by a single ternary in `RootView`, so the meaning of an absent `dark` key could not be unit-tested. The model now answers with a three-state `ThemeAppearance` (system/light/dark) and the view only maps it to SwiftUI's `ColorScheme`, leaving the rule covered by Kit tests: absent follows the system, explicit true/false mean dark/light, and the built-in theme forces nothing.
