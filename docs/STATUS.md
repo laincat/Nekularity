@@ -30,6 +30,10 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 日志与逐元素测量在 Mac `/tmp/nk-ios-037-visual/`（`visual-summary.json`、`element-contrast.json`）。
 
+## 跟随 Core f349e3d：受控传输桥（2026-11-04）
+
+Core 主线升到 `f349e3d`（tree `1a84c653`）：新增 `service.Bridge`，服务里的 `fetch` 只能走它——只允许 `http`/`https`、每一跳重定向重新校验、单次响应默认 4 MiB、默认不带 Cookie。iOS pin 已跟随，Swift 语法、文档与 pin 检查通过；iOS 仍未消费 `service` 包。
+
 ## 跟随 Core fbbda3f：服务生命周期（2026-11-04）
 
 Core 主线升到 `fbbda3f`（tree `4cd4c8c5`）：`service.Supervisor` 负责按需加载、常驻上限、空闲卸载与单次调用超时（靠中断运行时实现），异步 handler 按 Promise 状态读取或明确拒绝。iOS pin 已跟随，Swift 语法、文档与 pin 检查通过；iOS 仍未消费 `service` 包。

@@ -30,6 +30,10 @@ Not captured: the settings page scrolled to its 外观 section (the temporary te
 
 Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
 
+## Following Core f349e3d: the controlled transport bridge (2026-11-04)
+
+Core main moves to `f349e3d` (tree `1a84c653`): the new `service.Bridge` is the only way a service's `fetch` can go - HTTP and HTTPS only, every redirect hop re-checked, a 4 MiB response bound by default and no cookies by default. The iOS pin follows, and the Swift syntax, documentation and pin checks pass; iOS still does not consume the `service` package.
+
 ## Following Core fbbda3f: service lifecycle (2026-11-04)
 
 Core main moves to `fbbda3f` (tree `4cd4c8c5`): `service.Supervisor` owns on-demand loading, the resident bound, idle unloading and the per-call deadline (enforced by interrupting the runtime), and async handlers are read by promise state or refused clearly. The iOS pin follows, and the Swift syntax, documentation and pin checks pass; iOS still does not consume the `service` package.
