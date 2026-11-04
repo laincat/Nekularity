@@ -2,6 +2,10 @@
 
 English | [简体中文](STATUS.md)
 
+## Index-identity installation candidate (2026-11-04, not compiled)
+
+The isolated branch routes new index entries through Core candidate `c5ae195bb525d8e20a1519aa742e4e05f7cf4cd8` `InstallComicEntry`. A mismatch between the index key and executed script identity is rejected before publication; existing sources remain unchanged. Generic URL installation retains duplicate-key update fallback. Windows targeted and mobile race tests passed, but this branch has not been compiled or Swift-tested on Mac and no iOS behavior is accepted.
+
 ## Core313951e main integration and candidate IPA acceptance (2026-11-04)
 
 Core `313951e157a18e524f4c0c80c46d78abee662f2b` was published on main while retaining its single commit and tested tree. Both source-main pins match; Core CI41814080991 passed Linux, Windows, macOS Go and Apple SDK/Swift smoke jobs. iOS candidate c751085 passed CI41815696096. Original logs confirm443 tests/82 suites and XCTest31/0, with device App and UI-test compilation passed. The unsigned candidate IPA is29,478,302 bytes, SHA256 `9cebc4f5c07ab2f5de252d70ac446fd52e9e46dbe24880b1541980385e4742bd`. GitHub artifact digest, both ZIP CRC layers, App/Widget0.3.5/17, minimum26.0 and the full embedded Core313 marker passed.

@@ -58,6 +58,30 @@ struct SourceLibraryTests {
         #expect(record.origin == "https://index.test/mini.js")
     }
 
+    /// A new index entry whose downloaded body declares another installed key
+    /// must not update that key. Core's generic install fallback can otherwise
+    /// treat the duplicate-key error as permission to replace it.
+    @Test func anIndexEntryCannotRedirectIntoAnotherInstalledSource() async throws {
+        let other = """
+        class Other extends ComicSource {
+            name = "Other"; key = "other"; version = "1.0.0"
+            search = { load: async (keyword, options, page) => ({ comics: [], maxPage: 1 }) }
+        }
+        """
+        let redirected = script.replacingOccurrences(of: "1.0.0", with: "9.0.0")
+        let lib = try library(URL(filePath: NSTemporaryDirectory()).appending(path: UUID().uuidString)) { _ in
+            Data(redirected.utf8)
+        }
+        _ = try await lib.install(script: other, origin: "fixture")
+        let entry = IndexEntry(name: "Other", key: "other", version: "9.0.0", url: "https://index.test/other.js")
+        await #expect(throws: (any Error).self) {
+            _ = try await lib.install(entry: entry, indexURL: URL(string: "https://index.test/index.json")!)
+        }
+        await lib.refresh()
+        #expect(lib.sources.map(\.key) == ["other"])
+        #expect(lib.sources.first?.version == "1.0.0")
+    }
+
     /// A script that is not a comic source is refused, and nothing is left behind.
     @Test func aBrokenScriptIsRefusedAndNothingIsStored() async throws {
         let lib = try library(URL(filePath: NSTemporaryDirectory()).appending(path: UUID().uuidString))
