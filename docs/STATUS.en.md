@@ -30,6 +30,12 @@ Not captured: the settings page scrolled to its 外观 section (the temporary te
 
 Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
 
+## Following Core ec57f45: service runtime and package loading (2026-11-04)
+
+Core main moves to `ec57f45` (tree `f382a2d3`): the `service` package can now run a service for real - the module exports `handle(method, payload)`, the host calls it per method and gates `fetch`, `storageGet`, `storageSet`, `secret` and `log` by permission - and a loader reads a service package (manifest plus entry) from a directory on disk. All four jobs of Core CI 41906638143 passed.
+
+The iOS pin now points at `ec57f45`, and the Swift syntax, documentation and pin checks pass. The iOS side does not consume the `service` package yet, so this is pin maintenance only: installing a service plugin, its interface and its account flow are all still to do.
+
 ## Following Core 2380abd: service manifests and permissions (2026-11-04)
 
 Core main moves to `2380abd` (tree `6be6739f`), adding the `service` package: it validates a service manifest and intersects "what the service asks for" with "what the host allows", rejecting unknown fields and unknown permissions, with `entry` required to be a relative path inside the package. This round covers manifests and permissions only; no JavaScript is loaded. All four jobs of Core CI 41900200233 passed.

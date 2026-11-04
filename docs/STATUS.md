@@ -30,6 +30,12 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 日志与逐元素测量在 Mac `/tmp/nk-ios-037-visual/`（`visual-summary.json`、`element-contrast.json`）。
 
+## 跟随 Core ec57f45：服务运行时与包加载（2026-11-04）
+
+Core 主线升到 `ec57f45`（tree `f382a2d3`）：`service` 包现在能真正运行一个服务——模块导出 `handle(method, payload)`，宿主按方法调用并按权限把住 `fetch`、`storageGet`、`storageSet`、`secret`、`log`；同时新增从磁盘目录读取服务包（清单 + 入口）的加载器。Core CI 41906638143 四作业全部通过。
+
+iOS 端 pin 已更新到 `ec57f45`，Swift 语法、文档与 pin 检查通过。iOS 侧尚未消费 `service` 包，因此这只是 pin 跟随：服务插件在 iOS 的安装、界面与账号流程都还没做。
+
 ## 跟随 Core 2380abd：服务清单与权限（2026-11-04）
 
 Core 主线升到 `2380abd`（tree `6be6739f`），新增 `service` 包：校验服务清单并把“服务请求的权限”与“宿主允许的权限”取交集，未知字段与未知权限都拒绝，`entry` 必须是包内相对路径。本轮只做清单与权限，不加载 JavaScript。Core CI 41900200233 四作业全部通过。
