@@ -30,6 +30,10 @@ Not captured: the settings page scrolled to its 外观 section (the temporary te
 
 Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
 
+## Following Core e94b68c: the permission refusal message (2026-11-04)
+
+Core main moves to `e94b68c` (tree `308a3f68`): a permission refusal now distinguishes "the service never asked" from "the host did not grant", pointing at the manifest in one case and at the host's decision in the other. The iOS pin follows, and the Swift syntax, documentation and pin checks pass; iOS still does not consume the `service` package.
+
 ## Following Core f349e3d: the controlled transport bridge (2026-11-04)
 
 Core main moves to `f349e3d` (tree `1a84c653`): the new `service.Bridge` is the only way a service's `fetch` can go - HTTP and HTTPS only, every redirect hop re-checked, a 4 MiB response bound by default and no cookies by default. The iOS pin follows, and the Swift syntax, documentation and pin checks pass; iOS still does not consume the `service` package.
