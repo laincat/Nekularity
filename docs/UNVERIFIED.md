@@ -2,6 +2,10 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
+## Core313951e消费候选（2026-11-04，尚未整合）
+
+独立分支update/core-duplicate-key将两个权威构建pin更新为 `313951e157a18e524f4c0c80c46d78abee662f2b`。Core候选提供结构化重复键错误，保留旧LoadError与ErrExists分类；本分支不改变Swift业务逻辑，App/Widget仍0.3.5/17。Mac构建、Kit和IPA检查将由本分支CI执行；尚未取得终态，不宣称UI或真机通过。公开0.3.5及主线仍使用ccb6268，本候选不是新版本发布。
+
 ## 0.3.5 / build 17 正式发布与订阅验收（2026-11-04）
 
 公开tag `v0.3.5` 指向 `7c0d61bf03b774e804abfd4297e065bcb87a3e65`，Core 为 `ccb626825bc116dad3b3e9a082867fd22c09caf4`。精确发布提交的 CI41791891766 已通过 Core/Kit、设备App构建、UI测试编译、IPA打包和发布；没有执行UI。相对已验收组合bac68cda，非Markdown差异只有project.yml中的App/Widget版本元数据，原443 tests/82 suites及31项XCTest计数仍归该组合原日志。

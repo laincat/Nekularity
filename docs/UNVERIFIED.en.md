@@ -2,6 +2,10 @@
 
 [简体中文](UNVERIFIED.md) | English
 
+## Core313951e consumer candidate (2026-11-04, not integrated)
+
+Isolated branch update/core-duplicate-key updates both authoritative build pins to `313951e157a18e524f4c0c80c46d78abee662f2b`. The Core candidate provides structured duplicate-key errors while retaining LoadError and ErrExists classification. Swift business logic is unchanged; App/Widget remain0.3.5/17. Branch CI will perform Mac builds, Kit execution and IPA checks; no terminal result exists yet and no UI/device acceptance is claimed. Public0.3.5 and main still useccb6268; this is not a version release.
+
 ## Release 0.3.5 / build 17 and subscription acceptance (2026-11-04)
 
 Public tag `v0.3.5` points to `7c0d61bf03b774e804abfd4297e065bcb87a3e65`, with Core `ccb626825bc116dad3b3e9a082867fd22c09caf4`. CI41791891766 passed Core/Kit, device App build, UI-test compilation, IPA packaging and publication at that exact release commit; it did not execute UI tests. Compared with accepted combination bac68cda, the only non-Markdown difference is App/Widget version metadata in project.yml. The prior 443 tests/82 suites and 31 XCTest counts remain attributed to that combination's original logs.
