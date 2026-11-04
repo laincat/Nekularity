@@ -2,6 +2,12 @@
 
 [简体中文](ROADMAP.md) | English
 
+## Current focus: complete foundations, architecture and infrastructure first (2026-11-04)
+
+The user explicitly wants the UI/UX of all Nekularity and Nekophage clients rebuilt later. First finish Core/host/platform responsibilities, source-script and API/media contracts, request/stream cancellation and resource lifetimes, source/account isolation, storage/backup/migration/recovery across processes, and pinned dependencies, builds, packaging and publication infrastructure.
+
+Preserve existing UI evidence with its original scope; add no old-interface layout, theme, visual-consistency or screenshot-matrix work. Keep only the interactions and observations needed to demonstrate underlying behavior, such as reading saved playback progress after App relaunch. Existing P0–P3 identifiers remain for tracking; this order controls further execution. UI/UX reconstruction starts after these foundation tasks. Real accounts/devices and deferred services retain their existing handoff boundaries.
+
 ## Current independent repairs (2026-11-04)
 
 Nekularity's duplicate offline onResponse and HTTP 200 invalid-image completion are fixed; four exact Mac-tested files were integrated with matching SHA hashes and released as 0.3.4/16. Orca Worker passed 436 tests/81 suites, final build-for-testing and targeted UI 2/2; release CI/IPA and all three public AltStore endpoints are accepted. See [STATUS](STATUS.en.md). Lead also reproduced and fixed retained POST bodies/pixel scripts across desktop image mirrors. Actual Core, loopback HTTP and PNG decoding passed the Windows race regression; evidence: `E:/Temp/nk-image-fallback/`. This is a desktop client contract fix. Commit 0db2ead has a Windows ZIP/installer with package contents and isolated installation/uninstallation verified; delivery: `E:/Code/deliveries/2026-11-04-image-mirror-fix/README.en.md`. The functional Core pin remains 3be57b5 and old c545212 packages do not contain it. It does not extend Mac/GUI acceptance to a new version.
