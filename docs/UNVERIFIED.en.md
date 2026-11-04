@@ -2,6 +2,14 @@
 
 [简体中文](UNVERIFIED.md) | English
 
+## Release 0.3.5 / build 17 and subscription acceptance (2026-11-04)
+
+Public tag `v0.3.5` points to `7c0d61bf03b774e804abfd4297e065bcb87a3e65`, with Core `ccb626825bc116dad3b3e9a082867fd22c09caf4`. CI41791891766 passed Core/Kit, device App build, UI-test compilation, IPA packaging and publication at that exact release commit; it did not execute UI tests. Compared with accepted combination bac68cda, the only non-Markdown difference is App/Widget version metadata in project.yml. The prior 443 tests/82 suites and 31 XCTest counts remain attributed to that combination's original logs.
+
+The public IPA returned HTTP200 and 29,478,760 bytes; SHA-256 `34091cbbaa23db16b95f34d1ee86a4909c3b0e99a649216274f6760efcc801bd` matches the GitHub asset. ZIP CRC, App/Widget0.3.5/17, iOS26.0 minimum and the full Core marker passed. Bilingual release notes were written and read back identically. AltStore refresh41797483555 succeeded. GitHub Raw, CNB and the fixed Release endpoint all returned HTTP200, with legacy fields, flat versions and stable channel matching the new version/build/size/minimumOS/URL. Icon HTTP200 and actual decoding also passed.
+
+Delivery: [unsigned 0.3.5 IPA and receipts](../../deliveries/2026-11-04-nekularity-035/README.en.md); original acceptance records: `E:/Temp/nk-ios-035-evidence/`. This adds no historical full-UI count. Signed devices, background/lock-screen, Live Activity, PiP, speakers and real accounts remain separate. Older entries below retain the state and scope of their own execution.
+
 ## Core ccb6268 integrated; CI and candidate IPA verified (2026-11-04)
 
 The iOS main pin is now `ccb626825bc116dad3b3e9a082867fd22c09caf4`. CI41780802099 passed Core build, Kit execution, device App build, UITests compilation and IPA packaging at `bac68cdad3920ef76b299f59a2a8196e9b518add`. Downloaded original logs confirm Swift Testing443 tests /82 suites passed, plus31 XCTest cases with0 failures. UI tests were compiled, not executed.

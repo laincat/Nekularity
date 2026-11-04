@@ -4,7 +4,7 @@
 
 ## Core ccb6268 与 iOS 消费端整合（2026-11-04）
 
-Core ccb6268经四作业CI后按同一SHA发布main；iOS组合bac68cda的CI41780802099与候选IPA已核验，主线pin已更新，详见[STATUS](STATUS.md)。443/82 Swift Testing及31项XCTest通过，UI仅编译；公开0.3.4/AltStore仍为旧3be包。桌面ccb候选已由Windows工程/阅读媒体/安装与Orca Worker的macOS开发WebView分范围验收；桌面主线已整合到4d947098，功能pin同为ccb6268。
+Core ccb6268已发布main，两端功能pin一致。iOS现已正式发布0.3.5/build17（7c0d61b）：CI41791891766、公开IPA HTTP200/29,478,760字节、摘要/CRC/App与Widget/最低26.0/Core标记，以及AltStore三个入口均通过，详见[STATUS](STATUS.md)。UI只编译；bac68cda组合的443/82及31项XCTest计数保留原执行归属。桌面本地包仍为0.2.9/fe101db/Core ccb6268；Windows安装媒体和Mac开发WebView证据按各自提交范围记录。
 
 ## 当前主线:先完成底层、架构与基建(2026-11-04)
 
@@ -62,7 +62,7 @@ Lead 已构建并实际安装 0.2.7/`bf9cbd9`(Core `4f213ff`)。ZIP 21,566,978 b
 
 | 项目 | 当前事实 | 主要缺口 |
 |---|---|---|
-| Nekularity | **0.3.4/build16已发布并核验**:66454e8/Core3be57b5,CI41749091496成功,IPA29,459,904字节;三个AltStore入口一致 | Mac436 tests/81 suites与下载定向UI2/2通过;历史完整UI27/0/0仍归9498b4c。真机、后台/锁屏、PiP、Live Activity和真实账号单列交接 |
+| Nekularity | **0.3.5/build17已发布并核验**：7c0d61b/Core ccb6268，CI41791891766成功，IPA29,478,760字节；三个AltStore入口一致 | 发布CI执行Kit并编译UI；旧完整UI27/0/0及下载定向2/2保留原提交归属。真机、后台/锁屏、PiP、Live Activity和真实账号单列 |
 | Nekophage | MyGo主窗+WebView阅读/播放；当前本地包0.2.9/fe101db、Core ccb6268 | 七项工程、安装版English/既有3.03秒恢复、鉴权/Range206、卸载资料保留通过；前台字幕关闭被USER_INPUT_ACTIVE拒绝，清理终止不算正常关窗。Mac4d947098非Markdown源码的ccb开发阅读/HLS已验，安装包/签名/公证与公开目的地单列 |
 | VeneraCat Core | 共享漫画/视频/备份/AI 协议逻辑;网络与系统能力交给客户端 | JS 引擎的少量兼容限制、客户端边界契约仍需维护;Sender 没有生产调用方 |
 
@@ -81,7 +81,7 @@ Nekularity 早期完整 UI 验证提交 `5d9a5a1dfd5ce0e9d58fead6371d5cc4b3f842c
 | 顺序 | 目标 | 完成条件 |
 |---|---|---|
 | P0-1 | 收口当前 iOS 回归(合并树 `9498b4c` 已完成) | 同一提交上 Swift 416/76 suites、完整 UI 27 PASS/0 FAIL/0 SKIP;三类计数为 23+3+1,xcresult 与日志一致。中英文 STATUS/UNVERIFIED 已同步;单独分支的通过与负向对照保留原提交归属,不替代本轮整包 |
-| P0-2 | 发布当前修复测试版(**0.3.4/build16已发布**) | 66454e8/Core3be57b5的CI41749091496首次成功;公开IPA HTTP200/29,459,904字节、GitHub摘要/CRC/App与Widget0.3.4/16/最低26.0已核验;AltStore刷新41752744406及三个公开入口一致。CI只编译UI,模拟器执行单列,真机签名安装仍需用户设备 |
+| P0-2 | 发布当前修复测试版（**0.3.5/build17已发布**） | 7c0d61b/Core ccb6268的CI41791891766成功；公开IPA HTTP200/29,478,760字节、资产摘要/CRC/App与Widget0.3.5/17/最低26.0通过；AltStore刷新41797483555及三个公开入口一致。CI只编译UI，真机签名安装仍需设备 |
 | P1-1 | 把发现页和主题界面验证完整 | 本轮三项链接用例及8张明暗/横竖空状态截图已记录,竖屏402×874pt、横屏874×402pt;最大辅助字号单列修复已过Mac定向验收,发现/设置末端可操作,普通字号两列与顺序保留;同名下载分组修复也通过。12张封面的明暗/横竖四组合已实测;详情进入仅证明导航,不扩称未安装源的内容加载,详见UNVERIFIED。 长按进入编排、拖放顺序持久化、小/中尺寸持久化;主题 HTTPS 安装成功与错误显示;浅/深色、窄/宽屏截图核对,区分模拟器宽度与真实折叠设备 |
 | P1-2 | 下载与播放真机闭环 | 本地模拟器已验HLS中文/英文/关闭及Referer/Range206;手势/按钮进度保存通过,30秒夹具的两种关闭及页面重开恢复已通过;原10秒的回零调用原因仍不确定。 下载开始/结束时 Live Activity、锁屏/灵动岛;断网阅读;播放/字幕/续播/画中画/后台音频;记录版本、设备、动作、结果。可先用本地媒体与夹具完成不需账号的部分 |
 | P1-3 | iOS AI 两条接入的真实闭环 | **本地签名模拟器闭环已通过**(3be57b5候选):标准API三协议整包答复、模型目录、UI停止后的同请求peer_closed、模型目录401与重启凭据恢复;Magpie登录/模型、正文尾部释放前首段、UI停止peer_closed、重启认证恢复与刷新总数1。原始证据分别为 `/tmp/nk-standardai-acceptance/evidence/`、`/tmp/nk-d367-acceptance/ios-diagnostic/`。产品绑定修复与两条真实Core回归已随3574346受测组合整合main,CI/IPA核验通过。标准AI页面仍整包;真机、真实供应商账号和零正文完全扣住时的提前响应头行为不在通过范围 |

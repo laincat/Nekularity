@@ -2,6 +2,14 @@
 
 [English](UNVERIFIED.en.md) | 简体中文
 
+## 0.3.5 / build 17 正式发布与订阅验收（2026-11-04）
+
+公开tag `v0.3.5` 指向 `7c0d61bf03b774e804abfd4297e065bcb87a3e65`，Core 为 `ccb626825bc116dad3b3e9a082867fd22c09caf4`。精确发布提交的 CI41791891766 已通过 Core/Kit、设备App构建、UI测试编译、IPA打包和发布；没有执行UI。相对已验收组合bac68cda，非Markdown差异只有project.yml中的App/Widget版本元数据，原443 tests/82 suites及31项XCTest计数仍归该组合原日志。
+
+公开IPA下载HTTP200、29,478,760字节，SHA-256 `34091cbbaa23db16b95f34d1ee86a4909c3b0e99a649216274f6760efcc801bd` 与GitHub资产一致；ZIP CRC、App/Widget0.3.5/17、最低iOS26.0和完整Core标记通过。双语Release说明已写入并认证重读一致。AltStore刷新41797483555成功，GitHub Raw、CNB和固定Release三个入口均HTTP200，旧式字段、扁平列表及stable轨道与新包版本/build/大小/最低系统/地址一致；图标HTTP200并实际解码通过。
+
+交付[0.3.5未签名IPA及回执](../../deliveries/2026-11-04-nekularity-035/README.md)，原始验收记录位于 `E:/Temp/nk-ios-035-evidence/`。本次不增加历史完整UI计数；签名真机、后台/锁屏、Live Activity、PiP、实际扬声器及真实账号仍单列。以下较早条目保留各自执行时的状态与证据范围。
+
 ## Core ccb6268 已整合，CI 与候选 IPA 已核验（2026-11-04）
 
 当前iOS主线pin更新为 `ccb626825bc116dad3b3e9a082867fd22c09caf4`。受测组合 `bac68cdad3920ef76b299f59a2a8196e9b518add` 的CI41780802099通过Core构建、Kit单测、设备App构建、UITests编译和IPA打包。下载的原始日志确认Swift Testing为443 tests / 82 suites通过，另有XCTest31项、0失败；UI只编译，没有执行。
