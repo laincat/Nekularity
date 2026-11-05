@@ -30,6 +30,12 @@ Not captured: the settings page scrolled to its 外观 section (the temporary te
 
 Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
 
+## Following Core 971146f: the challenge rule crosses the bridge whole (2026-11-04)
+
+Core main moves to `971146f` (tree `ba7d3620`): `hostBridge.Verify` now carries `sameHost`, and the clearance it returns accepts `query`. iOS's `Challenge` therefore really receives the host condition; the `ChallengeRule`, `VerificationSession` and `VerificationOutcome` changes live on `feat/challenge-query` and merge into main after the Mac compiles and tests them.
+
+**Boundary**: there is no Swift toolchain here, so only the syntax parse passed; nothing is compiled or Kit-tested, and this is not counted as verified.
+
 ## Following Core 7ade130a: a verification page no longer reaches the source (2026-11-04)
 
 Core main moves to `7ade130a` (tree `790ad465`): the edge challenge page (the MangaDex shape) was not recognised, so its HTML reached the source and `JSON.parse` failed; both kinds now take the same path, `host.Clearance.Query` carries the parameters back to the retry, and the completion rule supports `SameHost`. The iOS pin follows, and the Swift syntax, documentation and pin checks pass; the iOS verification flow will consume that field later.

@@ -30,6 +30,12 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 日志与逐元素测量在 Mac `/tmp/nk-ios-037-visual/`（`visual-summary.json`、`element-contrast.json`）。
 
+## 跟随 Core 971146f：挑战规则整体过桥（2026-11-04）
+
+Core 主线升到 `971146f`（tree `ba7d3620`）：`hostBridge.Verify` 补上 `sameHost`，返回的 clearance 接受 `query`。iOS 的 `Challenge` 因此能真正拿到主机条件；`ChallengeRule`、`VerificationSession`、`VerificationOutcome` 的改动见 `feat/challenge-query` 分支，待 Mac 编译与测试后合入 main。
+
+**边界**：本机无 Swift 工具链，只有语法解析通过；未编译、未跑 Kit 测试，不计为已验证。
+
 ## 跟随 Core 7ade130a：验证页不再把 HTML 交给源（2026-11-04）
 
 Core 主线升到 `7ade130a`（tree `790ad465`）：边缘验证页（MangaDex 形态）此前未被识别，HTML 直接交给源导致 `JSON.parse` 失败；现在两种挑战走同一通道，`host.Clearance.Query` 把验证带回的参数交给重试，完成规则支持 `SameHost`。iOS pin 已跟随，Swift 语法、文档与 pin 检查通过；iOS 的验证流程后续接入该字段。
