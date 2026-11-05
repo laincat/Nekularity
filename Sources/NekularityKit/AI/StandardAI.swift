@@ -148,6 +148,29 @@ public final class StandardAI: @unchecked Sendable {
                                raw: answer.bodyText, streamed: answer.streamed)
     }
 
+    /// Sends a question and reports the answer as it is written.
+    ///
+    /// `onDelta` is called on the transport's queue for each piece, in order;
+    /// the returned reply carries the whole text. A stream that ends without
+    /// saying it completed is an error, because a truncated answer shown as a
+    /// whole one is worse than an error.
+    public func replyStreaming(config: StandardAIConfig, apiKey: String, messages: [StandardMessage],
+                               onDelta: @escaping @Sendable (String) -> Void) async throws -> StandardAIReply {
+        guard !messages.isEmpty else { throw StandardAIError("没有要发送的消息") }
+        let trimmedModel = config.model.trimmingCharacters(in: .whitespaces)
+        guard !trimmedModel.isEmpty else { throw StandardAIError("先填一个模型名") }
+        let body = try Self.requestBody(config: config, model: trimmedModel, messages: messages, stream: true)
+        let answer = try await core.streamAIRequest(configJSON: try config.wireJSON(apiKey: apiKey),
+                                                    bodyJSON: body, name: config.protocol.rawValue) { delta in
+            onDelta(delta)
+        }
+        guard (200..<300).contains(answer.status) else {
+            throw StandardAIError("接口返回 HTTP \(answer.status)")
+        }
+        return StandardAIReply(status: answer.status, text: answer.bodyText,
+                               raw: answer.bodyText, streamed: answer.streamed)
+    }
+
     /// The models the endpoint lists. A vendor that refuses to list them is an
     /// error, not an empty catalog.
     public func models(config: StandardAIConfig, apiKey: String) async throws -> [String] {
@@ -171,8 +194,9 @@ public final class StandardAI: @unchecked Sendable {
     ///
     /// Static so it can be checked without starting a Core runtime: the body is
     /// the one part of this file with rules worth pinning.
-    public static func requestBody(config: StandardAIConfig, model: String, messages: [StandardMessage]) throws -> String {
-        var doc: [String: Any] = ["model": model, "stream": false]
+    public static func requestBody(config: StandardAIConfig, model: String, messages: [StandardMessage],
+                                   stream: Bool = false) throws -> String {
+        var doc: [String: Any] = ["model": model, "stream": stream]
         switch config.protocol {
         case .messages:
             doc["messages"] = messages.map { ["role": $0.role, "content": $0.content] }

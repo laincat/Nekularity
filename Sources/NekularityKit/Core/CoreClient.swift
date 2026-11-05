@@ -242,6 +242,92 @@ public final class CoreClient: @unchecked Sendable {
         return try JSONDecoder().decode(StandardAIAnswer.self, from: Data(out.utf8))
     }
 
+    /// Sends a standard request on this client's own connection and hands each
+    /// piece of the answer's text to `onDelta` as it arrives.
+    ///
+    /// The connection is the client's, so cancellation, cookies and certificates
+    /// behave as they do everywhere else; the protocol's SSE parsing is Core's,
+    /// so there is one implementation shared with every other caller.
+    public func streamAIRequest(configJSON: String, bodyJSON: String, name: String,
+                                onDelta: @escaping @Sendable (String) -> Void) async throws -> StandardAIAnswer {
+        let wire = try await buildAIRequest(configJSON: configJSON, bodyJSON: bodyJSON)
+        guard let url = URL(string: wire.url) else { throw CoreError("invalid URL \(wire.url)") }
+        var headers = wire.headers
+        if headers.keys.first(where: { $0.caseInsensitiveCompare("Accept") == .orderedSame }) == nil {
+            headers["Accept"] = ["text/event-stream"]
+        }
+        var body: Data?
+        if let encoded = wire.bodyBase64, !encoded.isEmpty {
+            body = Data(base64Encoded: encoded)
+        }
+
+        var openError: NSError?
+        let handle = MobileAIStreamOpen(name, &openError)
+        if let openError { throw CoreError(openError.localizedDescription) }
+        defer { MobileAIStreamClose(handle) }
+
+        let collector = StreamCollector(handle: handle, onDelta: onDelta)
+        let response = try await host.transport.sendStreaming(.init(
+            id: Int64.random(in: 1_000_000..<2_000_000),
+            method: wire.method,
+            url: url,
+            headers: headers,
+            body: body,
+            useCookies: wire.cookies ?? false,
+            partition: wire.partition ?? "")) { data in
+            collector.push(data)
+        }
+        if let failure = collector.failure { throw failure }
+
+        var doneError: NSError?
+        let done = MobileAIStreamDone(handle, &doneError)
+        if let doneError { throw CoreError(doneError.localizedDescription) }
+        guard done else { throw CoreError("AI stream ended before completion") }
+        return StandardAIAnswer(status: response.status, headers: response.headers,
+                                bodyText: collector.text, finalURL: response.finalURL.absoluteString,
+                                streamed: true)
+    }
+
+    /// Collects deltas as the body arrives.
+    ///
+    /// The transport hands chunks on its own queue, so the text and the failure
+    /// are behind a lock; `onDelta` is called in arrival order.
+    private final class StreamCollector: @unchecked Sendable {
+        private let lock = NSLock()
+        private let handle: Int64
+        private let onDelta: @Sendable (String) -> Void
+        private(set) var failure: Error?
+
+        init(handle: Int64, onDelta: @escaping @Sendable (String) -> Void) {
+            self.handle = handle
+            self.onDelta = onDelta
+        }
+
+        var text: String {
+            lock.lock(); defer { lock.unlock() }
+            return _text
+        }
+
+        private var _text = ""
+
+        func push(_ data: Data) {
+            var error: NSError?
+            let json = MobileAIStreamPush(handle, data.base64EncodedString(), &error)
+            if let error {
+                lock.lock(); failure = CoreError(error.localizedDescription); lock.unlock()
+                return
+            }
+            guard let json, let raw = json.data(using: .utf8),
+                  let deltas = try? JSONDecoder().decode([String].self, from: raw) else { return }
+            lock.lock()
+            for delta in deltas {
+                _text += delta
+                onDelta(delta)
+            }
+            lock.unlock()
+        }
+    }
+
     // MARK: Backups
 
     /// Reads a `.venera` file and returns what it holds. Core unwinds the
