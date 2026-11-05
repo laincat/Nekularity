@@ -2,6 +2,11 @@ name: Build iOS IPA
 
 on:
   workflow_dispatch:
+    inputs:
+      ui_tests:
+        description: 'Run the interface suite on a simulator after building it'
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*'
@@ -112,6 +117,39 @@ jobs:
             ${{ runner.temp }}/uitests-build.log
             ${{ runner.temp }}/uitests-build.xcresult
             Nekularity.xcodeproj/project.pbxproj
+          if-no-files-found: warn
+      # Runs what the step above only compiled. Off by default so a release tag
+      # stays fast; a dispatched run asks for it when a page's behaviour is the
+      # question rather than a compile error. The sources are not seeded, so the
+      # cases that need them skip themselves and say so in the log.
+      - name: Run the interface tests
+        if: inputs.ui_tests
+        run: |
+          set -o pipefail
+          device=$(xcrun simctl list devices available \
+            | sed -n 's/^ *\(iPhone[^(]*\) (.*/\1/p' | head -1)
+          if [ -z "$device" ]; then
+            echo 'no iPhone simulator is available' >&2
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+          echo "running on $device"
+          xcrun simctl boot "$device" || true
+          xcrun simctl bootstatus "$device" -b
+          xcodebuild -project Nekularity.xcodeproj -scheme Nekularity \
+            -destination "platform=iOS Simulator,name=$device" -jobs 2 -quiet \
+            -derivedDataPath "$RUNNER_TEMP/nekularity-derived-ui" \
+            -resultBundlePath "$RUNNER_TEMP/uitests-run.xcresult" \
+            COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGNING_ALLOWED=NO test-without-building \
+            2>&1 | tee "$RUNNER_TEMP/uitests-run.log"
+      - name: Keep interface run diagnostics
+        if: always() && inputs.ui_tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nekularity-ui-run-diagnostics
+          path: |
+            ${{ runner.temp }}/uitests-run.log
+            ${{ runner.temp }}/uitests-run.xcresult
           if-no-files-found: warn
       - name: Package unsigned IPA
         run: |
