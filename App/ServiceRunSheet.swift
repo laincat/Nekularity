@@ -86,14 +86,13 @@ struct ServiceRunSheet: View {
     }
 
     private func run() {
-        let text = payload.trimmingCharacters(in: .whitespacesAndNewlines)
-        let body = text.isEmpty ? "null" : text
-        guard (try? JSONSerialization.jsonObject(with: Data(body.utf8))) != nil else {
+        guard ServicePayload.isValid(payload) else {
             problem = "参数不是合法 JSON，未发送。"
             return
         }
         problem = nil
         let chosen = method
+        let body = ServicePayload.normalized(payload)
         dismiss()
         Task { await services.call(record, method: chosen, payload: body, granted: granted) }
     }
