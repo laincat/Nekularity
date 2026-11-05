@@ -100,3 +100,31 @@ import Testing
     await store.describe(two)
     #expect(store.offeredMethods(for: one.id).isEmpty, "one package's methods must not answer for another")
 }
+
+/// The account values a person entered are what a run hands to Core, and
+/// nothing else.
+@MainActor
+@Test func aRunPassesOnlyTheStoredAccountValues() async {
+    let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appending(path: "nk-services-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let accounts = MemoryServiceAccounts()
+    try? accounts.set(service: "fixture", key: "token", value: "s3cret")
+    let store = ServiceStore(directory: directory, accounts: accounts)
+    #expect(store.accounts.keys(service: "fixture") == ["token"])
+    #expect(store.accounts.keys(service: "other").isEmpty)
+
+    try? accounts.remove(service: "fixture", key: "token")
+    #expect(store.accounts.keys(service: "fixture").isEmpty)
+}
+
+/// A service whose account values were never entered still cannot read them:
+/// the store hands Core an empty set rather than inventing one.
+@MainActor
+@Test func aRunWithoutAccountValuesSendsNone() async {
+    let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appending(path: "nk-services-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let store = ServiceStore(directory: directory, accounts: MemoryServiceAccounts())
+    #expect(store.accounts.keys(service: "fixture").isEmpty)
+}

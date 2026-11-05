@@ -14,6 +14,8 @@ struct ServicesView: View {
     @State private var pendingRemoval: ServiceRecord?
     /// The package whose permissions the user is about to allow for one run.
     @State private var pendingRun: ServiceRecord?
+    /// The package whose account values are being edited.
+    @State private var accountsFor: ServiceRecord?
 
     var body: some View {
         List {
@@ -103,6 +105,9 @@ struct ServicesView: View {
                  ? "\(record.name) 不申请任何权限。它说能做的事：\(Self.offeredText(services.offeredMethods(for: record.id)))。"
                  : "\(record.name) 申请：\(names.joined(separator: "、"))。它说能做的事：\(Self.offeredText(services.offeredMethods(for: record.id)))。这些权限只在这次调用期间允许，它仍然读不到账号值。")
         }
+        .sheet(item: $accountsFor) { record in
+            ServiceAccountsView(record: record)
+        }
         .task { services.reload() }
         .refreshable { services.reload() }
     }
@@ -152,6 +157,11 @@ struct ServicesView: View {
                 askToRun(record)
             } label: {
                 Label("运行…", systemImage: "play")
+            }
+            Button {
+                accountsFor = record
+            } label: {
+                Label("账号值…", systemImage: "key")
             }
         }
     }

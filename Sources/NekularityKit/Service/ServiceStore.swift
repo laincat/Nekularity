@@ -38,11 +38,16 @@ public final class ServiceStore {
     /// This client's side of Core, needed to run a service: the package's HTTP
     /// goes through it, so the transport, cookies and certificates stay here.
     private let host: CoreHost?
+    /// The account values the person entered for a service. Only what is here is
+    /// handed to Core for one call, so a service cannot read anything else.
+    public let accounts: ServiceAccounts
     /// Services live beside the sources of the environment they belong to, so a
     /// profile switch takes them along without anyone copying anything.
-    public init(directory: URL, host: CoreHost? = nil) {
+    public init(directory: URL, host: CoreHost? = nil,
+                accounts: ServiceAccounts = MemoryServiceAccounts()) {
         self.directory = directory
         self.host = host
+        self.accounts = accounts
     }
 
     public var dataDir: String { directory.path(percentEncoded: false) }
@@ -141,6 +146,7 @@ public final class ServiceStore {
     /// it with what the package asked for, so an allowance can only narrow.
     public func call(_ record: ServiceRecord, method: String, payload: String = "null",
                      granted: [String]) async {
+        let secrets = (try? accounts.values(service: record.id)) ?? [:]
         guard let host else {
             run = RunResult(id: record.id, method: method,
                             text: "没有宿主，无法运行服务", ok: false)
@@ -151,7 +157,8 @@ public final class ServiceStore {
         do {
             let text = try await Task.detached { [dataDir] in
                 try CoreService.call(host: host, dataDir: dataDir, id: record.id,
-                                     method: method, payload: payload, granted: granted)
+                                     method: method, payload: payload, granted: granted,
+                                     secrets: secrets)
             }.value
             run = RunResult(id: record.id, method: method, text: text, ok: true)
         } catch {
