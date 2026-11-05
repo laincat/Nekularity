@@ -262,7 +262,9 @@ public final class CoreClient: @unchecked Sendable {
         }
 
         var openError: NSError?
-        let handle = MobileAIStreamOpen(name, &openError)
+        guard let handle = MobileAIStreamOpen(name, &openError) else {
+            throw CoreError(openError?.localizedDescription ?? "could not open a stream decoder")
+        }
         if let openError { throw CoreError(openError.localizedDescription) }
         defer { MobileAIStreamClose(handle) }
 
@@ -282,7 +284,7 @@ public final class CoreClient: @unchecked Sendable {
         var doneError: NSError?
         let done = MobileAIStreamDone(handle, &doneError)
         if let doneError { throw CoreError(doneError.localizedDescription) }
-        guard done else { throw CoreError("AI stream ended before completion") }
+        guard done == "true" else { throw CoreError("AI stream ended before completion") }
         return StandardAIAnswer(status: response.status, headers: response.headers,
                                 bodyText: collector.text, finalURL: response.finalURL.absoluteString,
                                 streamed: true)
@@ -294,11 +296,11 @@ public final class CoreClient: @unchecked Sendable {
     /// are behind a lock; `onDelta` is called in arrival order.
     private final class StreamCollector: @unchecked Sendable {
         private let lock = NSLock()
-        private let handle: Int64
+        private let handle: String
         private let onDelta: @Sendable (String) -> Void
         private(set) var failure: Error?
 
-        init(handle: Int64, onDelta: @escaping @Sendable (String) -> Void) {
+        init(handle: String, onDelta: @escaping @Sendable (String) -> Void) {
             self.handle = handle
             self.onDelta = onDelta
         }

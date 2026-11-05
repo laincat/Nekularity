@@ -7,7 +7,7 @@ import Foundation
 /// open a terminal. `scripts/check-core-pin.sh` fails when the two disagree —
 /// a stale constant would be worse than none.
 public enum CoreVersion {
-    public static let pinned = "6647097a8d7a7f3b34d639e07c1b53e77efca83f"
+    public static let pinned = "49f245291f34a7896d135af4ad397e6dc4438aad"
 
     /// The first twelve characters: enough to identify a build, short enough to
     /// read in a footer.
