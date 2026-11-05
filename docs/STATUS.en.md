@@ -30,6 +30,10 @@ Not captured: the settings page scrolled to its 外观 section (the temporary te
 
 Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
 
+## Following Core 0f1e7b8: the Cloudflare rule corrected (2026-11-04)
+
+Core main moves to `0f1e7b8` (tree `80b14e97`): the Cloudflare rule is now "the interstitial markers are gone and the browser is back on the guarded host", without waiting for `/cdn-cgi/challenge-platform/` and without insisting on `cf_clearance`. iOS follows the pin only; `feat/challenge-query` still waits for a Mac compile.
+
 ## Following Core 518f446: a busy service is left alone (2026-11-04)
 
 Core main moves to `518f446` (tree `a7f402cb`): resident services count calls in flight and both `Sweep` and LRU eviction skip busy ones. iOS follows the pin only; the Swift work on `feat/challenge-query` still waits for a Mac compile.

@@ -30,6 +30,10 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 日志与逐元素测量在 Mac `/tmp/nk-ios-037-visual/`（`visual-summary.json`、`element-contrast.json`）。
 
+## 跟随 Core 0f1e7b8：Cloudflare 完成规则修正（2026-11-04）
+
+Core 主线升到 `0f1e7b8`（tree `80b14e97`）：Cloudflare 完成规则改为「插页标记消失且回到被保护主机」，不等 `/cdn-cgi/challenge-platform/`、也不强制 `cf_clearance`。iOS 只跟随 pin；`feat/challenge-query` 分支仍待 Mac 编译。
+
 ## 跟随 Core 518f446：忙碌的服务不被清扫（2026-11-04）
 
 Core 主线升到 `518f446`（tree `a7f402cb`）：常驻服务记录进行中的调用数，`Sweep` 与 LRU 淘汰跳过忙碌实例。iOS 只跟随 pin；`feat/challenge-query` 分支的 Swift 改动仍待 Mac 编译。
