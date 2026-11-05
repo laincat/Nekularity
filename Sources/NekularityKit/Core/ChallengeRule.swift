@@ -13,17 +13,28 @@ public enum ChallengeRule {
         public var html: String
         public var url: URL
         public var cookieNames: Set<String>
+        /// The host the challenge guards, from `Challenge.url`. A rule with
+        /// `sameHost` needs it; a cookie or marker rule does not.
+        public var guardedHost: String?
 
-        public init(html: String, url: URL, cookieNames: Set<String>) {
+        public init(html: String, url: URL, cookieNames: Set<String>, guardedHost: String? = nil) {
             self.html = html
             self.url = url
             self.cookieNames = cookieNames
+            self.guardedHost = guardedHost
         }
 
         public func satisfied(absentMarkers: [String], requiredCookies: [String],
-                              requiredQueryParams: [String]) -> Bool {
-            if absentMarkers.isEmpty && requiredCookies.isEmpty && requiredQueryParams.isEmpty {
+                              requiredQueryParams: [String], sameHost: Bool = false) -> Bool {
+            if absentMarkers.isEmpty && requiredCookies.isEmpty && requiredQueryParams.isEmpty && !sameHost {
                 return false
+            }
+            if sameHost {
+                // Being back on the guarded host is the whole condition for the
+                // edge shape; a window that has not loaded anything has no host,
+                // and the challenge page itself lives elsewhere.
+                guard let want = guardedHost?.lowercased(), !want.isEmpty,
+                      let have = url.host()?.lowercased(), have == want else { return false }
             }
             for marker in absentMarkers where !marker.isEmpty && html.contains(marker) {
                 return false

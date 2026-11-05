@@ -82,16 +82,16 @@ final class PromptCenter: SourceUI {
     func showLoading(id: Int64) { loading.insert(id) }
     func hideLoading(id: Int64) { loading.remove(id) }
 
-    func verify(_ challenge: Challenge) async -> String? {
+    func verify(_ challenge: Challenge) async -> VerificationOutcome? {
         let session = VerificationSession(challenge: challenge, cookies: cookies, userAgent: userAgent)
         enqueue(.verify(session))
-        let ua = await session.run()
+        let outcome = await session.run()
         if case .verify(let s)? = current?.kind, s === session {
             advance()
         } else {
             queue.removeAll { if case .verify(let s) = $0.kind { s === session } else { false } }
         }
-        return ua
+        return outcome
     }
 }
 

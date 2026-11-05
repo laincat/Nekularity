@@ -21,15 +21,28 @@ public protocol SourceUI: AnyObject {
     func open(url: URL)
     func showLoading(id: Int64)
     func hideLoading(id: Int64)
-    /// Runs a human-verification page and returns the WebView's User-Agent
-    /// after the user passes it, or nil when they give up.
-    func verify(_ challenge: Challenge) async -> String?
+    /// Runs a human-verification page and reports what it cleared the way
+    /// with, or nil when the user gives up.
+    func verify(_ challenge: Challenge) async -> VerificationOutcome?
 }
 
 public struct DialogButton: Decodable, Sendable, Hashable {
     public var text: String
     /// "text", "filled" or "danger".
     public var style: String
+}
+
+/// What a passed challenge hands back. A cookie-based clearance binds to the
+/// WebView's User-Agent; an edge clearance comes back as query parameters of
+/// the guarded address, and there is no cookie at all.
+public struct VerificationOutcome: Sendable {
+    public var userAgent: String
+    public var query: [String: String]
+
+    public init(userAgent: String, query: [String: String] = [:]) {
+        self.userAgent = userAgent
+        self.query = query
+    }
 }
 
 /// A page Core wants the user to pass in a browser.
@@ -42,6 +55,10 @@ public struct Challenge: Decodable, Sendable {
     /// Parameters that must be in the page's own query. A challenge that solves
     /// itself in page script records its result here instead of in a cookie.
     public var requiredQueryParams: [String]?
+    /// The page must be back on the host of `url`. A challenge page usually
+    /// lives elsewhere, so this is what says it has handed the browser over;
+    /// without it a blank window would satisfy a markers-only rule.
+    public var sameHost: Bool?
 }
 
 /// The client side of Core: implements `MobileHostProtocol`.
@@ -157,11 +174,15 @@ public final class CoreHost: NSObject, MobileHostProtocol, @unchecked Sendable {
             Self.fail(error, "invalid challenge")
             return ""
         }
-        guard let ua = withUI(String?.none, { await $0.verify(c) }) else {
+        guard let outcome = withUI(VerificationOutcome?.none, { await $0.verify(c) }) else {
             Self.fail(error, "verification dismissed")
             return ""
         }
-        return Self.json(["userAgent": ua])
+        var body: [String: Any] = ["userAgent": outcome.userAgent]
+        if !outcome.query.isEmpty {
+            body["query"] = outcome.query
+        }
+        return (try? JSONSerialization.data(withJSONObject: body)).flatMap { String(decoding: $0, as: UTF8.self) } ?? "null"
     }
 
     // MARK: Storage
