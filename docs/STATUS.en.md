@@ -1,5 +1,19 @@
 English · [简体中文](STATUS.md)
 
+## A standard-protocol answer is no longer drawn twice (2026-11-05)
+
+The Mac evidence found a real defect: one question on the standard-protocol screen drew **two identical answers**, the second carrying "整包返回 · 流式尚未接通"; the fixture received exactly one request, so the duplication was in **the client's rendering** - `App/StandardAIView.swift` kept the answer in a `reply` property *and* appended the same text to `messages`, and drew both.
+
+The fix gathers the conversation into one testable type, `StandardConversation` (Kit):
+
+- `messages` holds only **finished** turns and `pending` holds **the newest** answer, so an answer lives in exactly one place
+- the next question folds `pending` into `messages` before sending, giving the history "question, answer, question"
+- a failure leaves the question alone (the error sits beside something the user asked); a stop keeps the partial answer, which the next question folds into the record
+
+Regressions (`StandardConversationTests`, five cases): an answer drawn once, the next question carrying both sides, a failure leaving only the question, a stopped answer still becoming a turn, and several turns staying ordered without duplicates.
+
+**Boundary**: these are Kit unit tests plus a view refactor; re-running the scenario on a simulator needs the next Mac round. That the fixture saw one request is what the worker measured on the simulator.
+
 ## iOS reaches Core's five service entry points (2026-11-05)
 
 `Sources/NekularityKit/Core/CoreService.swift` wraps Core's `mobile` exports `ServiceInstall`/`ServiceList`/`ServiceRemove`/`ServiceManifest`/`ServiceSource` as a Swift `CoreService`, with `ServiceRecord` (including the optional `sha256` and `permissions`) and `CoreServiceError`.

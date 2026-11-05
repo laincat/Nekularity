@@ -1,5 +1,19 @@
 [English](STATUS.en.md) · 简体中文
 
+## 标准接口的回复不再画两遍（2026-11-05）
+
+Mac 取证发现一个真实缺陷：标准接口问一次，界面出现**两条相同回复**，第二条带着「整包返回 · 流式尚未接通」；夹具只收到 1 次请求，所以是**客户端渲染重复**——`App/StandardAIView.swift` 同时把回复存进 `reply` 又把同一条追加进 `messages`，两处都渲染。
+
+修法是把会话状态收到一个可测的类型里：`StandardConversation`（Kit）。
+
+- `messages` 只放**已结束**的轮次，`pending` 只放**最新那条**回答；同一时刻回答只在一处
+- 下一次提问时把 `pending` 折进 `messages` 再发，历史顺序为「问、答、问」
+- 失败时只留问题（错误显示在用户真正问过的东西旁边）；中途停止则保留下半截回答，下次提问时折进记录
+
+回归（`StandardConversationTests`，5 条）：回答只画一次、下一次提问带全双方、失败只留问题、停止的回答仍成轮、多轮不重复不串序。
+
+**边界**：这是 Kit 层单测与视图重构；真机/模拟器上重跑该场景要等下一轮 Mac 取证。夹具只收 1 次请求这一点，是 Worker 在模拟器上实测记录的。
+
 ## iOS 接上 Core 服务包的五个入口（2026-11-05）
 
 `Sources/NekularityKit/Core/CoreService.swift` 把 Core `mobile` 包的 `ServiceInstall`/`ServiceList`/`ServiceRemove`/`ServiceManifest`/`ServiceSource` 包成 Swift 可用的 `CoreService`，连同 `ServiceRecord`（含 `sha256`、`permissions` 等可选字段）与 `CoreServiceError`。

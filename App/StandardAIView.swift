@@ -18,8 +18,10 @@ struct StandardAIView: View {
     @State private var models: [String] = []
     @State private var modelsNote: String?
     @State private var prompt = ""
-    @State private var messages: [StandardMessage] = []
-    @State private var reply: StandardAIReply?
+    /// One place holds the answer, so the screen cannot draw it twice: the view
+    /// once kept a `reply` *and* appended it to a message list, and both were
+    /// rendered.
+    @State private var conversation = StandardConversation()
     @State private var error: String?
     @State private var request = StandardAIRequest()
 
@@ -81,14 +83,14 @@ struct StandardAIView: View {
             }
 
             Section("对话") {
-                ForEach(Array(messages.enumerated()), id: \.offset) { _, message in
+                ForEach(Array(conversation.messages.enumerated()), id: \.offset) { _, message in
                     VStack(alignment: .leading, spacing: 2) {
                         Text(message.role == "user" ? "你" : config.protocol.vendor)
                             .font(.caption).foregroundStyle(.secondary)
                         Text(message.content).textSelection(.enabled)
                     }
                 }
-                if let reply {
+                if let reply = conversation.pending {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(config.protocol.vendor).font(.caption).foregroundStyle(.secondary)
                         Text(reply.text).textSelection(.enabled)
@@ -187,17 +189,15 @@ struct StandardAIView: View {
         guard !text.isEmpty, !busy else { return }
         prompt = ""
         error = nil
-        reply = nil
-        messages.append(StandardMessage(role: "user", content: text))
-        let history = messages
+        let history = conversation.ask(text)
         let snapshot = config
         let key = apiKey
         request.start(operation: { [client, snapshot, key, history] in
             try await client.reply(config: snapshot, apiKey: key, messages: history)
         }, receive: { answer in
-            self.reply = answer
-            self.messages.append(StandardMessage(role: "assistant", content: answer.text))
+            self.conversation.answered(answer)
         }, failure: { error in
+            self.conversation.failed()
             self.error = error.localizedDescription
         })
     }
