@@ -1562,6 +1562,13 @@ final class NekularityUITests: XCTestCase {
         attach("board-before-drag")
 
         edit.tap()
+        // The button's own label is the cheapest proof that arranging started. A
+        // drag sent while the board is still animating its controls lands on a
+        // card that is moving, and a runner that never waited read that as "the
+        // drag does nothing".
+        let arrangeBy = Date().addingTimeInterval(10)
+        while edit.label != "完成" && Date() < arrangeBy { usleep(200_000) }
+        XCTAssertEqual(edit.label, "完成", "编辑 did not put the board into arranging")
         XCTAssertTrue(handle(second).waitForExistence(timeout: 10),
                       "arranging shows no handle for \(second)")
 
