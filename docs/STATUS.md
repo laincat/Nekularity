@@ -1,5 +1,18 @@
 [English](STATUS.en.md) · 简体中文
 
+## 0.3.9 / build 21（2026-11-05）
+
+带上这一轮的全部修复与能力：
+
+- 标准接口的一次提问不再画两条回复（`StandardConversation`，附 5 条单测）
+- iOS 有了服务包界面：列表、导入（摘要由客户端对实际字节计算）、移除，被拒绝的包会说明原因
+- 服务包可以**运行**：`CoreService.call` 把本机 Host 交给 Core，服务的 fetch 走 App 的传输，权限在运行前由用户确认、由 Core 取交集收窄
+- Core pin `0f1e7b8` → `998f3b9`
+
+## 坏包拒绝文案的界面复验（Mac，iPhone 17 / iOS 27.2，`e7c5507`）
+
+走 App 自己的入口导入缺 `service.json` 的包，界面显示红色提示：**`服务包未被接受：service: package has no service.json`**，位于「已安装」上方；列表仍是「还没有服务」，被拒绝的包没有进入列表。用例 `ZZServicesRejectTests` **PASS 34.1 秒**。截图 `rejected-wording.png`，日志 `/tmp/nk-services-ui/run3.log`。
+
 ## iOS 能把服务跑起来了（`bef0181`，pin `998f3b9`）
 
 Core 新增 `mobile.ServiceCall` 之后，客户端把最后一段接上：

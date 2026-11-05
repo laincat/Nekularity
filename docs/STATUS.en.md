@@ -1,5 +1,18 @@
 English · [简体中文](STATUS.md)
 
+## 0.3.9 / build 21 (2026-11-05)
+
+Carries everything this round produced:
+
+- one question on the standard-protocol screen no longer draws two answers (`StandardConversation`, with five unit tests)
+- iOS has a service screen: list, import (the client hashes the actual bytes), remove, and a refused package now says why
+- a service can be **run**: `CoreService.call` hands Core this client's host, so a service's fetch goes through the app's transport, with permissions confirmed by the person and narrowed by Core's intersection
+- the Core pin moves from `0f1e7b8` to `998f3b9`
+
+## The rejected-package message verified on screen (Mac, iPhone 17 / iOS 27.2, `e7c5507`)
+
+Importing a package with no `service.json` through the app's own entry shows, in red above 「已安装」: **`服务包未被接受：service: package has no service.json`**. The list still reads 「还没有服务」 and the refused package never appears in it. `ZZServicesRejectTests` **passed in 34.1 s**. Screenshot `rejected-wording.png`; log `/tmp/nk-services-ui/run3.log`.
+
 ## iOS can run a service now (`bef0181`, pin `998f3b9`)
 
 After Core gained `mobile.ServiceCall`, the client closes the last gap:
