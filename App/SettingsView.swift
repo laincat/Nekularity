@@ -156,6 +156,16 @@ struct SettingsView: View {
                 }
 
                 Section("外观") {
+                    Picker("亮暗", selection: Binding(
+                        get: { themes.appearance },
+                        set: { themes.select(appearance: $0) }
+                    )) {
+                        ForEach(ThemeAppearance.allCases, id: \.self) { appearance in
+                            Text(appearance.label).tag(appearance)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("settings.appearance")
                     ForEach(themes.all) { theme in
                         Button { themes.select(theme) } label: {
                             HStack {

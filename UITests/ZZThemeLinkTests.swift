@@ -39,8 +39,14 @@ final class ZZThemeLinkTests: XCTestCase {
             throw XCTSkip("theme fixture is not listening on 127.0.0.1:\(missing); see docs/UNVERIFIED.md")
         }
     }
+    /// The 设置 section, in whichever bar this idiom draws.
+    ///
+    /// iPhone puts it in a bottom tab bar; iPad draws the same `TabView` as a
+    /// compact top bar of plain buttons that are not inside a `TabBar` element.
     private func settings(_ app: XCUIApplication) {
-        let tab = app.tabBars.buttons["设置"].firstMatch
+        let inBar = app.tabBars.buttons["设置"].firstMatch
+        let tab = inBar.exists ? inBar
+            : app.buttons.matching(NSPredicate(format: "label == %@", "设置")).firstMatch
         XCTAssertTrue(tab.waitForExistence(timeout: 30))
         tab.tap()
     }

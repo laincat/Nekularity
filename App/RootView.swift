@@ -42,7 +42,7 @@ struct RootView: View {
         .tint(accent)
         // The theme answers with three states; only the view knows how to turn
         // them into a SwiftUI value, which is why this mapping stays here.
-        .preferredColorScheme(themes.active.appearance.colorScheme)
+        .preferredColorScheme(themes.appearance.colorScheme)
         // The signature changes on every page written and when a chapter starts or
         // ends, which is exactly when the island has something to say.
         .onChange(of: downloads.activitySignature) { _, _ in
