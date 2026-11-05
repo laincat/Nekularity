@@ -11,6 +11,9 @@ public protocol ServiceAccounts: Sendable {
     func values(service: String) throws -> [String: String]
     func set(service: String, key: String, value: String) throws
     func remove(service: String, key: String) throws
+    /// Forgets every value of one service: a removed package must not leave
+    /// working credentials behind in the Keychain.
+    func removeAll(service: String) throws
 }
 
 public extension ServiceAccounts {
@@ -36,6 +39,10 @@ public final class MemoryServiceAccounts: ServiceAccounts, @unchecked Sendable {
 
     public func remove(service: String, key: String) throws {
         lock.withLock { storage[service]?[key] = nil }
+    }
+
+    public func removeAll(service: String) throws {
+        lock.withLock { storage[service] = nil }
     }
 }
 
@@ -90,6 +97,13 @@ public final class KeychainServiceAccounts: ServiceAccounts, @unchecked Sendable
         var all = try values(service: id)
         all[key] = nil
         try write(id, all)
+    }
+
+    public func removeAll(service id: String) throws {
+        let status = SecItemDelete(query(id) as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw ServiceAccountError("the Keychain refused to delete the account values for \(id) (\(status))")
+        }
     }
 
     private func write(_ id: String, _ all: [String: String]) throws {

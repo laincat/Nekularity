@@ -128,3 +128,28 @@ import Testing
     let store = ServiceStore(directory: directory, accounts: MemoryServiceAccounts())
     #expect(store.accounts.keys(service: "fixture").isEmpty)
 }
+
+/// Removing a package must not leave its account values behind: a credential
+/// for a service whose code is gone is a credential nobody can revoke by
+/// uninstalling it.
+@MainActor
+@Test func removingAPackageForgetsItsAccountValues() async {
+    let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appending(path: "nk-services-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let accounts = MemoryServiceAccounts()
+    try? accounts.set(service: "fixture-one", key: "token", value: "s3cret")
+    try? accounts.set(service: "fixture-two", key: "token", value: "other")
+    let store = ServiceStore(directory: directory, accounts: accounts)
+
+    // Core reports an unknown package, so the removal itself fails; the values
+    // must survive that failure rather than vanishing on an error path.
+    store.remove("fixture-one")
+    #expect(store.accounts.keys(service: "fixture-one") == ["token"],
+            "a failed removal must not delete anything")
+
+    try? accounts.removeAll(service: "fixture-one")
+    #expect(store.accounts.keys(service: "fixture-one").isEmpty)
+    #expect(store.accounts.keys(service: "fixture-two") == ["token"],
+            "another service's values must be untouched")
+}

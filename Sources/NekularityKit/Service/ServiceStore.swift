@@ -103,6 +103,11 @@ public final class ServiceStore {
     public func remove(_ id: String) {
         do {
             try CoreService.remove(dataDir: dataDir, id: id)
+            // The package's code is gone, so its account values and any runtime
+            // Core still holds for it must go too: a reinstalled package must
+            // not inherit either.
+            try? accounts.removeAll(service: id)
+            CoreService.forget(dataDir: dataDir)
             records = try CoreService.list(dataDir: dataDir)
             error = nil
         } catch {

@@ -79,6 +79,13 @@ public enum CoreService {
         if let error { throw CoreServiceError.core(error.localizedDescription) }
     }
 
+    /// Drops the runtimes Core keeps for this directory, so a package that was
+    /// removed or replaced is loaded from disk next time rather than served
+    /// from a runtime holding the old code.
+    public static func forget(dataDir: String) {
+        MobileServiceRunForget(dataDir)
+    }
+
     /// The record of one installed package, without unpacking it again.
     public static func manifest(dataDir: String, id: String) throws -> ServiceRecord {
         var error: NSError?
