@@ -83,22 +83,46 @@ struct ServicesView: View {
         .confirmationDialog("允许这些权限并运行？", isPresented: Binding(
             get: { pendingRun != nil },
             set: { if !$0 { pendingRun = nil } }), presenting: pendingRun) { record in
-            Button("允许并运行") {
-                let granted = record.permissions ?? []
-                let id = record.id
-                pendingRun = nil
-                Task { await services.call(record, method: "ping", granted: granted) }
-                _ = id
+            // The buttons are what the package says it offers. A package that
+            // does not describe itself still answers `ping`, so that stays as
+            // one honest fallback rather than a list nobody wrote.
+            let offered = services.offeredMethods(for: record.id)
+            if offered.isEmpty {
+                Button("运行 ping") {
+                    start(record, method: "ping")
+                }
+            } else {
+                ForEach(offered) { method in
+                    Button(method.label) { start(record, method: method.name) }
+                }
             }
             Button("取消", role: .cancel) { pendingRun = nil }
         } message: { record in
             let names = (record.permissions ?? []).map(Self.permissionName)
             Text(names.isEmpty
-                 ? "\(record.name) 不申请任何权限。这次运行会调用它的 ping。"
-                 : "\(record.name) 申请：\(names.joined(separator: "、"))。这次运行只在这次调用期间允许这些权限，它仍然读不到账号值。")
+                 ? "\(record.name) 不申请任何权限。它说能做的事：\(Self.offeredText(services.offeredMethods(for: record.id)))。"
+                 : "\(record.name) 申请：\(names.joined(separator: "、"))。它说能做的事：\(Self.offeredText(services.offeredMethods(for: record.id)))。这些权限只在这次调用期间允许，它仍然读不到账号值。")
         }
         .task { services.reload() }
         .refreshable { services.reload() }
+    }
+
+    /// Describes the package first, then asks for the permission it needs.
+    private func askToRun(_ record: ServiceRecord) {
+        Task {
+            await services.describe(record)
+            pendingRun = record
+        }
+    }
+
+    private func start(_ record: ServiceRecord, method: String) {
+        let granted = record.permissions ?? []
+        pendingRun = nil
+        Task { await services.call(record, method: method, granted: granted) }
+    }
+
+    private static func offeredText(_ methods: [ServiceMethod]) -> String {
+        methods.isEmpty ? "没有说明，只能先试 ping" : methods.map(\.label).joined(separator: "、")
     }
 
     @ViewBuilder
@@ -120,14 +144,14 @@ struct ServicesView: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("service.\(record.id)")
         .swipeActions {
-            Button("运行") { pendingRun = record }.tint(.accentColor)
+            Button("运行") { askToRun(record) }.tint(.accentColor)
             Button("移除", role: .destructive) { pendingRemoval = record }
         }
         .contextMenu {
             Button {
-                pendingRun = record
+                askToRun(record)
             } label: {
-                Label("运行 ping", systemImage: "play")
+                Label("运行…", systemImage: "play")
             }
         }
     }

@@ -25,6 +25,16 @@ public struct ServiceRecord: Decodable, Sendable, Hashable, Identifiable {
     public var permissions: [String]?
 }
 
+/// One method a service offers to press.
+public struct ServiceMethod: Decodable, Sendable, Hashable, Identifiable {
+    public var name: String
+    public var title: String?
+
+    public var id: String { name }
+    /// What a button says: the service's own wording when it gave one.
+    public var label: String { (title?.isEmpty == false ? title! : name) }
+}
+
 public enum CoreServiceError: Error, LocalizedError, Equatable {
     case core(String)
     case unreadable(String)
@@ -98,6 +108,18 @@ public enum CoreService {
                                     granted.joined(separator: ","), &error)
         if let error { throw CoreServiceError.core(error.localizedDescription) }
         return out ?? "null"
+    }
+
+    /// What the package offers to press, as it describes itself.
+    ///
+    /// A service without a `describe` export answers with an empty list: it is
+    /// used by other code rather than by a button, which is not an error.
+    public static func describe(host: CoreHost, dataDir: String, id: String,
+                                granted: [String]) throws -> [ServiceMethod] {
+        var error: NSError?
+        let json = MobileServiceDescribe(host, dataDir, id, granted.joined(separator: ","), &error)
+        if let error { throw CoreServiceError.core(error.localizedDescription) }
+        return try decode(json, as: [ServiceMethod].self, what: "服务方法清单")
     }
 
     private static func decode<T: Decodable>(_ json: String?, as type: T.Type,

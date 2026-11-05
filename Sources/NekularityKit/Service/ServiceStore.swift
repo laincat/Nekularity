@@ -25,6 +25,13 @@ public final class ServiceStore {
     }
 
     public private(set) var running: String?
+    /// What the package said it offers, once it has been asked, and which
+    /// package that answer belongs to: a stale list must not be offered for a
+    /// different service.
+    public private(set) var methods: [ServiceMethod] = []
+    public private(set) var methodsFor: String?
+
+    public private(set) var describing: String?
     public private(set) var run: RunResult?
 
     private let directory: URL
@@ -39,6 +46,12 @@ public final class ServiceStore {
     }
 
     public var dataDir: String { directory.path(percentEncoded: false) }
+
+    /// The methods that belong to this package, never another one's.
+    public func offeredMethods(for id: String) -> [ServiceMethod] {
+        methodsFor == id ? methods : []
+    }
+
 
     public func reload() {
         do {
@@ -74,7 +87,8 @@ public final class ServiceStore {
             // to clear the message the user needed to read, so a package Core
             // rejected looked like nothing had happened.
             let message = Self.wording(for: error)
-            if let rows = try? CoreService.list(dataDir: dataDir) {
+            let rows = try? CoreService.list(dataDir: dataDir)
+            if let rows {
                 records = rows
             }
             self.error = message
@@ -88,10 +102,36 @@ public final class ServiceStore {
             error = nil
         } catch {
             let message = Self.wording(for: error)
-            if let rows = try? CoreService.list(dataDir: dataDir) {
+            let rows = try? CoreService.list(dataDir: dataDir)
+            if let rows {
                 records = rows
             }
             self.error = message
+        }
+    }
+
+    /// Asks the package what it offers. Describing runs the package's own code,
+    /// so it is asked without granting anything: a service whose description
+    /// needs the network answers with an error, and the screen offers `ping`
+    /// instead of guessing.
+    public func describe(_ record: ServiceRecord, granted: [String] = []) async {
+        guard let host else {
+            methods = []
+            methodsFor = record.id
+            return
+        }
+        describing = record.id
+        defer { describing = nil }
+        do {
+            let found = try await Task.detached { [dataDir] in
+                try CoreService.describe(host: host, dataDir: dataDir, id: record.id,
+                                         granted: granted)
+            }.value
+            methods = found
+            methodsFor = record.id
+        } catch {
+            methods = []
+            methodsFor = record.id
         }
     }
 

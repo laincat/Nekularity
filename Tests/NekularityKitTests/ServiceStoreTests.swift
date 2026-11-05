@@ -81,3 +81,22 @@ import Testing
     #expect(store.run?.ok == false)
     #expect(store.run?.text.contains("没有宿主") == true)
 }
+
+/// A description belongs to the package that gave it: offering another
+/// package's methods would put a button on the wrong service.
+@MainActor
+@Test func adescriptionIsNotOfferedForAnotherPackage() async {
+    let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appending(path: "nk-services-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let store = ServiceStore(directory: directory)
+    let one = ServiceRecord(id: "fixture-one", name: "One", version: "1", origin: "test",
+                            sha256: nil, installed: "", dir: directory.path, permissions: [])
+    let two = ServiceRecord(id: "fixture-two", name: "Two", version: "1", origin: "test",
+                            sha256: nil, installed: "", dir: directory.path, permissions: [])
+    await store.describe(one)
+    #expect(store.offeredMethods(for: one.id).isEmpty)
+    #expect(store.offeredMethods(for: two.id).isEmpty)
+    await store.describe(two)
+    #expect(store.offeredMethods(for: one.id).isEmpty, "one package's methods must not answer for another")
+}
