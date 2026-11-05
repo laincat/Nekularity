@@ -55,8 +55,14 @@ public final class ServiceStore {
             records = try CoreService.list(dataDir: dataDir)
             _ = record
         } catch {
-            self.error = Self.wording(for: error)
-            reload()
+            // Refresh the list, but keep the reason: a successful refresh used
+            // to clear the message the user needed to read, so a package Core
+            // rejected looked like nothing had happened.
+            let message = Self.wording(for: error)
+            if let rows = try? CoreService.list(dataDir: dataDir) {
+                records = rows
+            }
+            self.error = message
         }
     }
 
@@ -66,8 +72,11 @@ public final class ServiceStore {
             records = try CoreService.list(dataDir: dataDir)
             error = nil
         } catch {
-            self.error = Self.wording(for: error)
-            reload()
+            let message = Self.wording(for: error)
+            if let rows = try? CoreService.list(dataDir: dataDir) {
+                records = rows
+            }
+            self.error = message
         }
     }
 
