@@ -30,6 +30,13 @@ public struct ServiceMethod: Decodable, Sendable, Hashable, Identifiable {
     public var name: String
     public var title: String?
 
+    /// The memberwise initialiser is internal, so a screen in the app target
+    /// could not build the `ping` fallback without this.
+    public init(name: String, title: String? = nil) {
+        self.name = name
+        self.title = title
+    }
+
     public var id: String { name }
     /// What a button says: the service's own wording when it gave one.
     public var label: String { (title?.isEmpty == false ? title! : name) }
