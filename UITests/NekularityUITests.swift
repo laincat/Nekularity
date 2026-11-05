@@ -107,6 +107,29 @@ final class NekularityUITests: XCTestCase {
 
     /// A button inside the dialog that is on screen, not anywhere in the app.
     ///
+    /// Puts a card's size back to what it was, and says so rather than asserting:
+    /// this is housekeeping for the next case, so a board that cannot be restored
+    /// must not turn a correct case into a failure.
+    private func restoreBoardSize(_ app: XCUIApplication, of control: XCUIElement, to wanted: String) {
+        let edit = app.buttons.matching(NSPredicate(format: "identifier == 'discover.edit'")).firstMatch
+        if edit.label != "完成" { edit.tap() }
+        guard control.waitForExistence(timeout: 5) else {
+            print("NK_SIZE_RESTORE_SKIPPED: no size control after reopening arranging")
+            return
+        }
+        if control.label == wanted {
+            edit.tap()
+            return
+        }
+        control.tap()
+        let option = dialogButton(app, wanted)
+        if option.waitForExistence(timeout: 5) { option.tap() }
+        edit.tap()
+        if control.label != wanted {
+            print("NK_SIZE_RESTORE_NO_EFFECT: board is at \(control.label), wanted \(wanted)")
+        }
+    }
+
     /// `confirmationDialog` presents as a sheet on iPhone, and its buttons have no
     /// identifiers of their own, so they can only be found by label — which the cards
     /// underneath already use. Scoping the query to the dialog is what makes the label
@@ -1159,6 +1182,11 @@ final class NekularityUITests: XCTestCase {
             .matching(NSPredicate(format: "identifier BEGINSWITH 'home.hide.'")).firstMatch
         XCTAssertTrue(hide.exists, "arranging shows no hide control")
 
+        // The size this case starts from is whatever a previous case left behind,
+        // so it is recorded and put back: a board left at 中 changes the layout a
+        // later screenshot or case sees, and an iPad screenshot once came out in
+        // one column because of exactly that.
+        let original = size.label
         size.tap()
         // Scoped to the dialog: the card's own size button carries the same 小/中
         // label, so an app-wide query for 中 matches several elements and the tap
@@ -1173,6 +1201,8 @@ final class NekularityUITests: XCTestCase {
         let done = app.buttons["完成"].firstMatch
         if done.waitForExistence(timeout: 5) { done.tap() }
         XCTAssertFalse(size.exists, "the size control stayed after arranging ended")
+
+        restoreBoardSize(app, of: size, to: original)
     }
 
     /// Uses the gesture entry, changes a size, and checks that the saved choice
@@ -1206,9 +1236,11 @@ final class NekularityUITests: XCTestCase {
         let edit = app.buttons.matching(NSPredicate(format: "identifier == 'discover.edit'")).firstMatch
         XCTAssertEqual(edit.label, "完成", "the long press did not change the edit action")
 
+        // 大 is a real choice too: a case that left the board at 大 used to fail
+        // here for a reason that had nothing to do with long presses.
         let original = size.label
-        XCTAssertTrue(original == "小" || original == "中", "unexpected size label: \(original)")
-        let chosen = original == "中" ? "小" : "中"
+        XCTAssertTrue(["小", "中", "大"].contains(original), "unexpected size label: \(original)")
+        let chosen = original == "小" ? "中" : "小"
         size.tap()
         let option = dialogButton(app, chosen)
         XCTAssertTrue(option.waitForExistence(timeout: 5), "the size choice is missing")

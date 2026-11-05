@@ -1,3 +1,9 @@
+## 主题 HTTPS 安装与长按编排在 2026-11-05 转入已验证
+
+真实本地 CA + 18791/18792 夹具下的三条主题链接用例（HTTPS 安装/选中/重开、非法主题保留选择、明文 HTTP 被客户端拒绝）在 iPhone 17 / iOS 27.2 上 3/3 通过；`testBoardLongPressAndSizeSurviveRelaunch` 1/1 通过；iPhone 竖/横与 iPad 竖/横的明暗 16 张截图中无裁切、重叠或不可读文字。此前"夹具缺失导致跳过"的记录不再是当前状态。
+
+仍未验证：iOS 26 运行时（本机只有 27.2）、真机、后台/锁屏、Live Activity、PiP、实际扬声器、真实账号；横屏的坐标级元素测量不可靠，结论为整图统计加目视。详见 [STATUS](STATUS.md) 的同日条目。
+
 # 待验证清单
 
 [English](UNVERIFIED.en.md) | 简体中文

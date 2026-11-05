@@ -1,5 +1,23 @@
 English · [简体中文](STATUS.md)
 
+## Theme HTTPS install, long-press arranging and narrow/wide evidence (Mac, 2026-11-05)
+
+Commit `a23a513`, Core `0f1e7b8`, on iPhone 17 / iOS 27.2 and iPad Pro 11-inch (M5) / iOS 27.2. **All three items pass, no real failure, and no product code changed this round.**
+
+| Command | Result |
+| --- | --- |
+| `sh scripts/theme-fixture.sh <udid>` | **3/3 PASS** (41.2 / 40.1 / 23.4 s, `Executed 3 tests, with 0 failures`) |
+| `xcodebuild ... -only-testing:.../testBoardLongPressAndSizeSurviveRelaunch` | **PASS 1/1** (34.4 s) |
+| narrow/wide x light/dark screenshots | **16 images**, no cropping, no overlap, no unreadable text |
+
+The theme cases did not skip: a throwaway CA (fingerprint `18:D2:66...:8F:10`, 30 days, written only into that simulator's TrustStore) plus the 18791/18792 fixtures. The server received `18791 GET /valid.json` (preflight), `/valid.json`, `/invalid.json`, `/valid.json`, and **nothing at all on 18792** - so plain HTTP was refused by the **client**, not left unanswered.
+
+Narrow/wide covers iPhone portrait and landscape (1206x2622, 2622x1206) and iPad portrait and landscape (1668x2420, 2420x1668), 发现 and 设置, each in light and dark. Light backgrounds are `[240,240,240]`/`[248,248,248]`, dark ones `[0,0,0]`/`[24,24,24]`; primary text contrast is 16.72-19.77:1 with no inversion. Secondary text is 3.34:1 in light - the system `.secondary` trade-off already recorded for 0.3.7, above the large-text threshold and below AA for body text, unchanged here. On landscape and iPad the iOS 26 floating tab bar covers the last row of scrolled content, which is that control's normal behaviour and scrolls above it.
+
+**A test-hygiene problem found and fixed**: the first iPad screenshot was a single column because an earlier board case had persisted the size as 大. `testArrangingTheBoardShowsItsControls` used to switch to 中 and leave it; it now records the starting size and restores it through `restoreBoardSize` (a failed restore prints instead of asserting), and `testBoardLongPressAndSizeSurviveRelaunch` accepts 大 as a starting size so leftover state no longer produces a false failure.
+
+**Boundary**: every result is iOS 27.2 - this machine has no iOS 26 runtime; landscape screenshots come out with the content rotated 90 degrees from `XCUIScreen.main.screenshot()`, so coordinate-level element measurements are only reliable in portrait and the landscape conclusions are whole-image statistics plus visual review. A real device, background/lock screen, Live Activity, PiP, actual speakers and real accounts remain unverified.
+
 ## The iOS client already sends a Host the source names (2026-11-05)
 
 With the desktop gap fixed (Nekophage `4ec0a90`), the iOS side needed evidence of whether it has the same problem. `TransportHostHeaderTests` starts an `NWListener` on `127.0.0.1` that takes one request, hands `Host: mobileapp.example.com` to the real `URLSessionTransport.send`, and reads the request head the server received.

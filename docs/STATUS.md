@@ -1,5 +1,23 @@
 [English](STATUS.en.md) · 简体中文
 
+## 主题 HTTPS 安装、长按编排与窄宽屏取证（Mac，2026-11-05）
+
+提交 `a23a513`、Core `0f1e7b8`，设备 iPhone 17 / iOS 27.2 与 iPad Pro 11-inch (M5) / iOS 27.2。**三项全部通过，无真实失败，本轮未改产品代码。**
+
+| 命令 | 结果 |
+| --- | --- |
+| `sh scripts/theme-fixture.sh <udid>` | **3/3 PASS**（41.2 / 40.1 / 23.4 秒，`Executed 3 tests, with 0 failures`） |
+| `xcodebuild … -only-testing:…/testBoardLongPressAndSizeSurviveRelaunch` | **PASS 1/1**（34.4 秒） |
+| 窄/宽屏 × 明暗截图 | **16 张**，无裁切、无重叠、无不可读文字 |
+
+主题三条不是跳过：临时 CA（指纹 `18:D2:66…:8F:10`，30 天，只写进该模拟器的 TrustStore）加 18791/18792 夹具服务。服务端实际收到 `18791 GET /valid.json`（预检）、`/valid.json`、`/invalid.json`、`/valid.json`，而 **18792 一条请求都没有**——说明明文 HTTP 被**客户端**拦下，不是服务端没答。
+
+窄/宽屏覆盖 iPhone 竖/横（1206×2622、2622×1206）与 iPad 竖/横（1668×2420、2420×1668）的发现页与设置页，明暗各一组。亮色背景 `[240,240,240]`/`[248,248,248]`、暗色 `[0,0,0]`/`[24,24,24]`；主文字对比度 16.72–19.77:1，无反色。次级文字亮色 3.34:1，是 0.3.7 已记录的系统 `.secondary` 取舍，达大字号阈值、未达 AA 正文，本轮无变化。横屏与 iPad 上 iOS 26 浮动标签栏压住滚动内容最后一行是该控件的正常行为，可滚到其上方。
+
+**过程中发现并已修的测试卫生问题**：iPad 首次截图是单列，排查是上一轮板卡用例把尺寸持久化成了「大」。`testArrangingTheBoardShowsItsControls` 原来只切到「中」而不还原，现在会记录原尺寸并在结束时还原（`restoreBoardSize`，还原失败只打印不断言）；`testBoardLongPressAndSizeSurviveRelaunch` 也接受「大」为起始值，不再因残留状态误报。
+
+**边界**：全部是 iOS 27.2 证据，本机没有 iOS 26 运行时；横屏截图经 `XCUIScreen.main.screenshot()` 导出时内容侧转 90°，坐标级元素测量只在竖屏可靠，横屏结论为整图统计加目视。真机、后台/锁屏、Live Activity、PiP、实际扬声器与真实账号仍未验证。
+
 ## iOS 客户端本来就把源指定的 Host 发出去（2026-11-05）
 
 桌面端的 `Host` 缺口修好后（Nekophage `4ec0a90`），iOS 侧需要一个证据说明它是不是也有同样问题。新增 `TransportHostHeaderTests`：在 `127.0.0.1` 起一个只收一次请求的 `NWListener`，把 `Host: mobileapp.example.com` 交给真实的 `URLSessionTransport.send`，读出服务端收到的请求头。
