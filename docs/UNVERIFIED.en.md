@@ -1,3 +1,5 @@
+English · [简体中文](UNVERIFIED.md)
+
 ## Theme HTTPS install and long-press arranging became verified on 2026-11-05
 
 Against a real local CA and the 18791/18792 fixtures, the three theme-link cases (HTTPS install/select/relaunch, an invalid theme keeping the selection, and plain HTTP refused by the client) pass 3/3 on iPhone 17 / iOS 27.2; `testBoardLongPressAndSizeSurviveRelaunch` passes 1/1; and the 16 light/dark screenshots across iPhone and iPad portrait/landscape show no cropping, overlap or unreadable text. The earlier "skipped because the fixture is missing" record is no longer the current state.
