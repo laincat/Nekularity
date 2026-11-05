@@ -1,5 +1,20 @@
 English · [简体中文](STATUS.md)
 
+## The service screen: list, import and remove pass; a rejected package said nothing, now fixed (2026-11-05)
+
+On iPhone 17 / iOS 27.2 the Mac drove the app's own entry points at `9eb1f5c`:
+
+| Item | Result |
+| --- | --- |
+| empty list | PASS, showing 「还没有服务」 |
+| import (system file picker, a zip downloaded through Safari) | PASS; the row read 「夹具服务、1.0.0、fixture-service、网络（经宿主）」 |
+| remove (swipe plus confirmation) | PASS; the confirmation read "…的代码会从这台设备删除；它保存的账号值不在这里。" and the list went back to empty |
+| a bad package (no `service.json`) | **FAIL**: the screen said nothing at all |
+
+The cause was in `ServiceStore`: the catch wrote `error` and then called `reload()`, whose success branch set `error` back to `nil`, so the message erased itself. Fixed in `e7c5507`: the catches in `install` and `remove` keep the reason while refreshing the list, and Core's "package has no service.json" now shows as 「服务包未被接受：…」. Regression `Test aRejectedPackageKeepsItsReason` goes through the real `install` path; CI `42027315970` reports Kit **468 tests / 83 suites / 0 failures**.
+
+Two measured facts worth keeping: Core's `idPattern` rejects underscores, so an id like `fixture_service` is refused; and a zip copied straight into `File Provider Storage/Downloads` is not indexed by Files - only one downloaded through Safari can be picked.
+
 ## The duplicate-answer fix verified on a simulator (Mac, 2026-11-05)
 
 `d1d989d` (containing the fix `0b53d42`) re-ran the standard AI loop on iPhone 17 / iOS 27.2: the temporary `ZZStandardAINoDuplicateTests` **passed in 39.5 s** against the `UITests/Fixtures/standard-ai/serve.py` fixture (127.0.0.1:18796).

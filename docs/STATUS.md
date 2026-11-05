@@ -1,5 +1,20 @@
 [English](STATUS.en.md) · 简体中文
 
+## 服务包界面：列表/导入/移除通过，坏包文案缺失已修（2026-11-05）
+
+Mac 在 iPhone 17 / iOS 27.2 上走 App 自己的入口实测（`9eb1f5c`）：
+
+| 项 | 结果 |
+| --- | --- |
+| 空列表 | PASS，「还没有服务」 |
+| 导入（系统文件选择器，Safari 下载的 zip） | PASS，行文本实测「夹具服务、1.0.0、fixture-service、网络（经宿主）」 |
+| 移除（左滑 + 确认） | PASS，确认文案「…的代码会从这台设备删除；它保存的账号值不在这里。」，之后回到空列表 |
+| 坏包（缺 `service.json`） | **FAIL**：界面没有任何拒绝文案 |
+
+原因是 `ServiceStore` 的 catch 先写 `error`，紧接着 `reload()`，而 `reload()` 的成功分支把 `error` 置回 `nil`——文案被自己的刷新清掉。已改（`e7c5507`）：`install` 与 `remove` 的 catch 在刷新列表时保留原因，Core 的原句「package has no service.json」经界面文案露出为「服务包未被接受：…」。回归 `Test aRejectedPackageKeepsItsReason`（走真实 `install` 路径），CI `42027315970` Kit **468 tests / 83 suites / 0 失败**。
+
+另两条实测事实：Core 的 `idPattern` 不接受下划线，`fixture_service` 这种 id 会被 Core 拒绝；直接把 zip 拷进 `File Provider Storage/Downloads` 不会被 Files 索引，只有经 Safari 下载的才在选择器里可选。
+
 ## 重复回复修复的模拟器复验（Mac，2026-11-05）
 
 `d1d989d`（含修复 `0b53d42`）在 iPhone 17 / iOS 27.2 上重跑标准 AI 回环：临时用例 `ZZStandardAINoDuplicateTests` **PASS 39.5 秒**，夹具 `UITests/Fixtures/standard-ai/serve.py`（127.0.0.1:18796）。
