@@ -11,7 +11,7 @@ Core 新增 `mobile.ServiceDescribe`（`83253db`）后，客户端的「运行�
 - 描述结果按包 id 归属（`offeredMethods(for:)`），A 的方法不会被显示在 B 上
 - 描述在**不授予任何权限**的前提下进行；需要网络才能描述自己的服务会报错，页面随即退回 ping
 
-回归：`adscriptionIsNotOfferedForAnotherPackage` 钉住归属；Core 侧两条（带 `describe` 得到 `sync`/`同步`，不带得到 `[]`）。pin 跟到 `83253db`。
+回归：`adscriptionIsNotOfferedForAnotherPackage` 钉住归属；Core 侧两条（带 `describe` 得到 `sync`/`同步`，不带得到 `[]`）。pin 跟到 `83253db`；CI `42044441869` 全绿，Kit **470 tests / 83 suites / 0 失败**。
 ## 服务的 fetch 不再在拨号前失败（2026-11-05）
 
 Mac 在模拟器上的一条实测发现：服务的 `ping` 里去 `fetch(http://127.0.0.1:18798/proof)`，界面报 `service: fixture-fetch failed on "ping": Error: 未能读取数据，因为数据丢失。`，而**夹具 0 条请求**——请求从没发出。
