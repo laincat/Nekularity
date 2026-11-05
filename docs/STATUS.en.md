@@ -5,6 +5,19 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## iOS has service account values: stored in the Keychain, handed to Core only for a run (`ff01dcd`)
+
+Last round completed the contract; this one completes the client:
+
+- long-press a service row → 「账号值…」 → enter a `key` and `value`; the value is stored in **this environment's Keychain** (`AfterFirstUnlockThisDeviceOnly`, for the same reason as a Magpie sign-in: a backup restored onto another device must not carry a working credential)
+- the list shows only **key names** and 「已保存」; a saved value is never shown again, and a swipe deletes it
+- values are handed to Core only when the package asked for `secrets`; otherwise the screen says plainly that the saved values are not readable by it
+- Core receives the **whole set for that one call** and keeps no store of its own, so a key that was not passed cannot be read
+
+Regressions: `aRunPassesOnlyTheStoredAccountValues` (isolated per service, empty after a delete) and `aRunWithoutAccountValuesSendsNone`. CI `42065468307` is green with Kit at **473 tests / 83 suites / 0 failures**.
+
+**Boundary**: entering and running on a simulator or device is still to be verified; there is no mechanism for a package to declare which keys it needs (Core exposes only the permission), so the person chooses the key names.
 ## A service can read account values the client supplies (pin moves to `1574076`)
 
 Core gained `ServiceCallWithSecrets`: account values travel with one call (`{"key":"value"}`), are only reachable under the `secrets` permission, and a key that was not supplied is named in the error. `CoreService.call` takes an optional `secrets` argument, empty by default.

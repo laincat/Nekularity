@@ -5,6 +5,19 @@
 
 
 
+
+## iOS 有了服务账号值：Keychain 存，运行时才交给 Core（`ff01dcd`）
+
+上一轮只把契约打通，这一轮补客户端：
+
+- 服务页长按 →「账号值…」→ 录入 `键 / 值`；值存**本环境的 Keychain**（`AfterFirstUnlockThisDeviceOnly`，与 Magpie 登录同一套理由：备份还原到别的设备不该带走可用凭据）
+- 列表只显示**键名**与「已保存」，值保存后不再显示；滑动删除
+- 只有该包申请了 `secrets` 时，运行时才把值交给 Core；没申请时页面明说「这里保存的值它读不到」
+- 交给 Core 的是**这次调用**的完整集合，Core 没有自己的存储，所以没传的键读不到
+
+回归：`aRunPassesOnlyTheStoredAccountValues`（按服务隔离，删除后为空）、`aRunWithoutAccountValuesSendsNone`。CI `42065468307` 全绿，Kit **473 tests / 83 suites / 0 失败**。
+
+**边界**：模拟器/真机上的实机录入与运行待验证；服务包自己声明需要哪些键的机制不存在（Core 只暴露权限），所以键名由使用者决定。
 ## 服务可以读到客户端给的账号值（pin 跟到 `1574076`）
 
 Core 新增 `ServiceCallWithSecrets`：账号值由客户端在一次调用里传入（`{"key":"value"}`），只在 `secrets` 权限下可达，未提供的键会被指名报错。`CoreService.call` 增加可选 `secrets` 参数，默认空表示不传。
