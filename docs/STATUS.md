@@ -6,6 +6,15 @@
 
 
 
+
+## 移除服务包时一并清掉账号值与旧运行时（`a47e77f`）
+
+两个真实的遗留问题：
+
+- **Keychain 里留着可用凭据**：包删了，账号值还在，卸载并不能吊销它们。`ServiceAccounts` 增加 `removeAll(service:)`，`ServiceStore.remove` 在 Core 删除成功后调用它；**删除失败时不动**（错误路径上不该顺手清东西）。
+- **旧运行时继续服务重装的包**：Core 的 supervisor 按 dataDir 缓存，删除或替换后仍可能把旧代码的运行时给下一次调用。新增 `CoreService.forget(dataDir:)` 调 `MobileServiceRunForget`，删除时一并丢弃。
+
+回归 `removingAPackageForgetsItsAccountValues`：先让删除失败（不存在的包），断言值**仍在**；再显式清一个服务，断言它为空、另一个服务的值不受影响。CI `42075251630` 全绿，Kit **474 tests / 83 suites / 0 失败**。
 ## iOS 有了服务账号值：Keychain 存，运行时才交给 Core（`ff01dcd`）
 
 上一轮只把契约打通，这一轮补客户端：

@@ -6,6 +6,15 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## Removing a package now clears its account values and its old runtime (`a47e77f`)
+
+Two real leftovers:
+
+- **working credentials stayed in the Keychain**: the package was gone but its account values were not, and uninstalling could not revoke them. `ServiceAccounts` gained `removeAll(service:)`, and `ServiceStore.remove` calls it after Core's removal succeeds; **a failed removal changes nothing**, because an error path should not delete anything on the way out.
+- **an old runtime could serve a reinstalled package**: Core's supervisor caches per data directory, so a removed or replaced package could still be answered by the runtime holding the old code. `CoreService.forget(dataDir:)` calls `MobileServiceRunForget`, and removal now drops it too.
+
+Regression `removingAPackageForgetsItsAccountValues`: it first makes the removal fail (a package that does not exist) and asserts the values are **still there**; then it clears one service explicitly and checks that service is empty while the other is untouched. CI `42075251630` is green with Kit at **474 tests / 83 suites / 0 failures**.
 ## iOS has service account values: stored in the Keychain, handed to Core only for a run (`ff01dcd`)
 
 Last round completed the contract; this one completes the client:
