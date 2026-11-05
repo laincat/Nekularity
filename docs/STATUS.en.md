@@ -30,6 +30,14 @@ It used to only press `ping` with a fixed `null` payload. There is now a run she
 - the sheet states the permissions granted for this call and that nothing beyond the account values you saved is readable
 
 The first CI run failed: `App/ServiceRunSheet.swift:22:41: error: extra arguments at positions #1, #2` - `ServiceMethod`'s memberwise initialiser is internal, so the app target could not build the `ping` fallback. A public `init` fixed it, and CI `42093319801` is green with Kit at **474 tests / 83 suites / 0 failures**.
+## 0.4.1 / build 23 (2026-11-05)
+
+0.4.0's account-value screen printed its own code (the footer showed `(record.name) 申请了…` and the save notice `已保存 \(name)`). This version fixes that and carries:
+
+- a run sheet: choose a method, write a JSON payload, and non-JSON is stopped locally; the permissions and account-value scope are stated there
+- a new `check-swift.py` rule that fails on a two-backslash interpolation, so it cannot happen again
+- removing a package now clears its Keychain values and drops Core's old runtime
+
 ## 0.4.0 / build 22 is published and verified (2026-11-05)
 
 Tag `v0.4.0` points at `12bbb28`; the publish CI `42081589626` passed.

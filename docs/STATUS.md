@@ -30,6 +30,14 @@ CI `42097670057` 全绿，Kit **474 tests / 83 suites / 0 失败**。
 - 面板里写明这次调用授予的权限，以及「它仍然读不到你保存的账号值以外的任何东西」
 
 CI 第一次是失败的：`App/ServiceRunSheet.swift:22:41: error: extra arguments at positions #1, #2` —— `ServiceMethod` 的成员初始化器是 internal，App 目标造不出 `ping` 回退值。补公开 `init` 后 CI `42093319801` 全绿，Kit **474 tests / 83 suites / 0 失败**。
+## 0.4.1 / build 23（2026-11-05）
+
+0.4.0 的账号值界面把插值写成了字面量（页脚显示 `(record.name) 申请了…`、保存提示显示 `已保存 \(name)`）。这一版修掉它，并带上：
+
+- 运行面板：选方法、填 JSON 参数，非 JSON 本地拦下；权限与账号值范围写在面板里
+- `check-swift.py` 新增一条规则：双反斜杠插值即报错，防止再犯
+- 服务包移除时清 Keychain 账号值与 Core 旧运行时
+
 ## 0.4.0 / build 22 已发布并核对（2026-11-05）
 
 tag `v0.4.0` → `12bbb28`；发布 CI `42081589626` 全绿。
