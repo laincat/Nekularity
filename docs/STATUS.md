@@ -12,6 +12,19 @@
 
 
 
+
+## 0.4.2 / build 24 已发布并核对（2026-11-05）
+
+tag `v0.4.2` → `5b6bfd6`；发布 CI `42116548799` 全绿。
+
+| 项 | 值 |
+| --- | --- |
+| 公开下载 | **HTTP 200** |
+| 大小 | **29,751,122 bytes** |
+| SHA-256 | `5fddfb300482215c45df73cf541e8e711e10c9b96a3a91d11b42cd5f497901a2` |
+| IPA 内容 | **13 PASS / 0 FAIL**：两层 CRC、单一 app、App `0.4.2`/`24`、最低 26.0、Widget 同为 `0.4.2`/`24`、Core 标记 `1574076` |
+
+AltStore 刷新 run `42122404312` 成功；三个入口均 `0.4.2 / 24 / 29751122 / 26.0`。Release 说明为中英双语。
 ## 服务参数校验进了 Kit，并被测试抓到一个真 bug（`3edcac4` + 修复）
 
 运行面板原来在视图里直接 `JSONSerialization`，无法单测。抽成 `ServicePayload.normalized/isValid`：

@@ -12,6 +12,19 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## 0.4.2 / build 24 is published and verified (2026-11-05)
+
+Tag `v0.4.2` points at `5b6bfd6`; the publish CI `42116548799` passed.
+
+| Item | Value |
+| --- | --- |
+| public download | **HTTP 200** |
+| size | **29,751,122 bytes** |
+| SHA-256 | `5fddfb300482215c45df73cf541e8e711e10c9b96a3a91d11b42cd5f497901a2` |
+| IPA contents | **13 checks, 0 failures**: both layers' CRCs, one app bundle, App `0.4.2`/`24`, minimum 26.0, the widget also `0.4.2`/`24`, Core marker `1574076` |
+
+The AltStore refresh run `42122404312` succeeded; all three entries report `0.4.2 / 24 / 29751122 / 26.0`. The release notes are bilingual.
 ## Payload validation moved into Kit, and the tests caught a real bug (`3edcac4` plus a fix)
 
 The run sheet used `JSONSerialization` inside the view, where it could not be tested. It is now `ServicePayload.normalized/isValid`:
