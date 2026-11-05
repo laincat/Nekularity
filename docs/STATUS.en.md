@@ -1,5 +1,22 @@
 English · [简体中文](STATUS.md)
 
+## The duplicate-answer fix verified on a simulator (Mac, 2026-11-05)
+
+`d1d989d` (containing the fix `0b53d42`) re-ran the standard AI loop on iPhone 17 / iOS 27.2: the temporary `ZZStandardAINoDuplicateTests` **passed in 39.5 s** against the `UITests/Fixtures/standard-ai/serve.py` fixture (127.0.0.1:18796).
+
+| Assertion | Result |
+| --- | --- |
+| assistant answers for one question | `first_answers=1` |
+| occurrences of "整包返回 · 流式尚未接通" | `note_count=1` |
+| fixture requests | one per question (two in total), `authorized=true`, `answered 200` |
+| history after the second question | "第一句, Fixture Chat answer, 第二句, Fixture Chat answer" - question, answer, question, answer with no duplicate; the first answer folded into the history without the note, the last one is the tail and carries it |
+
+Screenshots `after-first-question.png` and `after-second-question.png`; log `/tmp/nk-ios-ipad-type/dup3-ui.log`.
+
+**Process note, not a product problem**: the first run failed because a previous round's settings had been written into the fields twice (address and model appended), and the app honestly said `接口返回 HTTP 404: unknown fixture root`; clearing the app with `simctl uninstall` made it pass. That also shows the error text is specific enough to act on.
+
+**Boundary**: the temporary case was removed and the project file restored, with `git status` clean; a real device and a real vendor account remain unverified.
+
 ## iOS has a service list and an import screen (2026-11-05)
 
 On top of `CoreService` there are now `ServiceStore` (Kit) and `ServicesView` (设置 → 模块与源 → 服务):

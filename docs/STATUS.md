@@ -1,5 +1,22 @@
 [English](STATUS.en.md) · 简体中文
 
+## 重复回复修复的模拟器复验（Mac，2026-11-05）
+
+`d1d989d`（含修复 `0b53d42`）在 iPhone 17 / iOS 27.2 上重跑标准 AI 回环：临时用例 `ZZStandardAINoDuplicateTests` **PASS 39.5 秒**，夹具 `UITests/Fixtures/standard-ai/serve.py`（127.0.0.1:18796）。
+
+| 断言 | 结果 |
+| --- | --- |
+| 一次提问的助手回复条数 | `first_answers=1` |
+| 「整包返回 · 流式尚未接通」标注次数 | `note_count=1` |
+| 夹具请求数 | 每问 1 次（两问共 2 次），`authorized=true`、`answered 200` |
+| 第二句后的历史顺序 | 「第一句、Fixture Chat answer、第二句、Fixture Chat answer」——问、答、问、答，无重复；首条回答折入历史且不带标注，末条为尾部并带标注 |
+
+截图 `after-first-question.png` / `after-second-question.png`，日志 `/tmp/nk-ios-ipad-type/dup3-ui.log`。
+
+**过程说明（非产品问题）**：第一次运行失败，因为上一轮残留配置写进了字段（地址与模型被追加成重复串），App 如实显示 `接口返回 HTTP 404: unknown fixture root`；`simctl uninstall` 清空后重跑通过。这条同时说明错误信息足够具体，能让人找到原因。
+
+**边界**：临时用例已删除、工程文件已还原、`git status` 干净；真机与真实供应商账号仍未验证。
+
 ## iOS 有了服务包列表与导入界面（2026-11-05）
 
 在 `CoreService` 之上加了 `ServiceStore`（Kit）与 `ServicesView`（设置 → 模块与源 → 服务）：
