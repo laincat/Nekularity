@@ -22,6 +22,15 @@ The run sheet used `JSONSerialization` inside the view, where it could not be te
 **The bug the tests caught**: `JSONSerialization` accepts only an object or an array by default, so `null`, `42`, `true` and `"text"` were all judged invalid - **including the default `null` for an empty field**, meaning the sheet could never send anything when nothing was typed. CI said `Expectation failed: (ServicePayload.isValid(good) → false) == true` across five cases. Adding `.fragmentsAllowed` fixed it.
 
 CI `42112679804` is green with Kit at **477 tests / 83 suites / 0 failures**.
+## 0.4.2 / build 24 (2026-11-05)
+
+0.4.1's run sheet had a real defect: validation used `JSONSerialization.jsonObject(with:)`, which **accepts only an object or an array** by default, so the default `null` for an empty field was judged invalid too - the sheet could not send anything when nothing was typed and only said 「参数不是合法 JSON，未发送。」
+
+This version:
+
+- moves the check into `ServicePayload` (Kit) with `.fragmentsAllowed`, so `null`, `42`, `true` and `"text"` are all valid payloads
+- adds three Kit cases pinning "empty means null", "non-JSON is stopped" and "scalar JSON is valid"
+
 ## 0.4.1 / build 23 is published and verified (2026-11-05)
 
 Tag `v0.4.1` points at `ede845c`; the publish CI `42103870843` passed.

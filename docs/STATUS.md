@@ -22,6 +22,15 @@
 **测试抓到的缺陷**：`JSONSerialization` 默认只接受对象或数组，于是 `null`、`42`、`true`、`"text"` 全被判成非法——**包括留空时默认的 `null`**，也就是说面板在「什么都不填」时根本发不出去。CI 原文 `Expectation failed: (ServicePayload.isValid(good) → false) == true`，5 个用例失败。加 `.fragmentsAllowed` 后全过。
 
 CI `42112679804` 全绿，Kit **477 tests / 83 suites / 0 失败**。
+## 0.4.2 / build 24（2026-11-05）
+
+0.4.1 的运行面板有个真缺陷：参数校验用 `JSONSerialization.jsonObject(with:)`，它**默认只接受对象或数组**，于是留空时默认的 `null` 也被判成非法——面板在「什么都不填」时发不出去，只会显示「参数不是合法 JSON，未发送。」
+
+这一版：
+
+- 校验抽成 `ServicePayload`（Kit）并加 `.fragmentsAllowed`，`null`/`42`/`true`/`"text"` 都是合法参数
+- 3 条 Kit 用例钉住「空 → null」「非 JSON 拦下」「标量 JSON 合法」
+
 ## 0.4.1 / build 23 已发布并核对（2026-11-05）
 
 tag `v0.4.1` → `ede845c`；发布 CI `42103870843` 全绿。
