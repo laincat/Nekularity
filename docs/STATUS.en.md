@@ -77,7 +77,7 @@ Service packages go from "installable" to "usable":
 - the service screen: list, import (digest from the actual bytes), remove, and a reason when a package is refused
 - running: it asks `describe()` first and offers the methods the service declares, falling back to `ping` only when there are none; permissions are confirmed before a run and Core grants only the intersection
 - account values: stored in the Keychain (`AfterFirstUnlockThisDeviceOnly`), only key names are shown, and they are handed to Core for one call; removing a package clears them and drops its old runtime
-- one question on the standard-protocol screen no longer draws two answers; Core pin `563f169`
+- one question on the standard-protocol screen no longer draws two answers; the binary carries Core `1574076` (`563f169` is a Core test-and-docs commit that the pin does not need)
 
 **Where the evidence comes from**: the service screen's list, import, removal, refused-package message, `ping` and the fetch going through the app all passed on iPhone 17 / iOS 27.2; the `describe()` method list and the account-value screen have CI evidence only (Kit 474 tests), and entering values on a device is still to be verified.
 
