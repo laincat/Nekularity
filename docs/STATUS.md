@@ -1,5 +1,18 @@
 [English](STATUS.en.md) · 简体中文
 
+## iOS 能把服务跑起来了（`bef0181`，pin `998f3b9`）
+
+Core 新增 `mobile.ServiceCall` 之后，客户端把最后一段接上：
+
+- `CoreService.call(host:dataDir:id:method:payload:granted:)` 把本机 `CoreHost` 交给 Core，服务的 `fetch` 走 App 自己的传输（Cookie、证书、代理都还是客户端的）
+- `ServiceStore.call` 记录一次运行的结果（成功/失败 + 原文），服务页在顶部显示「运行结果」/「运行失败」
+- 服务页行上左滑「运行」或长按「运行 ping」；运行前弹确认框列出该包申请的权限，用户确认后才授予，**Core 取交集，授予只能收窄**
+- pin 从 `0f1e7b8` 跟到 `998f3b9`（含 `mobile/service_run.go`）
+
+**验证**：CI `42030522124` 全绿，Kit **469 tests / 83 suites / 0 失败**（新增 `Test aRunWithoutAHostSaysSo`：没有宿主时明确说「没有宿主，无法运行服务」而不是假装调用）。
+
+**边界**：模拟器上的实机闭环（装包 → 运行 → 服务 fetch 走 App 传输 → 权限收窄）已在派单中，尚未回传；账号值仍由客户端保存，服务读不到。
+
 ## 服务包界面：列表/导入/移除通过，坏包文案缺失已修（2026-11-05）
 
 Mac 在 iPhone 17 / iOS 27.2 上走 App 自己的入口实测（`9eb1f5c`）：

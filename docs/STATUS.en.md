@@ -1,5 +1,18 @@
 English · [简体中文](STATUS.md)
 
+## iOS can run a service now (`bef0181`, pin `998f3b9`)
+
+After Core gained `mobile.ServiceCall`, the client closes the last gap:
+
+- `CoreService.call(host:dataDir:id:method:payload:granted:)` hands Core this client's `CoreHost`, so a service's `fetch` goes through the app's own transport (cookies, certificates and proxies stay the client's)
+- `ServiceStore.call` records the outcome of one run (success or the reason), and the services screen shows it as 「运行结果」 or 「运行失败」
+- a row offers 运行 by swipe or 运行 ping in its context menu; a confirmation lists the permissions the package asks for, and only after the person agrees are they granted - **Core intersects, so an allowance can only narrow**
+- the pin moves from `0f1e7b8` to `998f3b9`, which carries `mobile/service_run.go`
+
+**Verification**: CI `42030522124` is green with Kit at **469 tests / 83 suites / 0 failures**, including `Test aRunWithoutAHostSaysSo`, which says 「没有宿主，无法运行服务」 instead of pretending to call.
+
+**Boundary**: the simulator loop (install, run, the service's fetch going through the app, a narrowed permission) is dispatched and has not reported yet; account values still live with the client, where a service cannot read them.
+
 ## The service screen: list, import and remove pass; a rejected package said nothing, now fixed (2026-11-05)
 
 On iPhone 17 / iOS 27.2 the Mac drove the app's own entry points at `9eb1f5c`:
