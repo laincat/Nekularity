@@ -1,5 +1,18 @@
 [English](STATUS.en.md) · 简体中文
 
+## 0.3.9 / build 21 已发布并核对（2026-11-05）
+
+tag `v0.3.9` → `44d3845`，发布 CI `42034138520` 全绿。
+
+| 项 | 值 |
+| --- | --- |
+| 公开下载 | **HTTP 200**（GET 与 HEAD 都是 200） |
+| 大小 | **29,694,417 bytes**，与 Release 资产一致 |
+| SHA-256 | `ca8bf68c1ceca40ddff8cad0ba82349c3f0f33d8792bdb21b733ad42a90d0067` |
+| IPA 内容核对 | **13 PASS / 0 FAIL**：两层 CRC、单一 app、App `0.3.9`/`21`、最低 iOS 26.0、`NekularityWidgets.appex` 同为 `0.3.9`/`21`、二进制含 Core 标记 `998f3b9` |
+
+AltStore 刷新 run `42038005313` 成功，`apps.json` 提交 `f8bf8aa`；三个入口（GitHub Raw、`https://cnb.cool/laincat/AltStore/-/git/raw/main/apps.json`、固定 Release）都是 `0.3.9 / 21 / 29694417 / 26.0`；图标 HTTP 200、443,517 bytes、PNG 1024×1024。Release 说明改写为中英双语。
+
 ## 0.3.9 / build 21（2026-11-05）
 
 带上这一轮的全部修复与能力：

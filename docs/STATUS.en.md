@@ -1,5 +1,18 @@
 English · [简体中文](STATUS.md)
 
+## 0.3.9 / build 21 is published and verified (2026-11-05)
+
+Tag `v0.3.9` points at `44d3845`; the publish CI `42034138520` passed.
+
+| Item | Value |
+| --- | --- |
+| public download | **HTTP 200** on both GET and HEAD |
+| size | **29,694,417 bytes**, matching the release asset |
+| SHA-256 | `ca8bf68c1ceca40ddff8cad0ba82349c3f0f33d8792bdb21b733ad42a90d0067` |
+| IPA contents | **13 checks, 0 failures**: both zip layers' CRCs, one app bundle, App `0.3.9`/`21`, minimum iOS 26.0, `NekularityWidgets.appex` also `0.3.9`/`21`, and the binary carries the `998f3b9` Core marker |
+
+The AltStore refresh run `42038005313` succeeded and committed `apps.json` as `f8bf8aa`; all three entries (GitHub Raw, `https://cnb.cool/laincat/AltStore/-/git/raw/main/apps.json`, and the pinned release) report `0.3.9 / 21 / 29694417 / 26.0`, and the icon is HTTP 200, 443,517 bytes, a 1024x1024 PNG. The release notes were rewritten bilingually.
+
 ## 0.3.9 / build 21 (2026-11-05)
 
 Carries everything this round produced:
