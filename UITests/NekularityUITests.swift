@@ -880,8 +880,15 @@ final class NekularityUITests: XCTestCase {
         }
 
         element(app, "library.searchAll").tap()
-        XCTAssertTrue(element(app, "search.field").waitForExistence(timeout: 20),
-                      "全源搜索 opened nothing to type in")
+        // A client with no sources has nothing to search: the screen says so
+        // instead of drawing a field. That is the empty case, not a broken
+        // entry, so it skips the way the other seeded cases do.
+        if !element(app, "search.field").waitForExistence(timeout: 20) {
+            if app.staticTexts["没有可用的漫画源"].exists {
+                throw XCTSkip("no sources seeded: run scripts/seed-simulator.sh first")
+            }
+            XCTFail("全源搜索 opened nothing to type in")
+        }
         // 全部源 is the scope the entry promises.
         XCTAssertTrue(app.buttons["全部源"].waitForExistence(timeout: 10),
                       "全源搜索 did not offer 全部源")
