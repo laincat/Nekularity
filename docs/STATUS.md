@@ -1,5 +1,24 @@
 [English](STATUS.en.md) · 简体中文
 
+## ④ 的本地媒体与夹具闭环（Mac，2026-11-05）
+
+提交 `3aec689`、Core `0f1e7b8`，iPhone 17 / iOS 27.2。逐条 `-only-testing` 运行，未改产品代码。
+
+| 项 | 结果 |
+| --- | --- |
+| `testVideoPlaysTheSourcesClip`（回环 clip，校验 Referer / Range / 已解码时长） | **PASS** 29.1s |
+| `testDownloadedChapterReadsWithNoServer`（下载后停服仍能读） | **PASS** 52.0s |
+| `testDownloadedChapterBadImageFailsThenRetries` | **PASS** 55.5s |
+| `testAFailedDownloadCanBeRetriedFromTheDownloadsScreen` | **PASS** 53.0s |
+| 标准 AI 回路（临时 UI 用例 + `UITests/Fixtures/standard-ai`） | **PASS** 32.3s，夹具记录 `GET /events` 一次、`answered 200` |
+| Magpie 回路（临时 UI 用例 + 本地插件包 + `http://127.0.0.1:18797`） | **PASS** 68.3s，收到「第一段 第二段🐾」，夹具 9 条事件 |
+| PiP | **SKIP**：模拟器上 `AVPictureInPictureController.isPictureInPictureSupported()` 为假，按钮根本不渲染（`App/VideoPlayerView.swift:503`），需真机 |
+| 后台 | **部分**：`XCUIDevice.press(.home)` 后 `app_state=4`（进程存活）；后台续播与音频输出无法在此环境判定 |
+
+外加一个**真实缺陷**（已修，见上一条）：标准接口一次提问渲染两条相同回复。夹具只收到 1 次请求，证明是客户端渲染重复。
+
+**边界**：证据全部来自 iOS 27.2 模拟器；PiP、后台播放/音频、真机与真实账号仍未验证。临时用例与工程文件已还原，仓库未因这轮改动提交。
+
 ## 标准接口的回复不再画两遍（2026-11-05）
 
 Mac 取证发现一个真实缺陷：标准接口问一次，界面出现**两条相同回复**，第二条带着「整包返回 · 流式尚未接通」；夹具只收到 1 次请求，所以是**客户端渲染重复**——`App/StandardAIView.swift` 同时把回复存进 `reply` 又把同一条追加进 `messages`，两处都渲染。

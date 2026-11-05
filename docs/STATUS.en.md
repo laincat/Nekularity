@@ -1,5 +1,24 @@
 English · [简体中文](STATUS.md)
 
+## ④ local media and the fixture loops (Mac, 2026-11-05)
+
+Commit `3aec689`, Core `0f1e7b8`, iPhone 17 / iOS 27.2. Each case ran on its own with `-only-testing`, and no product code changed.
+
+| Item | Result |
+| --- | --- |
+| `testVideoPlaysTheSourcesClip` (loopback clip; checks Referer, Range and decoded duration) | **PASS** 29.1 s |
+| `testDownloadedChapterReadsWithNoServer` (reads after the server is stopped) | **PASS** 52.0 s |
+| `testDownloadedChapterBadImageFailsThenRetries` | **PASS** 55.5 s |
+| `testAFailedDownloadCanBeRetriedFromTheDownloadsScreen` | **PASS** 53.0 s |
+| the standard AI loop (a temporary UI case plus `UITests/Fixtures/standard-ai`) | **PASS** 32.3 s; the fixture logged one `GET /events` and `answered 200` |
+| the Magpie loop (a temporary UI case, a local package and `http://127.0.0.1:18797`) | **PASS** 68.3 s; received "第一段 第二段🐾" with 9 fixture events |
+| PiP | **SKIP**: on a simulator `AVPictureInPictureController.isPictureInPictureSupported()` is false, so the button is never drawn (`App/VideoPlayerView.swift:503`); needs a device |
+| background | **partial**: after `XCUIDevice.press(.home)` `app_state=4` (the process lives); background playback and audio cannot be judged here |
+
+Plus one **real defect**, fixed above: the standard-protocol screen drew two identical answers for one question. The fixture saw a single request, which proves the duplication was in rendering.
+
+**Boundary**: everything comes from iOS 27.2 simulators; PiP, background playback/audio, a real device and real accounts remain unverified. The temporary cases and project file are restored, and this round left nothing committed.
+
 ## A standard-protocol answer is no longer drawn twice (2026-11-05)
 
 The Mac evidence found a real defect: one question on the standard-protocol screen drew **two identical answers**, the second carrying "整包返回 · 流式尚未接通"; the fixture received exactly one request, so the duplication was in **the client's rendering** - `App/StandardAIView.swift` kept the answer in a `reply` property *and* appended the same text to `messages`, and drew both.

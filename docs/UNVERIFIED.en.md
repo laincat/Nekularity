@@ -1,5 +1,10 @@
 English · [简体中文](UNVERIFIED.md)
 
+
+## PiP and background remain device items as of 2026-11-05
+
+On a simulator `AVPictureInPictureController.isPictureInPictureSupported()` is false, so the player never draws its PiP button (`App/VideoPlayerView.swift:503`) and PiP cannot be verified there; background shows only that the process lives (`app_state=4`), while background playback and audio need a device. Video playback, the three download cases, and the standard AI and Magpie fixture loops all pass on iPhone 17 / iOS 27.2 - see the same-day [STATUS](STATUS.md) entry.
+
 ## Theme HTTPS install and long-press arranging became verified on 2026-11-05
 
 Against a real local CA and the 18791/18792 fixtures, the three theme-link cases (HTTPS install/select/relaunch, an invalid theme keeping the selection, and plain HTTP refused by the client) pass 3/3 on iPhone 17 / iOS 27.2; `testBoardLongPressAndSizeSurviveRelaunch` passes 1/1; and the 16 light/dark screenshots across iPhone and iPad portrait/landscape show no cropping, overlap or unreadable text. The earlier "skipped because the fixture is missing" record is no longer the current state.

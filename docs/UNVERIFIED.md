@@ -1,5 +1,10 @@
 [English](UNVERIFIED.en.md) · 简体中文
 
+
+## PiP 与后台在 2026-11-05 仍是真机项
+
+模拟器上 `AVPictureInPictureController.isPictureInPictureSupported()` 为假，播放器的画中画按钮因此不渲染（`App/VideoPlayerView.swift:503`），所以 PiP 无法在模拟器验证；后台只证明进程存活（`app_state=4`），后台续播与音频输出需真机。视频播放、下载三例、标准 AI 与 Magpie 的夹具闭环已在 iPhone 17 / iOS 27.2 上通过，详见 [STATUS](STATUS.md) 同日条目。
+
 ## 主题 HTTPS 安装与长按编排在 2026-11-05 转入已验证
 
 真实本地 CA + 18791/18792 夹具下的三条主题链接用例（HTTPS 安装/选中/重开、非法主题保留选择、明文 HTTP 被客户端拒绝）在 iPhone 17 / iOS 27.2 上 3/3 通过；`testBoardLongPressAndSizeSurviveRelaunch` 1/1 通过；iPhone 竖/横与 iPad 竖/横的明暗 16 张截图中无裁切、重叠或不可读文字。此前"夹具缺失导致跳过"的记录不再是当前状态。
