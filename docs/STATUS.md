@@ -15,7 +15,7 @@
 断言原文：
 
 - `testLibraryHubReachesItsEntries`：`全源搜索 opened nothing to type in`。原因是客户端**没有可用的漫画源**时,该页面显示「没有可用的漫画源」而不是搜索框——这是无源的空态,不是入口坏了。用例改为识别这一空态并 `XCTSkip`,其余情况仍然 `XCTFail`。
-- `testBoardDragOrderSurvivesRelaunch`：`dragging template:favorites before template:history produced ["template:history", "template:favorites", …], expected ["template:favorites", "template:history", …]`。**未修**：拖拽过程中顺序没有变化。这条属于长按编排/拖放（优先级③），需要在有种子源的模拟器上复核，CI 与 Mac 渠道的手势差异也尚未排除。
+- `testBoardDragOrderSurvivesRelaunch`：`dragging template:favorites before template:history produced ["template:history", "template:favorites", …], expected ["template:favorites", "template:history", …]`。**这是合并 Mac 回传（`7ab77c3`）之前的旧断言**：那次跑的是「整块顺序完全相等」，而多列看板上的拖拽只保证两张卡相对顺序与卡片集合不变。用例已在 `7ab77c3` 改写为 `waitForRelative`；这条在 CI 上需要按新断言重跑才能定论，尚未重跑。
 
 **边界**：CI 上的 App 没有种子源，需要种子的用例会自行跳过；因此 CI 的「绿」只覆盖不依赖源的部分。真机、真实账号与长按拖拽的真实手势仍未验证。
 

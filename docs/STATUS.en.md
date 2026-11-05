@@ -15,7 +15,7 @@ Three real results on `ci/ui-tests`:
 The messages:
 
 - `testLibraryHubReachesItsEntries`: `全源搜索 opened nothing to type in`. With **no enabled comic sources** that screen shows "没有可用的漫画源" instead of a field - an empty state, not a broken entry. The case now recognises that state and skips; every other case still fails as before.
-- `testBoardDragOrderSurvivesRelaunch`: `dragging template:favorites before template:history produced ["template:history", "template:favorites", ...], expected ["template:favorites", "template:history", ...]`. **Not fixed**: the drag left the order unchanged. This is the long-press arranging/drag item (priority ③) and needs a seeded simulator to confirm; a gesture difference between the CI runner and the Mac channel is not ruled out either.
+- `testBoardDragOrderSurvivesRelaunch`: `dragging template:favorites before template:history produced ["template:history", "template:favorites", ...], expected ["template:favorites", "template:history", ...]`. **That was the old assertion, before the Mac channel's `7ab77c3` landed**: it demanded the entire order be equal, while a drag on a multi-column board only guarantees the relative order of the two cards and that the set of cards is unchanged. `7ab77c3` rewrote the case as `waitForRelative`; the CI result has to be re-run against that before it means anything, and it has not been re-run yet.
 
 **Boundary**: the app on CI has no seeded sources, so the cases that need them skip themselves; a green CI run therefore covers only the seedless part. A real device, real accounts and the actual long-press drag remain unverified.
 
