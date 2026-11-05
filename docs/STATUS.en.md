@@ -2,6 +2,19 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## A service's network really goes through the app (Mac, iPhone 17 / iOS 27.2, `641172c`)
+
+After the `cookies` contract fix the same package was retested: its `ping` does `fetch(http://127.0.0.1:18798/proof)`, the screen's 运行结果 showed **`{"fetched":"fixture-proof-7K3 来自夹具"}`**, and the case **passed in 52.3 s**.
+
+The point is not the string but that the fixture recorded **one request coming from the simulator app**:
+
+```
+{"t":"2026-11-05T22:26:35","method":"GET","path":"/proof",
+ "ua":"Mozilla/5.0 (iPhone; CPU iPhone OS 27_2 like Mac OS X) …Safari/604.1","accept":"*/*"}
+```
+
+The user agent is the app's, not curl's, so the service's fetch really travels through `CoreHost` into `URLSessionTransport` rather than Core opening its own connection. Screenshot `fetch-retest.png`; log `/tmp/nk-service-run2/fetch.log`.
 ## The service screen now runs what the service says it offers (2026-11-05)
 
 With Core's `mobile.ServiceDescribe` (`83253db`), 运行 no longer only presses `ping`:

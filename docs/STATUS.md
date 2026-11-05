@@ -2,6 +2,19 @@
 
 
 
+
+## 服务的网络确实走 App 的传输（Mac，iPhone 17 / iOS 27.2，`641172c`）
+
+`cookies` 契约修好之后复测同一个包：`ping` 里去 `fetch(http://127.0.0.1:18798/proof)`，界面「运行结果」显示 **`{"fetched":"fixture-proof-7K3 来自夹具"}`**，用例 **PASS 52.3 秒**。
+
+关键不是那段字符串，而是夹具侧记到了**一条来自模拟器 App 的请求**：
+
+```
+{"t":"2026-11-05T22:26:35","method":"GET","path":"/proof",
+ "ua":"Mozilla/5.0 (iPhone; CPU iPhone OS 27_2 like Mac OS X) …Safari/604.1","accept":"*/*"}
+```
+
+UA 是 App 的，不是 curl 的，说明服务的 fetch 确实经 `CoreHost` 走到 `URLSessionTransport`，而不是 Core 自己开了连接。截图 `fetch-retest.png`，日志 `/tmp/nk-service-run2/fetch.log`。
 ## 服务页改按服务自己说的方法运行（2026-11-05）
 
 Core 新增 `mobile.ServiceDescribe`（`83253db`）后，客户端的「运行」不再只会按 `ping`：
