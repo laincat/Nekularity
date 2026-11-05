@@ -70,6 +70,17 @@ The cause sits between the two sides: Core's request JSON left out `cookies` (wh
 Both changed: Core always sends `"cookies": false`; the client takes `Bool?` and treats a missing value as `false`. `TestAServiceFetchGoesThroughTheClient` asserts the field is present and false, and removing it fails with `cookies = <nil> (present=false), want false`. The Core pin moves to `2d1dd76`.
 
 Three other cases passed in the same round: `ping` answering directly (`{"from":"fixture-ping","ok":true}`, PASS 52.7 s), the rejected-package message (`服务包未被接受：service: package has no service.json`), and a storage-only package refused by name when its `ping` fetches (`may not use the network: it did not ask for the "network" permission`).
+## 0.4.0 / build 22 (2026-11-05)
+
+Service packages go from "installable" to "usable":
+
+- the service screen: list, import (digest from the actual bytes), remove, and a reason when a package is refused
+- running: it asks `describe()` first and offers the methods the service declares, falling back to `ping` only when there are none; permissions are confirmed before a run and Core grants only the intersection
+- account values: stored in the Keychain (`AfterFirstUnlockThisDeviceOnly`), only key names are shown, and they are handed to Core for one call; removing a package clears them and drops its old runtime
+- one question on the standard-protocol screen no longer draws two answers; Core pin `563f169`
+
+**Where the evidence comes from**: the service screen's list, import, removal, refused-package message, `ping` and the fetch going through the app all passed on iPhone 17 / iOS 27.2; the `describe()` method list and the account-value screen have CI evidence only (Kit 474 tests), and entering values on a device is still to be verified.
+
 ## 0.3.9 / build 21 is published and verified (2026-11-05)
 
 Tag `v0.3.9` points at `44d3845`; the publish CI `42034138520` passed.

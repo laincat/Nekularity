@@ -70,6 +70,17 @@ Mac 在模拟器上的一条实测发现：服务的 `ping` 里去 `fetch(http:/
 两侧都改：Core 固定带 `"cookies": false`；客户端改为 `Bool?`、缺省按 `false`。回归 `TestAServiceFetchGoesThroughTheClient` 断言该字段存在且为 `false`，负控删掉后失败（`cookies = <nil> (present=false), want false`）。Core pin 跟到 `2d1dd76`。
 
 同一轮里另外三条实测通过：`ping` 直返（`{"from":"fixture-ping","ok":true}`，PASS 52.7s）、坏包文案（`服务包未被接受：service: package has no service.json`）、只申请 `storage` 的包在 `ping` 里 fetch 被指名拒绝（`may not use the network: it did not ask for the "network" permission`）。
+## 0.4.0 / build 22（2026-11-05）
+
+服务包从「能装」做到「能用」：
+
+- 服务页：列表、导入（摘要按实际字节）、移除；被拒绝的包说明原因
+- 运行：先问 `describe()` 再按服务声明的方法给按钮，没声明才回退 `ping`；权限在运行前确认，Core 取交集
+- 账号值：Keychain 存储（`AfterFirstUnlockThisDeviceOnly`）、只显示键名、只在一次调用里交给 Core；卸载包时一并清除，旧运行时也丢弃
+- 标准接口一次提问不再画两条回复；Core pin `563f169`
+
+**验证渠道**：服务页的列表/导入/移除/坏包文案/`ping`/`fetch` 经 App 传输在 iPhone 17 / iOS 27.2 上实测通过；`describe()` 方法清单与账号值界面目前只有 CI 证据（Kit 474 tests），真机录入与运行待验。
+
 ## 0.3.9 / build 21 已发布并核对（2026-11-05）
 
 tag `v0.3.9` → `44d3845`，发布 CI `42034138520` 全绿。
