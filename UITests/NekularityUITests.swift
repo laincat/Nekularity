@@ -1572,7 +1572,12 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(handle(second).waitForExistence(timeout: 10),
                       "arranging shows no handle for \(second)")
 
-        handle(second).press(forDuration: 1.0, thenDragTo: card(first))
+        // Slow, with a pause before release: SwiftUI's drop target only sees a
+        // drag that hovers over it, and the default synthetic drag crosses the
+        // card in a few milliseconds, which the runner reported as "the drag
+        // changed nothing" while a person's drag reorders the board.
+        handle(second).press(forDuration: 1.0, thenDragTo: card(first),
+                             withVelocity: .slow, thenHoldForDuration: 0.6)
         XCTAssertTrue(waitForRelative(second, before: first, set: before),
                       "dragging \(second) before \(first) produced \(order()), expected it before \(first)")
         attach("board-after-drag")
@@ -1602,7 +1607,8 @@ final class NekularityUITests: XCTestCase {
             // happen. That is reported, not asserted, so a correct forward drag and
             // relaunch are not turned into a failure by the cleanup.
             if hittable(card(third)) {
-                handle(second).press(forDuration: 1.0, thenDragTo: card(third))
+                handle(second).press(forDuration: 1.0, thenDragTo: card(third),
+                                     withVelocity: .slow, thenHoldForDuration: 0.6)
                 if !waitForRelative(first, before: second, set: before) {
                     print("NK_DRAG_RESTORE_NO_EFFECT: board is \(order()); left as the forward drag made it")
                 }
