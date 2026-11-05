@@ -11,6 +11,17 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## Payload validation moved into Kit, and the tests caught a real bug (`3edcac4` plus a fix)
+
+The run sheet used `JSONSerialization` inside the view, where it could not be tested. It is now `ServicePayload.normalized/isValid`:
+
+- empty text means `null`, which is how a method that takes nothing is called
+- anything that is not JSON is stopped, and the sheet says 「参数不是合法 JSON，未发送。」 before sending
+
+**The bug the tests caught**: `JSONSerialization` accepts only an object or an array by default, so `null`, `42`, `true` and `"text"` were all judged invalid - **including the default `null` for an empty field**, meaning the sheet could never send anything when nothing was typed. CI said `Expectation failed: (ServicePayload.isValid(good) → false) == true` across five cases. Adding `.fragmentsAllowed` fixed it.
+
+CI `42112679804` is green with Kit at **477 tests / 83 suites / 0 failures**.
 ## 0.4.1 / build 23 is published and verified (2026-11-05)
 
 Tag `v0.4.1` points at `ede845c`; the publish CI `42103870843` passed.

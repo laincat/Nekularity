@@ -11,6 +11,17 @@
 
 
 
+
+## 服务参数校验进了 Kit，并被测试抓到一个真 bug（`3edcac4` + 修复）
+
+运行面板原来在视图里直接 `JSONSerialization`，无法单测。抽成 `ServicePayload.normalized/isValid`：
+
+- 空文本等价 `null`（方法不需要参数时就是这么调的）
+- 非 JSON 一律拦下，界面在发送前就报「参数不是合法 JSON，未发送。」
+
+**测试抓到的缺陷**：`JSONSerialization` 默认只接受对象或数组，于是 `null`、`42`、`true`、`"text"` 全被判成非法——**包括留空时默认的 `null`**，也就是说面板在「什么都不填」时根本发不出去。CI 原文 `Expectation failed: (ServicePayload.isValid(good) → false) == true`，5 个用例失败。加 `.fragmentsAllowed` 后全过。
+
+CI `42112679804` 全绿，Kit **477 tests / 83 suites / 0 失败**。
 ## 0.4.1 / build 23 已发布并核对（2026-11-05）
 
 tag `v0.4.1` → `ede845c`；发布 CI `42103870843` 全绿。
