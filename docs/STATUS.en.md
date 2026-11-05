@@ -1,5 +1,18 @@
 English · [简体中文](STATUS.md)
 
+## CI and the multi-column drag: both causes ruled out, still failing (2026-11-05)
+
+`testBoardDragOrderSurvivesRelaunch` keeps failing on CI, and two candidate causes have now been excluded:
+
+| run | change | result |
+| --- | --- | --- |
+| `41996867565` | wait for 编辑 to become 完成 before dragging, so arranging has started | still fails: the order is unchanged |
+| `42000191624` | drag with `withVelocity: .slow` and hold on the target for 0.6 s before releasing | still fails: the order is unchanged |
+
+The message is the same both times: `dragging template:favorites before template:history produced ["template:history", "template:favorites", ...]`. So arranging was ready and the drag was slow and held, yet it still reorders nothing on the runner, while the same case passes on the Mac's iPhone 17 and iPad (`7ab77c3`). That is **not a timing or speed problem**: it looks like the runner's simulator does not hand a synthetic drag session to SwiftUI's `.draggable`/`dropDestination`. The conclusion is recorded as a channel difference - no UI drag verdict from CI, the Mac channel decides.
+
+Both changes stay in the case (wait for arranging, then a slow drag with a hold); they make a failure clearer without weakening the assertion.
+
 ## Theme HTTPS install, long-press arranging and narrow/wide evidence (Mac, 2026-11-05)
 
 Commit `a23a513`, Core `0f1e7b8`, on iPhone 17 / iOS 27.2 and iPad Pro 11-inch (M5) / iOS 27.2. **All three items pass, no real failure, and no product code changed this round.**

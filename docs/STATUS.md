@@ -1,5 +1,18 @@
 [English](STATUS.en.md) · 简体中文
 
+## CI 与多列拖拽：两种成因都排除后仍失败（2026-11-05）
+
+`testBoardDragOrderSurvivesRelaunch` 在 CI 上持续失败，先后排除了两种成因：
+
+| run | 改动 | 结果 |
+| --- | --- | --- |
+| `41996867565` | 拖拽前先等「编辑」变成「完成」，确认已进入编排 | 仍失败：顺序不变 |
+| `42000191624` | 拖拽改为 `withVelocity: .slow` 并在目标上停留 0.6 秒再松手 | 仍失败：顺序不变 |
+
+两次的断言原文一致：`dragging template:favorites before template:history produced ["template:history", "template:favorites", …]`。也就是说，编排状态已就绪、拖拽也已放慢并停留，runner 上这条拖拽仍然没有触发重排；而同一用例在 Mac 的 iPhone 17 与 iPad 上通过（`7ab77c3`）。因此这**不是时序或速度问题**，更像 runner 的模拟器不把合成拖拽会话交给 SwiftUI 的 `.draggable`/`dropDestination`。结论按渠道差异记录：桌面/CI 上不做 UI 拖拽结论，以 Mac 渠道为准。
+
+两处改动保留在用例里（先等编排状态、慢速并停留），它们让失败信息更明确，也没有放宽断言。
+
 ## 主题 HTTPS 安装、长按编排与窄宽屏取证（Mac，2026-11-05）
 
 提交 `a23a513`、Core `0f1e7b8`，设备 iPhone 17 / iOS 27.2 与 iPad Pro 11-inch (M5) / iOS 27.2。**三项全部通过，无真实失败，本轮未改产品代码。**
