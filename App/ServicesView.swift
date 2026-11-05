@@ -82,31 +82,8 @@ struct ServicesView: View {
         .overlay {
             if services.installing { ProgressView("正在安装…") }
         }
-        .confirmationDialog("允许这些权限并运行？", isPresented: Binding(
-            get: { pendingRun != nil },
-            set: { if !$0 { pendingRun = nil } }), presenting: pendingRun) { record in
-            // The buttons are what the package says it offers. A package that
-            // does not describe itself still answers `ping`, so that stays as
-            // one honest fallback rather than a list nobody wrote.
-            let offered = services.offeredMethods(for: record.id)
-            if offered.isEmpty {
-                Button("运行 ping") {
-                    start(record, method: "ping")
-                }
-            } else {
-                ForEach(offered) { method in
-                    Button(method.label) { start(record, method: method.name) }
-                }
-            }
-            Button("取消", role: .cancel) { pendingRun = nil }
-        } message: { record in
-            let names = (record.permissions ?? []).map(Self.permissionName)
-            Text(names.isEmpty
-                 ? "\(record.name) 不申请任何权限。它说能做的事：\(Self.offeredText(services.offeredMethods(for: record.id)))。"
-                 : "\(record.name) 申请：\(names.joined(separator: "、"))。它说能做的事：\(Self.offeredText(services.offeredMethods(for: record.id)))。这些权限只在这次调用期间允许，它仍然读不到账号值。")
-        }
-        .sheet(item: $accountsFor) { record in
-            ServiceAccountsView(record: record)
+        .sheet(item: $pendingRun) { record in
+            ServiceRunSheet(record: record, methods: services.offeredMethods(for: record.id))
         }
         .task { services.reload() }
         .refreshable { services.reload() }
@@ -118,16 +95,6 @@ struct ServicesView: View {
             await services.describe(record)
             pendingRun = record
         }
-    }
-
-    private func start(_ record: ServiceRecord, method: String) {
-        let granted = record.permissions ?? []
-        pendingRun = nil
-        Task { await services.call(record, method: method, granted: granted) }
-    }
-
-    private static func offeredText(_ methods: [ServiceMethod]) -> String {
-        methods.isEmpty ? "没有说明，只能先试 ping" : methods.map(\.label).joined(separator: "、")
     }
 
     @ViewBuilder
