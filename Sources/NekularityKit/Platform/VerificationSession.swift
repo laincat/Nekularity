@@ -18,7 +18,7 @@ public final class VerificationSession: NSObject, WKNavigationDelegate {
     public let challenge: Challenge
     public let webView: WKWebView
     private let cookies: CookieJars
-    private var continuation: CheckedContinuation<String?, Never>?
+    private var continuation: CheckedContinuation<VerificationOutcome?, Never>?
     private var finished = false
 
     public init(challenge: Challenge, cookies: CookieJars, userAgent: String?) {
@@ -32,9 +32,9 @@ public final class VerificationSession: NSObject, WKNavigationDelegate {
         if let userAgent { webView.customUserAgent = userAgent }
     }
 
-    /// Loads the page and waits until it is passed (User-Agent) or
-    /// `cancel()` is called (nil).
-    public func run() async -> String? {
+    /// Loads the page and waits until it is passed (what the clearance carries)
+    /// or `cancel()` is called (nil).
+    public func run() async -> VerificationOutcome? {
         guard let url = URL(string: challenge.url), ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return nil }
         // Send the cookies the partition already has, so a session the
         // source started is continued rather than replaced.
@@ -54,11 +54,11 @@ public final class VerificationSession: NSObject, WKNavigationDelegate {
 
     public func cancel() { finish(nil) }
 
-    private func finish(_ ua: String?) {
+    private func finish(_ outcome: VerificationOutcome?) {
         guard !finished else { return }
         finished = true
         webView.stopLoading()
-        continuation?.resume(returning: ua)
+        continuation?.resume(returning: outcome)
         continuation = nil
     }
 
@@ -83,16 +83,26 @@ public final class VerificationSession: NSObject, WKNavigationDelegate {
             let d = c.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
             return host == d || host.hasSuffix("." + d)
         }
+        let guardedHost = URL(string: challenge.url)?.host()
         let conditions = ChallengeRule.Conditions(html: html, url: url,
-                                                  cookieNames: Set(relevant.map(\.name)))
+                                                  cookieNames: Set(relevant.map(\.name)),
+                                                  guardedHost: guardedHost)
         guard conditions.satisfied(absentMarkers: challenge.absentMarkers ?? [],
                                    requiredCookies: challenge.requiredCookies ?? [],
-                                   requiredQueryParams: challenge.requiredQueryParams ?? [])
+                                   requiredQueryParams: challenge.requiredQueryParams ?? [],
+                                   sameHost: challenge.sameHost ?? false)
         else { return false }
         cookies.importCookies(partition: challenge.partition, relevant)
         let ua = webView.customUserAgent?.isEmpty == false ? webView.customUserAgent
             : (try? await webView.evaluateJavaScript("navigator.userAgent") as? String)
-        finish(ua ?? "")
+        // A rule that names parameters means the clearance is in the URL: the
+        // retry has to repeat them, so they travel back with the User-Agent.
+        var query: [String: String] = [:]
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        for want in challenge.requiredQueryParams ?? [] {
+            if let v = items.first(where: { $0.name == want })?.value, !v.isEmpty { query[want] = v }
+        }
+        finish(VerificationOutcome(userAgent: ua ?? "", query: query))
         return true
     }
 }
