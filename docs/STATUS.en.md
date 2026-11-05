@@ -7,6 +7,21 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## 0.4.0 / build 22 is published and verified (2026-11-05)
+
+Tag `v0.4.0` points at `12bbb28`; the publish CI `42081589626` passed.
+
+| Item | Value |
+| --- | --- |
+| public download | **HTTP 200** |
+| size | **29,758,353 bytes**, matching the asset |
+| SHA-256 | `642feabaea7cec136abe1b69d6760676ade93acd26630a81a01f356172454e26` |
+| IPA contents | **13 checks, 0 failures**: both layers' CRCs, one app bundle, App `0.4.0`/`22`, minimum iOS 26.0, the widget also `0.4.0`/`22`, and the `1574076` Core marker in the binary |
+
+The AltStore refresh run `42088211577` succeeded and committed `apps.json` as `c91a885`; all three entries report `0.4.0 / 22 / 29758353 / 26.0`, and the icon is 200 with 443,517 bytes. The release notes are bilingual.
+
+**One correction**: the tag went out without running `check-core-pin.sh`, and the notes first claimed `563f169` while the binary carries `1574076` (`563f169` is only a Core test-and-docs commit). The docs and release notes are fixed, and the verification script was rerun to confirm the binary's marker. Its first run failed precisely because it expected `563f169` - the artefact has to be the one that decides.
 ## Removing a package now clears its account values and its old runtime (`a47e77f`)
 
 Two real leftovers:
