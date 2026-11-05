@@ -30,6 +30,10 @@ Not captured: the settings page scrolled to its 外观 section (the temporary te
 
 Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`visual-summary.json`, `element-contrast.json`).
 
+## Following Core 518f446: a busy service is left alone (2026-11-04)
+
+Core main moves to `518f446` (tree `a7f402cb`): resident services count calls in flight and both `Sweep` and LRU eviction skip busy ones. iOS follows the pin only; the Swift work on `feat/challenge-query` still waits for a Mac compile.
+
 ## Following Core 971146f: the challenge rule crosses the bridge whole (2026-11-04)
 
 Core main moves to `971146f` (tree `ba7d3620`): `hostBridge.Verify` now carries `sameHost`, and the clearance it returns accepts `query`. iOS's `Challenge` therefore really receives the host condition; the `ChallengeRule`, `VerificationSession` and `VerificationOutcome` changes live on `feat/challenge-query` and merge into main after the Mac compiles and tests them.

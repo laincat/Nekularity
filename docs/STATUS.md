@@ -30,6 +30,10 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 日志与逐元素测量在 Mac `/tmp/nk-ios-037-visual/`（`visual-summary.json`、`element-contrast.json`）。
 
+## 跟随 Core 518f446：忙碌的服务不被清扫（2026-11-04）
+
+Core 主线升到 `518f446`（tree `a7f402cb`）：常驻服务记录进行中的调用数，`Sweep` 与 LRU 淘汰跳过忙碌实例。iOS 只跟随 pin；`feat/challenge-query` 分支的 Swift 改动仍待 Mac 编译。
+
 ## 跟随 Core 971146f：挑战规则整体过桥（2026-11-04）
 
 Core 主线升到 `971146f`（tree `ba7d3620`）：`hostBridge.Verify` 补上 `sameHost`，返回的 clearance 接受 `query`。iOS 的 `Challenge` 因此能真正拿到主机条件；`ChallengeRule`、`VerificationSession`、`VerificationOutcome` 的改动见 `feat/challenge-query` 分支，待 Mac 编译与测试后合入 main。
