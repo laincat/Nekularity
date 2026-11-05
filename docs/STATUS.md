@@ -1,5 +1,11 @@
 [English](STATUS.en.md) · 简体中文
 
+## iOS 客户端本来就把源指定的 Host 发出去（2026-11-05）
+
+桌面端的 `Host` 缺口修好后（Nekophage `4ec0a90`），iOS 侧需要一个证据说明它是不是也有同样问题。新增 `TransportHostHeaderTests`：在 `127.0.0.1` 起一个只收一次请求的 `NWListener`，把 `Host: mobileapp.example.com` 交给真实的 `URLSessionTransport.send`，读出服务端收到的请求头。
+
+结果：**通过**——服务端看到的就是源指定的主机名（`✔ Test aHostTheSourceNamesReachesTheServer() passed`）。CI run `41986971865` 的 Kit 单测为 **453 tests / 83 suites、0 失败**（原 452 条加这一条）。因此这个缺口只在桌面 transport 上，iOS 不需要改动。
+
 ## 0.3.8 / build 20 正式发布（2026-11-05）
 
 tag `v0.3.8` 指向 `fabe86b9a995b82522accc6eed435a2a66381ab4`（`0.3.8 / build 20`），Core `0f1e7b8856b77059c49fad1b12513adae577ca32`。发布 CI `41981571842`（`macos-26` / Xcode 26.6）全绿：Core 构建、`swift test`、设备 App 构建、UI 测试编译、IPA 打包与 tag 发布。

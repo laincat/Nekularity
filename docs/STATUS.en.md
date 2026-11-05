@@ -1,5 +1,11 @@
 English · [简体中文](STATUS.md)
 
+## The iOS client already sends a Host the source names (2026-11-05)
+
+With the desktop gap fixed (Nekophage `4ec0a90`), the iOS side needed evidence of whether it has the same problem. `TransportHostHeaderTests` starts an `NWListener` on `127.0.0.1` that takes one request, hands `Host: mobileapp.example.com` to the real `URLSessionTransport.send`, and reads the request head the server received.
+
+The result is a **pass**: the server sees the host the source named (`✔ Test aHostTheSourceNamesReachesTheServer() passed`). Kit tests in CI run `41986971865` were **453 tests / 83 suites, 0 failures** (the previous 452 plus this one). So the gap was the desktop transport only, and iOS needs no change.
+
 ## 0.3.8 / build 20 published (2026-11-05)
 
 Tag `v0.3.8` points at `fabe86b9a995b82522accc6eed435a2a66381ab4` (`0.3.8 / build 20`), Core `0f1e7b8856b77059c49fad1b12513adae577ca32`. Release CI `41981571842` (`macos-26` / Xcode 26.6) is green end to end: Core build, `swift test`, the device app, UI test compilation, IPA packaging and the tag publish.
