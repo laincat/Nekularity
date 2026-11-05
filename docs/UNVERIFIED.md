@@ -1,5 +1,13 @@
 [English](UNVERIFIED.en.md) · 简体中文
 
+## 服务包能力在 2026-11-05 的验证边界
+
+已验证（模拟器 iPhone 17 / iOS 27.2，真实入口）：空列表；从系统文件选择器导入；列表显示名字/版本/权限；滑动移除与确认文案；缺 `service.json` 的包被拒并显示 `服务包未被接受：service: package has no service.json`；`ping` 直返；服务 `fetch` 经 App 传输（夹具记录到 App UA 的请求）；只申请 `storage` 的包在 fetch 时被指名拒绝。
+
+仅有 CI 证据（Kit 473 tests）：`describe()` 方法清单、账号值的 Keychain 存储与「账号值」界面、`ServiceCallWithSecrets` 的权限与缺键拒绝。
+
+未验证：真机上录入账号值并运行、真实第三方服务包、服务包声明所需键名的机制（不存在，键名由使用者决定）、Core 的 `secrets` 与客户端 Keychain 在真机锁屏后的行为。
+
 
 ## PiP 与后台在 2026-11-05 仍是真机项
 

@@ -1,5 +1,13 @@
 English · [简体中文](UNVERIFIED.md)
 
+## Where the service capabilities stand on 2026-11-05
+
+Verified (simulator, iPhone 17 / iOS 27.2, through the app's own entry points): the empty list; importing from the system file picker; the row showing name, version and permissions; swipe removal with its confirmation; a package without `service.json` refused with `服务包未被接受：service: package has no service.json`; `ping` answering directly; a service's `fetch` going through the app (the fixture recorded a request with the app's user agent); and a storage-only package refused by name when it fetches.
+
+CI-only evidence (Kit 473 tests): the `describe()` method list, the Keychain storage and 「账号值」 screen, and `ServiceCallWithSecrets` refusing a missing key or a withheld permission.
+
+Not verified: entering account values and running on a real device, third-party packages, any mechanism for a package to declare which keys it needs (there is none; the person chooses the names), and how Core's `secrets` and the client's Keychain behave after a device lock.
+
 
 ## PiP and background remain device items as of 2026-11-05
 
