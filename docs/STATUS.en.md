@@ -1,3 +1,20 @@
+English · [简体中文](STATUS.md)
+
+## The challenge rule and its query parameters: compiled and unit tested on CI (2026-11-05)
+
+`feat/challenge-query` (rebased to `6b8eb2a`) is merged into main. It decodes `sameHost` into `Challenge`; teaches `ChallengeRule` a host condition (a blank window has no host and therefore fails); makes `VerificationSession` treat `Challenge.url`'s host as the guarded host and carry the values of `requiredQueryParams` back; and returns `VerificationOutcome` (User-Agent plus query) from `SourceUI.verify`/`CoreHost.verify`, matching the `sameHost`/`query` fields Core's `hostBridge.Verify` already uses. `ChallengeRuleTests.sameHostRule` is new.
+
+**Where the evidence comes from**: this machine has no Swift toolchain. CI ran `ios-release.yml` (run `41958530139`, `macos-26`, Xcode 26.6):
+
+| Step | Result |
+| --- | --- |
+| `swift test --no-parallel` | all green; the `ChallengeRule` suite including `sameHostRule` passes |
+| project generation and an unsigned device build | pass |
+| compiling the UI test target | passes (compiled, not executed) |
+| packaging the IPA | passes |
+
+**Boundary**: CI proves compilation, the Kit unit tests and the build; the simulator UI suite, a real device and a live verification site remain unverified.
+
 # Nekularity status
 
 English | [简体中文](STATUS.md)
@@ -32,15 +49,15 @@ Logs and per-element measurements are on the Mac at `/tmp/nk-ios-037-visual/` (`
 
 ## Following Core 0f1e7b8: the Cloudflare rule corrected (2026-11-04)
 
-Core main moves to `0f1e7b8` (tree `80b14e97`): the Cloudflare rule is now "the interstitial markers are gone and the browser is back on the guarded host", without waiting for `/cdn-cgi/challenge-platform/` and without insisting on `cf_clearance`. iOS follows the pin only; `feat/challenge-query` still waits for a Mac compile.
+Core main moves to `0f1e7b8` (tree `80b14e97`): the Cloudflare rule is now "the interstitial markers are gone and the browser is back on the guarded host", without waiting for `/cdn-cgi/challenge-platform/` and without insisting on `cf_clearance`. iOS follows the pin only; the `feat/challenge-query` Swift changes were compiled and unit tested by CI `41958530139` (macos-26) and merged into main.
 
 ## Following Core 518f446: a busy service is left alone (2026-11-04)
 
-Core main moves to `518f446` (tree `a7f402cb`): resident services count calls in flight and both `Sweep` and LRU eviction skip busy ones. iOS follows the pin only; the Swift work on `feat/challenge-query` still waits for a Mac compile.
+Core main moves to `518f446` (tree `a7f402cb`): resident services count calls in flight and both `Sweep` and LRU eviction skip busy ones. iOS follows the pin only; the `feat/challenge-query` Swift changes were compiled and unit tested by CI `41958530139` (macos-26) and merged into main.
 
 ## Following Core 971146f: the challenge rule crosses the bridge whole (2026-11-04)
 
-Core main moves to `971146f` (tree `ba7d3620`): `hostBridge.Verify` now carries `sameHost`, and the clearance it returns accepts `query`. iOS's `Challenge` therefore really receives the host condition; the `ChallengeRule`, `VerificationSession` and `VerificationOutcome` changes live on `feat/challenge-query` and merge into main after the Mac compiles and tests them.
+Core main moves to `971146f` (tree `ba7d3620`): `hostBridge.Verify` now carries `sameHost`, and the clearance it returns accepts `query`. iOS's `Challenge` therefore really receives the host condition; the `ChallengeRule`, `VerificationSession` and `VerificationOutcome` changes are on main (`6b8eb2a`).
 
 **Boundary**: there is no Swift toolchain here, so only the syntax parse passed; nothing is compiled or Kit-tested, and this is not counted as verified.
 

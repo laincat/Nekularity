@@ -1,3 +1,20 @@
+[English](STATUS.en.md) · 简体中文
+
+## 挑战完成规则与查询参数：CI 编译与 Kit 测试（2026-11-05）
+
+`feat/challenge-query`（rebase 后 `6b8eb2a`）合入 main。内容：`Challenge` 解码 `sameHost`；`ChallengeRule` 支持主机条件（空窗口没有 host，未导航就判未通过）；`VerificationSession` 用 `Challenge.url` 的主机作被保护主机，并把 `requiredQueryParams` 的实际值带回；`SourceUI.verify`/`CoreHost.verify` 返回 `VerificationOutcome`（User-Agent + query），过桥字段与 Core `hostBridge.Verify` 的 `sameHost`/`query` 对齐。新增 `ChallengeRuleTests.sameHostRule`。
+
+**验证渠道**：本机没有 Swift 工具链。这一轮由 CI 跑 `ios-release.yml`（run `41958530139`，`macos-26`、Xcode 26.6）：
+
+| 步骤 | 结果 |
+| --- | --- |
+| `swift test --no-parallel` | 全绿；`ChallengeRule` 套件（含 `sameHostRule`）通过 |
+| 生成工程 + 未签名 device 构建 | 通过 |
+| 编译 UI 测试目标 | 通过（只编译，不执行） |
+| 打包 IPA | 通过 |
+
+**边界**：CI 只证明编译、Kit 单测与构建；模拟器 UI 套件、真机与人机验证站点的真实流程仍未验证。
+
 # Nekularity 状态
 
 [English](STATUS.en.md) | 简体中文
@@ -32,17 +49,17 @@ Core `b882bf9` 让源在登录期间被更新或删除后的旧句柄返回结�
 
 ## 跟随 Core 0f1e7b8：Cloudflare 完成规则修正（2026-11-04）
 
-Core 主线升到 `0f1e7b8`（tree `80b14e97`）：Cloudflare 完成规则改为「插页标记消失且回到被保护主机」，不等 `/cdn-cgi/challenge-platform/`、也不强制 `cf_clearance`。iOS 只跟随 pin；`feat/challenge-query` 分支仍待 Mac 编译。
+Core 主线升到 `0f1e7b8`（tree `80b14e97`）：Cloudflare 完成规则改为「插页标记消失且回到被保护主机」，不等 `/cdn-cgi/challenge-platform/`、也不强制 `cf_clearance`。iOS 只跟随 pin；`feat/challenge-query` 的 Swift 改动已由 CI `41958530139`（macos-26）编译并跑通 Kit 测试后合入 main。
 
 ## 跟随 Core 518f446：忙碌的服务不被清扫（2026-11-04）
 
-Core 主线升到 `518f446`（tree `a7f402cb`）：常驻服务记录进行中的调用数，`Sweep` 与 LRU 淘汰跳过忙碌实例。iOS 只跟随 pin；`feat/challenge-query` 分支的 Swift 改动仍待 Mac 编译。
+Core 主线升到 `518f446`（tree `a7f402cb`）：常驻服务记录进行中的调用数，`Sweep` 与 LRU 淘汰跳过忙碌实例。iOS 只跟随 pin；`feat/challenge-query` 的 Swift 改动已由 CI `41958530139`（macos-26）编译并跑通 Kit 测试后合入 main。
 
 ## 跟随 Core 971146f：挑战规则整体过桥（2026-11-04）
 
-Core 主线升到 `971146f`（tree `ba7d3620`）：`hostBridge.Verify` 补上 `sameHost`，返回的 clearance 接受 `query`。iOS 的 `Challenge` 因此能真正拿到主机条件；`ChallengeRule`、`VerificationSession`、`VerificationOutcome` 的改动见 `feat/challenge-query` 分支，待 Mac 编译与测试后合入 main。
+Core 主线升到 `971146f`（tree `ba7d3620`）：`hostBridge.Verify` 补上 `sameHost`，返回的 clearance 接受 `query`。iOS 的 `Challenge` 因此能真正拿到主机条件；`ChallengeRule`、`VerificationSession`、`VerificationOutcome` 的改动已合入 main（`6b8eb2a`）。
 
-**边界**：本机无 Swift 工具链，只有语法解析通过；未编译、未跑 Kit 测试，不计为已验证。
+**验证渠道**：本机无 Swift 工具链；编译与 Kit 测试由 CI `41958530139`（`macos-26`，Xcode 26.6）完成——`swift test --no-parallel` 全绿，`ChallengeRule` 套件（含 `sameHostRule`）通过，UI 测试目标只编译未执行。模拟器 UI 套件仍在 Mac Worker 上跑。
 
 ## 跟随 Core 7ade130a：验证页不再把 HTML 交给源（2026-11-04）
 
