@@ -8,7 +8,7 @@ on:
         type: boolean
         default: false
       ui_only:
-        description: 'Run only these interface cases (comma separated: NekularityUITests.testX)'
+        description: 'Run only these interface cases (comma separated: XCUITestClass/testMethod)'
         type: string
         default: ''
   push:
@@ -144,7 +144,7 @@ jobs:
           # message is the whole point of a run that fails.
           only=""
           for name in $(echo "${{ inputs.ui_only }}" | tr ',' ' '); do
-            only="$only -only-testing:$name"
+            only="$only -only-testing:NekularityUITests/$name"
           done
           xcodebuild -project Nekularity.xcodeproj -scheme Nekularity \
             -destination "platform=iOS Simulator,name=$device" -jobs 2 \
