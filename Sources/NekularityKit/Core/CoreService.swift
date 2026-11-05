@@ -1,4 +1,5 @@
 import Foundation
+import VeneraCatCore
 
 /// One installed service package, as Core reports it.
 ///
