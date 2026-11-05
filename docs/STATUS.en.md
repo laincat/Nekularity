@@ -9,6 +9,18 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## The account-value screen printed its own code (`a87f5d9`)
+
+Simulator acceptance caught it: five places in `ServiceAccountsView.swift` used two backslashes, so the screen showed the source instead of a name -
+
+- footer: `(record.name) 申请了「读取账号值」…`
+- save notice: `已保存 \(name)`
+- the delete notice and the accessibility identifier too
+
+All are single-backslash interpolations now. **A check was added**: `scripts/check-swift.py` treats "two backslashes, a paren, an expression, a closing paren" as an error; a negative control that put the double backslash back reported `line 105: interpolation written with two backslashes` and passed once removed. Neither the parser nor the type checker complains about this - only the screen does.
+
+CI `42097670057` is green with Kit at **474 tests / 83 suites / 0 failures**.
 ## Running a service now lets you pick a method and write a payload (`ac29460` plus a follow-up fix)
 
 It used to only press `ping` with a fixed `null` payload. There is now a run sheet:
