@@ -1,6 +1,17 @@
 English · [简体中文](STATUS.md)
 
 
+
+## The service screen now runs what the service says it offers (2026-11-05)
+
+With Core's `mobile.ServiceDescribe` (`83253db`), 运行 no longer only presses `ping`:
+
+- tapping 运行 asks the service to `describe()` first, and the confirmation offers **its own methods** (`{"name":"sync","title":"同步"}` becomes a 「同步」 button)
+- a service without `describe` answers with an empty list, and the screen keeps 「运行 ping」 as an honest fallback instead of inventing a method
+- a description belongs to the package that gave it (`offeredMethods(for:)`), so A's methods never appear on B
+- describing happens **without granting anything**; a service that needs the network to describe itself fails, and the screen falls back to ping
+
+Regressions: `adscriptionIsNotOfferedForAnotherPackage` pins the ownership rule, and Core has two cases (with `describe` yielding `sync`/`同步`, without yielding `[]`). The pin moves to `83253db`.
 ## A service's fetch no longer fails before dialling (2026-11-05)
 
 One simulator run found it: a service whose `ping` does `fetch(http://127.0.0.1:18798/proof)` reported `service: fixture-fetch failed on "ping": Error: 未能读取数据，因为数据丢失。` while **the fixture recorded zero requests** - nothing was ever sent.

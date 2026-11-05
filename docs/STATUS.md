@@ -1,6 +1,17 @@
 [English](STATUS.en.md) · 简体中文
 
 
+
+## 服务页改按服务自己说的方法运行（2026-11-05）
+
+Core 新增 `mobile.ServiceDescribe`（`83253db`）后，客户端的「运行」不再只会按 `ping`：
+
+- 点「运行」先问服务 `describe()`，确认框里出现的是**它自己列的方法**（`{"name":"sync","title":"同步"}` → 按钮「同步」）
+- 没有 `describe` 的服务的回答是空列表，此时仍提供「运行 ping」作为诚实回退，而不是编一个方法
+- 描述结果按包 id 归属（`offeredMethods(for:)`），A 的方法不会被显示在 B 上
+- 描述在**不授予任何权限**的前提下进行；需要网络才能描述自己的服务会报错，页面随即退回 ping
+
+回归：`adscriptionIsNotOfferedForAnotherPackage` 钉住归属；Core 侧两条（带 `describe` 得到 `sync`/`同步`，不带得到 `[]`）。pin 跟到 `83253db`。
 ## 服务的 fetch 不再在拨号前失败（2026-11-05）
 
 Mac 在模拟器上的一条实测发现：服务的 `ping` 里去 `fetch(http://127.0.0.1:18798/proof)`，界面报 `service: fixture-fetch failed on "ping": Error: 未能读取数据，因为数据丢失。`，而**夹具 0 条请求**——请求从没发出。
