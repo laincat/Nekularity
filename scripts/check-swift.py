@@ -247,6 +247,25 @@ def duplicate_test_names(root: pathlib.Path, files: list[pathlib.Path]) -> list[
 
 
 
+def doubled_interpolation(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
+    """An interpolation written with two backslashes, so the screen shows the code.
+
+    Swift interpolates with one backslash; two produce a literal. This shipped
+    once - the account-value screen printed the code instead of a name, and a
+    simulator screenshot caught it - and neither the parser nor the type checker
+    minds, so it is checked here.
+    """
+    two = chr(92) * 2
+    broken = re.compile(re.escape(two + "(") + "[A-Za-z_$][^)" + chr(10) + "]*" + re.escape(")"))
+    problems: list[tuple[str, str]] = []
+    for path in files:
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if broken.search(line):
+                problems.append((str(path.relative_to(root)),
+                                 f"line {number}: interpolation written with two backslashes"))
+    return problems
+
+
 def stored_predicates(root: pathlib.Path, files: list[pathlib.Path]) -> list[tuple[str, str]]:
     """An NSPredicate kept in a variable and passed to `matching`.
 
@@ -492,6 +511,10 @@ def main() -> int:
         print(f"{rel}: {detail}")
 
     for rel, detail in element_query_predicates(root, files):
+        failed += 1
+        print(f"{rel}: {detail}")
+
+    for rel, detail in doubled_interpolation(root, files):
         failed += 1
         print(f"{rel}: {detail}")
 

@@ -36,14 +36,14 @@ struct ServiceAccountsView: View {
                                 Spacer()
                                 Text("已保存").font(.caption).foregroundStyle(.secondary)
                             }
-                            .accessibilityIdentifier("service.account.\\(name)")
+                            .accessibilityIdentifier("service.account.\(name)")
                         }
                         .onDelete { offsets in
                             for index in offsets {
                                 let name = keys[index]
                                 do {
                                     try services.accounts.remove(service: record.id, key: name)
-                                    notice = "已删除 \\(name)"
+                                    notice = "已删除 \(name)"
                                 } catch {
                                     problem = error.localizedDescription
                                 }
@@ -55,8 +55,8 @@ struct ServiceAccountsView: View {
                     Text("已保存的键")
                 } footer: {
                     Text(wantsSecrets
-                         ? "\\(record.name) 申请了「读取账号值」，运行时会读到这里保存的值。值保存后不再显示。"
-                         : "\\(record.name) 没有申请「读取账号值」，这里保存的值它读不到。")
+                         ? "\(record.name) 申请了「读取账号值」，运行时会读到这里保存的值。值保存后不再显示。"
+                         : "\(record.name) 没有申请「读取账号值」，这里保存的值它读不到。")
                 }
 
                 Section("添加或替换") {
@@ -102,7 +102,7 @@ struct ServiceAccountsView: View {
         let name = key.trimmingCharacters(in: .whitespaces)
         do {
             try services.accounts.set(service: record.id, key: name, value: value)
-            notice = "已保存 \\(name)"
+            notice = "已保存 \(name)"
             problem = nil
             key = ""
             value = ""
