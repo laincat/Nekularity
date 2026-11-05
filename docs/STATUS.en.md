@@ -4,6 +4,12 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## A service can read account values the client supplies (pin moves to `1574076`)
+
+Core gained `ServiceCallWithSecrets`: account values travel with one call (`{"key":"value"}`), are only reachable under the `secrets` permission, and a key that was not supplied is named in the error. `CoreService.call` takes an optional `secrets` argument, empty by default.
+
+The client still has **no screen for entering or storing a service's account values**; this step only completes the contract. `ServiceStore` passes nothing yet, so a service that asks for `secrets` is still refused by name when it reads one.
 ## The host request shape has a client-side regression now (2026-11-05)
 
 The service-fetch failure (a request without `cookies` made `JSONDecoder` throw `keyNotFound` before dialling, so the fixture saw zero requests) was only caught on a simulator; it is pinned at the Kit level now:

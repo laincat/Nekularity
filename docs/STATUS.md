@@ -4,6 +4,12 @@
 
 
 
+
+## 服务可以读到客户端给的账号值（pin 跟到 `1574076`）
+
+Core 新增 `ServiceCallWithSecrets`：账号值由客户端在一次调用里传入（`{"key":"value"}`），只在 `secrets` 权限下可达，未提供的键会被指名报错。`CoreService.call` 增加可选 `secrets` 参数，默认空表示不传。
+
+客户端还**没有**录入与保存服务账号值的界面——这一步只把契约接通；`ServiceStore` 目前不传账号值，所以申请 `secrets` 的服务仍会在读值时被指名拒绝。
 ## 宿主请求形状有了客户端回归（2026-11-05）
 
 服务 fetch 那次失败（请求里没有 `cookies` → `JSONDecoder` 在拨号前抛 `keyNotFound` → 夹具 0 请求）只在模拟器上抓到的，现在有了 Kit 层的钉住用例：

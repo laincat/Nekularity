@@ -102,10 +102,14 @@ public enum CoreService {
     /// what the user allowed; Core intersects it with what the package asked
     /// for, so withholding a permission cannot be undone by the package.
     public static func call(host: CoreHost, dataDir: String, id: String, method: String,
-                            payload: String, granted: [String]) throws -> String {
+                            payload: String, granted: [String],
+                            secrets: [String: String] = [:]) throws -> String {
         var error: NSError?
-        let out = MobileServiceCall(host, dataDir, id, method, payload,
-                                    granted.joined(separator: ","), &error)
+        let values = secrets.isEmpty
+            ? ""
+            : String(decoding: try JSONEncoder().encode(secrets), as: UTF8.self)
+        let out = MobileServiceCallWithSecrets(host, dataDir, id, method, payload,
+                                               granted.joined(separator: ","), values, &error)
         if let error { throw CoreServiceError.core(error.localizedDescription) }
         return out ?? "null"
     }
