@@ -1,5 +1,19 @@
 English · [简体中文](STATUS.md)
 
+## iOS has a service list and an import screen (2026-11-05)
+
+On top of `CoreService` there are now `ServiceStore` (Kit) and `ServicesView` (设置 → 模块与源 → 服务):
+
+- it lists what Core records: name, version, id and the permissions requested, worded as "网络（经宿主）", "本地小数据", "读取账号值", or "不申请任何权限" when none are asked for
+- "导入服务包" goes through the system file picker and accepts zips only; the client hashes **the actual bytes** with SHA-256 and hands that to Core, so the record names what was really installed
+- a swipe removes a package behind a confirmation that says the code goes and the account values do not
+- packages live in `Services/` under the environment's own directory, so a profile switch carries them along
+- Core's English error is kept inside; the screen says "服务包未被接受：…" or "无法解析服务清单"
+
+**Where the evidence comes from**: CI run `42018200763` (macos-26 / Xcode 26.6) is green, with Kit at **467 tests / 83 suites, 0 failures** (463 plus 4 new); the log shows `✔ Test theDigestIsTheSHA256OfTheArchive` and `✔ Test anUnreadableListingIsReportedNotShownAsEmpty`.
+
+**Boundary**: the screen proves it compiles and decodes Core's shape. **No service package has been installed on a device or simulator**, and no service has been run (that needs a host, a transport and account values). Both belong to the next round.
+
 ## ④ local media and the fixture loops (Mac, 2026-11-05)
 
 Commit `3aec689`, Core `0f1e7b8`, iPhone 17 / iOS 27.2. Each case ran on its own with `-only-testing`, and no product code changed.

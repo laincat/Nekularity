@@ -1,5 +1,19 @@
 [English](STATUS.en.md) · 简体中文
 
+## iOS 有了服务包列表与导入界面（2026-11-05）
+
+在 `CoreService` 之上加了 `ServiceStore`（Kit）与 `ServicesView`（设置 → 模块与源 → 服务）：
+
+- 列出 Core 记录的服务包：名字、版本、id、申请的权限（译成「网络（经宿主）」「本地小数据」「读取账号值」，未申请则写「不申请任何权限」）
+- 「导入服务包」走系统文件选择器，只接受 zip；摘要由客户端对**实际字节**算 SHA-256 后交给 Core，记录里写的是真正装进来的东西
+- 滑动移除，带确认文案，说明删的是代码、不是账号值
+- 服务包放在本环境目录下的 `Services/`，换环境时随之切换
+- Core 的英文错误保留在内部，界面显示「服务包未被接受：…」「无法解析服务清单」
+
+**验证渠道**：CI run `42018200763`（macos-26 / Xcode 26.6）全绿，Kit **467 tests / 83 suites、0 失败**（463 + 新增 4），日志可见 `✔ Test theDigestIsTheSHA256OfTheArchive` 与 `✔ Test anUnreadableListingIsReportedNotShownAsEmpty`。
+
+**边界**：界面只证明能编译、能解析 Core 的形状；**没有在设备或模拟器上真正装过一个服务包**，也没有跑过服务（需要宿主、传输与账号值）。这一层留给下一轮界面实测与运行宿主。
+
 ## ④ 的本地媒体与夹具闭环（Mac，2026-11-05）
 
 提交 `3aec689`、Core `0f1e7b8`，iPhone 17 / iOS 27.2。逐条 `-only-testing` 运行，未改产品代码。
