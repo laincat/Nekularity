@@ -1,5 +1,18 @@
 English · [简体中文](STATUS.md)
 
+## iOS reaches Core's five service entry points (2026-11-05)
+
+`Sources/NekularityKit/Core/CoreService.swift` wraps Core's `mobile` exports `ServiceInstall`/`ServiceList`/`ServiceRemove`/`ServiceManifest`/`ServiceSource` as a Swift `CoreService`, with `ServiceRecord` (including the optional `sha256` and `permissions`) and `CoreServiceError`.
+
+- all five use gomobile's `&err` form and turn a failure into `CoreServiceError.core`; Core's English message is kept inside the error, while the interface wording stays the client's
+- an undecodable answer reports `unreadable("服务清单"/"安装记录"/"服务记录")` instead of being shown as "nothing is installed"
+- an empty list is a normal answer on a fresh install, not a failure
+- `ServiceRecord.installed` keeps the string Core wrote: the date format belongs to Core, so the client does not guess one
+
+**Where the evidence comes from**: CI run `42009395617` (macos-26 / Xcode 26.6) is green, with Kit tests at **458 tests / 83 suites, 0 failures** (the previous 453 plus 5 new ones); the log prints `✔ Test aServiceListDecodesWhatCoreWrites` and the two beside it. The first attempt could not find the `Mobile*` symbols because the file was missing `import VeneraCatCore`; adding it fixed the build.
+
+**Boundary**: this layer only proves compilation and the JSON shape. There is **no install screen yet**, no service package has been installed on a device, and running a service (which needs the client's transport and account values) is still not wired.
+
 ## CI and the multi-column drag: both causes ruled out, still failing (2026-11-05)
 
 `testBoardDragOrderSurvivesRelaunch` keeps failing on CI, and two candidate causes have now been excluded:

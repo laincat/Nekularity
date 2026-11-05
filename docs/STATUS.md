@@ -1,5 +1,18 @@
 [English](STATUS.en.md) · 简体中文
 
+## iOS 接上 Core 服务包的五个入口（2026-11-05）
+
+`Sources/NekularityKit/Core/CoreService.swift` 把 Core `mobile` 包的 `ServiceInstall`/`ServiceList`/`ServiceRemove`/`ServiceManifest`/`ServiceSource` 包成 Swift 可用的 `CoreService`，连同 `ServiceRecord`（含 `sha256`、`permissions` 等可选字段）与 `CoreServiceError`。
+
+- 五个调用都走 gomobile 的 `&err` 形式，错误统一转成 `CoreServiceError.core`；Core 的英文原样保留在错误里，界面文案由客户端决定
+- JSON 解析失败报 `unreadable("服务清单"/"安装记录"/"服务记录")`，而不是当成"没有安装任何服务"
+- 空数组是正常结果（新装机器），不是错误
+- `ServiceRecord.installed` 保持 Core 写出的字符串：日期格式由 Core 拥有，客户端不猜
+
+**验证渠道**：CI run `42009395617`（macos-26 / Xcode 26.6）全绿，Kit 测试 **458 tests / 83 suites、0 失败**（原 453 条加新增 5 条），新增用例打印 `✔ Test aServiceListDecodesWhatCoreWrites` 等三条。第一次提交 `Mobile*` 找不到，原因是没有 `import VeneraCatCore`；补上后通过。
+
+**边界**：这一层只证明编译与 JSON 形状正确，**还没有安装界面**，也没有在设备上真正装过一个服务包；运行服务（需要客户端传输与账号值）仍未接。
+
 ## CI 与多列拖拽：两种成因都排除后仍失败（2026-11-05）
 
 `testBoardDragOrderSurvivesRelaunch` 在 CI 上持续失败，先后排除了两种成因：
