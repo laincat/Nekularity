@@ -8,6 +8,16 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## Running a service now lets you pick a method and write a payload (`ac29460` plus a follow-up fix)
+
+It used to only press `ping` with a fixed `null` payload. There is now a run sheet:
+
+- the method list comes from the service's own `describe()`; with no declaration there is a single `ping` as an honest fallback
+- the payload is a JSON text field and **non-JSON is stopped before sending** (checked locally rather than left for Core to reject)
+- the sheet states the permissions granted for this call and that nothing beyond the account values you saved is readable
+
+The first CI run failed: `App/ServiceRunSheet.swift:22:41: error: extra arguments at positions #1, #2` - `ServiceMethod`'s memberwise initialiser is internal, so the app target could not build the `ping` fallback. A public `init` fixed it, and CI `42093319801` is green with Kit at **474 tests / 83 suites / 0 failures**.
 ## 0.4.0 / build 22 is published and verified (2026-11-05)
 
 Tag `v0.4.0` points at `12bbb28`; the publish CI `42081589626` passed.

@@ -8,6 +8,16 @@
 
 
 
+
+## 运行服务时可以选方法、填参数（`ac29460` + `db1` 修复）
+
+原先只能按 `ping`、参数固定 `null`。现在是一个独立的运行面板：
+
+- 方法列表来自服务自己的 `describe()`；没有声明时只有一个 `ping` 作为诚实回退
+- 参数是 JSON 文本框，**非 JSON 直接拦下不发送**（本地先校验，不让 Core 去报错）
+- 面板里写明这次调用授予的权限，以及「它仍然读不到你保存的账号值以外的任何东西」
+
+CI 第一次是失败的：`App/ServiceRunSheet.swift:22:41: error: extra arguments at positions #1, #2` —— `ServiceMethod` 的成员初始化器是 internal，App 目标造不出 `ping` 回退值。补公开 `init` 后 CI `42093319801` 全绿，Kit **474 tests / 83 suites / 0 失败**。
 ## 0.4.0 / build 22 已发布并核对（2026-11-05）
 
 tag `v0.4.0` → `12bbb28`；发布 CI `42081589626` 全绿。
