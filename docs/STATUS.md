@@ -1,5 +1,24 @@
 [English](STATUS.en.md) · 简体中文
 
+## CI 可以跑模拟器 UI 套件（2026-11-05）
+
+`ios-release.yml` 新增两个 `workflow_dispatch` 输入：`ui_tests`（在构建之后真的跑一遍界面套件）与 `ui_only`（只跑指定用例，`XCUITestClass/testMethod`）。发布 tag 的行为不变，默认不跑。
+
+三次实际结果（`ci/ui-tests`）：
+
+| run | 内容 | 结果 |
+| --- | --- | --- |
+| `41962032877` | 全量套件（未种子） | 失败 2 条：`testBoardDragOrderSurvivesRelaunch`、`testLibraryHubReachesItsEntries` |
+| `41969766670` | 上述两条（保留断言文本） | 拿到断言原文 |
+| `41974065557` | 修后的 `testLibraryHubReachesItsEntries` | **成功**，1 条按预期跳过 |
+
+断言原文：
+
+- `testLibraryHubReachesItsEntries`：`全源搜索 opened nothing to type in`。原因是客户端**没有可用的漫画源**时,该页面显示「没有可用的漫画源」而不是搜索框——这是无源的空态,不是入口坏了。用例改为识别这一空态并 `XCTSkip`,其余情况仍然 `XCTFail`。
+- `testBoardDragOrderSurvivesRelaunch`：`dragging template:favorites before template:history produced ["template:history", "template:favorites", …], expected ["template:favorites", "template:history", …]`。**未修**：拖拽过程中顺序没有变化。这条属于长按编排/拖放（优先级③），需要在有种子源的模拟器上复核，CI 与 Mac 渠道的手势差异也尚未排除。
+
+**边界**：CI 上的 App 没有种子源，需要种子的用例会自行跳过；因此 CI 的「绿」只覆盖不依赖源的部分。真机、真实账号与长按拖拽的真实手势仍未验证。
+
 ## 挑战完成规则与查询参数：CI 编译与 Kit 测试（2026-11-05）
 
 `feat/challenge-query`（rebase 后 `6b8eb2a`）合入 main。内容：`Challenge` 解码 `sameHost`；`ChallengeRule` 支持主机条件（空窗口没有 host，未导航就判未通过）；`VerificationSession` 用 `Challenge.url` 的主机作被保护主机，并把 `requiredQueryParams` 的实际值带回；`SourceUI.verify`/`CoreHost.verify` 返回 `VerificationOutcome`（User-Agent + query），过桥字段与 Core `hostBridge.Verify` 的 `sameHost`/`query` 对齐。新增 `ChallengeRuleTests.sameHostRule`。

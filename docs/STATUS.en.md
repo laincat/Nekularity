@@ -1,5 +1,24 @@
 English · [简体中文](STATUS.md)
 
+## CI can run the simulator UI suite (2026-11-05)
+
+`ios-release.yml` gains two `workflow_dispatch` inputs: `ui_tests` (actually run the interface suite after building) and `ui_only` (only the named cases, `XCUITestClass/testMethod`). A release tag behaves as before; neither runs by default.
+
+Three real results on `ci/ui-tests`:
+
+| run | what | result |
+| --- | --- | --- |
+| `41962032877` | the whole suite (no seeded sources) | 2 failures: `testBoardDragOrderSurvivesRelaunch`, `testLibraryHubReachesItsEntries` |
+| `41969766670` | those two, with assertion text kept | the messages below |
+| `41974065557` | the corrected `testLibraryHubReachesItsEntries` | **success**, one case skipped as intended |
+
+The messages:
+
+- `testLibraryHubReachesItsEntries`: `全源搜索 opened nothing to type in`. With **no enabled comic sources** that screen shows "没有可用的漫画源" instead of a field - an empty state, not a broken entry. The case now recognises that state and skips; every other case still fails as before.
+- `testBoardDragOrderSurvivesRelaunch`: `dragging template:favorites before template:history produced ["template:history", "template:favorites", ...], expected ["template:favorites", "template:history", ...]`. **Not fixed**: the drag left the order unchanged. This is the long-press arranging/drag item (priority ③) and needs a seeded simulator to confirm; a gesture difference between the CI runner and the Mac channel is not ruled out either.
+
+**Boundary**: the app on CI has no seeded sources, so the cases that need them skip themselves; a green CI run therefore covers only the seedless part. A real device, real accounts and the actual long-press drag remain unverified.
+
 ## The challenge rule and its query parameters: compiled and unit tested on CI (2026-11-05)
 
 `feat/challenge-query` (rebased to `6b8eb2a`) is merged into main. It decodes `sameHost` into `Challenge`; teaches `ChallengeRule` a host condition (a blank window has no host and therefore fails); makes `VerificationSession` treat `Challenge.url`'s host as the guarded host and carry the values of `requiredQueryParams` back; and returns `VerificationOutcome` (User-Agent plus query) from `SourceUI.verify`/`CoreHost.verify`, matching the `sameHost`/`query` fields Core's `hostBridge.Verify` already uses. `ChallengeRuleTests.sameHostRule` is new.
