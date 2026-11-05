@@ -36,4 +36,59 @@ struct ThemeAppearanceTests {
     func builtinFollowsSystem() {
         #expect(BuiltinThemes.system.appearance == .system)
     }
+
+    /// A store over a throwaway defaults domain and theme directory, so one test
+    /// cannot see another's choice.
+    @MainActor
+    private func store(_ name: String) -> (ThemeStore, UserDefaults) {
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.removePersistentDomain(forName: name)
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "themes-\(name)-\(UUID().uuidString)")
+        return (ThemeStore(directory: directory, defaults: defaults), defaults)
+    }
+
+    @Test("with no choice the theme decides")
+    @MainActor
+    func themeDecides() {
+        let (themes, _) = store("theme-appearance-1")
+        #expect(themes.appearance == .system)
+        #expect(themes.appearanceOverride == nil)
+    }
+
+    @Test("an explicit choice wins over the theme and survives a new store")
+    @MainActor
+    func explicitChoicePersists() {
+        let name = "theme-appearance-2"
+        let (themes, defaults) = store(name)
+        themes.select(appearance: .dark)
+        #expect(themes.appearance == .dark)
+        // A second store over the same defaults is what a relaunch sees.
+        let again = ThemeStore(directory: FileManager.default.temporaryDirectory
+                                .appending(path: "themes-again-\(UUID().uuidString)"),
+                               defaults: defaults)
+        #expect(again.appearanceOverride == .dark)
+        #expect(again.appearance == .dark)
+        defaults.removePersistentDomain(forName: name)
+    }
+
+    @Test("picking the system is a choice, not the absence of one")
+    @MainActor
+    func systemIsAChoice() {
+        let name = "theme-appearance-3"
+        let (themes, defaults) = store(name)
+        themes.select(appearance: .dark)
+        themes.select(appearance: .system)
+        #expect(themes.appearanceOverride == .system)
+        #expect(themes.appearance == .system)
+        #expect(defaults.string(forKey: "appearance") == "system")
+        defaults.removePersistentDomain(forName: name)
+    }
+
+    @Test("every case has a name for the picker")
+    func labelsAreUnique() {
+        let labels = ThemeAppearance.allCases.map(\.label)
+        #expect(Set(labels).count == labels.count)
+        #expect(!labels.contains(""))
+    }
 }

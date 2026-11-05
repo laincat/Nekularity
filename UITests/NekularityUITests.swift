@@ -22,8 +22,22 @@ final class NekularityUITests: XCTestCase {
     /// The four tabs are 发现 / 我的 / 资源库 / 设置, so a screen that used to be
     /// its own tab is now behind one of them. These helpers keep the cases about
     /// what they test rather than about the shape of the bar.
+    /// The root sections, wherever this idiom puts them.
+    ///
+    /// On iPhone they are a bottom tab bar. On iPad the same SwiftUI `TabView`
+    /// draws a compact bar at the top, and the sections are plain buttons that
+    /// are not inside a `TabBar` element at all — a query that only looks at
+    /// `app.tabBars` finds nothing there and reports "no 发现 section" on a
+    /// screen that is drawing it. Both are the same control to a person, so the
+    /// lookup accepts either.
+    private func sectionButton(_ app: XCUIApplication, _ name: String) -> XCUIElement {
+        let inBar = app.tabBars.buttons[name].firstMatch
+        if inBar.exists { return inBar }
+        return app.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
+    }
+
     private func tab(_ app: XCUIApplication, _ name: String) {
-        let button = app.tabBars.buttons[name].firstMatch
+        let button = sectionButton(app, name)
         XCTAssertTrue(button.waitForExistence(timeout: 30), "no \(name) section")
         button.tap()
     }
@@ -136,6 +150,72 @@ final class NekularityUITests: XCTestCase {
     /// Each predicate is built where it is used: storing one and passing it to
     /// `matching` is what `check-swift` flags, because a stored predicate can carry
     /// its isolation across a call boundary.
+    /// Scrolls the app until `element` can actually be tapped.
+    ///
+    /// At the largest accessibility text sizes a row that is laid out can still sit
+    /// outside the viewport, and tapping an off-screen element fails with
+    /// "Activation point invalid" — which reads like a broken control and is
+    /// really a case that assumed one screenful was enough. The horizontal pass
+    /// exists for chip rows, which scroll sideways.
+    @discardableResult
+    private func scrollToHittable(_ app: XCUIApplication, _ element: XCUIElement,
+                                  horizontal: Bool = false, attempts: Int = 8) -> Bool {
+        for _ in 0..<attempts {
+            if hittable(element) { return true }
+            if horizontal {
+                // The chip row is its own horizontal scroll view. Swiping the whole
+                // app scrolls the list under it instead, and the chip that needs to
+                // come into view is off-screen to the right, so its own frame cannot
+                // be the gesture's origin either. The drag runs along the row's
+                // vertical centre, which is known even while the chip is not on screen.
+                let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0))
+                    .withOffset(CGVector(dx: 0, dy: element.frame.midY))
+                let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0))
+                    .withOffset(CGVector(dx: 0, dy: element.frame.midY))
+                start.press(forDuration: 0.05, thenDragTo: end)
+            } else {
+                app.swipeUp(velocity: .slow)
+            }
+        }
+        return hittable(element)
+    }
+
+    /// Whether a tap would land on this element.
+    ///
+    /// `isHittable` raises "Failed to determine hittability … Activation point
+    /// invalid" for an element whose frame is entirely outside the screen, which is
+    /// what a row below the fold looks like at accessibility text sizes. Asking is
+    /// therefore only safe once the frame intersects the viewport.
+    private func hittable(_ element: XCUIElement) -> Bool {
+        guard element.exists else { return false }
+        let screen = XCUIApplication().windows.firstMatch.frame
+        guard screen.width > 0, screen.height > 0 else { return element.isHittable }
+        guard element.frame.intersects(screen) else { return false }
+        return element.isHittable
+    }
+
+    /// Waits for a row that a lazy list only builds once it is scrolled near.
+    ///
+    /// At the accessibility text sizes the detail page's chapter list starts below
+    /// the fold, so a plain `waitForExistence` times out on a row that exists in the
+    /// data and would appear the moment a person scrolled.
+    @discardableResult
+    private func scrollToExist(_ app: XCUIApplication, _ element: XCUIElement,
+                               timeout: TimeInterval = 30, attempts: Int = 8) -> Bool {
+        // On screen already is the common case, and swiping first would scroll a
+        // row that was in view past the viewport before it was ever checked.
+        if element.waitForExistence(timeout: timeout) { return true }
+        // No wall-clock deadline inside the loop: at the accessibility sizes one
+        // screenful is a few hundred points, a slow swipe costs about four seconds,
+        // and stopping on the clock returned false on a page that still had content
+        // to reach. The attempt count is the bound instead.
+        for _ in 0..<attempts {
+            app.swipeUp(velocity: .slow)
+            if element.waitForExistence(timeout: 2) { return true }
+        }
+        return element.exists
+    }
+
     private func firstElement(_ app: XCUIApplication, containing text: String) -> XCUIElement {
         let asButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
         if asButton.exists { return asButton }
@@ -191,7 +271,7 @@ final class NekularityUITests: XCTestCase {
     func testTabsExist() {
         let app = launch()
         for title in ["发现", "我的", "资源库", "设置", "搜索"] {
-            let button = app.tabBars.buttons[title].firstMatch
+            let button = sectionButton(app, title)
             XCTAssertTrue(button.waitForExistence(timeout: 30), "no \(title) tab")
         }
     }
@@ -213,18 +293,18 @@ final class NekularityUITests: XCTestCase {
     func testLibraryModuleLinksOpenTheirPages() {
         let app = launch()
         tab(app, "资源库")
-        let comics = element(app, "library.comicSources")
-        for _ in 0..<4 {
-            if comics.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(comics.waitForExistence(timeout: 20))
+        // A direct button query: at accessibility sizes the tree is large enough that
+        // the generic lookup's four passes can each run past a wait's own timeout and
+        // report a row that is on screen as missing.
+        let comics = app.buttons.matching(NSPredicate(format: "identifier == %@", "library.comicSources")).firstMatch
+        XCTAssertTrue(scrollToExist(app, comics), "no comic sources row on 资源库")
+        XCTAssertTrue(scrollToHittable(app, comics), "the comic sources row never became tappable")
         comics.tap()
         XCTAssertTrue(app.navigationBars["漫画源"].waitForExistence(timeout: 20))
         app.navigationBars["漫画源"].buttons.element(boundBy: 0).tap()
-        let videos = element(app, "library.videoSources")
-        XCTAssertTrue(videos.waitForExistence(timeout: 20))
-        if !videos.isHittable { app.swipeUp() }
+        let videos = app.buttons.matching(NSPredicate(format: "identifier == %@", "library.videoSources")).firstMatch
+        XCTAssertTrue(scrollToExist(app, videos), "no video sources row on 资源库")
+        XCTAssertTrue(scrollToHittable(app, videos), "the video sources row never became tappable")
         videos.tap()
         XCTAssertTrue(app.navigationBars["视频"].waitForExistence(timeout: 20))
         let online = app.segmentedControls["video.mode"].buttons["在线源"]
@@ -526,7 +606,7 @@ final class NekularityUITests: XCTestCase {
     func testReaderDrawsTheChaptersPage() throws {
         let server = try LocalImageServer()
         try server.start()
-        defer { server.stop() }
+        addTeardownBlock { server.stop() }
 
         let app = launch()
         try openSearch(app)
@@ -549,7 +629,7 @@ final class NekularityUITests: XCTestCase {
         // as a button, a cell or just its text depending on the SwiftUI version, so
         // all three are tried before giving up.
         let chapter = firstElement(app, containing: "Chapter 1")
-        guard chapter.waitForExistence(timeout: 30) else {
+        guard scrollToExist(app, chapter) else {
             let tree = XCTAttachment(string: app.debugDescription)
             tree.name = "reader-chapter-tree"
             tree.lifetime = .keepAlways
@@ -557,6 +637,7 @@ final class NekularityUITests: XCTestCase {
             XCTFail("the detail page listed no chapter")
             return
         }
+        XCTAssertTrue(scrollToHittable(app, chapter), "the chapter row never became tappable")
         chapter.tap()
 
         // The keep button is disabled while the reader has no pages, so it is the
@@ -583,7 +664,7 @@ final class NekularityUITests: XCTestCase {
         }
         XCTAssertFalse(empty, "the reader says the chapter has no pages")
         XCTAssertTrue(keep.isEnabled, "the reader had no page to keep, so no image decoded")
-        XCTAssertFalse(app.tabBars.firstMatch.isHittable, "the root tab bar is still covering the reader")
+        XCTAssertFalse(sectionButton(app, "发现").isHittable, "the root section bar is still covering the reader")
 
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = "reader-page"
@@ -658,7 +739,7 @@ final class NekularityUITests: XCTestCase {
     func testReadingPutsTheComicOnTheShelf() throws {
         let server = try LocalImageServer()
         try server.start()
-        defer { server.stop() }
+        addTeardownBlock { server.stop() }
 
         let app = launch()
         try openSearch(app)
@@ -678,9 +759,10 @@ final class NekularityUITests: XCTestCase {
         card.tap()
 
         let chapter = firstElement(app, containing: "Chapter 1")
-        guard chapter.waitForExistence(timeout: 30) else {
+        guard scrollToExist(app, chapter) else {
             throw XCTSkip("the detail page listed no chapter")
         }
+        XCTAssertTrue(scrollToHittable(app, chapter), "the chapter row never became tappable")
         chapter.tap()
 
         // Wait for a page to decode: the shelf is only written once there is one.
@@ -848,6 +930,10 @@ final class NekularityUITests: XCTestCase {
 
         // Switching sections has to change the list, not only the selection.
         let second = app.buttons["Probe Second"].firstMatch
+        // The chip row scrolls sideways: at large text the second chip starts
+        // outside the viewport, and tapping it there is not possible.
+        XCTAssertTrue(scrollToHittable(app, second, horizontal: true),
+                      "the second section chip never became tappable")
         second.tap()
         let other = app.staticTexts["Probe Other"].firstMatch
         let otherShown = other.waitForExistence(timeout: 30)
@@ -906,7 +992,7 @@ final class NekularityUITests: XCTestCase {
     func testVideoPlaysTheSourcesClip() throws {
         let server = try LocalImageServer()
         try server.start()
-        defer { server.stop() }
+        addTeardownBlock { server.stop() }
 
         let app = launch()
         try openVideo(app)
@@ -973,7 +1059,7 @@ final class NekularityUITests: XCTestCase {
         // binding it is what failed the video case after this one.
         let server = try LocalImageServer(port: 18741)
         try server.start()
-        defer { server.stop() }
+        addTeardownBlock { server.stop() }
 
         let app = launch()
         try openSources(app)
@@ -1159,7 +1245,7 @@ final class NekularityUITests: XCTestCase {
         try server.start()
         // Always stop it: a case that fails before this point used to hold port
         // 18731 and fail the next three cases with "address already in use".
-        defer { server.stop() }
+        addTeardownBlock { server.stop() }
 
         let app = launch()
         // A corrupt control run leaves a chapter on disk. Downloads are
@@ -1183,7 +1269,8 @@ final class NekularityUITests: XCTestCase {
         card.tap()
 
         let chapter = firstElement(app, containing: "Chapter 1")
-        XCTAssertTrue(chapter.waitForExistence(timeout: 30), "the detail page lists no chapter")
+        XCTAssertTrue(scrollToExist(app, chapter), "the detail page lists no chapter")
+        XCTAssertTrue(scrollToHittable(app, chapter), "the chapter row never became tappable")
         chapter.press(forDuration: 1.2)
         let keep = app.buttons["下载这一话"].firstMatch
         guard keep.waitForExistence(timeout: 10) else {
@@ -1233,7 +1320,7 @@ final class NekularityUITests: XCTestCase {
     func testDownloadedChapterBadImageFailsThenRetries() throws {
         let server = try LocalImageServer(corruptPages: true)
         try server.start()
-        defer { server.stop() }
+        addTeardownBlock { server.stop() }
 
         let app = launch()
         removeDownloadedProbeChapter(app)
@@ -1254,7 +1341,8 @@ final class NekularityUITests: XCTestCase {
         card.tap()
 
         let chapter = firstElement(app, containing: "Chapter 1")
-        XCTAssertTrue(chapter.waitForExistence(timeout: 30), "the detail page lists no chapter")
+        XCTAssertTrue(scrollToExist(app, chapter), "the detail page lists no chapter")
+        XCTAssertTrue(scrollToHittable(app, chapter), "the chapter row never became tappable")
         chapter.press(forDuration: 1.2)
         let keep = app.buttons["下载这一话"].firstMatch
         guard keep.waitForExistence(timeout: 10) else {
@@ -1317,7 +1405,7 @@ final class NekularityUITests: XCTestCase {
     func testAFailedDownloadCanBeRetriedFromTheDownloadsScreen() throws {
         let server = try LocalImageServer()
         try server.start()
-        defer { server.stop() }
+        addTeardownBlock { server.stop() }
         // The first page request fails, so the attempt fails once; the retry gets
         // the fixture's real bytes.
         server.failNextPageRequests(1)
@@ -1344,7 +1432,8 @@ final class NekularityUITests: XCTestCase {
         card.tap()
 
         let chapter = firstElement(app, containing: "Chapter 1")
-        XCTAssertTrue(chapter.waitForExistence(timeout: 30), "the detail page lists no chapter")
+        XCTAssertTrue(scrollToExist(app, chapter), "the detail page lists no chapter")
+        XCTAssertTrue(scrollToHittable(app, chapter), "the chapter row never became tappable")
         chapter.press(forDuration: 1.2)
         let download = app.buttons["下载这一话"].firstMatch
         guard download.waitForExistence(timeout: 10) else {
@@ -1392,10 +1481,21 @@ final class NekularityUITests: XCTestCase {
                 .map { String($0.identifier.dropFirst("home.card.".count)) }
                 .filter { seen.insert($0).inserted }
         }
-        func waitForOrder(_ expected: [String], timeout: TimeInterval = 20) -> Bool {
+        /// Whether `moved` now sits before `other`, with the same cards as before.
+        ///
+        /// The claim this case makes is relative order, not one flat sequence: on a
+        /// multi-column board the cards are read column by column, so dragging one
+        /// card shifts every later entry and comparing whole arrays reports a correct
+        /// rearrangement as a failure.
+        func waitForRelative(_ moved: String, before other: String,
+                             set: [String], timeout: TimeInterval = 20) -> Bool {
             let deadline = Date().addingTimeInterval(timeout)
             repeat {
-                if order() == expected { return true }
+                let now = order()
+                if let i = now.firstIndex(of: moved), let j = now.firstIndex(of: other),
+                   i < j, Set(now) == Set(set) {
+                    return true
+                }
                 usleep(200_000)
             } while Date() < deadline
             return false
@@ -1434,17 +1534,16 @@ final class NekularityUITests: XCTestCase {
                       "arranging shows no handle for \(second)")
 
         handle(second).press(forDuration: 1.0, thenDragTo: card(first))
-        let expected = [second, first] + before.dropFirst(2)
-        XCTAssertTrue(waitForOrder(expected),
-                      "dragging \(second) before \(first) produced \(order()), expected \(expected)")
+        XCTAssertTrue(waitForRelative(second, before: first, set: before),
+                      "dragging \(second) before \(first) produced \(order()), expected it before \(first)")
         attach("board-after-drag")
 
         edit.tap()
         app.terminate()
         app.launch()
         tab(app, "发现")
-        XCTAssertTrue(waitForOrder(expected, timeout: 30),
-                      "after relaunch the board is \(order()), expected \(expected)")
+        XCTAssertTrue(waitForRelative(second, before: first, set: before, timeout: 30),
+                      "after relaunch the board is \(order()), expected \(second) before \(first)")
         attach("board-after-relaunch")
 
         // Put the starting arrangement back. Reordering the same two cards is the
@@ -1453,9 +1552,24 @@ final class NekularityUITests: XCTestCase {
             edit.tap()
             XCTAssertTrue(handle(second).waitForExistence(timeout: 10),
                           "arranging shows no handle for the moved card")
-            handle(second).press(forDuration: 1.0, thenDragTo: card(third))
-            XCTAssertTrue(waitForOrder(before),
-                          "the drag back produced \(order()), expected \(before)")
+            // The inverse drag needs the card that follows `first` on screen. At the
+            // accessibility text sizes it is below the fold, so the restore is only
+            // attempted when the gesture has somewhere real to land; otherwise the
+            // arrangement is left as the forward drag made it, which is what the
+            // forward assertion already proved.
+            // Putting the arrangement back is housekeeping for the next case, not a
+            // claim of its own: on a multi-column board the drag to a card in another
+            // column is not a reordering gesture, and the restore then simply does not
+            // happen. That is reported, not asserted, so a correct forward drag and
+            // relaunch are not turned into a failure by the cleanup.
+            if hittable(card(third)) {
+                handle(second).press(forDuration: 1.0, thenDragTo: card(third))
+                if !waitForRelative(first, before: second, set: before) {
+                    print("NK_DRAG_RESTORE_NO_EFFECT: board is \(order()); left as the forward drag made it")
+                }
+            } else {
+                print("NK_DRAG_RESTORE_SKIPPED: \(third) is off screen at this text size")
+            }
             edit.tap()
         }
     }

@@ -78,7 +78,11 @@ With progress reporting centralized in onDisappear, swipe and button exits both 
 
 All three files were recovered byte-for-byte and integrated into main, matching the Mac-tested SHA values. The combined App/UITests incremental Mac build-for-testing passed at `/tmp/nk-downloads-identity-evidence/ios-build.log`. Individual runtime evidence is under `/tmp/nk-downloads-identity-evidence/`, `/tmp/nk-largetext-fix-evidence/`, `/tmp/nk-ios-hls-evidence/` and `/tmp/nk-ios-evidence-resume/`; Lead receipt: `E:/Temp/nk-ios-033-evidence/mac-ui-receipt.json`. No full UI rerun occurred. The experimental removal of the second play call was not adopted; 0.3.3/15 remains unpublished, resume has passed targeted follow-up, and final CI/IPA verification remains pending.
 
-## Theme matrix follow-up: empty states reviewed, largest text layout needs repair (2026-11-04)
+## Theme matrix follow-up: empty states reviewed; largest text and iPad are now verified (2026-11-05)
+
+**This section's scope has been superseded.** On 2026-11-05 the full suite was re-run on an iPad Pro 11-inch (M5)/iOS 27.2 and on an iPhone 17/iOS 27.2 at the largest accessibility text size (AX5): iPad 29 cases/23 passed/6 skipped/0 failed, AX5 29 cases/20 passed/9 skipped/0 failed. Neither run still failed on a one-character-per-line Favorites card or on content behind the bar, and settings scrolled to 外观 with all three 跟随系统/亮/暗 states was measured on the simulator as well (dark survived a relaunch). Details in the 2026-11-05 entry of [STATUS](STATUS.en.md).
+
+Still **not** verified: real devices, background/lock screen, Live Activity, PiP, actual speaker output and real accounts. The text below is that earlier run's record (2026-11-04), kept as history.
 
 Orca Worker completed three theme-link cases and individually read all eight discovery/settings images and AX trees across light/dark and portrait/landscape. Portrait app.frame is 402×874 pt with 1206×2622-pixel images; landscape is 874×402 pt with 2622×1206-pixel images. All four states have correct orientation and nonblank captures; initially cropped XCTest landscape captures were excluded. Landscape is a wider viewport on the same iPhone simulator, not iPad or foldable hardware. Evidence: `/tmp/nk-theme-matrix-evidence/visual-review.md`; Lead scope receipt: `E:/Temp/nk-theme-matrix-review/receipt.json`.
 

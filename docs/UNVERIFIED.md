@@ -78,7 +78,11 @@ Orca Worker完成下载同名分组、辅助字号与HLS字幕三项定向验收
 
 三份源码已逐字节收回并整合main,与Mac受测SHA一致。组合App/UITests的Mac增量build-for-testing成功日志 `/tmp/nk-downloads-identity-evidence/ios-build.log`。分别的运行证据位于 `/tmp/nk-downloads-identity-evidence/`、`/tmp/nk-largetext-fix-evidence/`、`/tmp/nk-ios-hls-evidence/`、`/tmp/nk-ios-evidence-resume/`;Lead回执 `E:/Temp/nk-ios-033-evidence/mac-ui-receipt.json`。没有重跑完整UI。删除重复play的实验候选未采用;0.3.3/15仍未发布,恢复已完成定向复核,最终CI/IPA仍待验收。
 
-## 主题矩阵补验:空状态已查看,最大字号布局待修(2026-11-04)
+## 主题矩阵补验:空状态已查看,最大字号与 iPad 已转入已验证(2026-11-05)
+
+**这一节的范围已被取代。** 2026-11-05 在 iPad Pro 11-inch (M5)/iOS 27.2 与 iPhone 17/iOS 27.2（动态字体 AX5）上重跑了完整套件：iPad 29 例/23 通过/6 跳过/0 失败，AX5 29 例/20 通过/9 跳过/0 失败，两轮都不再有"收藏卡片一字一行"或底栏遮挡导致的失败；设置页滚动到「外观」并切换 跟随系统/亮/暗 三态也已在模拟器上实测通过（暗色重开后保持）。细节见 [STATUS](STATUS.md) 的 2026-11-05 条目。
+
+仍然**不在**已验证范围：真机、后台/锁屏、Live Activity、PiP、实际扬声器与真实账号。下面这段是当轮（2026-11-04）当时的记录，保留作为历史。
 
 Orca Worker 完成三项主题链接用例,并逐张 read 查看浅/深色 × 竖/横屏的发现页与设置页共8张图及AX树。竖屏 app.frame 为402×874 pt、图1206×2622像素;横屏为874×402 pt、图2622×1206像素。四种状态无空白或方向错误,初次XCTest横屏裁切图未计入。横屏仅为同一iPhone模拟器的更宽视口,不是iPad或折叠设备。证据 `/tmp/nk-theme-matrix-evidence/visual-review.md`,Lead范围回执 `E:/Temp/nk-theme-matrix-review/receipt.json`。
 

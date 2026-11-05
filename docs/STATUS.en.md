@@ -38,6 +38,20 @@ The messages:
 
 English | [简体中文](STATUS.md)
 
+## iPad, accessibility text sizes and the three-way appearance choice on simulators (2026-11-05)
+
+Main `9c73909` (Core pin `0f1e7b8`) passes `scripts/verify-ios.sh` with **15 PASS / 1 SKIP / 0 FAIL**; the SKIP is the script's own default of not driving the interface (that needs `NK_UI_TESTS=1`). The interface evidence comes from three dedicated simulators created on this Mac:
+
+- **iPad Pro 11-inch (M5) / iOS 27.2**: the full UI suite ran **29 cases, 23 passed, 6 skipped, 0 failed** (773 s), with screenshots covering discovery, search, detail, reader and settings. The skips are two cases needing the real sources `nhentai`/`Komiic`, three needing the local theme fixture, and one three-column width assertion (an iPad lays the board out in four columns on purpose).
+- **iPhone 17 / iOS 27.2 with the largest accessibility text size (AX5, `accessibility-extra-extra-extra-large`)**: **29 cases, 20 passed, 9 skipped, 0 failed** (969 s). Discovery, detail, settings and the reader are all reachable; the long-press download action on a chapter row, both library module entries, the category page and the comment thread were all exercised successfully.
+- **Settings scrolled to 外观, switching 跟随系统 / 亮 / 暗**: the section was reached by a real scroll, each of the three states took effect immediately (the light and dark screenshots differ in page background, not just the status bar), 暗 survived a relaunch, and the run ended back on 跟随系统. The new case is `ZZAppearanceSettingsTests`.
+
+Fixed this round were **test-assumption defects** (no layout or wording changes): iPad draws its sections as plain buttons in a top bar that is not inside a `TabBar` element, so four queries that only looked at `app.tabBars` reported 26 cases as broken on iPad; at accessibility sizes the chapter and library rows have to be scrolled to before they can be tapped; a failed assertion left the test server holding its port, so later cases failed in a cascade with `Address already in use` (`defer` became `addTeardownBlock`); the multi-column board's drag assertion now states what the case is really about — the relative order of the two cards plus an unchanged set of cards; and the three-column width assertion skips when the board is in the four-column band.
+
+**One necessary product change**: 设置 → 外观 listed themes but had no system/light/dark control — `ThemeAppearance` and its rendering map existed with no way to reach them. The existing `Section("外观")` now carries a segmented control and `ThemeStore` gained the override (persisted under the `appearance` key in `UserDefaults`), with 7 new Kit tests: `swift test` reports **452 tests / 83 suites, 0 failures** (the new pin's baseline is 445 tests; this adds 7).
+
+Scope is simulators only. Installing on a device, background/lock screen, Live Activity, PiP, actual speaker output and real accounts remain unverified; screenshots and the machine-readable summary are in `/tmp/nk-ios-ipad-type/` on the Mac.
+
 ## Full UI suite on0.3.6 (Mac report, 2026-11-04)
 
 Tag `v0.3.6` at `9684c108f0ade6490b4209827f0525aed54e0853` (tree `fbcb0a7a…`) ran the full suite on a dedicated iPhone17 simulator: `xcodebuild test-without-building` executed **28 tests with 5 skipped and 0 failures** in752 seconds. Three ZZThemeLinkTests cases skipped for a missing local theme fixture; after starting the repository's own `scripts/theme-fixture.sh` they passed **3/3**, giving **26 passed / 2 skipped / 0 failed** overall.

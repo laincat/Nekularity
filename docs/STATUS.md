@@ -38,6 +38,20 @@
 
 [English](STATUS.en.md) | 简体中文
 
+## 模拟器上的 iPad、辅助字号与外观三态（2026-11-05）
+
+主线 `9c73909`（Core pin `0f1e7b8`）在 `scripts/verify-ios.sh` 上 **15 步 PASS / 1 SKIP / 0 FAIL**，SKIP 项是脚本默认不驱动界面（`NK_UI_TESTS=1` 才跑）。界面证据来自三台本机新建的专用模拟器：
+
+- **iPad Pro 11-inch (M5) / iOS 27.2**：完整 UI 套件 **29 例、23 通过、6 跳过、0 失败**（773 秒）。截图覆盖发现、搜索、详情、阅读、设置。跳过项为：需要真实站源 `nhentai`/`Komiic` 的两条、需要本地主题夹具的三条，以及一条三列宽度断言（iPad 上按设计是四列）。
+- **iPhone 17 / iOS 27.2，动态字体调到最大（AX5，`accessibility-extra-extra-extra-large`）**：**29 例、20 通过、9 跳过、0 失败**（969 秒）。发现、详情、设置与阅读页均可达，长按章节行弹出的下载动作、资源库两个模块入口、分类页、评论线程都实际操作成功。
+- **设置页滚动到「外观」并切换 跟随系统 / 亮 / 暗**：真实滚动到该分区，三态各自立即生效（亮/暗截图背景分别为浅色与黑色，非仅状态栏），选「暗」后重开仍是暗色，最后恢复跟随系统。新增用例 `ZZAppearanceSettingsTests`。
+
+本轮修复的**测试假设缺陷**（不改布局、不改文案）：iPad 的标签栏是顶部普通按钮、不在 `TabBar` 元素内，四处查询只认 `app.tabBars` 导致 iPad 上 26 条用例误报；辅助字号下章节行与资源库行需要先滚动才可点；断言失败时测试服务器端口不释放，导致后续用例级联 `Address already in use`（`defer` 改为 `addTeardownBlock`）；多列看板的拖拽断言改为「两张卡的相对顺序 + 卡片集合不变」；三列宽度断言在四列宽度（iPad）上按设计跳过。
+
+**产品代码一处必要补充**：设置页「外观」原先只有主题列表、没有系统/亮/暗三态控件，`ThemeAppearance` 与渲染映射已在但无入口。本轮在既有 `Section("外观")` 内加了分段控件与 `ThemeStore` 的覆盖值（持久化到 `UserDefaults` 的 `appearance` 键），并加 7 条 Kit 单测：`swift test` 为 **452 tests / 83 suites、0 失败**（新 pin 合并后基线为 445 tests，本条加 7 条）。
+
+范围仅限模拟器。真机安装、后台/锁屏、Live Activity、PiP、实际扬声器与真实账号仍未验证；截图与机器可读汇总在 Mac `/tmp/nk-ios-ipad-type/`。
+
 ## 0.3.6 完整 UI 套件（Mac 回传，2026-11-04）
 
 tag `v0.3.6` 的 `9684c108f0ade6490b4209827f0525aed54e0853`（tree `fbcb0a7a…`）在专用 iPhone 17 模拟器上跑完整套件：`xcodebuild test-without-building` 执行 **28 个用例、5 跳过、0 失败**（752 秒）。其中 ZZThemeLinkTests 的 3 条因缺本地主题夹具而跳过，用仓库自带 `scripts/theme-fixture.sh` 起夹具后复跑 **3/3 通过**，合并为 **26 通过 / 2 跳过 / 0 失败**。

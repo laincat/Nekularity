@@ -193,6 +193,16 @@ public enum ThemeAppearance: String, CaseIterable, Sendable {
     case system
     case light
     case dark
+
+    /// What the picker calls this. Written next to the case rather than in the
+    /// view so a new case cannot ship without a name.
+    public var label: String {
+        switch self {
+        case .system: return "跟随系统"
+        case .light: return "亮"
+        case .dark: return "暗"
+        }
+    }
 }
 
 extension Theme {
@@ -217,6 +227,13 @@ public final class ThemeStore {
     public private(set) var themes: [Theme] = []
     public private(set) var active: Theme = BuiltinThemes.system
     public private(set) var failure: String?
+    /// The appearance the reader picked, if they picked one.
+    ///
+    /// A theme carries its own `dark` answer, but "follow the system" is the only
+    /// shipped theme and the system can be switched from the outside. This is the
+    /// override that lets 设置 → 外观 name 系统 / 亮 / 暗 directly, without
+    /// installing a theme file for it. nil means "no override": the theme decides.
+    public private(set) var appearanceOverride: ThemeAppearance?
 
     private let directory: URL
     private let defaults: UserDefaults
@@ -225,6 +242,9 @@ public final class ThemeStore {
         self.directory = directory
         self.defaults = defaults
         reload()
+        // A stored value that no longer names a case (an older build, a hand-edited
+        // plist) falls back to "no override" rather than pinning the wrong one.
+        appearanceOverride = defaults.string(forKey: "appearance").flatMap(ThemeAppearance.init(rawValue:))
     }
 
     public var all: [Theme] { BuiltinThemes.all + themes.filter { theme in
@@ -234,6 +254,18 @@ public final class ThemeStore {
     public func select(_ theme: Theme) {
         active = theme
         defaults.set(theme.id, forKey: "theme")
+    }
+
+    /// What the interface should actually draw with: the reader's choice when they
+    /// made one, otherwise whatever the active theme asks for.
+    public var appearance: ThemeAppearance { appearanceOverride ?? active.appearance }
+
+    /// Records the reader's choice. `.system` is stored as an explicit override so
+    /// that picking it is different from never having picked anything: a theme that
+    /// forces dark keeps working until the reader says otherwise.
+    public func select(appearance: ThemeAppearance) {
+        appearanceOverride = appearance
+        defaults.set(appearance.rawValue, forKey: "appearance")
     }
 
     /// Installs a theme file. The id comes from the file, so installing the same
