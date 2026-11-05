@@ -1,5 +1,15 @@
 [English](STATUS.en.md) · 简体中文
 
+## 0.3.8 / build 20 正式发布（2026-11-05）
+
+tag `v0.3.8` 指向 `fabe86b9a995b82522accc6eed435a2a66381ab4`（`0.3.8 / build 20`），Core `0f1e7b8856b77059c49fad1b12513adae577ca32`。发布 CI `41981571842`（`macos-26` / Xcode 26.6）全绿：Core 构建、`swift test`、设备 App 构建、UI 测试编译、IPA 打包与 tag 发布。
+
+公开 IPA：下载 **HTTP 200**、**29,563,915 字节**、SHA-256 `55dc841b70b1601ec110a92e49b8f9f02f8cf34c04ebe7ebcd657f05fbf4dc72`（与 GitHub 资产大小一致）。IPA 内容核对 13 项全 PASS：两层 ZIP CRC、单一 `Nekularity.app`、App `0.3.8`/`20`、最低 iOS 26.0、`NekularityWidgets.appex` 同为 `0.3.8`/`20`、二进制含完整 Core 标记 `0f1e7b8…`。
+
+AltStore 刷新 run `41985050590` 成功：`apps.json` 提交 `5f611ad`，三个入口——GitHub Raw、CNB 镜像（`/-/git/raw/`）、固定 Release——均为 **0.3.8 / 20 / 29,563,915 字节 / 最低 26.0**，扁平旧字段（`version`/`downloadURL`/`size`）与 `versions[0]` 一并更新；图标 HTTP 200、443,517 字节、PNG 1024×1024 有效。
+
+Release 说明已改写为中英双语并回读一致。**边界**：这一版仍只在模拟器（iPad Pro 11-inch M5 与 iPhone 17，均 iOS 27.2）与 CI 上验证，真机、后台/锁屏、Live Activity、PiP、实际扬声器与真实账号未验证；本机没有 iOS 26 运行时。
+
 ## CI 可以跑模拟器 UI 套件（2026-11-05）
 
 `ios-release.yml` 新增两个 `workflow_dispatch` 输入：`ui_tests`（在构建之后真的跑一遍界面套件）与 `ui_only`（只跑指定用例，`XCUITestClass/testMethod`）。发布 tag 的行为不变，默认不跑。

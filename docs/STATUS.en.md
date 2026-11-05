@@ -1,5 +1,15 @@
 English · [简体中文](STATUS.md)
 
+## 0.3.8 / build 20 published (2026-11-05)
+
+Tag `v0.3.8` points at `fabe86b9a995b82522accc6eed435a2a66381ab4` (`0.3.8 / build 20`), Core `0f1e7b8856b77059c49fad1b12513adae577ca32`. Release CI `41981571842` (`macos-26` / Xcode 26.6) is green end to end: Core build, `swift test`, the device app, UI test compilation, IPA packaging and the tag publish.
+
+The public IPA downloads with **HTTP 200**, is **29,563,915 bytes**, SHA-256 `55dc841b70b1601ec110a92e49b8f9f02f8cf34c04ebe7ebcd657f05fbf4dc72` (matching the GitHub asset). All 13 content checks pass: both ZIP layers' CRCs, a single `Nekularity.app`, App `0.3.8`/`20`, minimum iOS 26.0, `NekularityWidgets.appex` at `0.3.8`/`20` too, and the full Core marker `0f1e7b8…` inside the binary.
+
+The AltStore refresh (run `41985050590`) succeeded: `apps.json` commit `5f611ad`, and all three entries - GitHub Raw, the CNB mirror (`/-/git/raw/`) and the fixed Release - report **0.3.8 / 20 / 29,563,915 bytes / minimum 26.0**, with the flat legacy fields (`version`/`downloadURL`/`size`) updated alongside `versions[0]`. The icon is HTTP 200, 443,517 bytes, a valid 1024x1024 PNG.
+
+The release notes were rewritten bilingually and read back. **Boundary**: this version is verified on simulators only (iPad Pro 11-inch M5 and iPhone 17, both iOS 27.2) plus CI; a real device, background/lock screen, Live Activity, PiP, actual speakers and real accounts remain unverified, and this machine has no iOS 26 runtime.
+
 ## CI can run the simulator UI suite (2026-11-05)
 
 `ios-release.yml` gains two `workflow_dispatch` inputs: `ui_tests` (actually run the interface suite after building) and `ui_only` (only the named cases, `XCUITestClass/testMethod`). A release tag behaves as before; neither runs by default.
