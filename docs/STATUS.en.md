@@ -3,6 +3,14 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## The host request shape has a client-side regression now (2026-11-05)
+
+The service-fetch failure (a request without `cookies` made `JSONDecoder` throw `keyNotFound` before dialling, so the fixture saw zero requests) was only caught on a simulator; it is pinned at the Kit level now:
+
+`HostRequestShapeTests.aRequestWithoutCookiesIsStillSent` starts a real TCP listener on `127.0.0.1`, hands `CoreHost.http` a request that **omits `cookies` and `bodyBase64`**, and asserts the request really went out (the server counted one), answered 200, with the body decoding from `bodyBase64`. It pins two things at once: a protocol field may be omitted, and omitting one must not fail silently.
+
+CI `42050804199` is green with Kit at **471 tests / 83 suites / 0 failures**.
 ## A service's network really goes through the app (Mac, iPhone 17 / iOS 27.2, `641172c`)
 
 After the `cookies` contract fix the same package was retested: its `ping` does `fetch(http://127.0.0.1:18798/proof)`, the screen's 运行结果 showed **`{"fetched":"fixture-proof-7K3 来自夹具"}`**, and the case **passed in 52.3 s**.

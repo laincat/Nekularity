@@ -3,6 +3,14 @@
 
 
 
+
+## 宿主请求形状有了客户端回归（2026-11-05）
+
+服务 fetch 那次失败（请求里没有 `cookies` → `JSONDecoder` 在拨号前抛 `keyNotFound` → 夹具 0 请求）只在模拟器上抓到的，现在有了 Kit 层的钉住用例：
+
+`HostRequestShapeTests.aRequestWithoutCookiesIsStillSent` 在 `127.0.0.1` 起一个真实 TCP 监听，把**省略 `cookies` 和 `bodyBase64`** 的请求原样交给 `CoreHost.http`，断言请求确实发出（服务端计数 1）、状态 200、`bodyBase64` 解出的正文正确。这条同时钉住两件事：协议字段可以省略，以及省略不等于静默失败。
+
+CI `42050804199` 全绿，Kit **471 tests / 83 suites / 0 失败**。
 ## 服务的网络确实走 App 的传输（Mac，iPhone 17 / iOS 27.2，`641172c`）
 
 `cookies` 契约修好之后复测同一个包：`ping` 里去 `fetch(http://127.0.0.1:18798/proof)`，界面「运行结果」显示 **`{"fetched":"fixture-proof-7K3 来自夹具"}`**，用例 **PASS 52.3 秒**。
