@@ -135,7 +135,10 @@ public final class CoreHost: NSObject, MobileHostProtocol, @unchecked Sendable {
         var url: String
         var headers: [String: [String]]?
         var bodyBase64: String?
-        var cookies: Bool
+        /// Optional on purpose: the contract lists the field, but a host that
+        /// left it out used to fail the whole request with "the data couldn't
+        /// be read because it is missing" before anything was dialled.
+        var cookies: Bool?
         var partition: String?
     }
 
@@ -156,7 +159,8 @@ public final class CoreHost: NSObject, MobileHostProtocol, @unchecked Sendable {
                 body = d
             }
             let req = URLSessionTransport.Request(id: w.id, method: w.method, url: url, headers: w.headers ?? [:],
-                                                  body: body, useCookies: w.cookies, partition: w.partition ?? "")
+                                                  body: body, useCookies: w.cookies ?? false,
+                                                  partition: w.partition ?? "")
             let transport = self.transport
             let resp = try blocking { try await transport.send(req) }
             return Self.json(WireResponse(status: resp.status, headers: resp.headers,

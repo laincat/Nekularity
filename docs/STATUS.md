@@ -1,5 +1,15 @@
 [English](STATUS.en.md) · 简体中文
 
+
+## 服务的 fetch 不再在拨号前失败（2026-11-05）
+
+Mac 在模拟器上的一条实测发现：服务的 `ping` 里去 `fetch(http://127.0.0.1:18798/proof)`，界面报 `service: fixture-fetch failed on "ping": Error: 未能读取数据，因为数据丢失。`，而**夹具 0 条请求**——请求从没发出。
+
+原因在两端之间：Core 拼给客户端的请求 JSON 缺 `cookies`（`Host.HTTP` 契约里列了它），Nekularity 的 `WireRequest.cookies` 是非可选 `Bool`，于是 `JSONDecoder` 在拨号前抛 `keyNotFound`。这条同时说明「Core 侧少了字段」和「客户端把契约读得过窄」是两个独立缺陷。
+
+两侧都改：Core 固定带 `"cookies": false`；客户端改为 `Bool?`、缺省按 `false`。回归 `TestAServiceFetchGoesThroughTheClient` 断言该字段存在且为 `false`，负控删掉后失败（`cookies = <nil> (present=false), want false`）。Core pin 跟到 `2d1dd76`。
+
+同一轮里另外三条实测通过：`ping` 直返（`{"from":"fixture-ping","ok":true}`，PASS 52.7s）、坏包文案（`服务包未被接受：service: package has no service.json`）、只申请 `storage` 的包在 `ping` 里 fetch 被指名拒绝（`may not use the network: it did not ask for the "network" permission`）。
 ## 0.3.9 / build 21 已发布并核对（2026-11-05）
 
 tag `v0.3.9` → `44d3845`，发布 CI `42034138520` 全绿。

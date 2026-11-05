@@ -1,5 +1,15 @@
 English · [简体中文](STATUS.md)
 
+
+## A service's fetch no longer fails before dialling (2026-11-05)
+
+One simulator run found it: a service whose `ping` does `fetch(http://127.0.0.1:18798/proof)` reported `service: fixture-fetch failed on "ping": Error: 未能读取数据，因为数据丢失。` while **the fixture recorded zero requests** - nothing was ever sent.
+
+The cause sits between the two sides: Core's request JSON left out `cookies` (which the `Host.HTTP` contract lists) and Nekularity decoded `WireRequest.cookies` as a non-optional `Bool`, so `JSONDecoder` threw `keyNotFound` before dialling. That is two separate defects: Core omitting a documented field, and the client reading the contract too narrowly.
+
+Both changed: Core always sends `"cookies": false`; the client takes `Bool?` and treats a missing value as `false`. `TestAServiceFetchGoesThroughTheClient` asserts the field is present and false, and removing it fails with `cookies = <nil> (present=false), want false`. The Core pin moves to `2d1dd76`.
+
+Three other cases passed in the same round: `ping` answering directly (`{"from":"fixture-ping","ok":true}`, PASS 52.7 s), the rejected-package message (`服务包未被接受：service: package has no service.json`), and a storage-only package refused by name when its `ping` fetches (`may not use the network: it did not ask for the "network" permission`).
 ## 0.3.9 / build 21 is published and verified (2026-11-05)
 
 Tag `v0.3.9` points at `44d3845`; the publish CI `42034138520` passed.
