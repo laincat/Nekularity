@@ -188,7 +188,8 @@ final class AppModel {
                 bangumi: BangumiStore(
                     tokens: KeychainBangumiTokenStore(
                         service: profiles.keychainService(for: profiles.activeID) + ".bangumi")),
-                services: ServiceStore(directory: root.appending(path: "Services", directoryHint: .isDirectory))))
+                services: ServiceStore(directory: root.appending(path: "Services", directoryHint: .isDirectory),
+                                        host: host)))
         } catch {
             started = false
             state = .failed(error.localizedDescription)

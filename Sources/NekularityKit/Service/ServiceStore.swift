@@ -16,11 +16,26 @@ public final class ServiceStore {
     public private(set) var error: String?
     public private(set) var installing = false
 
+    /// The answer to one run: what came back, or why nothing did.
+    public struct RunResult: Sendable, Equatable {
+        public var id: String
+        public var method: String
+        public var text: String
+        public var ok: Bool
+    }
+
+    public private(set) var running: String?
+    public private(set) var run: RunResult?
+
     private let directory: URL
+    /// This client's side of Core, needed to run a service: the package's HTTP
+    /// goes through it, so the transport, cookies and certificates stay here.
+    private let host: CoreHost?
     /// Services live beside the sources of the environment they belong to, so a
     /// profile switch takes them along without anyone copying anything.
-    public init(directory: URL) {
+    public init(directory: URL, host: CoreHost? = nil) {
         self.directory = directory
+        self.host = host
     }
 
     public var dataDir: String { directory.path(percentEncoded: false) }
@@ -77,6 +92,32 @@ public final class ServiceStore {
                 records = rows
             }
             self.error = message
+        }
+    }
+
+    /// Runs one method of a package the user allowed these permissions.
+    ///
+    /// `granted` comes from the person, not from the manifest: Core intersects
+    /// it with what the package asked for, so an allowance can only narrow.
+    public func call(_ record: ServiceRecord, method: String, payload: String = "null",
+                     granted: [String]) async {
+        guard let host else {
+            run = RunResult(id: record.id, method: method,
+                            text: "没有宿主，无法运行服务", ok: false)
+            return
+        }
+        running = record.id
+        defer { running = nil }
+        do {
+            let text = try await Task.detached { [dataDir] in
+                try CoreService.call(host: host, dataDir: dataDir, id: record.id,
+                                     method: method, payload: payload, granted: granted)
+            }.value
+            run = RunResult(id: record.id, method: method, text: text, ok: true)
+        } catch {
+            let message = (error as? CoreServiceError)?.errorDescription
+                ?? error.localizedDescription
+            run = RunResult(id: record.id, method: method, text: message, ok: false)
         }
     }
 

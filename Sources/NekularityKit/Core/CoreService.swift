@@ -37,11 +37,11 @@ public enum CoreServiceError: Error, LocalizedError, Equatable {
     }
 }
 
-/// Installs, lists and removes Core service packages.
+/// Installs, lists, removes and runs Core service packages.
 ///
-/// Running a service is deliberately absent: it needs this client's transport
-/// and its account values, so the client that wires it also owns the host it
-/// runs with. These five calls are the part Core can do on its own.
+/// A service's HTTP goes out through this client's host, so a run takes one:
+/// the transport, cookies and certificate decisions stay the app's, and Core
+/// never opens a socket of its own.
 public enum CoreService {
     /// Verifies and installs a package archive, returning Core's record.
     public static func install(dataDir: String, origin: String, digest: String,
@@ -83,6 +83,21 @@ public enum CoreService {
         let code = MobileServiceSource(dataDir, id, &error)
         if let error { throw CoreServiceError.core(error.localizedDescription) }
         return code ?? ""
+    }
+
+    /// Runs one method of an installed service.
+    ///
+    /// `host` is this client's side of Core: a service's fetch goes through its
+    /// HTTP method, and cancelling tells it to drop the request. `granted` is
+    /// what the user allowed; Core intersects it with what the package asked
+    /// for, so withholding a permission cannot be undone by the package.
+    public static func call(host: CoreHost, dataDir: String, id: String, method: String,
+                            payload: String, granted: [String]) throws -> String {
+        var error: NSError?
+        let out = MobileServiceCall(host, dataDir, id, method, payload,
+                                    granted.joined(separator: ","), &error)
+        if let error { throw CoreServiceError.core(error.localizedDescription) }
+        return out ?? "null"
     }
 
     private static func decode<T: Decodable>(_ json: String?, as type: T.Type,

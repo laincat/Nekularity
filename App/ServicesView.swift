@@ -12,9 +12,24 @@ struct ServicesView: View {
     @Environment(ServiceStore.self) private var services
     @State private var importing = false
     @State private var pendingRemoval: ServiceRecord?
+    /// The package whose permissions the user is about to allow for one run.
+    @State private var pendingRun: ServiceRecord?
 
     var body: some View {
         List {
+            if let run = services.run {
+                Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(run.id) · \(run.method)").font(.caption).foregroundStyle(.secondary)
+                        Text(run.text).font(.system(.footnote, design: .monospaced))
+                            .textSelection(.enabled)
+                            .foregroundStyle(run.ok ? .primary : Color.red)
+                    }
+                    .accessibilityIdentifier("service.run.result")
+                } header: {
+                    Text(run.ok ? "运行结果" : "运行失败")
+                }
+            }
             if let error = services.error {
                 Section {
                     Text(error).font(.footnote).foregroundStyle(.red)
@@ -65,6 +80,23 @@ struct ServicesView: View {
         .overlay {
             if services.installing { ProgressView("正在安装…") }
         }
+        .confirmationDialog("允许这些权限并运行？", isPresented: Binding(
+            get: { pendingRun != nil },
+            set: { if !$0 { pendingRun = nil } }), presenting: pendingRun) { record in
+            Button("允许并运行") {
+                let granted = record.permissions ?? []
+                let id = record.id
+                pendingRun = nil
+                Task { await services.call(record, method: "ping", granted: granted) }
+                _ = id
+            }
+            Button("取消", role: .cancel) { pendingRun = nil }
+        } message: { record in
+            let names = (record.permissions ?? []).map(Self.permissionName)
+            Text(names.isEmpty
+                 ? "\(record.name) 不申请任何权限。这次运行会调用它的 ping。"
+                 : "\(record.name) 申请：\(names.joined(separator: "、"))。这次运行只在这次调用期间允许这些权限，它仍然读不到账号值。")
+        }
         .task { services.reload() }
         .refreshable { services.reload() }
     }
@@ -88,7 +120,15 @@ struct ServicesView: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("service.\(record.id)")
         .swipeActions {
+            Button("运行") { pendingRun = record }.tint(.accentColor)
             Button("移除", role: .destructive) { pendingRemoval = record }
+        }
+        .contextMenu {
+            Button {
+                pendingRun = record
+            } label: {
+                Label("运行 ping", systemImage: "play")
+            }
         }
     }
 

@@ -66,3 +66,18 @@ import Testing
             || store.error?.contains("操作失败") == true,
             "the message must say the package was not taken: \(store.error ?? "nil")")
 }
+
+/// A run without a host is refused in words rather than pretending to call.
+@MainActor
+@Test func aRunWithoutAHostSaysSo() async {
+    let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appending(path: "nk-services-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let store = ServiceStore(directory: directory)
+    let record = ServiceRecord(id: "fixture", name: "Fixture", version: "1.0.0",
+                               origin: "test", sha256: nil, installed: "", dir: directory.path,
+                               permissions: ["network"])
+    await store.call(record, method: "ping", granted: ["network"])
+    #expect(store.run?.ok == false)
+    #expect(store.run?.text.contains("没有宿主") == true)
+}
