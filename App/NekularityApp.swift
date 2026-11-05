@@ -38,6 +38,7 @@ struct NekularityApp: App {
                         .environment(env.home)
                         .environment(env.profiles)
                         .environment(env.bangumi)
+                        .environment(env.services)
                         .environment(\.switchProfile, env.switchProfile)
                         .environment(\.imageLoader, env.images)
                         .sourcePrompts(env.prompts)
@@ -92,6 +93,9 @@ final class AppModel {
         /// Bangumi: the account's collections, and the air dates the reminder
         /// planner reads. The token is per environment, like every other account.
         let bangumi: BangumiStore
+        /// Service packages Core holds for this environment. They live beside
+        /// the sources so a profile switch takes them along.
+        let services: ServiceStore
     }
 
     var state: State = .starting
@@ -183,7 +187,8 @@ final class AppModel {
                 switchProfile: { [weak self] id in await self?.switchProfile(to: id) },
                 bangumi: BangumiStore(
                     tokens: KeychainBangumiTokenStore(
-                        service: profiles.keychainService(for: profiles.activeID) + ".bangumi"))))
+                        service: profiles.keychainService(for: profiles.activeID) + ".bangumi")),
+                services: ServiceStore(directory: root.appending(path: "Services", directoryHint: .isDirectory))))
         } catch {
             started = false
             state = .failed(error.localizedDescription)

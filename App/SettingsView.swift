@@ -101,6 +101,12 @@ struct SettingsView: View {
                         Label("漫画源与视频源", systemImage: "puzzlepiece.extension")
                     }
                     .accessibilityIdentifier("settings.sources")
+                    NavigationLink {
+                        ServicesView()
+                    } label: {
+                        Label("服务", systemImage: "shippingbox")
+                    }
+                    .accessibilityIdentifier("settings.services")
                 }
 
                 Section {

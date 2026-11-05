@@ -1,0 +1,90 @@
+import CryptoKit
+import Foundation
+import Observation
+
+/// The service packages installed under one environment.
+///
+/// Core owns the packages: it verifies the archive, unpacks it and keeps the
+/// record. This type only carries what a screen needs — the list, an install
+/// from a file the user picked, and a removal — and keeps the interface's
+/// wording out of Core's English errors.
+@MainActor
+@Observable
+public final class ServiceStore {
+    public private(set) var records: [ServiceRecord] = []
+    /// The last failure, already worded for the interface.
+    public private(set) var error: String?
+    public private(set) var installing = false
+
+    private let directory: URL
+    /// Services live beside the sources of the environment they belong to, so a
+    /// profile switch takes them along without anyone copying anything.
+    public init(directory: URL) {
+        self.directory = directory
+    }
+
+    public var dataDir: String { directory.path(percentEncoded: false) }
+
+    public func reload() {
+        do {
+            records = try CoreService.list(dataDir: dataDir)
+            error = nil
+        } catch {
+            records = []
+            self.error = Self.wording(for: error)
+        }
+    }
+
+    /// Installs the package at `url`, which the user picked from Files.
+    ///
+    /// The digest is computed here and handed to Core, so the record says what
+    /// was actually installed rather than what a listing claimed.
+    public func install(from url: URL) async {
+        installing = true
+        defer { installing = false }
+        do {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            let archive = try Data(contentsOf: url)
+            let digest = Self.digest(of: archive)
+            let record = try await Task.detached { [dataDir] in
+                try CoreService.install(dataDir: dataDir, origin: url.lastPathComponent,
+                                        digest: digest, archive: archive)
+            }.value
+            error = nil
+            records = try CoreService.list(dataDir: dataDir)
+            _ = record
+        } catch {
+            self.error = Self.wording(for: error)
+            reload()
+        }
+    }
+
+    public func remove(_ id: String) {
+        do {
+            try CoreService.remove(dataDir: dataDir, id: id)
+            records = try CoreService.list(dataDir: dataDir)
+            error = nil
+        } catch {
+            self.error = Self.wording(for: error)
+            reload()
+        }
+    }
+
+    /// SHA-256 of the archive, lowercase hex, which is the form Core records.
+    public nonisolated static func digest(of data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Core's own message is kept for diagnosis, but what the screen shows says
+    /// what happened in the language the rest of the interface speaks.
+    private static func wording(for error: Error) -> String {
+        if let service = error as? CoreServiceError {
+            switch service {
+            case .core(let message): return "服务包未被接受：\(message)"
+            case .unreadable(let what): return "无法解析\(what)"
+            }
+        }
+        return "操作失败：\(error.localizedDescription)"
+    }
+}
