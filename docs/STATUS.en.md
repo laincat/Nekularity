@@ -10,6 +10,19 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## 0.4.1 / build 23 is published and verified (2026-11-05)
+
+Tag `v0.4.1` points at `ede845c`; the publish CI `42103870843` passed.
+
+| Item | Value |
+| --- | --- |
+| public download | **HTTP 200** |
+| size | **29,754,414 bytes**, matching the asset |
+| SHA-256 | `6be3769c0a9447100740b6893e3031c07f172580cb46a3c655bfa26b9447bcb5` |
+| IPA contents | **13 checks, 0 failures**: both layers' CRCs, one app bundle, App `0.4.1`/`23`, minimum 26.0, the widget also `0.4.1`/`23`, Core marker `1574076` |
+
+The AltStore refresh run `42107774868` succeeded and committed `apps.json` as `7ae8f4a`; all three entries report `0.4.1 / 23 / 29754414 / 26.0`. The release notes are bilingual.
 ## The account-value screen printed its own code (`a87f5d9`)
 
 Simulator acceptance caught it: five places in `ServiceAccountsView.swift` used two backslashes, so the screen showed the source instead of a name -
