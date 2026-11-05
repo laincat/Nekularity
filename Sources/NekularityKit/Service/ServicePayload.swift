@@ -17,6 +17,10 @@ public enum ServicePayload {
     public static func isValid(_ text: String) -> Bool {
         let body = normalized(text)
         guard let data = body.data(using: .utf8) else { return false }
-        return (try? JSONSerialization.jsonObject(with: data)) != nil
+        // fragmentsAllowed: `42`, `true`, `"text"` and `null` are JSON values a
+        // method may take, and without this option the parser only accepts an
+        // object or an array - which would reject the default `null` payload.
+        return (try? JSONSerialization.jsonObject(with: data,
+                                                  options: [.fragmentsAllowed])) != nil
     }
 }
