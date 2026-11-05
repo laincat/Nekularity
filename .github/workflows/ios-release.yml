@@ -7,6 +7,10 @@ on:
         description: 'Run the interface suite on a simulator after building it'
         type: boolean
         default: false
+      ui_only:
+        description: 'Run only these interface cases (comma separated: NekularityUITests.testX)'
+        type: string
+        default: ''
   push:
     tags:
       - 'v*'
@@ -136,11 +140,17 @@ jobs:
           echo "running on $device"
           xcrun simctl boot "$device" || true
           xcrun simctl bootstatus "$device" -b
+          # Only the cases asked for, when some were. Not quiet: an assertion
+          # message is the whole point of a run that fails.
+          only=""
+          for name in $(echo "${{ inputs.ui_only }}" | tr ',' ' '); do
+            only="$only -only-testing:$name"
+          done
           xcodebuild -project Nekularity.xcodeproj -scheme Nekularity \
-            -destination "platform=iOS Simulator,name=$device" -jobs 2 -quiet \
+            -destination "platform=iOS Simulator,name=$device" -jobs 2 \
             -derivedDataPath "$RUNNER_TEMP/nekularity-derived-ui" \
             -resultBundlePath "$RUNNER_TEMP/uitests-run.xcresult" \
-            COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGNING_ALLOWED=NO test-without-building \
+            COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGNING_ALLOWED=NO test-without-building $only \
             2>&1 | tee "$RUNNER_TEMP/uitests-run.log"
       - name: Keep interface run diagnostics
         if: always() && inputs.ui_tests
