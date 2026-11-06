@@ -1379,6 +1379,17 @@ final class NekularityUITests: XCTestCase {
         let deadline = Date().addingTimeInterval(10)
         while Date() < deadline, cue.exists { Thread.sleep(forTimeInterval: 0.2) }
         XCTAssertFalse(cue.exists, "subtitles were turned off but the English cue is still drawn")
+
+        // Choosing a language or 关闭字幕 makes it the default for the next
+        // episode, which is the behaviour under test - so put the default back
+        // to the system, or this case would hand every later case a preference
+        // it never asked for.
+        showTransport()
+        menu.tap()
+        let followSystem = app.buttons["跟随系统语言"].firstMatch
+        XCTAssertTrue(followSystem.waitForExistence(timeout: 10),
+                      "the menu offers no way back to the system language")
+        followSystem.tap()
     }
 
     /// The batch update, driven through the interface it is reached by.

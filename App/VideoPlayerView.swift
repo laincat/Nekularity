@@ -539,6 +539,25 @@ struct VideoPlayerView: View {
                         Text("关闭字幕")
                     }
                 }
+                Divider()
+                // The way back: a remembered language is a default, and a
+                // default nobody can undo is a setting, not a choice.
+                Button {
+                    UserDefaults.standard.removeObject(forKey: VideoPlayerView.subtitlePreferenceKey)
+                    if let track = SubtitlePreference.pick(
+                        model.subtitleTracks, languages: SubtitlePreference.system.languages(),
+                        language: { $0.language }) {
+                        model.selectSubtitle(track.id)
+                    } else {
+                        model.selectSubtitle(nil)
+                    }
+                } label: {
+                    if UserDefaults.standard.string(forKey: VideoPlayerView.subtitlePreferenceKey) == nil {
+                        Label("跟随系统语言", systemImage: "checkmark")
+                    } else {
+                        Text("跟随系统语言")
+                    }
+                }
                 ForEach(model.subtitleTracks, id: \.id) { track in
                     Button {
                         model.selectSubtitle(track.id)
