@@ -49,6 +49,21 @@ final class LocalImageServer: @unchecked Sendable {
     /// The value the video route demands; the fixture sends it as `Referer`.
     static let clipReferer = "http://127.0.0.1:18731/"
 
+    /// The HLS fixture's folder inside the test bundle. The project copies
+    /// `UITests/Fixtures/media/hls-subs` as a folder reference, so the files
+    /// keep their names and the playlists' relative URIs resolve.
+    static var hlsDirectory: URL? {
+        Bundle(for: LocalImageServer.self).url(forResource: "hls-subs", withExtension: nil)
+    }
+
+    /// Whether any request reached a subtitle file: a track listed in the menu
+    /// and a track whose cues were fetched are different claims.
+    func subtitleFilesRequested() -> [String] {
+        clipLock.lock()
+        defer { clipLock.unlock() }
+        return clipLog.filter { $0.hasPrefix("hls ") && $0.contains(".vtt") }
+    }
+
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "local-image-server")
     private let png: Data
@@ -251,6 +266,29 @@ final class LocalImageServer: @unchecked Sendable {
         case "/source.js":
             reply(connection, status: "200 OK", body: Data(Self.scriptBody.utf8),
                   type: "application/javascript")
+        case _ where route.hasPrefix("/hls/"):
+            // An HLS rendition with two subtitle groups (中文 default, English
+            // alternate), fMP4 byte ranges and WebVTT. Same Referer rule as the
+            // clip: a playlist that reaches the engine without the source's
+            // headers would fail on every segment of a real site.
+            let name = String(route.dropFirst("/hls/".count))
+            guard headers["referer"] == Self.clipReferer else {
+                recordClip("hls \(name) 403 (referer=\(headers["referer"] ?? "none"))")
+                reply(connection, status: "403 Forbidden", body: Data())
+                return
+            }
+            guard !name.contains("/"), !name.contains(".."),
+                  let url = Self.hlsDirectory?.appendingPathComponent(name),
+                  let body = try? Data(contentsOf: url) else {
+                recordClip("hls \(name) 404")
+                reply(connection, status: "404 Not Found", body: Data())
+                return
+            }
+            let type = name.hasSuffix(".m3u8") ? "application/vnd.apple.mpegurl"
+                : name.hasSuffix(".vtt") ? "text/vtt; charset=utf-8" : "video/mp4"
+            recordClip("hls \(name) \(headers["range"] == nil ? "200" : "206")")
+            reply(connection, status: "200 OK", body: body, type: type,
+                  range: headers["range"], extra: ["Accept-Ranges": "bytes"])
         case "/clip.mp4":
             // The header the source declared. Without it the request fails, which is
             // the whole point of the case.

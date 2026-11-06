@@ -1094,6 +1094,104 @@ final class NekularityUITests: XCTestCase {
         }
     }
 
+    /// HLS with subtitles, on the engine this build pins.
+    ///
+    /// The fixture is a master playlist with two WebVTT groups (中文 default,
+    /// English alternate) over fMP4 byte ranges, every request refused without the
+    /// source's `Referer`. The case asks four things in turn: the picture advances,
+    /// the English track can be chosen, its cue is actually drawn (the overlay's
+    /// text, not the track name in a menu), and turning subtitles off removes it.
+    func testHLSPlaysAndSwitchesSubtitles() throws {
+        let server = try LocalImageServer()
+        try server.start()
+        addTeardownBlock { server.stop() }
+        guard LocalImageServer.hlsDirectory != nil else {
+            XCTFail("the HLS fixture is not in the test bundle")
+            return
+        }
+
+        let app = launch()
+        try openVideo(app)
+        let online = app.buttons["在线源"].firstMatch
+        if online.waitForExistence(timeout: 10) { online.tap() }
+        let picker = element(app, "video.source")
+        guard picker.waitForExistence(timeout: 20) else {
+            throw XCTSkip("the 视频 tab has no source picker")
+        }
+        picker.tap()
+        let provider = app.buttons["Video Probe"].firstMatch
+        guard provider.waitForExistence(timeout: 10) else {
+            throw XCTSkip("the video fixture is not seeded: run scripts/seed-simulator.sh")
+        }
+        provider.tap()
+        let field = element(app, "video.query")
+        XCTAssertTrue(field.waitForExistence(timeout: 20), "the 视频 tab has no field")
+        field.tap()
+        field.typeText("probe")
+        app.typeText("\n")
+
+        let card = firstElement(app, containing: "Probe HLS")
+        guard card.waitForExistence(timeout: 60) else {
+            throw XCTSkip("the seeded video fixture predates the HLS entry: regenerate the seed")
+        }
+        card.tap()
+        let episode = firstElement(app, containing: "Episode 1")
+        XCTAssertTrue(episode.waitForExistence(timeout: 30), "the detail page lists no episode")
+        episode.tap()
+
+        XCTAssertTrue(element(app, "video.close").waitForExistence(timeout: 60),
+                      "the player screen never opened: \(server.clipSummary())")
+        let duration = element(app, "video.duration")
+        XCTAssertTrue(duration.waitForExistence(timeout: 90), "no duration: \(server.clipSummary())")
+
+        func seconds(_ clock: String) -> Int? {
+            let parts = clock.split(separator: ":")
+            let numbers = parts.compactMap { Int($0) }
+            guard !numbers.isEmpty, numbers.count == parts.count else { return nil }
+            return numbers.reduce(0) { $0 * 60 + $1 }
+        }
+        func showTransport() {
+            if !duration.exists { app.windows.firstMatch.tap() }
+            _ = duration.waitForExistence(timeout: 10)
+        }
+        let first = seconds(duration.value as? String ?? "")
+        Thread.sleep(forTimeInterval: 3)
+        showTransport()
+        let second = seconds(duration.value as? String ?? "")
+        print("HLS clock: \(String(describing: first)) -> \(String(describing: second))")
+        XCTAssertNotNil(first, "the clock was not readable")
+        if let first, let second {
+            XCTAssertGreaterThan(second, first, "the HLS picture did not advance: \(first)s then \(second)s")
+        }
+
+        // Pause so a ten-second clip cannot end while the menu is open; the cue
+        // spans the whole clip, so it is due wherever the picture stopped.
+        element(app, "video.playPause").tap()
+        showTransport()
+        let menu = element(app, "video.subtitles")
+        XCTAssertTrue(menu.waitForExistence(timeout: 20),
+                      "no subtitle menu: the engine listed no tracks (\(server.clipSummary()))")
+        menu.tap()
+        let english = app.buttons.matching(NSPredicate(
+            format: "label CONTAINS[c] %@ OR label CONTAINS %@", "English", "英语")).firstMatch
+        XCTAssertTrue(english.waitForExistence(timeout: 10), "the menu offers no English track")
+        english.tap()
+
+        let cue = app.staticTexts["Subtitle rendering proof"]
+        XCTAssertTrue(cue.waitForExistence(timeout: 20),
+                      "English was chosen but its cue was never drawn; vtt requests: \(server.subtitleFilesRequested())")
+        print("HLS subtitle requests: \(server.subtitleFilesRequested())")
+
+        showTransport()
+        menu.tap()
+        let off = app.buttons["关闭字幕"].firstMatch
+        XCTAssertTrue(off.waitForExistence(timeout: 10), "the menu has no 关闭字幕")
+        off.tap()
+        let gone = NSPredicate(format: "exists == false")
+        expectation(for: gone, evaluatedWith: cue)
+        waitForExpectations(timeout: 10)
+    }
+
     /// The batch update, driven through the interface it is reached by.
     ///
     /// It shipped broken: every installed source failed with "already exists" because

@@ -13,7 +13,11 @@ class VideoProbe extends VideoSource {
 
     search = {
         load: async () => ({
-            videos: [{id: "clip", title: "Probe Clip", subtitle: "loopback"}],
+            videos: [
+                {id: "clip", title: "Probe Clip", subtitle: "loopback"},
+                // HLS with two subtitle groups (中文 default, English alternate).
+                {id: "hls", title: "Probe HLS", subtitle: "loopback hls"},
+            ],
             maxPage: 1,
         }),
     }
@@ -21,13 +25,19 @@ class VideoProbe extends VideoSource {
     video = {
         loadInfo: async (id) => ({
             id: id,
-            title: "Probe Clip",
+            title: id === "hls" ? "Probe HLS" : "Probe Clip",
             description: "a clip served by the test runner",
             lines: [
                 {id: "line1", name: "Line 1", episodes: [{id: "ep1", title: "Episode 1"}]},
             ],
         }),
-        loadPlay: async () => ({
+        // The episode id alone does not say which video it belongs to, so the
+        // play answer branches on the video id.
+        loadPlay: async (videoId) => videoId === "hls" ? {
+            url: "http://127.0.0.1:18731/hls/master.m3u8",
+            format: "hls",
+            headers: {Referer: "http://127.0.0.1:18731/"},
+        } : ({
             url: "http://127.0.0.1:18731/clip.mp4",
             format: "mp4",
             // The runner answers 403 without this header.

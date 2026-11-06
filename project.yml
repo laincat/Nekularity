@@ -106,6 +106,12 @@ targets:
           # The seed goes into the app's container before a run; it is not a
           # test resource, and in the bundle it would only be dead weight.
           - Fixtures/seed/**
+          # Copied below as one folder: flattened, its playlists' relative URIs
+          # would point at files that no longer sit beside them.
+          - Fixtures/media/hls-subs/**
+      - path: UITests/Fixtures/media/hls-subs
+        type: folder
+        buildPhase: resources
     dependencies:
       - target: Nekularity
     settings:
