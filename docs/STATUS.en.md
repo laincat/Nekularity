@@ -16,6 +16,27 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## The standard-AI fixture streams, and Core's own decoder vouches for it (2026-11-06)
+
+Last round's on-screen streaming acceptance used a fixture edited ad hoc on the Mac, and that edit never reached the repository (the worker died twice mid-task and never sent it back). It is now rewritten in the repository to the same shapes, and **the event shapes are verified on Windows with Core's own decoder**, with no Mac involved:
+
+- `serve.py` answers `stream:true` with server-sent events, each protocol in its own shape (Chat's `choices[].delta.content` plus `[DONE]`; Responses' `response.output_text.delta` plus `response.completed`; Messages' `content_block_delta`/`text_delta` plus `message_stop`)
+- a new `/cutoff/v1` sends two pieces, then closes the connection without a completion marker
+- received request bodies are also written to `<log>.requests.jsonl`, so a test can assert the `stream` and `model` the app actually sent
+
+**Measured locally** (`E:/Temp/nk-fixture-check`, a small separate program reading real loopback through `aiapi.StreamDecoder`):
+
+| Request | Result |
+| --- | --- |
+| all three protocols, `/v1` with `stream:true` | `["流式","第一段"," ","第二段🐾"]`, `Done()==true` |
+| all three protocols, `/cutoff/v1` | `["流式","第一段"]`, `Done()==false` |
+| all three protocols, `stream:false` | the whole reply, as before |
+| the model catalogue and `requests.jsonl` | normal; the log shows both `"stream": true` and `"stream": false` |
+
+The last piece is a surrogate pair (U+1F43E), so a wrong UTF-8/UTF-16 boundary shows up.
+
+**Still missing**: the on-screen increments were accepted against the old ad-hoc fixture, and the interface test has **not been re-run** against this repository version, so "the screen still passes with the committed fixture" is not yet verified.
 ## Relicensed to LGPL-3.0-or-later, dependencies moved to their latest (2026-11-06)
 
 The repository was GPL-3.0. It is now **LGPL-3.0-or-later with the App Store / DRM Exception**, the exception clauses are the same ones the playback engine AetherEngine uses (the engine states v3 only; this project additionally says "or any later version"):

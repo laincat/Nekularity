@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
-"""Loopback-only, whole-response AI fixture. No external packages or accounts.
+"""Loopback-only AI fixture: whole replies and server-sent streams. No external packages.
 
 python3 UITests/Fixtures/standard-ai/serve.py --port 18796 --log /tmp/ai.jsonl
 API key: fixture-key; model: fixture-model.
-Roots: /v1, /slow/v1, /denied/v1, /unavailable/v1, /inband/v1.
+Roots: /v1, /slow/v1, /denied/v1, /unavailable/v1, /inband/v1, /cutoff/v1.
 GET /events returns sanitized observations. POST /release releases slow bodies.
 A slow request sends headers, then waits for release or detects a peer close.
-This fixture does not implement streaming, OAuth, or credential refresh.
+A request says which it wants with `stream`: false gets the whole reply, true gets
+events. /cutoff sends two text events and then closes without the protocol's
+completion marker, so a client that treats a closed connection as a finished
+answer is caught.
+
+The request bodies are appended to <log>.requests.jsonl so a test can assert what
+the app actually sent. No credentials, cookies or query strings are logged.
 """
 import argparse
 import json
@@ -18,6 +24,12 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
+# The text a stream produces, split so a test can tell pieces apart: the first
+# event is one word, the second starts with a space, and the fourth is a
+# surrogate pair, which is where a wrong UTF-8/UTF-16 boundary would show.
+STREAM_PIECES = ["流式", "第一段", " ", "第二段🐾"]
+CUTOFF_PIECES = STREAM_PIECES[:2]
+
 
 class State:
     def __init__(self, log=None):
@@ -26,8 +38,10 @@ class State:
         self.counter = 0
         self.release = threading.Event()
         self.log = Path(log) if log else None
+        self.requests = None
         if self.log:
             self.log.parent.mkdir(parents=True, exist_ok=True)
+            self.requests = self.log.with_name(self.log.name + ".requests.jsonl")
 
     def record(self, event, **fields):
         with self.lock:
@@ -36,6 +50,14 @@ class State:
             if self.log:
                 with self.log.open("a", encoding="utf-8") as stream:
                     stream.write(json.dumps(item, ensure_ascii=False) + "\n")
+
+    def record_request(self, body):
+        """Appends one received body; called only when the fixture accepted it."""
+        if not self.requests:
+            return
+        with self.lock:
+            with self.requests.open("a", encoding="utf-8") as stream:
+                stream.write(json.dumps(body, ensure_ascii=False) + "\n")
 
     def next_id(self):
         with self.lock:
@@ -100,6 +122,66 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             self.server.state.record("peer_closed", id=request_id)
 
+    # --- streaming -------------------------------------------------------
+
+    def stream_event(self, data, event=None):
+        """Writes one server-sent event and flushes it, so pieces arrive apart."""
+        lines = []
+        if event:
+            lines.append("event: " + event)
+        lines.append("data: " + data)
+        payload = ("\n".join(lines) + "\n\n").encode("utf-8")
+        self.wfile.write(payload)
+        self.wfile.flush()
+
+    def text_event(self, protocol, text):
+        """The event that carries one piece of text, in that protocol's shape."""
+        if protocol == "chat":
+            body = {"choices": [{"index": 0, "delta": {"content": text}}]}
+            self.stream_event(json.dumps(body, ensure_ascii=False))
+        elif protocol == "responses":
+            body = {"type": "response.output_text.delta", "delta": text}
+            self.stream_event(json.dumps(body, ensure_ascii=False), "response.output_text.delta")
+        else:
+            body = {"type": "content_block_delta",
+                    "index": 0,
+                    "delta": {"type": "text_delta", "text": text}}
+            self.stream_event(json.dumps(body, ensure_ascii=False), "content_block_delta")
+
+    def completion_event(self, protocol):
+        """The protocol's own end marker: a closed connection is not one."""
+        if protocol == "chat":
+            self.stream_event("[DONE]")
+        elif protocol == "responses":
+            self.stream_event(json.dumps({"type": "response.completed"}), "response.completed")
+        else:
+            self.stream_event(json.dumps({"type": "message_stop"}), "message_stop")
+
+    def stream_reply(self, protocol, request_id, pieces, cutoff):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.flush()
+        self.close_connection = True
+        self.server.state.record("streamed", id=request_id, protocol=protocol, mode="cutoff" if cutoff else "normal")
+        sent = 0
+        try:
+            for piece in pieces:
+                self.text_event(protocol, piece)
+                sent += 1
+                time.sleep(0.4)  # slow enough that the app paints between pieces
+            if cutoff:
+                self.server.state.record("stream_cut", id=request_id, sent=sent)
+                return  # no completion marker: the body just ends
+            self.completion_event(protocol)
+            self.server.state.record("stream_complete", id=request_id, sent=sent)
+        except (BrokenPipeError, ConnectionResetError):
+            self.server.state.record("peer_closed", id=request_id)
+
+    # --- routing ---------------------------------------------------------
+
     def handle_request(self):
         path = urlsplit(self.path).path
         if path == "/events" and self.command == "GET":
@@ -111,7 +193,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         parts = path.strip("/").split("/")
         mode = "normal"
-        if parts and parts[0] in {"slow", "denied", "unavailable", "inband"}:
+        if parts and parts[0] in {"slow", "denied", "unavailable", "inband", "cutoff"}:
             mode = parts.pop(0)
         if not parts or parts.pop(0) != "v1":
             self.respond(404, {"error": {"message": "unknown fixture root"}})
@@ -136,6 +218,7 @@ class Handler(BaseHTTPRequestHandler):
         if cookie_present:
             self.respond(400, {"error": {"message": "AI requests must not send cookies"}}, request_id)
             return
+        content = None
         if endpoint != "models":
             try:
                 size = int(self.headers.get("Content-Length", "0"))
@@ -143,8 +226,11 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("invalid size")
                 content = json.loads(self.rfile.read(size))
                 field = "input" if endpoint == "responses" else "messages"
+                # A caller states what it wants; the fixture answers in kind
+                # rather than deciding for it.
                 valid = (content.get("model") == "fixture-model"
-                         and content.get("stream") is False and bool(content.get(field)))
+                         and type(content.get("stream")) is bool
+                         and bool(content.get(field)))
                 if endpoint == "messages":
                     valid = valid and type(content.get("max_tokens")) is int and content["max_tokens"] > 0
                 if not valid:
@@ -156,6 +242,8 @@ class Handler(BaseHTTPRequestHandler):
             status = {"denied": 401, "unavailable": 503, "inband": 200}[mode]
             self.respond(status, {"error": {"message": "fixture rejection"}}, request_id)
             return
+        if content is not None:
+            self.server.state.record_request(content)
         if endpoint == "models":
             reply = {"data": [{"id": "fixture-model"}, {"id": "fixture-alt"}]}
         elif endpoint == "chat/completions":
@@ -164,6 +252,11 @@ class Handler(BaseHTTPRequestHandler):
             reply = {"output": [{"type": "message", "content": [{"type": "output_text", "text": "Fixture Responses answer"}]}]}
         else:
             reply = {"content": [{"type": "text", "text": "Fixture Messages answer"}]}
+        if content is not None and content.get("stream") is True:
+            protocol = {"chat/completions": "chat", "responses": "responses", "messages": "messages"}[endpoint]
+            pieces = CUTOFF_PIECES if mode == "cutoff" else STREAM_PIECES
+            self.stream_reply(protocol, request_id, pieces, cutoff=mode == "cutoff")
+            return
         self.respond(200, reply, request_id, slow=mode == "slow")
 
 

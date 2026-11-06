@@ -16,6 +16,27 @@
 
 
 
+
+## 标准 AI 夹具支持流式，并用 Core 的解码器自证（2026-11-06）
+
+上一轮界面流式验收用的是 Mac 上临时改的夹具，那份改动没进仓库（Worker 两次异常终止，改动没有回传）。现在按同一套形状在仓库里重写了一遍，而且**在 Windows 上用 Core 自己的解码器验证了事件形状**，不依赖 Mac：
+
+- `serve.py` 的 `stream:true` 走 server-sent events，三种协议各按自己的形状发（Chat 的 `choices[].delta.content` + `[DONE]`；Responses 的 `response.output_text.delta` + `response.completed`；Messages 的 `content_block_delta`/`text_delta` + `message_stop`）
+- 新增 `/cutoff/v1`：发两段后直接关连接、不发完成标记
+- 收到的请求正文另写一份到 `<log>.requests.jsonl`，测试可以断言 App 实际发的 `stream` 与 `model`
+
+**本机实测**（`E:/Temp/nk-fixture-check`，一个独立小程序，用 `aiapi.StreamDecoder` 读真实 loopback）：
+
+| 请求 | 结果 |
+| --- | --- |
+| 三协议 `/v1` + `stream:true` | `["流式","第一段"," ","第二段🐾"]`，`Done()==true` |
+| 三协议 `/cutoff/v1` | `["流式","第一段"]`，`Done()==false` |
+| 三协议 `stream:false` | 整包回答，与此前一致 |
+| 模型目录、`requests.jsonl` | 正常；日志里能看到 `"stream": true` 与 `"stream": false` |
+
+最后一段是代理对（U+1F43E），UTF-8/UTF-16 边界算错就会露出来。
+
+**仍缺**：界面上的增量显示是用旧临时夹具验的；换成仓库这份夹具后**没有重跑界面用例**，所以「夹具换成仓库版本后界面仍然通过」这一条还没验证。
 ## 许可证改为 LGPL-3.0-or-later 并跟 AetherEngine 的最新依赖（2026-11-06）
 
 此前仓库是 GPL-3.0。现在改为 **LGPL-3.0-or-later 附 App Store / DRM 例外**，例外条款与播放引擎 AetherEngine 用的同一套（引擎自己声明 v3-only，我们这一份额外写明「或任何更新版本」）：
