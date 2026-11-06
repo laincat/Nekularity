@@ -186,6 +186,18 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/uitests-run.xcresult" \
             COMPILER_INDEX_STORE_ENABLE=NO test-without-building $only \
             2>&1 | tee "$RUNNER_TEMP/uitests-run.log"
+      - name: Collect the app's engine log
+        if: always() && inputs.ui_tests
+        run: |
+          # Written only when a case launches the app with NK_VIDEO_DIAGNOSTIC=1.
+          data=$(xcrun simctl get_app_container booted com.laincat.nekularity data 2>/dev/null || true)
+          if [ -n "$data" ] && [ -f "$data/Documents/engine.log" ]; then
+            cp "$data/Documents/engine.log" "$RUNNER_TEMP/engine.log"
+            echo "engine.log: $(wc -l <"$RUNNER_TEMP/engine.log") lines"
+            grep -E "AE#154|legible|subtitle|#316" "$RUNNER_TEMP/engine.log" | head -40 || true
+          else
+            echo "no engine.log in the app container"
+          fi
       - name: Keep interface run diagnostics
         if: always() && inputs.ui_tests
         uses: actions/upload-artifact@v4
@@ -193,6 +205,7 @@ jobs:
           name: Nekularity-ui-run-diagnostics
           path: |
             ${{ runner.temp }}/uitests-run.log
+            ${{ runner.temp }}/engine.log
             ${{ runner.temp }}/uitests-run.xcresult
             ${{ runner.temp }}/nk-ai-stream/ai.jsonl
             ${{ runner.temp }}/nk-ai-stream/ai.jsonl.requests.jsonl

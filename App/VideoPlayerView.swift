@@ -69,6 +69,7 @@ final class VideoPlayerModel {
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
         try? AVAudioSession.sharedInstance().setActive(true)
         do {
+            VideoPlayerView.installDiagnosticLog()
             let made = try AetherEngine()
             engine = made
             try await made.load(url: url, startPosition: startPosition,
@@ -507,6 +508,25 @@ struct VideoPlayerView: View {
     /// else, so the label never becomes part of the product.
     static var diagnosticRequested: Bool {
         ProcessInfo.processInfo.environment["NK_VIDEO_DIAGNOSTIC"] == "1"
+    }
+
+    /// Under the same switch, the engine's own lines go to
+    /// `Documents/engine.log` in the app's container, where CI collects them. The
+    /// subtitle route decides who draws captions, and only the engine log says
+    /// which option AVFoundation actually selected.
+    static func installDiagnosticLog() {
+        guard diagnosticRequested, EngineLog.handler == nil,
+              let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        else { return }
+        let url = folder.appendingPathComponent("engine.log")
+        FileManager.default.createFile(atPath: url.path, contents: nil)
+        guard let file = try? FileHandle(forWritingTo: url) else { return }
+        let lock = NSLock()
+        EngineLog.handler = { line in
+            lock.lock()
+            defer { lock.unlock() }
+            file.write(Data((line + "\n").utf8))
+        }
     }
 
     private static func diagnosticLabel(_ model: VideoPlayerModel) -> String {
