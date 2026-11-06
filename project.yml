@@ -39,6 +39,13 @@ targets:
       # Shared with the extension: one definition of what an activity carries, so the
       # app and the island cannot disagree about its shape.
       - path: Live
+      # LGPL 4(b): the binary travels with the GPL and LGPL texts. The app is
+      # distributed as an App Store build, so the bundle is the only place the
+      # recipient can read them from.
+      - path: LICENSE
+        buildPhase: resources
+      - path: COPYING
+        buildPhase: resources
     dependencies:
       - package: NekularityKit
         product: NekularityKit
