@@ -30,6 +30,11 @@ final class VideoPlayerModel {
     private(set) var route = ""
     private(set) var nativeSubtitleCount = 0
     private(set) var nativeDefaultOrdinal: Int?
+    /// The position the client asked this session to start from. A later clock
+    /// reading cannot prove the resume decision (a player that restarted at zero
+    /// can also show 13 seconds once it has been open a while), so the test reads
+    /// the request itself.
+    private(set) var startPosition: Double = 0
     /// Playback speed the user picked; the engine clamps it to what this route can do.
     private(set) var rate: Float = 1
     /// What the source offers. Empty is a fact worth showing, not an error.
@@ -53,6 +58,7 @@ final class VideoPlayerModel {
     func start(_ play: VideoPlay, from startPosition: Double) async {
         guard !started else { return }
         started = true
+        self.startPosition = startPosition
         guard let url = play.url.flatMap(URL.init(string:)) else {
             failure = "这个源没有给出可直接播放的地址"
             return
@@ -507,6 +513,7 @@ struct VideoPlayerView: View {
         "route=\(model.route) cues=\(model.cues.count) tracks=\(model.subtitleTracks.count)"
             + " active=\(model.activeSubtitleID.map(String.init) ?? "none")"
             + " native=\(model.nativeSubtitleCount) default=\(model.nativeDefaultOrdinal.map(String.init) ?? "none")"
+            + " start=\(String(format: "%.1f", model.startPosition))"
     }
 
     private static func speedLabel(_ rate: Float) -> String {

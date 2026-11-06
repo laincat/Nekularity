@@ -1148,6 +1148,17 @@ final class NekularityUITests: XCTestCase {
         episode.tap()
     }
 
+    /// The start position the client handed the engine, from the hidden
+    /// diagnostic line. Unlike a clock reading taken later, this is the resume
+    /// decision itself.
+    private func requestedStart(_ app: XCUIApplication) -> Double? {
+        let line = app.descendants(matching: .any)
+            .matching(identifier: "video.diagnostic").firstMatch
+        guard line.waitForExistence(timeout: 10) else { return nil }
+        guard let range = line.label.range(of: "start=") else { return nil }
+        return Double(line.label[range.upperBound...].split(separator: " ").first ?? "")
+    }
+
     /// Seconds shown by the engine clock on the duration element's value.
     private func playedSeconds(_ app: XCUIApplication) -> Int? {
         let clock = element(app, "video.duration").value as? String ?? ""
@@ -1172,7 +1183,8 @@ final class NekularityUITests: XCTestCase {
             XCTFail("the 30 s HLS fixture is not in the test bundle")
             return
         }
-        let env = ["NK_SHELF_FILE": "uitest-resume-\(UUID().uuidString).json"]
+        let env = ["NK_SHELF_FILE": "uitest-resume-\(UUID().uuidString).json",
+                   "NK_VIDEO_DIAGNOSTIC": "1"]
         let app = launch(environment: env)
 
         try openProbe(app, title: "Probe Resume")
@@ -1202,8 +1214,14 @@ final class NekularityUITests: XCTestCase {
         try openProbe(app, title: "Probe Resume")
         XCTAssertTrue(element(app, "video.duration").waitForExistence(timeout: 90),
                       "the reopened player has no duration: \(server.clipSummary())")
+        let start = requestedStart(app)
         let resumed = playedSeconds(app)
-        print("resume: saved at \(String(describing: saved)) s, reopened at \(String(describing: resumed)) s")
+        print("resume: saved at \(String(describing: saved)) s, requested start \(String(describing: start)) s, reopened at \(String(describing: resumed)) s")
+        XCTAssertNotNil(start, "the reopened player did not report its requested start position")
+        if let start {
+            XCTAssertGreaterThanOrEqual(start, 6,
+                                         "the client asked the engine to start at \(start) s, not the saved position")
+        }
         XCTAssertNotNil(resumed, "the reopened player's clock was not readable")
         if let resumed {
             XCTAssertGreaterThanOrEqual(resumed, 6,
