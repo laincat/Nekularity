@@ -262,9 +262,7 @@ public final class CoreClient: @unchecked Sendable {
         }
 
         var openError: NSError?
-        guard let handle = MobileAIStreamOpen(name, &openError) else {
-            throw CoreError(openError?.localizedDescription ?? "could not open a stream decoder")
-        }
+        let handle = MobileAIStreamOpen(name, &openError)
         if let openError { throw CoreError(openError.localizedDescription) }
         defer { MobileAIStreamClose(handle) }
 
@@ -286,7 +284,8 @@ public final class CoreClient: @unchecked Sendable {
         if let doneError { throw CoreError(doneError.localizedDescription) }
         guard done == "true" else { throw CoreError("AI stream ended before completion") }
         return StandardAIAnswer(status: response.status, headers: response.headers,
-                                bodyText: collector.text, finalURL: response.finalURL.absoluteString,
+                                bodyBase64: Data(collector.text.utf8).base64EncodedString(),
+                                finalUrl: response.finalURL.absoluteString,
                                 streamed: true)
     }
 
@@ -319,8 +318,8 @@ public final class CoreClient: @unchecked Sendable {
                 lock.lock(); failure = CoreError(error.localizedDescription); lock.unlock()
                 return
             }
-            guard let json, let raw = json.data(using: .utf8),
-                  let deltas = try? JSONDecoder().decode([String].self, from: raw) else { return }
+            let raw = Data(json.utf8)
+            guard let deltas = try? JSONDecoder().decode([String].self, from: raw) else { return }
             lock.lock()
             for delta in deltas {
                 _text += delta
