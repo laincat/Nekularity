@@ -75,10 +75,19 @@ final class ZZStandardAIStreamTests: XCTestCase {
         for _ in 0..<8 where !ai.isHittable { app.swipeUp() }
         XCTAssertTrue(ai.waitForExistence(timeout: 10), "no AI entry in 设置")
         ai.tap()
-        let standard = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "标准接口")).firstMatch
-        XCTAssertTrue(standard.waitForExistence(timeout: 15), "no 标准接口 row on the AI list")
+        // The row is a `NavigationLink` inside a `List`: depending on the idiom
+        // it surfaces as a button, a cell or plain text, and a case that only
+        // looked for the button reported "no 标准接口 row" on a screen that was
+        // drawing it.
+        let standard = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "标准接口")).firstMatch
+        if !standard.waitForExistence(timeout: 20) {
+            // The sheet animates and the first tap can land before it settles.
+            ai.tap()
+        }
+        XCTAssertTrue(standard.waitForExistence(timeout: 20), "no 标准接口 row on the AI list")
         standard.tap()
-        XCTAssertTrue(app.navigationBars["标准接口"].waitForExistence(timeout: 15), "the standard screen did not open")
+        XCTAssertTrue(app.navigationBars["标准接口"].waitForExistence(timeout: 20), "the standard screen did not open")
     }
 
     /// Picks OpenAI Chat, points it at `root` and stores the fixture key.
