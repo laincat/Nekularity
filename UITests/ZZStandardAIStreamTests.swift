@@ -117,10 +117,15 @@ final class ZZStandardAIStreamTests: XCTestCase {
             // The screen says why when a store fails (a keychain that refuses a
             // write reports errSecMissingEntitlement). Without this the failure
             // reads as "the button did not appear" and hides that reason.
-            let shown = app.staticTexts.allElementsBoundByIndex.map(\.label)
-                .filter { !$0.isEmpty }.joined(separator: " | ")
+            // Collected with a loop rather than `map(\.label)`: a key path to a
+            // main-actor property does not compile in Swift 6.
+            var labels: [String] = []
+            for element in app.staticTexts.allElementsBoundByIndex where !element.label.isEmpty {
+                labels.append(element.label)
+            }
+            let all = labels.joined(separator: " | ")
             capture("00-key-not-stored")
-            XCTFail("the key was not stored; the screen says: \(shown)")
+            XCTFail("the key was not stored; the screen says: \(all)")
         }
     }
 
