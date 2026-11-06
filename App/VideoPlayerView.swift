@@ -120,7 +120,7 @@ final class VideoPlayerModel {
     }
 
     /// Stored per environment by `UserDefaults`, like the reader's layout.
-    static let subtitlePreferenceKey = "videoSubtitlePreference"
+    static var subtitlePreferenceKey: String { VideoPlayerView.subtitlePreferenceKey }
 
     /// AetherEngine publishes its own state; mirroring it into observed
     /// properties is what lets this screen redraw.
@@ -230,6 +230,9 @@ final class VideoPlayerModel {
 /// A video that plays only in full screen and cannot be paused is an unfinished
 /// screen, so the pause control is here rather than left to a system overlay.
 struct VideoPlayerView: View {
+    /// Where the remembered subtitle choice lives, per environment.
+    static let subtitlePreferenceKey = "videoSubtitlePreference"
+
     let title: String
     let play: VideoPlay
     /// The provider and show this belongs to. Empty means "no show identity", and
@@ -432,14 +435,7 @@ struct VideoPlayerView: View {
     /// it to the path that already does it.
     @ViewBuilder
     private var subtitleLayer: some View {
-        // The engine's own cues on the paths where it decodes; on the
-        // AVPlayer-owned route these are empty and `nativeCues` carries the
-        // text AVPlayer presented instead.
-        var lines = model.cues
-            .filter { $0.startTime <= model.time && model.time < $0.endTime }
-            .compactMap(\.text)
-            .filter { !$0.isEmpty }
-        if lines.isEmpty { lines = model.nativeCues }
+        let lines = visibleSubtitleLines
         if !lines.isEmpty {
             VStack {
                 Spacer()
@@ -461,6 +457,17 @@ struct VideoPlayerView: View {
             }
             .allowsHitTesting(false)
         }
+    }
+
+    /// What to draw: the engine's cues on the paths where it decodes, and on the
+    /// AVPlayer-owned route the text AVPlayer presented, since its layer draws
+    /// no captions.
+    private var visibleSubtitleLines: [String] {
+        let cues = model.cues
+            .filter { $0.startTime <= model.time && model.time < $0.endTime }
+            .compactMap(\.text)
+            .filter { !$0.isEmpty }
+        return cues.isEmpty ? model.nativeCues : cues
     }
 
     private func danmakuLine(_ comment: DanmakuComment) -> some View {
