@@ -100,15 +100,28 @@ final class ZZStandardAIStreamTests: XCTestCase {
         replace(model, with: "fixture-model", where: "the model name")
         let key = app.secureTextFields.firstMatch
         XCTAssertTrue(key.waitForExistence(timeout: 10), "no key field")
-        // A secure field reads back as bullets, so the proof that the key was
-        // stored is the 清除密钥 button, which only appears once one is loaded.
-        tapEnd(key)
+        // A secure field reads back as bullets, so the value cannot be compared
+        // to the key. What can be checked is that something arrived: the last
+        // failure was typed text that never reached the field, which left the
+        // save button disabled and looked like a keychain problem.
+        key.tap()
         key.typeText("fixture-key")
+        let filled = (key.value as? String ?? "").isEmpty == false
+        XCTAssertTrue(filled, "the key did not reach the secure field")
         let save = app.buttons["保存密钥"].firstMatch
         XCTAssertTrue(save.waitForExistence(timeout: 5), "no 保存密钥 button")
+        XCTAssertTrue(save.isEnabled, "the save button is disabled, so the field is empty")
         save.tap()
-        XCTAssertTrue(app.buttons["清除密钥"].firstMatch.waitForExistence(timeout: 10),
-                      "the key was not stored: no 清除密钥 button appeared")
+        let stored = app.buttons["清除密钥"].firstMatch.waitForExistence(timeout: 10)
+        if !stored {
+            // The screen says why when a store fails (a keychain that refuses a
+            // write reports errSecMissingEntitlement). Without this the failure
+            // reads as "the button did not appear" and hides that reason.
+            let shown = app.staticTexts.allElementsBoundByIndex.map(\.label)
+                .filter { !$0.isEmpty }.joined(separator: " | ")
+            capture("00-key-not-stored")
+            XCTFail("the key was not stored; the screen says: \(shown)")
+        }
     }
 
     /// Taps at the far right of a field, which puts the caret after the text.

@@ -104,13 +104,18 @@ jobs:
         # The app scheme does not build UITests, so a case that does not compile is
         # only found on a Mac — which is where every interface mistake so far was
         # found. This compiles them and runs nothing.
+        #
+        # Signing stays on for this step and the run below, unlike the device
+        # build: a simulator app with no signature has no Keychain, and the cases
+        # that store a key failed with errSecMissingEntitlement (-34018) while
+        # this was disabled. Ad-hoc signing on a simulator needs no team.
         run: |
           set -o pipefail
           xcodebuild -project Nekularity.xcodeproj -scheme Nekularity \
             -destination 'generic/platform=iOS Simulator' -jobs 2 -quiet \
             -derivedDataPath "$RUNNER_TEMP/nekularity-derived-ui" \
             -resultBundlePath "$RUNNER_TEMP/uitests-build.xcresult" \
-            COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGNING_ALLOWED=NO build-for-testing \
+            COMPILER_INDEX_STORE_ENABLE=NO build-for-testing \
             2>&1 | tee "$RUNNER_TEMP/uitests-build.log"
       - name: Keep interface build diagnostics
         if: always()
@@ -167,7 +172,7 @@ jobs:
             -destination "platform=iOS Simulator,name=$device" -jobs 2 \
             -derivedDataPath "$RUNNER_TEMP/nekularity-derived-ui" \
             -resultBundlePath "$RUNNER_TEMP/uitests-run.xcresult" \
-            COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGNING_ALLOWED=NO test-without-building $only \
+            COMPILER_INDEX_STORE_ENABLE=NO test-without-building $only \
             2>&1 | tee "$RUNNER_TEMP/uitests-run.log"
       - name: Keep interface run diagnostics
         if: always() && inputs.ui_tests
