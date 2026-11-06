@@ -1,5 +1,16 @@
 English · [简体中文](UNVERIFIED.md)
 
+## HLS dual subtitles are not drawn on screen (found on CI, under investigation, 2026-11-06)
+
+The case `testHLSPlaysAndSwitchesSubtitles` (HLS fixture, Chinese default, English alternate) **fails** on CI run `42218134206` (AetherEngine 7.58.0, iPhone 17 Pro / iOS 26.5 simulator). This is a real finding, not a test error:
+
+- What passes: `/hls/master.m3u8` and `sub-en.vtt` both return 200; the picture clock advances 4 s → 7 s; the subtitle menu opens and the English entry can be chosen.
+- What fails: after choosing English, `Subtitle rendering proof` is not on screen. The screenshot (paused at 0:07, where the cue should be active from 0–10 s) shows the picture and controls only; the accessibility tree has no cue text either.
+- The engine docs (`docs/api.md`, `nativeSubtitleDefaultOrdinal`) say that on the native route a programmatically selected WebVTT track renders only if it is the `DEFAULT=YES` one. The app calls `selectSubtitleTrack(index:)`, which takes the host-overlay path; whether cues reach `$subtitleCues` is not yet shown.
+- Unknown: whether the engine does not hand WebVTT cues to `subtitleCues`, the app overlay does not draw them, or the menu picked a track other than English. Telling these apart needs the engine log or the `$subtitleCues` count.
+
+Handling: the case stays failing, not skipped. A fix means changing the player's subtitle route (`nativeSubtitlePreferredLanguages` or the selection method). Per project convention that is a player-control change, **pending the user's approval of the approach**.
+
 ## The standard protocol's streaming screen moved to verified on 2026-11-06
 
 Both cases in `UITests/ZZStandardAIStreamTests.swift` pass on CI's iPhone 17 Pro / iOS 26.5 simulator (run `42193319262`): the 「正在写…」 row and the growing text while the answer is written, the 「流式」 label and the four pieces when it finishes, `stream:true` in exactly one request; and on a cut stream, `源返回错误:AI stream ended before completion` with the half answer not kept. The evidence and the three fixes the cases themselves needed are in [STATUS](STATUS.md).

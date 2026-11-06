@@ -1,5 +1,16 @@
 [English](UNVERIFIED.en.md) · 简体中文
 
+## HLS 双字幕在界面上未绘出（CI 发现，待查，2026-11-06）
+
+用例 `testHLSPlaysAndSwitchesSubtitles`（HLS 夹具，中文默认、英文备选）在 CI run `42218134206`（AetherEngine 7.58.0，iPhone 17 Pro / iOS 26.5 模拟器）上**失败**，这是真实发现，不是测试误差：
+
+- 通过的部分：`/hls/master.m3u8` 与 `sub-en.vtt` 均 200，画面时钟 4 s → 7 s 推进，字幕菜单可打开、英文项可选。
+- 失败的部分：选择英文后，屏幕上没有 `Subtitle rendering proof` 文字。截图（暂停在 0:07，字幕应在 0–10 s 生效）只有画面与控件，没有字幕；无障碍树里的文字也不含 cue。
+- 引擎文档（`docs/api.md`，`nativeSubtitleDefaultOrdinal`）说明：原生通路上程序化选择的 WebVTT 轨只有 `DEFAULT=YES` 那条才会渲染。当前 App 用 `selectSubtitleTrack(index:)`，走的是宿主叠层路径，cue 是否进入 `$subtitleCues` 尚未证实。
+- 未知：是引擎没把 WebVTT cue 交给 `subtitleCues`，还是 App 叠层没画，还是菜单选中的并非英文轨。需要引擎日志或 `$subtitleCues` 的计数来区分。
+
+处理：用例保持失败，不改为跳过。修复需要改播放器字幕路由（换 `nativeSubtitlePreferredLanguages` 或改选择方式），按项目约定属于播放器控件改动，**待用户确认方案后再做**。
+
 ## 标准 AI 的流式界面在 2026-11-06 转入已验证
 
 `UITests/ZZStandardAIStreamTests.swift` 两条用例在 CI 的 iPhone 17 Pro / iOS 26.5 模拟器上通过（run `42193319262`）：流式书写中的「正在写…」与增量文字、完成后的「流式」标注与四段文字、请求体 `stream:true` 且只有一次请求；断流时报 `源返回错误:AI stream ended before completion` 且半截答案不被保留。证据与三处用例自身的修复见 [STATUS](STATUS.md)。
