@@ -6,7 +6,11 @@
 
 仍未验证：真机、真实供应商的增量行为、iOS 26 运行时，以及服务端在零正文时是否提前交响应头。
 
-## AetherEngine 7.58.0 升级后还没重跑播放（2026-11-06）
+## AetherEngine 7.58.0 升级后的播放：画面推进已验，其余仍待（2026-11-06 更新）
+
+**更新**：CI run `42199314431` 上 `testVideoPlaysTheSourcesClip` 通过，用例现在要求引擎时钟在 4 秒内增长，即画面确实在推进、源声明的 `Referer` 传到了引擎（见 [STATUS](STATUS.md) 同日条目）。下文列的字幕、HLS、取消、后台、PiP 仍未在 7.58.0 上重跑。
+
+### 原记录
 
 播放引擎从 `7.53.1` 升到 `7.58.0`，依据是 API 面核对 + CI：把两版的公开声明去掉行号后逐条比对，**我们用的 21 个符号全部还在**，5 条消失的声明（`timeRange()`、`isPictureInPicture` 式的便利属性等）在 7.58.0 里以同名或改名后的形态存在（`SoftwarePiPSource.timeRange()` 仍返回 `CMTimeRange`，`isPaused` 从 `engine?.state != .playing` 改成走快照）。CI `42153619870` 编译并跑完 482 项 kit 测试与整包构建，**但这不等于播放通过**。
 

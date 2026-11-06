@@ -6,7 +6,11 @@ Both cases in `UITests/ZZStandardAIStreamTests.swift` pass on CI's iPhone 17 Pro
 
 Still unverified: a real device, a real vendor's incremental behaviour, an iOS 26 runtime, and whether a provider sends response headers before any body byte.
 
-## Playback has not been re-run since AetherEngine 7.58.0 (2026-11-06)
+## Playback since AetherEngine 7.58.0: the picture advancing is verified, the rest is not (updated 2026-11-06)
+
+**Update**: `testVideoPlaysTheSourcesClip` passes on CI run `42199314431`, and the case now requires the engine clock to grow within 4 s - so the picture does advance and the source's declared `Referer` reaches the engine (see the same day's entry in [STATUS](STATUS.md)). Subtitles, HLS, cancellation, background and PiP listed below have still not been re-run on 7.58.0.
+
+### Original record
 
 The playback engine moved from `7.53.1` to `7.58.0` on the strength of an API-surface comparison plus CI: with line numbers stripped, the two releases' public declarations were compared line by line and **all 21 symbols we use are still there**. The five declarations that disappeared exist under the same or a new name in 7.58.0 (`SoftwarePiPSource.timeRange()` still returns `CMTimeRange`; `isPaused` moved from `engine?.state != .playing` to a snapshot read). CI `42153619870` compiled the app, ran 482 kit tests and built the package - **which is not the same as playback working**.
 

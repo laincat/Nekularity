@@ -18,6 +18,20 @@
 
 
 
+
+## AetherEngine 7.58.0 上视频确实在播：画面推进已在 CI 模拟器验证（2026-11-06）
+
+引擎升级后这一条一直缺证据（Mac Worker 三次异常终止，都没回结果）。现在用 CI 的模拟器补上：
+
+- **用例变严**：`testVideoPlaysTheSourcesClip` 原来只等 `video.duration` 出现——时长在解码刚开始时就有，画面卡在首帧也一样会过。时长元素现在带上 `accessibilityValue`，值是引擎自己的时钟（`model.time`，约 10 Hz）；用例隔 4 秒读两次，**要求第二次比第一次大**。VoiceOver 也因此能读出「已播放到哪里」。
+- **CI 预置源**：界面步骤先把 App 装进模拟器，再把仓库里的种子 `UITests/Fixtures/seed/plugins.json`（`video_probe` + `callback_probe`，桌面端 `seedgen` 生成）写进容器；`check-seed.sh` 先逐字节核对 `callback_probe` 与仓库夹具一致。日志：`check-seed: callback_probe matches …; 2 source(s) seeded, others: video_probe`、`seed-simulator: wrote … (7823 bytes)`。
+
+结果：CI run [`42199314431`](https://github.com/laincat/Nekularity/actions/runs/42199314431)，AetherEngine **7.58.0**，iPhone 17 Pro / iOS 26.5 模拟器，`testVideoPlaysTheSourcesClip` **PASS 64.7s**。走的是真实路径：在线源 → Video Probe → 搜索 → Probe Clip → Episode 1 → 播放器；片源由测试进程的 loopback 服务器提供，**缺少源声明的 `Referer` 就拒绝**，所以通过同时说明请求头传到了引擎。
+
+边界：
+
+- 日志只记录了断言通过，没有打印两次读到的秒数，所以「推进了多少秒」这一数值没有留下，只能说「第二次严格大于第一次」。
+- 没有覆盖：字幕切换、HLS、取消、续播、PiP、后台、实际扬声器。7.56.0 改动的软件通路画中画仍只能在真机验证。
 ## 标准 AI 的流式与断流已在 CI 模拟器上验通（2026-11-06）
 
 之前这一条只有 Mac 上的一次临时验收：用例与夹具都建在临时位置，进程一断就全没了，后续两次重派也没跑完。现在换成仓库里的常驻用例 **`UITests/ZZStandardAIStreamTests.swift`**，跑在 GitHub 的 macOS 模拟器上（iPhone 17 Pro / iOS 26.5），CI 步骤先拉起夹具再执行：

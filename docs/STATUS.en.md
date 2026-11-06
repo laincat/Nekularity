@@ -18,6 +18,20 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## Video really plays on AetherEngine 7.58.0: the picture advancing is verified on a CI simulator (2026-11-06)
+
+This had no evidence since the engine upgrade (the Mac worker died three times without reporting). It now comes from CI's simulator:
+
+- **A stricter case**: `testVideoPlaysTheSourcesClip` used to wait only for `video.duration` - a duration exists as soon as decoding starts, so a picture stuck on its first frame passed too. The duration element now carries an `accessibilityValue` holding the engine's own clock (`model.time`, about 10 Hz); the case reads it twice, 4 s apart, and **requires the second read to be larger**. VoiceOver can also now say how far playback has got.
+- **Sources seeded in CI**: the interface step installs the app on the simulator first, then writes the repository's seed `UITests/Fixtures/seed/plugins.json` (`video_probe` plus `callback_probe`, built by the desktop client's `seedgen`) into its container, after `check-seed.sh` checks `callback_probe` byte for byte against the repository fixture. Log: `check-seed: callback_probe matches …; 2 source(s) seeded, others: video_probe`, `seed-simulator: wrote … (7823 bytes)`.
+
+Result: CI run [`42199314431`](https://github.com/laincat/Nekularity/actions/runs/42199314431), AetherEngine **7.58.0**, iPhone 17 Pro / iOS 26.5 simulator, `testVideoPlaysTheSourcesClip` **PASS in 64.7 s**, along the real path: online sources → Video Probe → search → Probe Clip → Episode 1 → player. The clip is served by the test process on loopback, which **refuses any request without the source's declared `Referer`**, so the pass also shows the headers reached the engine.
+
+Boundaries:
+
+- The log records that the assertion held but does not print the two readings, so how many seconds the picture advanced is not kept; all that can be said is that the second read was strictly larger.
+- Not covered: switching subtitles, HLS, cancellation, resume, PiP, background, the actual speaker. The software PiP path changed in 7.56.0 and can still only be checked on a device.
 ## The standard protocol's stream, and a stream cut short, are verified on a CI simulator (2026-11-06)
 
 This had only ever been accepted once by hand on the Mac: the case and the fixture both lived in temporary files, so a dying process took them with it, and two re-dispatches never finished. It is now the committed case **`UITests/ZZStandardAIStreamTests.swift`**, run on GitHub's macOS simulator (iPhone 17 Pro / iOS 26.5), with the CI step starting the fixture first:
