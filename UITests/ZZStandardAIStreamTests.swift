@@ -82,6 +82,9 @@ final class ZZStandardAIStreamTests: XCTestCase {
     }
 
     /// Picks OpenAI Chat, points it at `root` and stores the fixture key.
+    ///
+    /// Every case uses the same root, so the address field is written once per
+    /// launch rather than rewritten between cases.
     private func configure(root: String) {
         let picker = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "接口")).firstMatch
         if picker.waitForExistence(timeout: 5) {
@@ -97,21 +100,35 @@ final class ZZStandardAIStreamTests: XCTestCase {
         replace(model, with: "fixture-model", where: "the model name")
         let key = app.secureTextFields.firstMatch
         XCTAssertTrue(key.waitForExistence(timeout: 10), "no key field")
-        replace(key, with: "fixture-key", where: "the key")
+        // A secure field reads back as bullets, so the proof that the key was
+        // stored is the 清除密钥 button, which only appears once one is loaded.
+        tapEnd(key)
+        key.typeText("fixture-key")
         let save = app.buttons["保存密钥"].firstMatch
         XCTAssertTrue(save.waitForExistence(timeout: 5), "no 保存密钥 button")
         save.tap()
+        XCTAssertTrue(app.buttons["清除密钥"].firstMatch.waitForExistence(timeout: 10),
+                      "the key was not stored: no 清除密钥 button appeared")
+    }
+
+    /// Taps at the far right of a field, which puts the caret after the text.
+    ///
+    /// Tapping the middle puts the caret where the finger landed: deletes then
+    /// remove only what is left of it and typing inserts in the middle, which
+    /// produced `http://127.0.0.1:18796/v1cutoff/v1` in an earlier run.
+    private func tapEnd(_ field: XCUIElement) {
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
     }
 
     /// Replaces a field's text, then proves the text arrived: a case that fails
     /// here should say "the URL did not reach the field", not "no answer
     /// appeared" ten seconds later.
     private func replace(_ field: XCUIElement, with text: String, where note: String) {
-        field.tap()
+        tapEnd(field)
         let current = field.value as? String ?? ""
         if !current.isEmpty, current != field.placeholderValue {
-            // More deletes than characters: fields can report a truncated value
-            // after a failed clear, and over-typing deletes nothing.
+            // More deletes than characters: the reported value can be shorter
+            // than what the field holds, and over-typing deletes nothing.
             field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count + 8))
         }
         if !text.isEmpty { field.typeText(text) }
@@ -185,8 +202,10 @@ final class ZZStandardAIStreamTests: XCTestCase {
         app.launch()
         defer { restore(); app.terminate() }
         openStandardScreen()
-        configure(root: "http://127.0.0.1:\(port)/cutoff/v1")
-        ask("说一段")
+        configure(root: "http://127.0.0.1:\(port)/v1")
+        // The fixture cuts a stream when the prompt says 断流, so both cases use
+        // one root and the address field is never rewritten mid-run.
+        ask("断流：说一段")
 
         let failure = staticText(containing: "AI stream ended before completion")
         XCTAssertTrue(failure.waitForExistence(timeout: 20), "a stream cut short was not reported")

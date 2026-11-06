@@ -27,7 +27,7 @@ python3 UITests/Fixtures/standard-ai/serve.py --port 18796 --log /tmp/standard-a
 | Responses | `event: response.output_text.delta` + `data: {"type":"response.output_text.delta","delta":"…"}` | `data: {"type":"response.completed"}` |
 | Messages | `event: content_block_delta` + `data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"…"}}` | `data: {"type":"message_stop"}` |
 
-`/cutoff/v1` 只发前两段就关闭连接。**完成标记是协议的一部分,连接关闭不是** —— 这正是它要抓的缺陷:把「连接断了」当成「回答说完了」的客户端会在这里被抓住。
+`/cutoff/v1` 只发前两段就关闭连接。请求正文里任意位置出现「断流」二字也走同一条路,这样界面用例可以两个用例共用同一个地址,不必在两条用例之间改写地址栏(改写本身曾让一条用例失败在流式之外的原因上)。**完成标记是协议的一部分,连接关闭不是** —— 这正是它要抓的缺陷:把「连接断了」当成「回答说完了」的客户端会在这里被抓住。
 
 ## 记录
 

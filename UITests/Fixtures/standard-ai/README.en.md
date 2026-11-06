@@ -27,7 +27,7 @@ Each piece of text is its own event, 1.2 s apart by default (`--interval` change
 | Responses | `event: response.output_text.delta` + `data: {"type":"response.output_text.delta","delta":"…"}` | `data: {"type":"response.completed"}` |
 | Messages | `event: content_block_delta` + `data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"…"}}` | `data: {"type":"message_stop"}` |
 
-`/cutoff/v1` sends the first two pieces and closes the connection. **The completion marker is part of the protocol; a closed connection is not** - which is exactly the defect it catches: a client that reads "the connection ended" as "the answer is finished" fails here.
+`/cutoff/v1` sends the first two pieces and closes the connection. The two characters 断流 anywhere in the request body take the same path, so both interface cases can share one root: rewriting the address field between cases is what made an earlier run fail for a reason unrelated to streaming. **The completion marker is part of the protocol; a closed connection is not** - which is exactly the defect it catches: a client that reads "the connection ended" as "the answer is finished" fails here.
 
 ## Records
 

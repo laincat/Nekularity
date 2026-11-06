@@ -269,8 +269,13 @@ class Handler(BaseHTTPRequestHandler):
             reply = {"content": [{"type": "text", "text": "Fixture Messages answer"}]}
         if content is not None and content.get("stream") is True:
             protocol = {"chat/completions": "chat", "responses": "responses", "messages": "messages"}[endpoint]
-            pieces = CUTOFF_PIECES if mode == "cutoff" else STREAM_PIECES
-            self.stream_reply(protocol, request_id, pieces, cutoff=mode == "cutoff")
+            # A test can also ask for the cut through the prompt text, so both
+            # cases can use one root: rewriting the endpoint field between cases
+            # is what made an earlier run fail for a reason unrelated to
+            # streaming.
+            cut = mode == "cutoff" or "断流" in json.dumps(content, ensure_ascii=False)
+            pieces = CUTOFF_PIECES if cut else STREAM_PIECES
+            self.stream_reply(protocol, request_id, pieces, cutoff=cut)
             return
         self.respond(200, reply, request_id, slow=mode == "slow")
 
