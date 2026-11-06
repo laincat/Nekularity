@@ -22,6 +22,7 @@ The repository was GPL-3.0. It is now **LGPL-3.0-or-later with the App Store / D
 
 - `LICENSE` is this project's LGPL-3.0 text plus the exception (distribution of a statically linked binary through the App Store, TestFlight and similar platforms is permitted, and the platform's re-signing, DRM or ban on user re-linking does not breach the licence); the GPL-3.0 text LGPL incorporates is in `COPYING`
 - the exception covers the binary distribution path only and changes no source obligation: the corresponding source is still in the public upstream repository, and recipients keep every right GPL-3.0 / LGPL-3.0 grants them
+- **Static linking and what LGPL asks for**: the Swift client compiles Core into an xcframework and the Go desktop compiles it into one executable, so both are statically linked. LGPL sections 4-6 ask that a recipient be able to relink against a changed library; on iOS the App Store exception above covers that. The desktop has no realistic "the user relinks it" path, and the workable answer is **take the source and build it** (the repository is public and `scripts/fetch-core.sh` plus `scripts/package-windows.py` are that path). This is recorded as it is, not claimed as dynamic replacement in the browser sense.
 
 Why the exception: on iOS the app and Core are statically linked, and App Store terms forbid both user re-linking and third-party re-signing - exactly what LGPL sections 4-6 require. Without the exception LGPL contradicts itself on iOS. AetherEngine already solved this with the same clauses, so we match it.
 
