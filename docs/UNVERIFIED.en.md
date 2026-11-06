@@ -1,5 +1,13 @@
 English · [简体中文](UNVERIFIED.md)
 
+## Playback has not been re-run since AetherEngine 7.58.0 (2026-11-06)
+
+The playback engine moved from `7.53.1` to `7.58.0` on the strength of an API-surface comparison plus CI: with line numbers stripped, the two releases' public declarations were compared line by line and **all 21 symbols we use are still there**. The five declarations that disappeared exist under the same or a new name in 7.58.0 (`SoftwarePiPSource.timeRange()` still returns `CMTimeRange`; `isPaused` moved from `engine?.state != .playing` to a snapshot read). CI `42153619870` compiled the app, ran 482 kit tests and built the package - **which is not the same as playback working**.
+
+Not re-run: playing a video on a device or simulator (8 s or more with the picture advancing), subtitle track switching, an HLS main playlist, cancelling playback, background behaviour. 7.56.0 made the software PiP source build its own controller (`SoftwarePiPSource.makePictureInPictureController()`), while our PiP code still uses the older `pip.update(player:software:)` shape - it compiles, but `AVPictureInPictureController` is unsupported on the simulator anyway, so whether the behaviour changed cannot be judged there.
+
+Next: replay once on the simulator with the local HTTP media fixture in `UITests/Fixtures`, covering at least advancing picture and subtitles; PiP and background stay device-only items.
+
 ## Where the service capabilities stand on 2026-11-05
 
 Verified (simulator, iPhone 17 / iOS 27.2, through the app's own entry points): the empty list; importing from the system file picker; the row showing name, version and permissions; swipe removal with its confirmation; a package without `service.json` refused with `服务包未被接受：service: package has no service.json`; `ping` answering directly; a service's `fetch` going through the app (the fixture recorded a request with the app's user agent); and a storage-only package refused by name when it fetches.

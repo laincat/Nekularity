@@ -1,5 +1,13 @@
 [English](UNVERIFIED.en.md) · 简体中文
 
+## AetherEngine 7.58.0 升级后还没重跑播放（2026-11-06）
+
+播放引擎从 `7.53.1` 升到 `7.58.0`，依据是 API 面核对 + CI：把两版的公开声明去掉行号后逐条比对，**我们用的 21 个符号全部还在**，5 条消失的声明（`timeRange()`、`isPictureInPicture` 式的便利属性等）在 7.58.0 里以同名或改名后的形态存在（`SoftwarePiPSource.timeRange()` 仍返回 `CMTimeRange`，`isPaused` 从 `engine?.state != .playing` 改成走快照）。CI `42153619870` 编译并跑完 482 项 kit 测试与整包构建，**但这不等于播放通过**。
+
+没有重跑的：真机/模拟器播一次视频（8 秒以上，看到画面推进）、字幕轨切换、HLS 主播放列表、取消播放、后台行为。7.56.0 把软件通路的画中画控制器改成自己建（`SoftwarePiPSource.makePictureInPictureController()`），而我们的 PiP 代码仍是 `pip.update(player:software:)` 的旧形状——编译通过，但 `AVPictureInPictureController` 在模拟器上本来就不支持，无法判断行为是否变了。
+
+下一步：用 `UITests/Fixtures` 里的本地 HTTP 媒体夹具在模拟器上重播一次，至少覆盖画面推进与字幕；PiP 与后台仍归真机项。
+
 ## 服务包能力在 2026-11-05 的验证边界
 
 已验证（模拟器 iPhone 17 / iOS 27.2，真实入口）：空列表；从系统文件选择器导入；列表显示名字/版本/权限；滑动移除与确认文案；缺 `service.json` 的包被拒并显示 `服务包未被接受：service: package has no service.json`；`ping` 直返；服务 `fetch` 经 App 传输（夹具记录到 App UA 的请求）；只申请 `storage` 的包在 fetch 时被指名拒绝。

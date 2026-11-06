@@ -22,6 +22,7 @@
 
 - `LICENSE` 是本项目的 LGPL-3.0 全文加例外（允许通过 App Store / TestFlight 等平台分发静态链接的二进制，且不因平台的再签名、DRM 或禁止用户重链接而违约），LGPL 引用的 GPL-3.0 全文在 `COPYING`
 - 例外只覆盖二进制分发路径，不改变源码义务：对应源码仍在上游公开仓库，接收方保留 GPL-3.0 / LGPL-3.0 下的全部权利
+- **or-later 与例外的关系（未取得法务意见，记录的是我们自己的读法）**：例外是按 GPL v3 §7 的附加许可机制写的，`or-later` 又允许接收方选一个后续版本。我们的读法是：选后续版本时，例外按那一版里对应的附加许可条款理解，不因换了版本就作废，也不把授予句变回 v3-only。这里没有 AetherEngine 的现成先例——引擎写的是 v3-only，所以这一段是我们自己加的，日后有法务意见再改。
 - **两份文本已经真的进包**：`project.yml` 把 `LICENSE`、`COPYING` 作为资源加进 App target，`xcodegen` 生成的 bundle 才有它们。核对方式不是看配置，是下载那次构建的产物——run [`42153619870`](https://github.com/laincat/Nekularity/actions/runs/42153619870) 的 unsigned IPA 里 `Payload/Nekularity.app/LICENSE`（214 行，授予句是 or-later）与 `Payload/Nekularity.app/COPYING`（674 行 GPL-3.0 全文）都在。
 - **静态链接与 LGPL 的边界**：Swift 客户端把 Core 编进 xcframework，Go 桌面端把 Core 编进单一可执行文件，两者都是静态链接。LGPL 4—6 节要求接收方能够重链接换过的库；iOS 上由上面那条 App Store 例外覆盖。桌面端没有"用户自己重链接"的现实路径，能满足的做法是**拿到源码再构建**（仓库公开、`scripts/fetch-core.sh` 与 `scripts/package-windows.py` 即构建路径）。这是如实记录，不宣称已经做到浏览器意义上的动态替换。
 
