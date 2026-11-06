@@ -68,8 +68,8 @@ public final class StandardAIRequest {
             }
             do {
                 let value = try await operation { piece in
-                    Task { @MainActor in
-                        generation.commit(token) { delta(piece) }
+                    Task { @MainActor [weak self] in
+                        self?.generation.commit(token) { delta(piece) }
                     }
                 }
                 guard !Task.isCancelled else { return }
