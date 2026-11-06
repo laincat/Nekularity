@@ -129,30 +129,48 @@ final class ZZStandardAIStreamTests: XCTestCase {
         }
     }
 
-    /// Taps at the far right of a field, which puts the caret after the text.
+    /// Clears a field through the edit menu, then types the new text.
     ///
-    /// Tapping the middle puts the caret where the finger landed: deletes then
-    /// remove only what is left of it and typing inserts in the middle, which
-    /// produced `http://127.0.0.1:18796/v1cutoff/v1` in an earlier run.
-    private func tapEnd(_ field: XCUIElement) {
-        field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
-    }
-
-    /// Replaces a field's text, then proves the text arrived: a case that fails
-    /// here should say "the URL did not reach the field", not "no answer
-    /// appeared" ten seconds later.
+    /// Two earlier attempts are recorded here because both looked like product
+    /// failures and were not:
+    /// - tapping the middle of a filled field puts the caret where the finger
+    ///   landed, so deletes removed the left half and typing inserted in the
+    ///   middle, producing `http://127.0.0.1:18796/v1cutoff/v1`;
+    /// - tapping at a normalised offset near the right edge left the field with
+    ///   no keyboard focus at all, and `typeText` then failed outright.
+    ///
+    /// So: tap the element itself for focus, select all through the edit menu,
+    /// and let the typing replace the selection. The value is read back here, so
+    /// a case that fails later fails for its own reason.
     private func replace(_ field: XCUIElement, with text: String, where note: String) {
-        tapEnd(field)
+        field.tap()
         let current = field.value as? String ?? ""
+        // Both cases use one root, so the second case usually finds the value
+        // already right: rewriting a field that is correct is the risk without
+        // the benefit.
+        if current == text { return }
         if !current.isEmpty, current != field.placeholderValue {
-            // More deletes than characters: the reported value can be shorter
-            // than what the field holds, and over-typing deletes nothing.
-            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count + 8))
+            field.press(forDuration: 1.1)
+            let all = app.menuItems["全选"].exists ? app.menuItems["全选"] : app.menuItems["Select All"]
+            if all.waitForExistence(timeout: 3) {
+                all.tap()
+            } else {
+                field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count + 8))
+            }
         }
         if !text.isEmpty { field.typeText(text) }
         let landed = field.value as? String ?? ""
         let expected = text.isEmpty ? (field.placeholderValue ?? "") : text
-        XCTAssertEqual(landed, expected, "\(note) did not reach the field")
+        if landed != expected {
+            // One retry with the selection route, which is the only one that
+            // does not depend on where the caret ended up.
+            field.press(forDuration: 1.1)
+            let all = app.menuItems["全选"].exists ? app.menuItems["全选"] : app.menuItems["Select All"]
+            if all.waitForExistence(timeout: 3) { all.tap() }
+            field.typeText(text)
+        }
+        let final = field.value as? String ?? ""
+        XCTAssertEqual(final, expected, "\(note) did not reach the field")
     }
 
     private func ask(_ text: String) {
