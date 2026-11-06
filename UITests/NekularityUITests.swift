@@ -1066,8 +1066,32 @@ final class NekularityUITests: XCTestCase {
         // transport bar has auto-hidden: this asks "did the screen open", nothing
         // about playback.
         XCTAssertTrue(player.exists, "the player screen never opened")
-        XCTAssertTrue(element(app, "video.duration").waitForExistence(timeout: 90),
+        let duration = element(app, "video.duration")
+        XCTAssertTrue(duration.waitForExistence(timeout: 90),
                       "no duration: \(server.clipSummary())")
+
+        // A duration exists as soon as decoding starts, even if the picture then
+        // stalls on its first frame. The element's value is the engine's own
+        // clock, so two reads a few seconds apart say whether frames advance.
+        // This is what an engine upgrade has to keep working.
+        func seconds(_ clock: String) -> Int? {
+            let parts = clock.split(separator: ":").compactMap { Int($0) }
+            guard !parts.isEmpty, parts.count == clock.split(separator: ":").count else { return nil }
+            return parts.reduce(0) { $0 * 60 + $1 }
+        }
+        let first = seconds(duration.value as? String ?? "")
+        Thread.sleep(forTimeInterval: 4)
+        // The transport bar may have hidden itself; a tap on the picture brings
+        // it back without pausing.
+        if !duration.exists { app.windows.firstMatch.tap() }
+        XCTAssertTrue(duration.waitForExistence(timeout: 10), "the transport did not come back")
+        let second = seconds(duration.value as? String ?? "")
+        XCTAssertNotNil(first, "the clock was not readable: \(String(describing: duration.value))")
+        XCTAssertNotNil(second, "the clock was not readable: \(String(describing: duration.value))")
+        if let first, let second {
+            XCTAssertGreaterThan(second, first,
+                                 "the picture did not advance: \(first)s then \(second)s")
+        }
     }
 
     /// The batch update, driven through the interface it is reached by.

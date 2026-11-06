@@ -162,6 +162,18 @@ jobs:
           echo "running on $device"
           xcrun simctl boot "$device" || true
           xcrun simctl bootstatus "$device" -b
+          # The cases that need sources skip without them. The seed holds the
+          # two fixtures that live in this repository (video_probe and
+          # callback_probe), built by the desktop client's seedgen; the app is
+          # installed first because the container only exists afterwards.
+          app="$RUNNER_TEMP/nekularity-derived-ui/Build/Products/Debug-iphonesimulator/Nekularity.app"
+          if [ -d "$app" ]; then
+            xcrun simctl install "$device" "$app"
+            sh scripts/check-seed.sh UITests/Fixtures/seed/plugins.json UITests/Fixtures/callback_probe.js
+            sh scripts/seed-simulator.sh UITests/Fixtures/seed/plugins.json com.laincat.nekularity booted --replace
+          else
+            echo "no simulator build at $app; seeded cases will skip" >&2
+          fi
           # Only the cases asked for, when some were. Not quiet: an assertion
           # message is the whole point of a run that fails.
           only=""

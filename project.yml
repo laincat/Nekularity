@@ -103,6 +103,9 @@ targets:
         excludes:
           - Fixtures/theme/serve.py
           - Fixtures/standard-ai/serve.py
+          # The seed goes into the app's container before a run; it is not a
+          # test resource, and in the bundle it would only be dead weight.
+          - Fixtures/seed/**
     dependencies:
       - target: Nekularity
     settings:

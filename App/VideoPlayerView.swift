@@ -241,6 +241,11 @@ struct VideoPlayerView: View {
             if let duration = model.duration, duration > 0 {
                 Text(PlaybackProgress.clock(duration)).font(.caption.monospacedDigit())
                     .accessibilityIdentifier("video.duration")
+                    // The picture's own clock, read by VoiceOver as "played so
+                    // far" and by the interface test as evidence that frames are
+                    // advancing: a duration alone exists as soon as decoding
+                    // starts, even if the picture then stalls on its first frame.
+                    .accessibilityValue(PlaybackProgress.clock(model.time))
             }
             if !model.format.isEmpty {
                 Text(model.format).font(.caption2).foregroundStyle(.secondary)
