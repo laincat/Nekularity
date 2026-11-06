@@ -17,6 +17,25 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## The standard protocol's stream, and a stream cut short, are verified on a CI simulator (2026-11-06)
+
+This had only ever been accepted once by hand on the Mac: the case and the fixture both lived in temporary files, so a dying process took them with it, and two re-dispatches never finished. It is now the committed case **`UITests/ZZStandardAIStreamTests.swift`**, run on GitHub's macOS simulator (iPhone 17 Pro / iOS 26.5), with the CI step starting the fixture first:
+
+| Case | Result | Assertions |
+| --- | --- | --- |
+| `testStreamCutoff` | PASS 214.5 s | the screen shows `源返回错误:AI stream ended before completion`; there is no 「流式」 label; the half answer 「第一段」 is not kept as a finished one; the fixture really sent `stream_cut` after 2 pieces |
+| `testStreamedAnswer` | PASS 110.7 s | while writing, `standardAI.streaming` and 「正在写…」 are on screen; when it finishes the label is 「流式」 and not 「整包返回」, and the text is `流式第一段 第二段🐾`; the fixture saw **one** request, with `"stream": true` |
+
+CI run [`42193319262`](https://github.com/laincat/Nekularity/actions/runs/42193319262). The fixture log (uploaded with the xcresult): `request` 1 → `streamed` → `stream_cut sent=2`, then `request` 2 → `streamed` → `stream_complete sent=4`; the recorded bodies both carry `"stream": true`.
+
+Three fixes on the way were **not product defects** and are worth keeping:
+
+- clearing a field only worked when the tap landed in the text: tapping the middle puts the caret there, deletes remove the left half, and the address became `…/v1cutoff/v1`. It now taps the element for focus, selects all through the edit menu, then types.
+- a secure field reads back as bullets, so comparing it to the key can never match. The existence of the 清除密钥 button is the proof the key was stored.
+- the CI interface build carried `CODE_SIGNING_ALLOWED=NO`. A simulator app with no signature has no Keychain, and writing the key returned `errSecMissingEntitlement (-34018)`. Those two steps now keep the default ad-hoc signing (the device build still does not sign).
+
+Still unverified: a real device, a real vendor's incremental behaviour (the fixture is local loopback), and an iOS 26 runtime (CI runs a 26.5 simulator).
 ## The standard-AI fixture streams, and Core's own decoder vouches for it (2026-11-06)
 
 Last round's on-screen streaming acceptance used a fixture edited ad hoc on the Mac, and that edit never reached the repository (the worker died twice mid-task and never sent it back). It is now rewritten in the repository to the same shapes, and **the event shapes are verified on Windows with Core's own decoder**, with no Mac involved:

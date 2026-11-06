@@ -1,5 +1,11 @@
 [English](UNVERIFIED.en.md) · 简体中文
 
+## 标准 AI 的流式界面在 2026-11-06 转入已验证
+
+`UITests/ZZStandardAIStreamTests.swift` 两条用例在 CI 的 iPhone 17 Pro / iOS 26.5 模拟器上通过（run `42193319262`）：流式书写中的「正在写…」与增量文字、完成后的「流式」标注与四段文字、请求体 `stream:true` 且只有一次请求；断流时报 `源返回错误:AI stream ended before completion` 且半截答案不被保留。证据与三处用例自身的修复见 [STATUS](STATUS.md)。
+
+仍未验证：真机、真实供应商的增量行为、iOS 26 运行时，以及服务端在零正文时是否提前交响应头。
+
 ## AetherEngine 7.58.0 升级后还没重跑播放（2026-11-06）
 
 播放引擎从 `7.53.1` 升到 `7.58.0`，依据是 API 面核对 + CI：把两版的公开声明去掉行号后逐条比对，**我们用的 21 个符号全部还在**，5 条消失的声明（`timeRange()`、`isPictureInPicture` 式的便利属性等）在 7.58.0 里以同名或改名后的形态存在（`SoftwarePiPSource.timeRange()` 仍返回 `CMTimeRange`，`isPaused` 从 `engine?.state != .playing` 改成走快照）。CI `42153619870` 编译并跑完 482 项 kit 测试与整包构建，**但这不等于播放通过**。

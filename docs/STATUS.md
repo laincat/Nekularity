@@ -17,6 +17,25 @@
 
 
 
+
+## 标准 AI 的流式与断流已在 CI 模拟器上验通（2026-11-06）
+
+之前这一条只有 Mac 上的一次临时验收：用例与夹具都建在临时位置，进程一断就全没了，后续两次重派也没跑完。现在换成仓库里的常驻用例 **`UITests/ZZStandardAIStreamTests.swift`**，跑在 GitHub 的 macOS 模拟器上（iPhone 17 Pro / iOS 26.5），CI 步骤先拉起夹具再执行：
+
+| 用例 | 结果 | 断言 |
+| --- | --- | --- |
+| `testStreamCutoff` | PASS 214.5s | 界面出现 `源返回错误:AI stream ended before completion`；没有「流式」标注；半截「第一段」没被当成完整答案；夹具侧确实 `stream_cut` 并只发了 2 段 |
+| `testStreamedAnswer` | PASS 110.7s | 写到一半时 `standardAI.streaming` 在、「正在写…」在；完成后标注为「流式」、不是「整包返回」、文字是 `流式第一段 第二段🐾`；夹具收到 **1 次**请求且 `"stream": true` |
+
+CI run [`42193319262`](https://github.com/laincat/Nekularity/actions/runs/42193319262)。夹具日志（随 xcresult 一起上传）：`request` 1 → `streamed` → `stream_cut sent=2`，随后 `request` 2 → `streamed` → `stream_complete sent=4`；请求体记录里两条都是 `"stream": true`。
+
+这一轮修掉的三处**都不是产品缺陷**，值得记下来：
+
+- 清空输入框只在点中文字时才生效：点输入框中央会让光标落在中间，删除只删左半边，地址于是变成 `…/v1cutoff/v1`。改成点元素取焦点、经编辑菜单「全选」再输入。
+- 安全输入框读回是圆点，拿它比对明文必然不等。改成用「清除密钥」按钮作为「密钥已存」的判据。
+- CI 的界面构建原本带 `CODE_SIGNING_ALLOWED=NO`。模拟器里没有签名的 App 没有 Keychain，写密钥返回 `errSecMissingEntitlement (-34018)`。两条界面步骤改为保留默认的 ad-hoc 签名（设备构建仍不签名）。
+
+仍未验证：真机、真实供应商的增量行为（夹具是本地 loopback）、以及 iOS 26 运行时（CI 用的是 26.5 模拟器）。
 ## 标准 AI 夹具支持流式，并用 Core 的解码器自证（2026-11-06）
 
 上一轮界面流式验收用的是 Mac 上临时改的夹具，那份改动没进仓库（Worker 两次异常终止，改动没有回传）。现在按同一套形状在仓库里重写了一遍，而且**在 Windows 上用 Core 自己的解码器验证了事件形状**，不依赖 Mac：

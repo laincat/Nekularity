@@ -1,5 +1,11 @@
 English · [简体中文](UNVERIFIED.md)
 
+## The standard protocol's streaming screen moved to verified on 2026-11-06
+
+Both cases in `UITests/ZZStandardAIStreamTests.swift` pass on CI's iPhone 17 Pro / iOS 26.5 simulator (run `42193319262`): the 「正在写…」 row and the growing text while the answer is written, the 「流式」 label and the four pieces when it finishes, `stream:true` in exactly one request; and on a cut stream, `源返回错误:AI stream ended before completion` with the half answer not kept. The evidence and the three fixes the cases themselves needed are in [STATUS](STATUS.md).
+
+Still unverified: a real device, a real vendor's incremental behaviour, an iOS 26 runtime, and whether a provider sends response headers before any body byte.
+
 ## Playback has not been re-run since AetherEngine 7.58.0 (2026-11-06)
 
 The playback engine moved from `7.53.1` to `7.58.0` on the strength of an API-surface comparison plus CI: with line numbers stripped, the two releases' public declarations were compared line by line and **all 21 symbols we use are still there**. The five declarations that disappeared exist under the same or a new name in 7.58.0 (`SoftwarePiPSource.timeRange()` still returns `CMTimeRange`; `isPaused` moved from `engine?.state != .playing` to a snapshot read). CI `42153619870` compiled the app, ran 482 kit tests and built the package - **which is not the same as playback working**.
