@@ -77,8 +77,11 @@ final class NekularityUITests: XCTestCase {
         link.tap()
     }
 
-    private func launch() -> XCUIApplication {
+    /// `diagnostic` turns on the player's hidden one-line report of who owns
+    /// subtitles on this route; it changes nothing a person sees.
+    private func launch(diagnostic: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
+        if diagnostic { app.launchEnvironment["NK_VIDEO_DIAGNOSTIC"] = "1" }
         app.launch()
         return app
     }
@@ -1110,7 +1113,7 @@ final class NekularityUITests: XCTestCase {
             return
         }
 
-        let app = launch()
+        let app = launch(diagnostic: true)
         try openVideo(app)
         let online = app.buttons["在线源"].firstMatch
         if online.waitForExistence(timeout: 10) { online.tap() }
@@ -1177,6 +1180,15 @@ final class NekularityUITests: XCTestCase {
             format: "label CONTAINS[c] %@ OR label CONTAINS %@", "English", "英语")).firstMatch
         XCTAssertTrue(english.waitForExistence(timeout: 10), "the menu offers no English track")
         english.tap()
+
+        showTransport()
+        let diagnostic = app.descendants(matching: .any)
+            .matching(identifier: "video.diagnostic").firstMatch
+        if diagnostic.waitForExistence(timeout: 5) {
+            print("HLS diagnostic after choosing English: \(diagnostic.label)")
+        } else {
+            print("HLS diagnostic: the player showed no diagnostic element")
+        }
 
         let cue = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", "Subtitle rendering proof")).firstMatch

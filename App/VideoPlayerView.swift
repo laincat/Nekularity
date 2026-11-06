@@ -23,6 +23,13 @@ final class VideoPlayerModel {
     /// The engine's own clock, read when the screen closes.
     private(set) var position: Double = 0
     private(set) var format = ""
+    /// Which pipeline is serving, and what the engine offers for the native
+    /// subtitle route. Read by the diagnostic element below, which exists only
+    /// when a run asks for it: on the native route AVKit draws the captions, so an
+    /// overlay that shows nothing is not evidence that no subtitle was selected.
+    private(set) var route = ""
+    private(set) var nativeSubtitleCount = 0
+    private(set) var nativeDefaultOrdinal: Int?
     /// Playback speed the user picked; the engine clamps it to what this route can do.
     private(set) var rate: Float = 1
     /// What the source offers. Empty is a fact worth showing, not an error.
@@ -115,6 +122,9 @@ final class VideoPlayerModel {
         duration = engine.duration
         if engine.currentTime > 0 { position = engine.currentTime }
         format = String(describing: engine.videoFormat)
+        route = String(describing: engine.videoRoute)
+        nativeSubtitleCount = engine.nativeSubtitleTracks.count
+        nativeDefaultOrdinal = engine.nativeSubtitleDefaultOrdinal
         subtitleTracks = engine.subtitleTracks
         activeSubtitleID = engine.activeSubtitleTrackIndex
         cues = engine.subtitleCues
@@ -271,6 +281,17 @@ struct VideoPlayerView: View {
             }
             if !model.format.isEmpty {
                 Text(model.format).font(.caption2).foregroundStyle(.secondary)
+            }
+            if Self.diagnosticRequested {
+                // One line naming who owns subtitles on this route. A caption that
+                // never appears is ambiguous without it: the engine's cue list, the
+                // host overlay and AVKit's legible output are three different
+                // owners, and only the last one is invisible to the accessibility
+                // tree.
+                Text(Self.diagnosticLabel(model))
+                    .font(.caption2)
+                    .foregroundStyle(.clear)
+                    .accessibilityIdentifier("video.diagnostic")
             }
         }
         .padding(.horizontal, 20)
@@ -474,6 +495,18 @@ struct VideoPlayerView: View {
             }
             .accessibilityIdentifier("video.subtitles")
         }
+    }
+
+    /// Set by the interface tests (`NK_VIDEO_DIAGNOSTIC=1`); absent for everyone
+    /// else, so the label never becomes part of the product.
+    static var diagnosticRequested: Bool {
+        ProcessInfo.processInfo.environment["NK_VIDEO_DIAGNOSTIC"] == "1"
+    }
+
+    private static func diagnosticLabel(_ model: VideoPlayerModel) -> String {
+        "route=\(model.route) cues=\(model.cues.count) tracks=\(model.subtitleTracks.count)"
+            + " active=\(model.activeSubtitleID.map(String.init) ?? "none")"
+            + " native=\(model.nativeSubtitleCount) default=\(model.nativeDefaultOrdinal.map(String.init) ?? "none")"
     }
 
     private static func speedLabel(_ rate: Float) -> String {
