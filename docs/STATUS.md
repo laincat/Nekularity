@@ -28,6 +28,7 @@
 **字幕根因**：`NK_VIDEO_DIAGNOSTIC=1` 下的诊断行在 run `42252292384` 给出 `route=remoteBypass cues=0 tracks=2 active=200000 native=0 default=0`：字幕轨在菜单里，选中项也变了，但引擎未把 WebVTT cue 交给 `$subtitleCues`，由 AVPlayer 自己渲染；引擎文档说明程序化选中的非默认轨会被 AVKit 隐藏。**不是默认语言、不是夹具、也不是无障碍树看不到**。按系统语言选择默认字幕（`72c3719`）已实现且编译通过，但不解决这一路由问题。修法是播放器字幕控件改动，仍待用户确认方案；`testHLSPlaysAndSwitchesSubtitles` 保持失败，不改成跳过。
 
 **边界**：模拟器 ≠ 真机；无音轨，不证明扬声器、后台、PiP；续播为同一环境内重启 App，未跨设备或跨备份还原。
+- 组合回归（2026-11-07，CI run `42284633653`，同一提交）：`testResumeStartsWhereTheVideoWasLeft` **PASS 161.7 s**（`saved at 8 s, requested start 11.0 s, reopened at 23 s`）、`testVideoPlaysTheSourcesClip` **PASS 55.4 s**、`testStreamedAnswer` **PASS 119.7 s**、`testStreamCutoff` **PASS 118.3 s**；作业 `success`。前一次同配置的 run `42280119879` 在启动前被取消（job 没有任何步骤），与代码无关。收紧后的续播断言仍通过：请求起始位置既不小于关闭时刻，也不超出 10 秒。
 
 ## AetherEngine 7.58.0 上视频确实在播：画面推进已在 CI 模拟器验证（2026-11-06）
 
