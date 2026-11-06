@@ -158,7 +158,14 @@ final class ZZStandardAIStreamTests: XCTestCase {
                 field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count + 8))
             }
         }
-        if !text.isEmpty { field.typeText(text) }
+        if text.isEmpty {
+            // Selecting all and typing nothing deletes nothing: an empty value
+            // has to be typed as a delete. This is what a cleanup that reads
+            // back the old value was hiding.
+            field.typeText(XCUIKeyboardKey.delete.rawValue)
+        } else {
+            field.typeText(text)
+        }
         let landed = field.value as? String ?? ""
         let expected = text.isEmpty ? (field.placeholderValue ?? "") : text
         if landed != expected {
@@ -167,7 +174,7 @@ final class ZZStandardAIStreamTests: XCTestCase {
             field.press(forDuration: 1.1)
             let all = app.menuItems["全选"].exists ? app.menuItems["全选"] : app.menuItems["Select All"]
             if all.waitForExistence(timeout: 3) { all.tap() }
-            field.typeText(text)
+            field.typeText(text.isEmpty ? XCUIKeyboardKey.delete.rawValue : text)
         }
         let final = field.value as? String ?? ""
         XCTAssertEqual(final, expected, "\(note) did not reach the field")
