@@ -14,6 +14,20 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## The standard-protocol screen now paints incrementally (`b81b52d`, pin `49f2452`)
+
+With the path open, the screen finally uses it:
+
+- `StandardAIView` uses `StandardAIRequest.startStream` and `StandardAI.replyStreaming`: the increments appear under a 「正在写…」 line while the answer is being written, and the finished text goes to `StandardConversation`, which alone holds it (no second source of truth)
+- the delivery label is now 「流式」 or 「整包返回」 - **「流式尚未接通」 is gone**
+- a replaced stream cannot paint into the next question: each increment is checked against the request's generation
+
+Two regressions: `streamPiecesArriveInOrder` (increments arrive in order, and the runner is no longer running afterwards) and `aSupersededStreamIsDropped` (a cancelled stream stays quiet). CI `42143725049` is green with Kit at **482 tests / 83 suites / 0 failures**.
+
+The first CI run failed on Swift 6's explicit-capture rule: `reference to property 'generation' in closure requires explicit use of 'self'` - `[weak self]` fixed it.
+
+**Boundary**: this only guarantees that arriving text is painted in order. A real vendor's incremental behaviour, and the signing and notarisation an App Store release needs, remain external conditions; the screen has not been exercised on a simulator yet.
 ## The streaming path reaches the client (pin `49f2452`)
 
 After Core's `AIStreamOpen/Push/Done/Close`, the client connects its own transport to the parsing:

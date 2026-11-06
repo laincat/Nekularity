@@ -14,6 +14,20 @@
 
 
 
+
+## 标准 AI 页面改成流式呈现（`b81b52d`，pin `49f2452`）
+
+通道打通之后，界面终于用上了它：
+
+- `StandardAIView` 改用 `StandardAIRequest.startStream` + `StandardAI.replyStreaming`：增量先显示在一行「正在写…」之下，整段到达后交给 `StandardConversation` 单一持有（不再有两处真相）
+- 回答模式标注改成「流式」/「整包返回」——**不再写「流式尚未接通」**
+- 被替换的流不会把字画进下一个问题：增量回调经 `generation` 代号校验
+
+回归两条：`streamPiecesArriveInOrder`（增量按顺序到达、完成后不再 running）、`aSupersededStreamIsDropped`（取消后的旧流不再发声）。CI `42143725049` 全绿，Kit **482 tests / 83 suites / 0 失败**。
+
+CI 首次失败是 Swift 6 的显式捕获要求：`reference to property 'generation' in closure requires explicit use of 'self'`——改成 `[weak self]` 后通过。
+
+**边界**：这一版只保证「流到达时按顺序显示」。真实供应商的增量行为、以及 App Store 上架所需的签名与公证，仍是外部条件；本页面的模拟器实测待下一轮。
 ## 标准接口的流式通道已接通（客户端，PIN `49f2452`）
 
 Core 的 `AIStreamOpen/Push/Done/Close` 之后，客户端把连接与解析接上：
