@@ -28,6 +28,7 @@
 为什么需要例外：iOS 上 App 与 Core 是静态链接，App Store 的分发条款既不允许用户重链接，也限制再签名，而 LGPL 的 4—6 节恰恰要求这些。没有例外，LGPL 在 iOS 上自相矛盾。AetherEngine 已经用同一套例外解决了这件事，直接对齐；它写 v3-only，我们的授予句多一句「或任何更新版本」。
 
 依赖同步到本轮最新：AetherEngine `7.53.1` → `7.58.0`（CI 全绿，含 482 项 kit 测试与整包构建），Core pin `49f2452` → `d9a1851`。
+  - 包内实测：下载该 run 的未签名 IPA，`Payload/Nekularity.app/` 里 `LICENSE`（9,727 字节）与 `COPYING`（35,149 字节）都在，LGPL 4(b) 的“随二进制交付许可证全文”因此对 iOS 成立。
 ## 标准 AI 页面改成流式呈现（`b81b52d`，pin `49f2452`）
 
 通道打通之后，界面终于用上了它：

@@ -28,6 +28,7 @@ The repository was GPL-3.0. It is now **LGPL-3.0-or-later with the App Store / D
 Why the exception: on iOS the app and Core are statically linked, and App Store terms forbid both user re-linking and third-party re-signing - exactly what LGPL sections 4-6 require. Without the exception LGPL contradicts itself on iOS. AetherEngine already solved this with the same exception, so we match it; it states v3 only, while our grant adds "or any later version".
 
 Dependencies at this round's latest: AetherEngine `7.53.1` -> `7.58.0` (CI green, including 482 kit tests and the packaged build), Core pin `49f2452` -> `d9a1851`.
+  - Measured in the artifact: downloading that run's unsigned IPA shows `LICENSE` (9,727 bytes) and `COPYING` (35,149 bytes) inside `Payload/Nekularity.app/`, so LGPL 4(b)'s "the licence texts travel with the binary" holds for iOS too.
 ## The standard-protocol screen now paints incrementally (`b81b52d`, pin `49f2452`)
 
 With the path open, the screen finally uses it:
