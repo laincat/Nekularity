@@ -7,7 +7,7 @@
   <img src="docs/assets/brand/nekularity-banner.png" alt="Nekularity" width="720">
 </picture>
 
-iOS/iPadOS 漫画客户端(视频为后续阶段),界面使用 SwiftUI,许可证为 GPL-3.0-or-later。业务逻辑来自 [VeneraCat Core](https://github.com/laincat/VeneraCat-Core),兼容 Venera 的漫画源脚本和订阅索引。
+iOS/iPadOS 漫画客户端(视频为后续阶段),界面使用 SwiftUI,许可证为 LGPL-3.0-or-later(附 App Store / DRM 例外,与播放引擎一致)。业务逻辑来自 [VeneraCat Core](https://github.com/laincat/VeneraCat-Core),兼容 Venera 的漫画源脚本和订阅索引。
 
 ## 状态
 
@@ -74,4 +74,4 @@ scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK TGZ_MD5 TGZ_BYTES SWIFT_FILES 
 
 ## 许可证
 
-GPL-3.0-or-later,见 [LICENSE](LICENSE)。
+LGPL-3.0-or-later,附 App Store / DRM 例外,见 [LICENSE](LICENSE);LGPL 引用的 GPL-3.0 全文见 [COPYING](COPYING)。
