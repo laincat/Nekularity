@@ -1342,6 +1342,16 @@ final class NekularityUITests: XCTestCase {
         }
 
         showTransport()
+        let menu = element(app, "video.subtitles")
+        XCTAssertTrue(menu.waitForExistence(timeout: 20),
+                      "no subtitle menu: the engine listed no tracks (\(server.clipSummary()))")
+        menu.tap()
+        let english = app.buttons.matching(NSPredicate(
+            format: "label CONTAINS[c] %@ OR label CONTAINS %@", "English", "英语")).firstMatch
+        XCTAssertTrue(english.waitForExistence(timeout: 10), "the menu offers no English track")
+        english.tap()
+
+        showTransport()
         let diagnostic = app.descendants(matching: .any)
             .matching(identifier: "video.diagnostic").firstMatch
         if diagnostic.waitForExistence(timeout: 5) {
