@@ -201,8 +201,14 @@ public final class ShelfStore {
     private let decoder = JSONDecoder()
 
     /// Opens the shelf in a directory, creating the file on first write.
-    public init(directory: URL) {
-        self.url = directory.appendingPathComponent("shelf.json")
+    ///
+    /// `filename` exists so an interface test can use its own shelf: a case that
+    /// records a playback position then reads it back must not leave that
+    /// position in the default `shelf.json`, and must not inherit one from a
+    /// previous run. It is a single filename, never a path.
+    public init(directory: URL, filename: String = "shelf.json") {
+        let name = filename.split(separator: "/").last.map(String.init) ?? "shelf.json"
+        self.url = directory.appendingPathComponent(name == ".." ? "shelf.json" : name)
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         load()
     }

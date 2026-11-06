@@ -277,7 +277,10 @@ final class LocalImageServer: @unchecked Sendable {
                 reply(connection, status: "403 Forbidden", body: Data())
                 return
             }
-            guard !name.contains("/"), !name.contains(".."),
+            // One nested folder is allowed: the 30 s resume fixture lives in
+            // `resume/` beside the 10 s subtitle one, and its playlists use the
+            // same relative URIs. `..` stays refused either way.
+            guard !name.contains(".."), !name.hasPrefix("/"),
                   let url = Self.hlsDirectory?.appendingPathComponent(name),
                   let body = try? Data(contentsOf: url) else {
                 recordClip("hls \(name) 404")

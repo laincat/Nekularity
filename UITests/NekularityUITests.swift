@@ -79,9 +79,11 @@ final class NekularityUITests: XCTestCase {
 
     /// `diagnostic` turns on the player's hidden one-line report of who owns
     /// subtitles on this route; it changes nothing a person sees.
-    private func launch(diagnostic: Bool = false) -> XCUIApplication {
+    private func launch(diagnostic: Bool = false,
+                        environment: [String: String] = [:]) -> XCUIApplication {
         let app = XCUIApplication()
         if diagnostic { app.launchEnvironment["NK_VIDEO_DIAGNOSTIC"] = "1" }
+        for (key, value) in environment { app.launchEnvironment[key] = value }
         app.launch()
         return app
     }
@@ -1115,6 +1117,106 @@ final class NekularityUITests: XCTestCase {
             XCTAssertGreaterThan(second, first,
                                  "the picture did not advance: \(first)s then \(second)s")
         }
+    }
+
+    /// Opens one of the loopback probe videos and its only episode.
+    private func openProbe(_ app: XCUIApplication, title: String) throws {
+        try openVideo(app)
+        let online = app.buttons["在线源"].firstMatch
+        if online.waitForExistence(timeout: 10) { online.tap() }
+        let picker = element(app, "video.source")
+        guard picker.waitForExistence(timeout: 20) else {
+            throw XCTSkip("the 视频 tab has no source picker")
+        }
+        picker.tap()
+        let provider = app.buttons["Video Probe"].firstMatch
+        guard provider.waitForExistence(timeout: 10) else {
+            throw XCTSkip("the video fixture is not seeded: run scripts/seed-simulator.sh")
+        }
+        provider.tap()
+        let field = element(app, "video.query")
+        XCTAssertTrue(field.waitForExistence(timeout: 20), "the 视频 tab has no field")
+        type("probe", into: field, in: app)
+        app.typeText("\n")
+        let card = firstElement(app, containing: title)
+        guard card.waitForExistence(timeout: 60) else {
+            throw XCTSkip("the seeded video fixture has no \(title): regenerate the seed")
+        }
+        card.tap()
+        let episode = firstElement(app, containing: "Episode 1")
+        XCTAssertTrue(episode.waitForExistence(timeout: 30), "the detail page lists no episode")
+        episode.tap()
+    }
+
+    /// Seconds shown by the engine clock on the duration element's value.
+    private func playedSeconds(_ app: XCUIApplication) -> Int? {
+        let clock = element(app, "video.duration").value as? String ?? ""
+        let parts = clock.split(separator: ":")
+        let numbers = parts.compactMap { Int($0) }
+        guard !numbers.isEmpty, numbers.count == parts.count else { return nil }
+        return numbers.reduce(0) { $0 * 60 + $1 }
+    }
+
+    /// Watching a 30 s clip past 7 s, closing it, relaunching the app, and
+    /// opening the same episode again must start from the saved position.
+    ///
+    /// A 10 s clip puts 7 s within a few seconds of the end, where an engine may
+    /// legitimately wrap to zero; the 30 s fixture keeps the save point away from
+    /// both edges. The case uses a fresh UUID-named shelf file, so it neither
+    /// inherits nor leaves a position in the app's default `shelf.json`.
+    func testResumeStartsWhereTheVideoWasLeft() throws {
+        let server = try LocalImageServer()
+        try server.start()
+        addTeardownBlock { server.stop() }
+        guard LocalImageServer.hlsDirectory != nil else {
+            XCTFail("the 30 s HLS fixture is not in the test bundle")
+            return
+        }
+        let env = ["NK_SHELF_FILE": "uitest-resume-\(UUID().uuidString).json"]
+        let app = launch(environment: env)
+
+        try openProbe(app, title: "Probe Resume")
+        let duration = element(app, "video.duration")
+        XCTAssertTrue(duration.waitForExistence(timeout: 90),
+                      "no duration: \(server.clipSummary())")
+        XCTAssertTrue(app.staticTexts["0:30"].waitForExistence(timeout: 10),
+                      "the 30 s fixture did not load: \(server.clipSummary())")
+
+        // Wait for the picture to pass the resume threshold (> 5 s), then close.
+        var saved: Int?
+        let by = Date().addingTimeInterval(45)
+        while Date() < by {
+            if let now = playedSeconds(app), now >= 7 { saved = now; break }
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+        XCTAssertNotNil(saved, "the picture never reached 7 s: \(server.clipSummary())")
+        let close = element(app, "video.close")
+        XCTAssertTrue(close.waitForExistence(timeout: 10), "no close button")
+        close.tap()
+
+        // A new process: the saved position has to come back from the file, not
+        // from a view still sitting in memory.
+        app.terminate()
+        for (key, value) in env { app.launchEnvironment[key] = value }
+        app.launch()
+        try openProbe(app, title: "Probe Resume")
+        XCTAssertTrue(element(app, "video.duration").waitForExistence(timeout: 90),
+                      "the reopened player has no duration: \(server.clipSummary())")
+        let resumed = playedSeconds(app)
+        print("resume: saved at \(String(describing: saved)) s, reopened at \(String(describing: resumed)) s")
+        XCTAssertNotNil(resumed, "the reopened player's clock was not readable")
+        if let resumed {
+            XCTAssertGreaterThanOrEqual(resumed, 6,
+                                         "the episode restarted near the beginning instead of the saved position")
+        }
+        // And it keeps playing from there rather than freezing on the seeked frame.
+        Thread.sleep(forTimeInterval: 2)
+        if !element(app, "video.duration").exists { app.windows.firstMatch.tap() }
+        let later = playedSeconds(app)
+        if let resumed, let later {
+            XCTAssertGreaterThan(later, resumed, "the resumed picture did not advance")
+        }
+        element(app, "video.close").tap()
     }
 
     /// HLS with subtitles, on the engine this build pins.

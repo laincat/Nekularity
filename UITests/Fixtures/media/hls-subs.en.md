@@ -8,3 +8,7 @@ The HLS fixture for the interface case `testHLSPlaysAndSwitchesSubtitles`: a mas
 - The subtitles are test text.
 
 The test process serves these files under `/hls/` on loopback and answers 403 to any request without the source's declared `Referer`.
+
+## 30-second resume fixture
+
+`hls-subs/resume/` is the same licensed clip repeated three times into a 30 s, audio-less HLS (a copy of `scripts/fixtures/hls-subtitles/media30/`), with no subtitles. A save point at 7 s is far enough from the end for the client's resume rule (position > 5 s and before 95%). The test's shelf filename carries a UUID, so it neither reads nor writes the default `shelf.json`.
