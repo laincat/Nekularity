@@ -1234,6 +1234,16 @@ final class NekularityUITests: XCTestCase {
         if let start {
             XCTAssertGreaterThanOrEqual(start, 6,
                                          "the client asked the engine to start at \(start) s, not the saved position")
+            // Tying the request to the moment the player closed: a stale entry
+            // from an earlier run, or a hardcoded resume point, would otherwise
+            // also satisfy "at least 6". The gap allows only the seconds the
+            // close button itself took to tap.
+            if let saved {
+                XCTAssertGreaterThanOrEqual(start, Double(saved) - 1,
+                                             "the resume point \(start) s is older than the position at close \(saved) s")
+                XCTAssertLessThanOrEqual(start, Double(saved) + 10,
+                                         "the resume point \(start) s is far beyond the position at close \(saved) s")
+            }
         }
         XCTAssertNotNil(resumed, "the reopened player's clock was not readable")
         if let resumed {

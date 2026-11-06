@@ -19,6 +19,16 @@ English · [简体中文](STATUS.md)
 
 
 
+## Resume works on a CI simulator; the HLS subtitle root cause is located (2026-11-07)
+
+**Resume**: the new `testResumeStartsWhereTheVideoWasLeft` uses the 30 s HLS fixture (a save point at 7 s is far from the end). It plays past 7 s, closes the player, terminates and relaunches the app, opens the same episode again, and reads the **start position the app handed the engine** rather than a later clock reading - the latter would mistake "started at zero and has now played 13 s" for a resume. CI run `42271738998`: **PASS in 184.8 s**, log `saved at 9 s, requested start 13.0 s, reopened at 20 s` (the picture kept moving while the close button was tapped, so the request is later than the reading). It then asserts the picture continues advancing from there.
+
+Test isolation: `ShelfStore` can open a named file and the app reads `NK_SHELF_FILE`; the case uses a UUID-named file, so it neither inherits nor pollutes the default `shelf.json`. The loopback `/hls/` route now allows one nested folder, `video_probe` gained a `Probe Resume` entry, and the seed was regenerated.
+
+**Subtitle root cause**: the diagnostic line under `NK_VIDEO_DIAGNOSTIC=1` gave `route=remoteBypass cues=0 tracks=2 active=200000 native=0 default=0` on run `42252292384`. The subtitle tracks are in the menu and the selected id changes, but the engine never hands WebVTT cues to `$subtitleCues`; AVPlayer renders them itself, and the engine docs say AVKit hides a programmatically selected non-default track. **It is not the default language, not the fixture, and not an invisible accessibility tree.** Picking the default subtitle from the system language (`72c3719`) is implemented and compiles but does not address this route. A fix changes the player's subtitle controls and still awaits the user's choice of approach; `testHLSPlaysAndSwitchesSubtitles` stays failing rather than being skipped.
+
+**Boundaries**: a simulator is not a device; the fixture has no audio, so it says nothing about the speaker, background playback or PiP; resume is an app relaunch within one environment, not across devices or a backup restore.
+
 ## Video really plays on AetherEngine 7.58.0: the picture advancing is verified on a CI simulator (2026-11-06)
 
 This had no evidence since the engine upgrade (the Mac worker died three times without reporting). It now comes from CI's simulator:
