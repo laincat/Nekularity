@@ -1187,9 +1187,9 @@ final class NekularityUITests: XCTestCase {
         let off = app.buttons["关闭字幕"].firstMatch
         XCTAssertTrue(off.waitForExistence(timeout: 10), "the menu has no 关闭字幕")
         off.tap()
-        let gone = NSPredicate(format: "exists == false")
-        expectation(for: gone, evaluatedWith: cue)
-        waitForExpectations(timeout: 10)
+        let deadline = Date().addingTimeInterval(10)
+        while Date() < deadline, cue.exists { Thread.sleep(forTimeInterval: 0.2) }
+        XCTAssertFalse(cue.exists, "subtitles were turned off but the English cue is still drawn")
     }
 
     /// The batch update, driven through the interface it is reached by.
