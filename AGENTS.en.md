@@ -11,6 +11,7 @@ For people and AI assistants working on the code. Read before changing it.
 - Never call Core on the main thread. gomobile methods block; `CoreClient` runs them in the background.
 - Each source's cookies and login state are isolated: cookies are kept per `partition` given by Core, never in `HTTPCookieStorage.shared`, and human verification uses a non-persistent WebView data store.
 - JSON keeps key order and number text: decode Core results with `OrderedJSONDecoder` or `JSONValue.parse`, never through `JSONSerialization` or Double.
+- Licence: **LGPL-3.0-or-later with the App Store / DRM Exception** (see `LICENSE`; the GPL-3.0 text is in `COPYING`). New files carry the same licence, and a new dependency is checked for a compatible licence first - if it is not compatible, rewrite the behaviour instead.
 - Do not copy code from AGPL projects (Animeko, AnimeFlow) or unlicensed ones (AniCh). Do not add third-party credentials, accounts or site keys.
 
 ## Scope problems do not show up locally

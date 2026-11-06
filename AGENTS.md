@@ -12,6 +12,7 @@
 - 每个源的 Cookie 和登录状态互相隔离:Cookie 按 Core 给出的 `partition` 分别存放,不使用 `HTTPCookieStorage.shared`;人机验证使用非持久化的 WebView 数据存储。
 - JSON 保持键顺序和数字原文:Core 的结果用 `OrderedJSONDecoder` 或 `JSONValue.parse` 解码,不经过 `JSONSerialization` 或 Double。
 - 不要从 AGPL 项目(Animeko、AnimeFlow)或没有许可证的项目(AniCh)复制代码。不放入第三方凭据、账号或站点密钥。
+- 许可证是 **LGPL-3.0-or-later 附 App Store / DRM 例外**(见 `LICENSE`,GPL-3.0 全文在 `COPYING`)。新文件沿用同一许可;引入新依赖前先看它的许可证能否并进来,不能就只有重写。
 
 ## 仓库约定
 
