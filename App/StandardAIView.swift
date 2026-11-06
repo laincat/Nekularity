@@ -24,6 +24,9 @@ struct StandardAIView: View {
     @State private var conversation = StandardConversation()
     @State private var error: String?
     @State private var request = StandardAIRequest()
+    /// Text of the answer being written. Cleared when the reply lands, so the
+    /// finished answer comes from one place (the conversation) rather than two.
+    @State private var partial = ""
 
     private let keys = StandardAIKeyStore()
     private let settings = StandardAISettingsStore()
@@ -90,13 +93,21 @@ struct StandardAIView: View {
                         Text(message.content).textSelection(.enabled)
                     }
                 }
+                if busy && !partial.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(config.protocol.vendor).font(.caption).foregroundStyle(.secondary)
+                        Text(partial).textSelection(.enabled)
+                            .accessibilityIdentifier("standardAI.streaming")
+                        Text("正在写…").font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
                 if let reply = conversation.pending {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(config.protocol.vendor).font(.caption).foregroundStyle(.secondary)
                         Text(reply.text).textSelection(.enabled)
-                        // This standard-protocol path returns a whole reply;
-                        // keep its delivery mode explicit.
-                        Text(reply.streamed ? "流式" : "整包返回 · 流式尚未接通")
+                        // Say which delivery this answer was, rather than
+                        // claiming a stream that may not have happened.
+                        Text(reply.streamed ? "流式" : "整包返回")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
                 }
@@ -192,11 +203,18 @@ struct StandardAIView: View {
         let history = conversation.ask(text)
         let snapshot = config
         let key = apiKey
-        request.start(operation: { [client, snapshot, key, history] in
-            try await client.reply(config: snapshot, apiKey: key, messages: history)
+        partial = ""
+        request.startStream(operation: { [client, snapshot, key, history] emit in
+            try await client.replyStreaming(config: snapshot, apiKey: key, messages: history) { piece in
+                emit(piece)
+            }
         }, receive: { answer in
+            self.partial = ""
             self.conversation.answered(answer)
+        }, delta: { piece in
+            self.partial += piece
         }, failure: { error in
+            self.partial = ""
             self.conversation.failed()
             self.error = error.localizedDescription
         })

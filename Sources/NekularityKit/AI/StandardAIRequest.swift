@@ -44,6 +44,45 @@ public final class StandardAIRequest {
         return current
     }
 
+    /// Starts a request that reports text as it arrives.
+    ///
+    /// `operation` receives a way to publish a piece; each piece is delivered on
+    /// the main actor and dropped if the request has been superseded, so a
+    /// cancelled stream cannot paint into the next question.
+    @discardableResult
+    public func startStream<Value: Sendable>(
+        operation: @escaping @Sendable (@escaping @Sendable (String) -> Void) async throws -> Value,
+        receive: @escaping @MainActor (Value) -> Void,
+        delta: @escaping @MainActor (String) -> Void,
+        failure: @escaping @MainActor (any Error) -> Void
+    ) -> Task<Void, Never> {
+        let token = generation.begin()
+        task?.cancel()
+        isRunning = true
+        let current = Task { @MainActor in
+            defer {
+                generation.commit(token) {
+                    self.task = nil
+                    self.isRunning = false
+                }
+            }
+            do {
+                let value = try await operation { piece in
+                    Task { @MainActor in
+                        generation.commit(token) { delta(piece) }
+                    }
+                }
+                guard !Task.isCancelled else { return }
+                generation.commit(token) { receive(value) }
+            } catch {
+                guard !Task.isCancelled else { return }
+                generation.commit(token) { failure(error) }
+            }
+        }
+        task = current
+        return current
+    }
+
     public func cancel() {
         _ = generation.begin()
         let current = task
