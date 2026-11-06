@@ -166,8 +166,13 @@ final class ZZStandardAIStreamTests: XCTestCase {
         } else {
             field.typeText(text)
         }
-        let landed = field.value as? String ?? ""
-        let expected = text.isEmpty ? (field.placeholderValue ?? "") : text
+        // A cleared field reports either an empty value or its placeholder,
+        // depending on the idiom; accepting both is the check that means
+        // "nothing is stored here" without depending on which it is.
+        let cleared = field.value as? String ?? ""
+        let isClear = cleared.isEmpty || cleared == (field.placeholderValue ?? "?")
+        let landed = text.isEmpty ? (isClear ? "" : cleared) : cleared
+        let expected = text.isEmpty ? "" : text
         if landed != expected {
             // One retry with the selection route, which is the only one that
             // does not depend on where the caret ended up.
@@ -177,7 +182,9 @@ final class ZZStandardAIStreamTests: XCTestCase {
             field.typeText(text.isEmpty ? XCUIKeyboardKey.delete.rawValue : text)
         }
         let final = field.value as? String ?? ""
-        XCTAssertEqual(final, expected, "\(note) did not reach the field")
+        let finalClear = final.isEmpty || final == (field.placeholderValue ?? "?")
+        let finalValue = text.isEmpty ? (finalClear ? "" : final) : final
+        XCTAssertEqual(finalValue, expected, "\(note) did not reach the field")
     }
 
     private func ask(_ text: String) {
