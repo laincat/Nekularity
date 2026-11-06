@@ -11,6 +11,8 @@
 
 处理：用例保持失败，不改为跳过。修复需要改播放器字幕路由（换 `nativeSubtitlePreferredLanguages` 或改选择方式），按项目约定属于播放器控件改动，**待用户确认方案后再做**。
 - 追加（2026-11-06，run `42228654474`，提交 `72c3719`）：播放器已按系统语言默认选字幕（`nativeSubtitlePreferredLanguages` 与 `preferredSubtitleLanguages` 都取自 `Locale.preferredLanguages`，去地区码，保留 zh-Hans/zh-Hant）。编译通过，但 HLS 用例仍失败：选英文后屏上仍无 cue。这说明默认语言不是根因。系统语言为中文时，`DEFAULT=YES` 落在中文轨，用户手动选英文仍走宿主叠层路径，而叠层没有画出 cue。根因未定，仍需 `$subtitleCues` 计数与引擎日志。
+- 根因已确认（2026-11-06，run `42252292384`，提交 `768aeb6` 的 `NK_VIDEO_DIAGNOSTIC=1`）：`route=remoteBypass cues=0 tracks=2 active=200000 native=0 default=0`。字幕轨确实在菜单里，选中项的 id 也变了；但引擎没有把 WebVTT cue 交给 `$subtitleCues`，宿主叠层自然无字可画。该路由下 AVPlayer 自己渲染 legible track，引擎文档说明程序化选中的非默认轨会被 AVKit 隐藏。**这是路由与选择方式不匹配，不是默认语言、不是夹具、也不是无障碍树看不到**。
+  - 可选修法：在 `.remoteBypass` 上让想要的轨成为 `DEFAULT=YES`（`nativeSubtitlePreferredLanguages` + 选中 `nativeSubtitleDefaultOrdinal`，切换需 `reloadAtCurrentPosition`），或改走引擎自己取流、由叠层画 cue 的路由。两者都是播放器字幕控件改动，按约定仍待用户确认方案。
 
 ## 标准 AI 的流式界面在 2026-11-06 转入已验证
 
