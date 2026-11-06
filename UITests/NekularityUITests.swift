@@ -92,20 +92,18 @@ final class NekularityUITests: XCTestCase {
     /// leaves it without focus, and `typeText` then fails to synthesise the key
     /// events - a runner-side flake that once failed the HLS case before the player
     /// had even opened. The retry taps the field again and waits for the keyboard.
-    private func type(_ text: String, into field: XCUIElement, file: StaticString = #filePath,
-                      line: UInt = #line) {
-        for attempt in 1...3 {
+    private func type(_ text: String, into field: XCUIElement, in app: XCUIApplication,
+                      file: StaticString = #filePath, line: UInt = #line) {
+        // `typeText` does not throw: without focus it records a failure on the
+        // spot. So the retry is decided before typing, by whether a keyboard is up.
+        for _ in 1...3 {
             field.tap()
-            _ = app.keyboards.firstMatch.waitForExistence(timeout: 5)
-            do {
-                try field.typeText(text)
+            if app.keyboards.firstMatch.waitForExistence(timeout: 5) {
+                field.typeText(text)
                 return
-            } catch {
-                if attempt == 3 {
-                    XCTFail("could not type into \(field): \(error)", file: file, line: line)
-                }
             }
         }
+        XCTFail("no keyboard appeared after three taps on \(field)", file: file, line: line)
     }
 
     /// The element with this identifier, whatever kind it is.
@@ -1151,7 +1149,7 @@ final class NekularityUITests: XCTestCase {
         provider.tap()
         let field = element(app, "video.query")
         XCTAssertTrue(field.waitForExistence(timeout: 20), "the 视频 tab has no field")
-        type("probe", into: field)
+        type("probe", into: field, in: app)
         app.typeText("\n")
 
         let card = firstElement(app, containing: "Probe HLS")
