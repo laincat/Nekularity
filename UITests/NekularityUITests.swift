@@ -1148,6 +1148,16 @@ final class NekularityUITests: XCTestCase {
         episode.tap()
     }
 
+    /// The duration element lives in the transport bar, which auto-hides. A
+    /// relaunched app can therefore open a playing picture with no visible
+    /// clock; a tap on the picture brings it back without pausing.
+    private func showClock(_ app: XCUIApplication) -> Bool {
+        let duration = element(app, "video.duration")
+        if duration.exists { return true }
+        app.windows.firstMatch.tap()
+        return duration.waitForExistence(timeout: 20)
+    }
+
     /// The start position the client handed the engine, from the hidden
     /// diagnostic line. Unlike a clock reading taken later, this is the resume
     /// decision itself.
@@ -1188,9 +1198,10 @@ final class NekularityUITests: XCTestCase {
         let app = launch(environment: env)
 
         try openProbe(app, title: "Probe Resume")
+        XCTAssertTrue(element(app, "video.close").waitForExistence(timeout: 60),
+                      "the player never opened: \(server.clipSummary())")
         let duration = element(app, "video.duration")
-        XCTAssertTrue(duration.waitForExistence(timeout: 90),
-                      "no duration: \(server.clipSummary())")
+        XCTAssertTrue(showClock(app), "no duration: \(server.clipSummary())")
         XCTAssertTrue(app.staticTexts["0:30"].waitForExistence(timeout: 10),
                       "the 30 s fixture did not load: \(server.clipSummary())")
 
@@ -1212,8 +1223,10 @@ final class NekularityUITests: XCTestCase {
         for (key, value) in env { app.launchEnvironment[key] = value }
         app.launch()
         try openProbe(app, title: "Probe Resume")
-        XCTAssertTrue(element(app, "video.duration").waitForExistence(timeout: 90),
-                      "the reopened player has no duration: \(server.clipSummary())")
+        XCTAssertTrue(element(app, "video.close").waitForExistence(timeout: 60),
+                      "the reopened player never opened: \(server.clipSummary())")
+        XCTAssertTrue(showClock(app),
+                      "the reopened player has no visible clock: \(server.clipSummary())")
         let start = requestedStart(app)
         let resumed = playedSeconds(app)
         print("resume: saved at \(String(describing: saved)) s, requested start \(String(describing: start)) s, reopened at \(String(describing: resumed)) s")
@@ -1229,7 +1242,7 @@ final class NekularityUITests: XCTestCase {
         }
         // And it keeps playing from there rather than freezing on the seeked frame.
         Thread.sleep(forTimeInterval: 2)
-        if !element(app, "video.duration").exists { app.windows.firstMatch.tap() }
+        _ = showClock(app)
         let later = playedSeconds(app)
         if let resumed, let later {
             XCTAssertGreaterThan(later, resumed, "the resumed picture did not advance")
