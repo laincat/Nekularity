@@ -10,6 +10,7 @@
 - 未知：是引擎没把 WebVTT cue 交给 `subtitleCues`，还是 App 叠层没画，还是菜单选中的并非英文轨。需要引擎日志或 `$subtitleCues` 的计数来区分。
 
 处理：用例保持失败，不改为跳过。修复需要改播放器字幕路由（换 `nativeSubtitlePreferredLanguages` 或改选择方式），按项目约定属于播放器控件改动，**待用户确认方案后再做**。
+- 追加（2026-11-06，run `42228654474`，提交 `72c3719`）：播放器已按系统语言默认选字幕（`nativeSubtitlePreferredLanguages` 与 `preferredSubtitleLanguages` 都取自 `Locale.preferredLanguages`，去地区码，保留 zh-Hans/zh-Hant）。编译通过，但 HLS 用例仍失败：选英文后屏上仍无 cue。这说明默认语言不是根因。系统语言为中文时，`DEFAULT=YES` 落在中文轨，用户手动选英文仍走宿主叠层路径，而叠层没有画出 cue。根因未定，仍需 `$subtitleCues` 计数与引擎日志。
 
 ## 标准 AI 的流式界面在 2026-11-06 转入已验证
 

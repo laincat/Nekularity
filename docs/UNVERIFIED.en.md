@@ -10,6 +10,7 @@ The case `testHLSPlaysAndSwitchesSubtitles` (HLS fixture, Chinese default, Engli
 - Unknown: whether the engine does not hand WebVTT cues to `subtitleCues`, the app overlay does not draw them, or the menu picked a track other than English. Telling these apart needs the engine log or the `$subtitleCues` count.
 
 Handling: the case stays failing, not skipped. A fix means changing the player's subtitle route (`nativeSubtitlePreferredLanguages` or the selection method). Per project convention that is a player-control change, **pending the user's approval of the approach**.
+- Addendum (2026-11-06, run `42228654474`, commit `72c3719`): the player now picks a default subtitle from the system language (`nativeSubtitlePreferredLanguages` and `preferredSubtitleLanguages` both come from `Locale.preferredLanguages`, regions dropped, zh-Hans/zh-Hant kept). It compiles, but the HLS case still fails: after choosing English no cue is on screen. So the default language is not the root cause. With a Chinese system language, `DEFAULT=YES` lands on the Chinese track, and a manual English choice still takes the host-overlay path, which draws no cue. The root cause is still open; it needs the `$subtitleCues` count and the engine log.
 
 ## The standard protocol's streaming screen moved to verified on 2026-11-06
 
