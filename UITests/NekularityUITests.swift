@@ -1178,8 +1178,22 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(english.waitForExistence(timeout: 10), "the menu offers no English track")
         english.tap()
 
-        let cue = app.staticTexts["Subtitle rendering proof"]
-        XCTAssertTrue(cue.waitForExistence(timeout: 20),
+        let cue = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", "Subtitle rendering proof")).firstMatch
+        if !cue.waitForExistence(timeout: 20) {
+            // Say what was on screen instead: the cue missing from the
+            // accessibility tree and the cue missing from the picture are
+            // different failures, and the screenshot settles which.
+            let shot = XCTAttachment(screenshot: app.screenshot())
+            shot.name = "hls-english-no-cue"
+            shot.lifetime = .keepAlways
+            add(shot)
+            var labels: [String] = []
+            for text in app.staticTexts.allElementsBoundByIndex { labels.append(text.label) }
+            print("HLS on-screen texts: \(labels)")
+            print("HLS subtitle value: \(String(describing: menu.value)) phase via clock \(String(describing: duration.value))")
+        }
+        XCTAssertTrue(cue.exists,
                       "English was chosen but its cue was never drawn; vtt requests: \(server.subtitleFilesRequested())")
         print("HLS subtitle requests: \(server.subtitleFilesRequested())")
 
