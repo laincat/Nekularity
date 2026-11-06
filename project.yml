@@ -12,8 +12,10 @@ packages:
   # The player. Video decoders belong with the platform, not with Core: Core
   # answers where an episode plays, the engine plays it.
   # Exact, not `from:`: `from:` means up-to-next-major, and the same tree then
-  # resolved 7.53.1 on one machine and could resolve another version on the
-  # next. The player is what a build reproduces or does not.
+  # resolved one version on one machine and another on the next. The player is
+  # what a build reproduces or does not. Exact is how the *tree* stays fixed;
+  # the version itself is kept at the upstream latest (7.58.0), raised on
+  # purpose with the API check and CI, not by drift.
   AetherEngine:
     url: https://github.com/superuser404notfound/AetherEngine.git
     exactVersion: 7.58.0
