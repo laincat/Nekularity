@@ -4,8 +4,8 @@
 python3 UITests/Fixtures/standard-ai/serve.py --port 18796 --log /tmp/ai.jsonl
 API key: fixture-key; model: fixture-model.
 Roots: /v1, /slow/v1, /denied/v1, /unavailable/v1, /inband/v1, /cutoff/v1.
-GET /events returns sanitized observations; GET /requests returns the accepted
-request bodies. POST /release releases slow bodies.
+GET /events returns sanitized observations; GET /requests returns the request
+bodies, accepted or rejected, so a 400 can be diagnosed from the client side. POST /release releases slow bodies.
 A slow request sends headers, then waits for release or detects a peer close.
 A request says which it wants with `stream`: false gets the whole reply, true gets
 events. /cutoff sends two text events and then closes without the protocol's
@@ -247,6 +247,10 @@ class Handler(BaseHTTPRequestHandler):
                 if not valid:
                     raise ValueError("invalid body")
             except (ValueError, AttributeError, TypeError):
+                # Recorded, not just refused: a 400 with no body is a failure
+                # nobody can diagnose from the client side.
+                self.server.state.record("rejected", id=request_id, body=content)
+                self.server.state.record_request({"rejected": True, "body": content})
                 self.respond(400, {"error": {"message": "unexpected fixture request body"}}, request_id)
                 return
         if mode in {"denied", "unavailable", "inband"}:

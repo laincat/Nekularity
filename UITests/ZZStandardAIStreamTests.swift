@@ -91,25 +91,33 @@ final class ZZStandardAIStreamTests: XCTestCase {
         }
         let address = app.textFields.element(boundBy: 0)
         XCTAssertTrue(address.waitForExistence(timeout: 10), "no address field")
-        replace(address, with: root)
+        replace(address, with: root, where: "the endpoint URL")
         let model = app.textFields["模型名"].firstMatch
         XCTAssertTrue(model.waitForExistence(timeout: 10), "no model field")
-        replace(model, with: "fixture-model")
+        replace(model, with: "fixture-model", where: "the model name")
         let key = app.secureTextFields.firstMatch
         XCTAssertTrue(key.waitForExistence(timeout: 10), "no key field")
-        replace(key, with: "fixture-key")
+        replace(key, with: "fixture-key", where: "the key")
         let save = app.buttons["保存密钥"].firstMatch
         XCTAssertTrue(save.waitForExistence(timeout: 5), "no 保存密钥 button")
         save.tap()
     }
 
-    private func replace(_ field: XCUIElement, with text: String) {
+    /// Replaces a field's text, then proves the text arrived: a case that fails
+    /// here should say "the URL did not reach the field", not "no answer
+    /// appeared" ten seconds later.
+    private func replace(_ field: XCUIElement, with text: String, where note: String) {
         field.tap()
-        if let current = field.value as? String, !current.isEmpty,
-           current != field.placeholderValue {
-            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count))
+        let current = field.value as? String ?? ""
+        if !current.isEmpty, current != field.placeholderValue {
+            // More deletes than characters: fields can report a truncated value
+            // after a failed clear, and over-typing deletes nothing.
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count + 8))
         }
-        field.typeText(text)
+        if !text.isEmpty { field.typeText(text) }
+        let landed = field.value as? String ?? ""
+        let expected = text.isEmpty ? (field.placeholderValue ?? "") : text
+        XCTAssertEqual(landed, expected, "\(note) did not reach the field")
     }
 
     private func ask(_ text: String) {
@@ -129,9 +137,9 @@ final class ZZStandardAIStreamTests: XCTestCase {
         for _ in 0..<4 where !clear.isHittable { app.swipeDown() }
         if clear.waitForExistence(timeout: 5) { clear.tap() }
         let address = app.textFields.element(boundBy: 0)
-        if address.waitForExistence(timeout: 5) { replace(address, with: "") }
+        if address.waitForExistence(timeout: 5) { replace(address, with: "", where: "the endpoint URL") }
         let model = app.textFields["模型名"].firstMatch
-        if model.waitForExistence(timeout: 5) { replace(model, with: "") }
+        if model.waitForExistence(timeout: 5) { replace(model, with: "", where: "the model name") }
     }
 
     private func staticText(containing text: String) -> XCUIElement {
