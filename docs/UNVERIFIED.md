@@ -13,6 +13,8 @@
 - 追加（2026-11-06，run `42228654474`，提交 `72c3719`）：播放器已按系统语言默认选字幕（`nativeSubtitlePreferredLanguages` 与 `preferredSubtitleLanguages` 都取自 `Locale.preferredLanguages`，去地区码，保留 zh-Hans/zh-Hant）。编译通过，但 HLS 用例仍失败：选英文后屏上仍无 cue。这说明默认语言不是根因。系统语言为中文时，`DEFAULT=YES` 落在中文轨，用户手动选英文仍走宿主叠层路径，而叠层没有画出 cue。根因未定，仍需 `$subtitleCues` 计数与引擎日志。
 - 根因已确认（2026-11-06，run `42252292384`，提交 `768aeb6` 的 `NK_VIDEO_DIAGNOSTIC=1`）：`route=remoteBypass cues=0 tracks=2 active=200000 native=0 default=0`。字幕轨确实在菜单里，选中项的 id 也变了；但引擎没有把 WebVTT cue 交给 `$subtitleCues`，宿主叠层自然无字可画。该路由下 AVPlayer 自己渲染 legible track，引擎文档说明程序化选中的非默认轨会被 AVKit 隐藏。**这是路由与选择方式不匹配，不是默认语言、不是夹具、也不是无障碍树看不到**。
   - 可选修法：在 `.remoteBypass` 上让想要的轨成为 `DEFAULT=YES`（`nativeSubtitlePreferredLanguages` + 选中 `nativeSubtitleDefaultOrdinal`，切换需 `reloadAtCurrentPosition`），或改走引擎自己取流、由叠层画 cue 的路由。两者都是播放器字幕控件改动，按约定仍待用户确认方案。
+  - 进一步排除（2026-11-07，run `42309608676`，提交 `11c322b`）：宿主自己挂第二个 `AVPlayerItemLegibleOutput` 也拿不到文字。原因是 `AVPlayerItem` 只有一个 legible output 槽位，引擎的 `RemoteHLSCueClockObserver` 已经占用（它要用它测 AE#616 的字幕超前量），所以第二个被忽略。同时确认 `AVPlayerLayer` 本身不渲染字幕（字幕由 `AVPlayerViewController` 或 legible output 消费方绘制）。
+  - 因此修复必须来自引擎：在 `.remoteBypass` 上把 AVPlayer **实际呈现的** cue 文本发布出来（例如 `RemoteHLSCueClockObserver` 顺带发布一个 `presentedSubtitleLines` 数组，或在 `subtitleCues` 里以文本 cue 形式给出），客户端可直接复用现有叠层。客户端已把默认字幕语言（`SubtitlePreference`）与"选择即默认、可恢复跟随系统"做完，缺的只有这一步。
 
 ## 标准 AI 的流式界面在 2026-11-06 转入已验证
 

@@ -35,17 +35,6 @@ final class VideoPlayerModel {
     /// can also show 13 seconds once it has been open a while), so the test reads
     /// the request itself.
     private(set) var startPosition: Double = 0
-    /// Captions the engine cannot draw: on `.remoteBypass` AVPlayer owns the
-    /// legible selection, its Layer only gets the picture, and AVPlayerLayer has
-    /// no caption renderer at all. So the host reads the cues it presents and
-    /// draws them, which is also what makes them readable to VoiceOver.
-    private(set) var nativeCues: [String] = []
-    /// The item whose legible output is attached, and the observer that feeds
-    /// `nativeCues`. Rebuilt only when the item changes: the engine re-emits the
-    /// player on every reload.
-    @ObservationIgnored private var cueItem: AVPlayerItem?
-    @ObservationIgnored private var cueOutput: AVPlayerItemLegibleOutput?
-    @ObservationIgnored private var cueSink: CueSink?
     /// Playback speed the user picked; the engine clamps it to what this route can do.
     private(set) var rate: Float = 1
     /// What the source offers. Empty is a fact worth showing, not an error.
@@ -104,7 +93,6 @@ final class VideoPlayerModel {
                 Task { @MainActor [weak self] in self?.position = value }
             }
             sync(made)
-            watchCues(made)
             onProgress?(made.currentTime, made.duration ?? 0)
         } catch {
             failure = error.localizedDescription
@@ -142,7 +130,6 @@ final class VideoPlayerModel {
         // Only the native route publishes an AVPlayer; on the software route the
         // engine decodes into its own layer, and PiP there needs
         // `softwarePiPSource` wiring that this screen does not have yet.
-        watchCues(engine)
         pip.update(player: engine.currentAVPlayer, software: engine.softwarePiPSource)
         // Same player, same layer, but the position moved: the window's scrubber
         // reads these snapshots.
@@ -191,35 +178,10 @@ final class VideoPlayerModel {
         UserDefaults.standard.set(preference.stored, forKey: VideoPlayerView.subtitlePreferenceKey)
     }
 
-    /// The captions AVPlayer presents, as plain lines. A second legible output is
-    /// legal next to the engine's own cue-clock observer, and it does not
-    /// suppress AVPlayer's rendering: on a receiver or an external display the
-    /// system still draws the same text.
-    private func watchCues(_ engine: AetherEngine) {
-        guard let item = engine.currentAVPlayer?.currentItem else { return }
-        guard item !== cueItem else { return }
-        cueItem = item
-        let output = AVPlayerItemLegibleOutput()
-        output.suppressesPlayerRendering = false
-        let sink = CueSink { [weak self] lines in
-            Task { @MainActor [weak self] in self?.nativeCues = lines }
-        }
-        output.setDelegate(sink, queue: .main)
-        item.add(output)
-        cueOutput = output
-        cueSink = sink
-        nativeCues = []
-    }
-
     func stop() {
         watch = nil
         clockWatch = nil
         positionWatch = nil
-        if let item = cueItem, let output = cueOutput { item.remove(output) }
-        cueItem = nil
-        cueOutput = nil
-        cueSink = nil
-        nativeCues = []
         engine?.stop()
         engine = nil
     }
@@ -459,15 +421,15 @@ struct VideoPlayerView: View {
         }
     }
 
-    /// What to draw: the engine's cues on the paths where it decodes, and on the
-    /// AVPlayer-owned route the text AVPlayer presented, since its layer draws
-    /// no captions.
+    /// What to draw. The engine publishes cues on the paths where it decodes;
+    /// on `.remoteBypass` this stays empty because AVPlayer owns the legible
+    /// selection and its layer draws no captions - see UNVERIFIED, where the
+    /// engine API that would fix it is written down.
     private var visibleSubtitleLines: [String] {
-        let cues = model.cues
+        model.cues
             .filter { $0.startTime <= model.time && model.time < $0.endTime }
             .compactMap(\.text)
             .filter { !$0.isEmpty }
-        return cues.isEmpty ? model.nativeCues : cues
     }
 
     private func danmakuLine(_ comment: DanmakuComment) -> some View {
@@ -786,28 +748,5 @@ extension PiPController: AVPictureInPictureSampleBufferPlaybackDelegate {
         // window does not need it to mean "the skip landed" — it asks for the new
         // time range next, which is refreshed from the engine.
         completionHandler()
-    }
-}
-
-/// Turns a presented `NSAttributedString` into the plain lines the overlay draws.
-///
-/// The delegate arrives on the queue it was installed with (main), and the
-/// output calls back for every cue batch AVPlayer renders - including the empty
-/// one that withdraws a caption, which is why an empty batch clears the lines
-/// rather than being ignored.
-final class CueSink: NSObject, AVPlayerItemLegibleOutputPushDelegate, @unchecked Sendable {
-    private let receive: ([String]) -> Void
-    init(_ receive: @escaping ([String]) -> Void) { self.receive = receive }
-
-    func legibleOutput(_ output: AVPlayerItemLegibleOutput,
-                       didOutputAttributedStrings strings: [NSAttributedString],
-                       nativeSampleBuffers: [Any],
-                       forItemTime itemTime: CMTime) {
-        var lines: [String] = []
-        for string in strings {
-            let text = string.string.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !text.isEmpty { lines.append(text) }
-        }
-        receive(lines)
     }
 }
