@@ -15,6 +15,17 @@
 
 
 
+
+## 许可证改为 LGPL-3.0-or-later 并跟 AetherEngine 的最新依赖（2026-11-06）
+
+此前仓库是 GPL-3.0。现在改为 **LGPL-3.0-or-later 附 App Store / DRM 例外**，条款与播放引擎 AetherEngine 用的同一套：
+
+- `LICENSE` 是本项目的 LGPL-3.0 全文加例外（允许通过 App Store / TestFlight 等平台分发静态链接的二进制，且不因平台的再签名、DRM 或禁止用户重链接而违约），LGPL 引用的 GPL-3.0 全文在 `COPYING`
+- 例外只覆盖二进制分发路径，不改变源码义务：对应源码仍在上游公开仓库，接收方保留 GPL-3.0 / LGPL-3.0 下的全部权利
+
+为什么需要例外：iOS 上 App 与 Core 是静态链接，App Store 的分发条款既不允许用户重链接，也限制再签名，而 LGPL 的 4—6 节恰恰要求这些。没有例外，LGPL 在 iOS 上自相矛盾。AetherEngine 已经用同一套条款解决了这件事，直接对齐。
+
+依赖同步到本轮最新：AetherEngine `7.53.1` → `7.58.0`（CI 全绿，含 482 项 kit 测试与整包构建），Core pin `49f2452` → `d9a1851`。
 ## 标准 AI 页面改成流式呈现（`b81b52d`，pin `49f2452`）
 
 通道打通之后，界面终于用上了它：
