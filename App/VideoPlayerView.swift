@@ -59,7 +59,10 @@ final class VideoPlayerModel {
             let made = try AetherEngine()
             engine = made
             try await made.load(url: url, startPosition: startPosition,
-                                options: LoadOptions(httpHeaders: play.requestHeaders))
+                                options: LoadOptions(
+                                    httpHeaders: play.requestHeaders,
+                                    nativeSubtitlePreferredLanguages: Self.systemSubtitleLanguages,
+                                    preferredSubtitleLanguages: Self.systemSubtitleLanguages))
             made.play()
             watch = made.objectWillChange.sink { [weak self] _ in
                 Task { @MainActor [weak self] in self?.sync(made) }
@@ -80,6 +83,25 @@ final class VideoPlayerModel {
         } catch {
             failure = error.localizedDescription
         }
+    }
+
+    /// The subtitle languages to prefer, from the system's own order: the engine
+    /// does not read Locale itself, and an empty list leaves subtitles off by
+    /// default. Regions are dropped because subtitle tags are ISO 639 languages.
+    /// Chinese is the one exception that needs its script kept (`zh-Hans`,
+    /// `zh-Hant`) so the right track wins; the engine rejects an opposite script
+    /// rather than demoting it.
+    static var systemSubtitleLanguages: [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for tag in Locale.preferredLanguages {
+            let parts = tag.split(separator: "-")
+            guard let language = parts.first.map(String.init), !language.isEmpty else { continue }
+            let value = (language == "zh" && parts.count > 1 && (parts[1] == "Hans" || parts[1] == "Hant"))
+                ? "zh-\(parts[1])" : language
+            if seen.insert(value).inserted { result.append(value) }
+        }
+        return result
     }
 
     /// AetherEngine publishes its own state; mirroring it into observed
