@@ -19,7 +19,7 @@ python3 UITests/Fixtures/standard-ai/serve.py --port 18796 --log /tmp/standard-a
 
 ## 流式的形状
 
-每段文字是一个独立事件,间隔 0.4 秒,依次是 `流式` / `第一段` / 一个空格 / `第二段🐾` —— 最后一段是代理对,UTF-8 与 UTF-16 边界算错就会露出来。三种协议各按自己的形状发:
+每段文字是一个独立事件,默认间隔 1.2 秒(`--interval` 可改,界面用例靠这段间隔看到「写了一半」),依次是 `流式` / `第一段` / 一个空格 / `第二段🐾` —— 最后一段是代理对,UTF-8 与 UTF-16 边界算错就会露出来。三种协议各按自己的形状发:
 
 | 协议 | 文字事件 | 完成标记 |
 |---|---|---|
@@ -33,7 +33,7 @@ python3 UITests/Fixtures/standard-ai/serve.py --port 18796 --log /tmp/standard-a
 
 `GET /events` 返回请求、等待、作答、开始流式、完成与断开记录,以服务端请求 ID 关联。记录的字段只含路径类别、鉴权是否匹配、是否携带 Cookie、发了几段等状态,不保存密钥或提示正文。携带 Cookie 的请求被拒绝。
 
-收到的请求正文另外写到 `<--log 的值>.requests.jsonl`,一行一个 JSON,供测试断言「App 实际发了什么」(`stream` 是否为 `true`、`model`、消息条数)。
+收到的请求正文可以用 `GET /requests` 读(界面用例走这条,不读主机文件),也写到 `<--log 的值>.requests.jsonl`,一行一个 JSON,供测试断言「App 实际发了什么」(`stream` 是否为 `true`、`model`、消息条数)。
 
 ```sh
 curl http://127.0.0.1:18796/events

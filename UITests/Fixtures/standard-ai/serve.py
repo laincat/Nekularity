@@ -4,7 +4,8 @@
 python3 UITests/Fixtures/standard-ai/serve.py --port 18796 --log /tmp/ai.jsonl
 API key: fixture-key; model: fixture-model.
 Roots: /v1, /slow/v1, /denied/v1, /unavailable/v1, /inband/v1, /cutoff/v1.
-GET /events returns sanitized observations. POST /release releases slow bodies.
+GET /events returns sanitized observations; GET /requests returns the accepted
+request bodies. POST /release releases slow bodies.
 A slow request sends headers, then waits for release or detects a peer close.
 A request says which it wants with `stream`: false gets the whole reply, true gets
 events. /cutoff sends two text events and then closes without the protocol's
@@ -39,6 +40,8 @@ class State:
         self.release = threading.Event()
         self.log = Path(log) if log else None
         self.requests = None
+        self.bodies = []
+        self.interval = 1.2
         if self.log:
             self.log.parent.mkdir(parents=True, exist_ok=True)
             self.requests = self.log.with_name(self.log.name + ".requests.jsonl")
@@ -52,10 +55,11 @@ class State:
                     stream.write(json.dumps(item, ensure_ascii=False) + "\n")
 
     def record_request(self, body):
-        """Appends one received body; called only when the fixture accepted it."""
-        if not self.requests:
-            return
+        """Keeps one received body; called only when the fixture accepted it."""
         with self.lock:
+            self.bodies.append(body)
+            if not self.requests:
+                return
             with self.requests.open("a", encoding="utf-8") as stream:
                 stream.write(json.dumps(body, ensure_ascii=False) + "\n")
 
@@ -171,7 +175,7 @@ class Handler(BaseHTTPRequestHandler):
             for piece in pieces:
                 self.text_event(protocol, piece)
                 sent += 1
-                time.sleep(0.4)  # slow enough that the app paints between pieces
+                time.sleep(self.server.state.interval)  # long enough to see the half answer
             if cutoff:
                 self.server.state.record("stream_cut", id=request_id, sent=sent)
                 return  # no completion marker: the body just ends
@@ -186,6 +190,13 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/events" and self.command == "GET":
             self.respond(200, self.server.state.snapshot())
+            return
+        if path == "/requests" and self.command == "GET":
+            # Over HTTP rather than only in a file: a UI test runs in the
+            # simulator and should not depend on reading the host's /tmp.
+            with self.server.state.lock:
+                bodies = list(self.server.state.bodies)
+            self.respond(200, bodies)
             return
         if path == "/release" and self.command == "POST":
             self.server.state.release.set()
@@ -264,8 +275,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=18796)
     parser.add_argument("--log")
+    parser.add_argument("--interval", type=float, default=1.2,
+                        help="seconds between stream pieces (default 1.2)")
     args = parser.parse_args()
     with Server(args.port, args.log) as server:
+        server.state.interval = args.interval
         print(json.dumps({"event": "ready", "host": "127.0.0.1", "port": server.server_port}), flush=True)
         try:
             server.serve_forever()

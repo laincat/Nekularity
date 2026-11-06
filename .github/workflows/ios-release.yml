@@ -126,6 +126,23 @@ jobs:
       # stays fast; a dispatched run asks for it when a page's behaviour is the
       # question rather than a compile error. The sources are not seeded, so the
       # cases that need them skip themselves and say so in the log.
+      - name: Start the standard-AI fixture
+        # A UI test runs inside the simulator and cannot start a host process,
+        # so the fixture the streaming cases need is started here. It listens on
+        # loopback only and needs nothing but python3.
+        if: inputs.ui_tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/nk-ai-stream"
+          python3 UITests/Fixtures/standard-ai/serve.py --port 18796             --log "$RUNNER_TEMP/nk-ai-stream/ai.jsonl" &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:18796/events >/dev/null; then
+              echo "standard-AI fixture is up"
+              exit 0
+            fi
+            sleep 0.5
+          done
+          echo "the standard-AI fixture did not come up" >&2
+          exit 1
       - name: Run the interface tests
         if: inputs.ui_tests
         run: |
@@ -160,6 +177,8 @@ jobs:
           path: |
             ${{ runner.temp }}/uitests-run.log
             ${{ runner.temp }}/uitests-run.xcresult
+            ${{ runner.temp }}/nk-ai-stream/ai.jsonl
+            ${{ runner.temp }}/nk-ai-stream/ai.jsonl.requests.jsonl
           if-no-files-found: warn
       - name: Package unsigned IPA
         run: |

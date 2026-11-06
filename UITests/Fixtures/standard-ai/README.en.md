@@ -19,7 +19,7 @@ The server listens on `127.0.0.1` only. The model name is `fixture-model` and th
 
 ## The shape of a stream
 
-Each piece of text is its own event, 0.4 s apart: `流式`, `第一段`, a space, `第二段🐾`. The last is a surrogate pair, so a wrong UTF-8/UTF-16 boundary shows up. Each protocol uses its own shape:
+Each piece of text is its own event, 1.2 s apart by default (`--interval` changes it; the interface test relies on the gap to see the half-written answer): `流式`, `第一段`, a space, `第二段🐾`. The last is a surrogate pair, so a wrong UTF-8/UTF-16 boundary shows up. Each protocol uses its own shape:
 
 | Protocol | Text event | Completion marker |
 |---|---|---|
@@ -33,7 +33,7 @@ Each piece of text is its own event, 0.4 s apart: `流式`, `第一段`, a space
 
 `GET /events` returns the request, waiting, answer, stream-start, completion and disconnect records, keyed by the server's request id. The fields are states only - which path class, whether authentication matched, whether a cookie was sent, how many pieces went out - never a key or a prompt. A request carrying a cookie is refused.
 
-The received request bodies are written separately to `<the --log value>.requests.jsonl`, one JSON per line, so a test can assert what the app actually sent (whether `stream` is `true`, the `model`, the number of messages).
+The received request bodies can be read with `GET /requests` (the interface test uses this and reads no host file) and are also written to `<the --log value>.requests.jsonl`, one JSON per line, so a test can assert what the app actually sent (whether `stream` is `true`, the `model`, the number of messages).
 
 ```sh
 curl http://127.0.0.1:18796/events
