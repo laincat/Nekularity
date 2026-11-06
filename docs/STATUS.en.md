@@ -13,6 +13,20 @@ English · [简体中文](STATUS.md)
 
 
 
+
+## The streaming path reaches the client (pin `49f2452`)
+
+After Core's `AIStreamOpen/Push/Done/Close`, the client connects its own transport to the parsing:
+
+- `CoreClient.streamAIRequest` sends on **this client's transport** (cookies, cancellation and certificates stay the client's), feeds body pieces to Core's decoder, and calls back with each delta in arrival order
+- `StandardAI.replyStreaming(..., onDelta:)` sends a body with `"stream": true`, and each protocol keeps its own shape (`messages`, `input`, `max_tokens`)
+- a stream that never declares completion is an error, so a truncated answer is never returned as a whole one
+
+Regressions: `aStreamingBodySaysStream` (all three protocols carry the flag), `aPlainBodyAsksForAWholeAnswer`, `aStreamingBodyKeepsItsProtocolShape`. CI `42135798559` is green with Kit at **480 tests / 83 suites / 0 failures**.
+
+**Both CI failures are recorded**: the framework was built from the old pin so `MobileAIStreamOpen` did not exist; then gomobile mapped `(int64, error)` to an out-parameter rather than the NSError-pointer form `(string, error)` uses, so handles became strings; the last one was `StandardAIAnswer`'s labels (`bodyText/finalURL` versus the actual `bodyBase64/finalUrl`).
+
+**Boundary**: `StandardAIView` has not switched to `replyStreaming` yet, so the screen still says 「整包返回 · 流式尚未接通」 - the path works but is not wired to the screen.
 ## 0.4.2 / build 24 is published and verified (2026-11-05)
 
 Tag `v0.4.2` points at `5b6bfd6`; the publish CI `42116548799` passed.

@@ -13,6 +13,20 @@
 
 
 
+
+## 标准接口的流式通道已接通（客户端，PIN `49f2452`）
+
+Core 的 `AIStreamOpen/Push/Done/Close` 之后，客户端把连接与解析接上：
+
+- `CoreClient.streamAIRequest`：用**本机传输**发请求（Cookie、取消、证书都是客户端的事），body 分片喂给 Core 的解码器，增量按到达顺序回调
+- `StandardAI.replyStreaming(..., onDelta:)`：请求体带 `"stream": true`，三种协议的报文形状不变（`messages` / `input` / `max_tokens` 各自保留）
+- 流没有声明「完成」就报错，不把被截断的答案当成完整答案返回
+
+回归：`aStreamingBodySaysStream`（三协议都带 stream 标志）、`aPlainBodyAsksForAWholeAnswer`、`aStreamingBodyKeepsItsProtocolShape`。CI `42135798559` 全绿，Kit **480 tests / 83 suites / 0 失败**。
+
+**两次 CI 失败都记下来**：先是框架按旧 pin 构建、找不到 `MobileAIStreamOpen`；再是 gomobile 把 `(int64, error)` 映射成 out 参数，与 `(string, error)` 的 NSError 指针形式不同，于是句柄改成字符串；最后一次是 `StandardAIAnswer` 的构造标签用了 `bodyText/finalURL` 而实际是 `bodyBase64/finalUrl`。
+
+**边界**：`StandardAIView` 尚未改用 `replyStreaming`，界面仍显示「整包返回 · 流式尚未接通」——通道通了但还没接到屏幕上。
 ## 0.4.2 / build 24 已发布并核对（2026-11-05）
 
 tag `v0.4.2` → `5b6bfd6`；发布 CI `42116548799` 全绿。
