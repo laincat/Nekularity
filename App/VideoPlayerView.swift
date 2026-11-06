@@ -35,6 +35,17 @@ final class VideoPlayerModel {
     /// can also show 13 seconds once it has been open a while), so the test reads
     /// the request itself.
     private(set) var startPosition: Double = 0
+    /// Captions the engine cannot draw: on `.remoteBypass` AVPlayer owns the
+    /// legible selection, its Layer only gets the picture, and AVPlayerLayer has
+    /// no caption renderer at all. So the host reads the cues it presents and
+    /// draws them, which is also what makes them readable to VoiceOver.
+    private(set) var nativeCues: [String] = []
+    /// The item whose legible output is attached, and the observer that feeds
+    /// `nativeCues`. Rebuilt only when the item changes: the engine re-emits the
+    /// player on every reload.
+    @ObservationIgnored private var cueItem: AVPlayerItem?
+    @ObservationIgnored private var cueOutput: AVPlayerItemLegibleOutput?
+    @ObservationIgnored private var cueSink: CueSink?
     /// Playback speed the user picked; the engine clamps it to what this route can do.
     private(set) var rate: Float = 1
     /// What the source offers. Empty is a fact worth showing, not an error.
@@ -75,8 +86,8 @@ final class VideoPlayerModel {
             try await made.load(url: url, startPosition: startPosition,
                                 options: LoadOptions(
                                     httpHeaders: play.requestHeaders,
-                                    nativeSubtitlePreferredLanguages: Self.systemSubtitleLanguages,
-                                    preferredSubtitleLanguages: Self.systemSubtitleLanguages))
+                                    nativeSubtitlePreferredLanguages: Self.subtitleLanguages,
+                                    preferredSubtitleLanguages: Self.subtitleLanguages))
             made.play()
             watch = made.objectWillChange.sink { [weak self] _ in
                 Task { @MainActor [weak self] in self?.sync(made) }
@@ -93,30 +104,23 @@ final class VideoPlayerModel {
                 Task { @MainActor [weak self] in self?.position = value }
             }
             sync(made)
+            watchCues(made)
             onProgress?(made.currentTime, made.duration ?? 0)
         } catch {
             failure = error.localizedDescription
         }
     }
 
-    /// The subtitle languages to prefer, from the system's own order: the engine
-    /// does not read Locale itself, and an empty list leaves subtitles off by
-    /// default. Regions are dropped because subtitle tags are ISO 639 languages.
-    /// Chinese is the one exception that needs its script kept (`zh-Hans`,
-    /// `zh-Hant`) so the right track wins; the engine rejects an opposite script
-    /// rather than demoting it.
-    static var systemSubtitleLanguages: [String] {
-        var seen = Set<String>()
-        var result: [String] = []
-        for tag in Locale.preferredLanguages {
-            let parts = tag.split(separator: "-")
-            guard let language = parts.first.map(String.init), !language.isEmpty else { continue }
-            let value = (language == "zh" && parts.count > 1 && (parts[1] == "Hans" || parts[1] == "Hant"))
-                ? "zh-\(parts[1])" : language
-            if seen.insert(value).inserted { result.append(value) }
-        }
-        return result
+    /// The languages a new episode starts with: the person's own choice from
+    /// this screen when there is one, else the system's order. `SubtitlePreference`
+    /// owns the rules (Chinese keeps its script) and is unit-tested in Kit.
+    static var subtitleLanguages: [String] {
+        SubtitlePreference(stored: UserDefaults.standard.string(forKey: Self.subtitlePreferenceKey) ?? "")
+            .languages()
     }
+
+    /// Stored per environment by `UserDefaults`, like the reader's layout.
+    static let subtitlePreferenceKey = "videoSubtitlePreference"
 
     /// AetherEngine publishes its own state; mirroring it into observed
     /// properties is what lets this screen redraw.
@@ -138,6 +142,7 @@ final class VideoPlayerModel {
         // Only the native route publishes an AVPlayer; on the software route the
         // engine decodes into its own layer, and PiP there needs
         // `softwarePiPSource` wiring that this screen does not have yet.
+        watchCues(engine)
         pip.update(player: engine.currentAVPlayer, software: engine.softwarePiPSource)
         // Same player, same layer, but the position moved: the window's scrubber
         // reads these snapshots.
@@ -162,21 +167,59 @@ final class VideoPlayerModel {
     var maxRate: Float { engine?.maxSupportedRate ?? 2 }
 
     /// nil clears the subtitle, which is a choice and not a failure.
+    ///
+    /// The choice becomes the default for the next episode: someone who reads
+    /// English subtitles should not re-pick them on every title, and turning
+    /// them off once should stick too.
     func selectSubtitle(_ id: Int?) {
         guard let engine else { return }
         if let id {
             engine.selectSubtitleTrack(index: id)
             activeSubtitleID = id
+            if let tag = subtitleTracks.first(where: { $0.id == id })?.language,
+               let normalised = SubtitlePreference.normalise(tag) {
+                remember(.language(normalised))
+            }
         } else {
             engine.clearSubtitle()
             activeSubtitleID = nil
+            remember(.off)
         }
+    }
+
+    private func remember(_ preference: SubtitlePreference) {
+        UserDefaults.standard.set(preference.stored, forKey: VideoPlayerView.subtitlePreferenceKey)
+    }
+
+    /// The captions AVPlayer presents, as plain lines. A second legible output is
+    /// legal next to the engine's own cue-clock observer, and it does not
+    /// suppress AVPlayer's rendering: on a receiver or an external display the
+    /// system still draws the same text.
+    private func watchCues(_ engine: AetherEngine) {
+        guard let item = engine.currentAVPlayer?.currentItem else { return }
+        guard item !== cueItem else { return }
+        cueItem = item
+        let output = AVPlayerItemLegibleOutput()
+        output.suppressesPlayerRendering = false
+        let sink = CueSink { [weak self] lines in
+            Task { @MainActor [weak self] in self?.nativeCues = lines }
+        }
+        output.setDelegate(sink, queue: .main)
+        item.add(output)
+        cueOutput = output
+        cueSink = sink
+        nativeCues = []
     }
 
     func stop() {
         watch = nil
         clockWatch = nil
         positionWatch = nil
+        if let item = cueItem, let output = cueOutput { item.remove(output) }
+        cueItem = nil
+        cueOutput = nil
+        cueSink = nil
+        nativeCues = []
         engine?.stop()
         engine = nil
     }
@@ -389,10 +432,14 @@ struct VideoPlayerView: View {
     /// it to the path that already does it.
     @ViewBuilder
     private var subtitleLayer: some View {
-        let lines = model.cues
+        // The engine's own cues on the paths where it decodes; on the
+        // AVPlayer-owned route these are empty and `nativeCues` carries the
+        // text AVPlayer presented instead.
+        var lines = model.cues
             .filter { $0.startTime <= model.time && model.time < $0.endTime }
             .compactMap(\.text)
             .filter { !$0.isEmpty }
+        if lines.isEmpty { lines = model.nativeCues }
         if !lines.isEmpty {
             VStack {
                 Spacer()
@@ -713,5 +760,28 @@ extension PiPController: AVPictureInPictureSampleBufferPlaybackDelegate {
         // window does not need it to mean "the skip landed" — it asks for the new
         // time range next, which is refreshed from the engine.
         completionHandler()
+    }
+}
+
+/// Turns a presented `NSAttributedString` into the plain lines the overlay draws.
+///
+/// The delegate arrives on the queue it was installed with (main), and the
+/// output calls back for every cue batch AVPlayer renders - including the empty
+/// one that withdraws a caption, which is why an empty batch clears the lines
+/// rather than being ignored.
+final class CueSink: NSObject, AVPlayerItemLegibleOutputPushDelegate, @unchecked Sendable {
+    private let receive: ([String]) -> Void
+    init(_ receive: @escaping ([String]) -> Void) { self.receive = receive }
+
+    func legibleOutput(_ output: AVPlayerItemLegibleOutput,
+                       didOutputAttributedStrings strings: [NSAttributedString],
+                       nativeSampleBuffers: [Any],
+                       forItemTime itemTime: CMTime) {
+        var lines: [String] = []
+        for string in strings {
+            let text = string.string.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty { lines.append(text) }
+        }
+        receive(lines)
     }
 }
