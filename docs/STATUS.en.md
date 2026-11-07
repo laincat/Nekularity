@@ -19,6 +19,25 @@ English · [简体中文](STATUS.md)
 
 
 
+## Captions are drawn by AVPlayer, so PiP/AirPlay keep them (2026-11-07)
+
+The previous build set `AVPlayerItemLegibleOutput.suppressesPlayerRendering = true`, making the host overlay the only drawer. The full suite then read the same line twice in the OCR (the overlay was already de-duplicated, so the other copy came from AVPlayer compositing captions into its layer). **That means the earlier claim that an `AVPlayerLayer` draws no captions was wrong**: AVPlayer does draw them.
+
+It is now `suppressesPlayerRendering = false`, so **AVPlayer owns the picture** and the host only keeps a transparent SwiftUI Text for screen readers (no second copy). That gives:
+
+- captions in PiP, AirPlay and an external display - those surfaces only ever receive the `AVPlayerLayer`, never the host's view tree;
+- the words appearing exactly once. The case now asserts `occurrences(of: "subtitle rendering proof") == 1` over the OCR text.
+
+Run `42397054228`: both HLS cases PASS (156.2 s / 111.1 s) and the OCR reads a single `Subtitle rendering proof` line.
+
+## A rejected standard AI stream is decided at the response head (2026-11-07)
+
+`streamAIRequest` handed the status code to its caller only after the whole body had arrived. A provider that answers `401` and then holds the connection open therefore left the client waiting for a socket timeout before it knew the request had been refused.
+
+The changes: `URLSessionTransport.sendStreaming` gained `stopAfterHead`; `TaskState.received` returns a `HeadDecision` (`read` / `stop`), and on `stop` the body is never read and the following completion is not a failure; `CoreClient.streamAIRequest` gained `onHead`; `StandardAI.replyStreaming` reports `接口返回 HTTP <status>` as soon as a non-2xx head arrives.
+
+Regression `Tests/NekularityKitTests/StandardAIStreamRejectionTests.swift`: `aRejectedStreamIsReportedWithoutWaitingForTheBody` asserts the 401 is reported in 4 ms with 0 body bytes and the transfer stopped; `anAcceptedStreamKeepsReadingTheBody` asserts a 200 is not treated as a rejection. Run `42401875446`: the kit passes **492 tests across 85 suites**.
+
 ## 0.4.3 / build 25 released and verified (2026-11-07)
 
 The complete interface suite on final HEAD `f486376` is **32 passed / 0 failed / 2 skipped** (run `42386284795`; 490 Kit tests across 84 suites passed), and `v0.4.3` was released from it (`87db928`, CI run `42392553106`, `success`):

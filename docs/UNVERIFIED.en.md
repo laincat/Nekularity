@@ -1,8 +1,10 @@
 English · [简体中文](UNVERIFIED.md)
 
-## `.remoteBypass` caption boundary for PiP / AirPlay (2026-11-07)
+## `.remoteBypass` captions: the PiP / AirPlay behaviour is still unverified (2026-11-07)
 
-The host attaches an `AVPlayerItemLegibleOutput` on `.remoteBypass` with `suppressesPlayerRendering=true`, so the SwiftUI overlay draws the caption (and exposes it as an accessibility element). The engine's `docs/formats.md` explains that PiP / AirPlay / external displays composite only `AVPlayerLayer` content and never the host's view tree, so those surfaces show **no caption** while a suppressing output is attached. Covering them needs the engine to serve captions as native `SUBTITLES` renditions (`prepareNativeSubtitles` / #316 injection), or a dynamic switch of `suppressesPlayerRendering` when entering PiP; neither is verified on a device and both are follow-up work. Full-screen captions are verified on the CI simulator by pixel OCR and by the accessibility text.
+Captions are now drawn by **AVPlayer** (`suppressesPlayerRendering=false`), and the host only keeps a transparent accessibility text. So PiP / AirPlay / an external display should carry captions as well, because those surfaces composite only the `AVPlayerLayer` content and the captions are pixels on that layer.
+
+**What is still unverified**: the sentence above is a conclusion drawn from the documentation and from the pixel behaviour. There is no device here, and PiP, AirPlay and an external display have **never actually been run**. The CI simulator evidence covers the full-screen picture only: the OCR reads one `Subtitle rendering proof` line (run `42397054228`), and a new assertion requires the caption to appear **exactly once**. Whether it still appears once on a device, whether the PiP window carries a caption and whether the AirPlay receiver shows one all need a device or an external display.
 
 ## HLS dual subtitles: no cue text reaches the client, and the case's assertion and timing do not hold either (read-only diagnosis, 2026-11-07)
 
@@ -27,7 +29,7 @@ Evidence: `E:/Temp/nk-diag/engine.log` (44 lines, with `AE#154 legible group sur
 
 Both cases in `UITests/ZZStandardAIStreamTests.swift` pass on CI's iPhone 17 Pro / iOS 26.5 simulator (run `42193319262`): the 「正在写…」 row and the growing text while the answer is written, the 「流式」 label and the four pieces when it finishes, `stream:true` in exactly one request; and on a cut stream, `源返回错误:AI stream ended before completion` with the half answer not kept. The evidence and the three fixes the cases themselves needed are in [STATUS](STATUS.md).
 
-Still unverified: a real device, a real vendor's incremental behaviour, an iOS 26 runtime, and whether a provider sends response headers before any body byte.
+Still unverified: a real device, a real vendor's incremental behaviour and an iOS 26 runtime. Whether a provider sends response headers before any body byte was added on 2026-11-07: the client now decides the status as soon as a rejected head arrives and stops reading the body (see [STATUS](STATUS.md)).
 
 ## Playback since AetherEngine 7.58.0: the picture advancing is verified, the rest is not (updated 2026-11-06)
 

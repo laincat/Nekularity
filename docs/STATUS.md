@@ -19,6 +19,25 @@
 
 
 
+## 字幕改由 AVPlayer 绘制，PiP/AirPlay 不再没有字幕（2026-11-07）
+
+上一版把 `AVPlayerItemLegibleOutput` 设为 `suppressesPlayerRendering = true`，让宿主叠层成为唯一绘制者。完整套件因此在 OCR 里读到两行相同文字（叠层已按文本去重，另一行来自 AVPlayer 自己把字幕合成进图层）。**这说明此前"AVPlayerLayer 不画字幕"的判断是错的**：AVPlayer 本来就会把字幕画进图层。
+
+因此改成 `suppressesPlayerRendering = false`，由 **AVPlayer 负责视觉绘制**，宿主只保留一份透明的 SwiftUI Text 供读屏（不再画第二份）。这样：
+
+- 字幕在 PiP、AirPlay 和外接显示器里也在——那些场景只拿得到 `AVPlayerLayer`，拿不到宿主的视图树；
+- 画面里字幕只出现一次。用例新增 OCR 计数断言 `occurrences(of: "subtitle rendering proof") == 1`。
+
+run `42397054228`：两条 HLS 用例 PASS（156.2 s / 111.1 s），OCR 只有一行 `Subtitle rendering proof`。
+
+## 标准 AI 流式：被拒的请求在响应头就判定（2026-11-07）
+
+`streamAIRequest` 原先只在整段正文结束后才把状态码交给调用方。服务端回 `401` 却把连接挂着不结束时，客户端会一直等到 socket 超时才知道被拒。
+
+改动：`URLSessionTransport.sendStreaming` 新增 `stopAfterHead`，`TaskState.received` 返回 `HeadDecision`（`read` / `stop`），`stop` 时不再读正文且随后的完成不是失败；`CoreClient.streamAIRequest` 新增 `onHead`；`StandardAI.replyStreaming` 拿到非 2xx 响应头就立刻报 `接口返回 HTTP <status>`。
+
+回归 `Tests/NekularityKitTests/StandardAIStreamRejectionTests.swift`：`aRejectedStreamIsReportedWithoutWaitingForTheBody` 断言 401 在 4 毫秒内报出、正文 0 字节、传输被停止；`anAcceptedStreamKeepsReadingTheBody` 断言 200 不会被当成拒绝。run `42401875446`：Kit **492 tests / 85 suites 通过**。
+
 ## 0.4.3 / build 25 已发布并核对（2026-11-07）
 
 最终 HEAD `f486376` 的完整界面套件 **32 通过 / 0 失败 / 2 跳过**（run `42386284795`，Kit 490 tests / 84 suites 通过），按此发布 `v0.4.3`（`87db928`，CI run `42392553106`，`success`）：

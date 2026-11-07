@@ -1,8 +1,10 @@
 [English](UNVERIFIED.en.md) · 简体中文
 
-## `.remoteBypass` 字幕的 PiP / AirPlay 边界（2026-11-07）
+## `.remoteBypass` 字幕：PiP / AirPlay 的真机行为仍未验证（2026-11-07）
 
-宿主在 `.remoteBypass` 上挂 `AVPlayerItemLegibleOutput` 并设 `suppressesPlayerRendering=true`，由 SwiftUI 叠层画字幕（也是无障碍元素）。引擎文档 `docs/formats.md` 说明 PiP / AirPlay / 外接显示器只合成 `AVPlayerLayer` 内容、不合成宿主视图树，因此这些场景在 suppressing output 挂载期间**没有字幕**。要覆盖它们需要让引擎自己把字幕做成原生 `SUBTITLES` rendition（`prepareNativeSubtitles` / #316 注入），或按是否在 PiP 动态切换 `suppressesPlayerRendering`；两者都未在真机验证，属于后续项。当前全屏字幕在 CI 模拟器上已用像素 OCR + 无障碍文字双重验证。
+字幕现在由 **AVPlayer 绘制**（`suppressesPlayerRendering=false`），宿主只保留透明的无障碍文本。因此 PiP / AirPlay / 外接显示器按引擎文档 `docs/formats.md` 的说明也应带有字幕（那些场景只合成 `AVPlayerLayer` 的内容，而字幕正是画在图层上的像素）。
+
+**仍未验证的部分**：以上只是从文档与像素行为推出的结论，本地没有真机，PiP、AirPlay 与外接显示器**一次都没有真跑过**。CI 模拟器上的证据只有全屏画面：OCR 读到一行 `Subtitle rendering proof`（run `42397054228`），且新增断言要求字幕在画面里**只出现一次**。真机上是否仍只出现一次、PiP 小窗里是否有字幕、AirPlay 接收端是否有字幕，都需要真机或外接显示器。
 
 ## HLS 双字幕：cue 没交给客户端，用例的判据与时序也都不成立（只读诊断，2026-11-07）
 
@@ -27,7 +29,7 @@
 
 `UITests/ZZStandardAIStreamTests.swift` 两条用例在 CI 的 iPhone 17 Pro / iOS 26.5 模拟器上通过（run `42193319262`）：流式书写中的「正在写…」与增量文字、完成后的「流式」标注与四段文字、请求体 `stream:true` 且只有一次请求；断流时报 `源返回错误:AI stream ended before completion` 且半截答案不被保留。证据与三处用例自身的修复见 [STATUS](STATUS.md)。
 
-仍未验证：真机、真实供应商的增量行为、iOS 26 运行时，以及服务端在零正文时是否提前交响应头。
+仍未验证：真机、真实供应商的增量行为、iOS 26 运行时。服务端在零正文时是否提前交响应头，这一项已在 2026-11-07 补上：客户端现在会在被拒的响应头到达时立刻判定状态并停止读正文（见 [STATUS](STATUS.md)）。
 
 ## AetherEngine 7.58.0 升级后的播放：画面推进已验，其余仍待（2026-11-06 更新）
 
