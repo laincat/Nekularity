@@ -800,9 +800,12 @@ final class CueSink: NSObject, AVPlayerItemLegibleOutputPushDelegate, @unchecked
                        nativeSampleBuffers: [Any],
                        forItemTime itemTime: CMTime) {
         var lines: [String] = []
+        var seen = Set<String>()
         for string in strings {
             let text = string.string.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !text.isEmpty { lines.append(text) }
+            // One cue can arrive as several attributed strings (style runs),
+            // which used to draw the same line twice.
+            if !text.isEmpty, seen.insert(text).inserted { lines.append(text) }
         }
         receive(lines)
     }

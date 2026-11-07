@@ -48,7 +48,7 @@ class VideoProbe extends VideoSource {
             format: "hls",
             headers: {Referer: "http://127.0.0.1:18731/"},
         } : videoId === "hls" ? {
-            url: "http://127.0.0.1:18731/hls/master.m3u8",
+            url: "http://127.0.0.1:18731/hls/resume/master30.m3u8",
             format: "hls",
             headers: {Referer: "http://127.0.0.1:18731/"},
         } : ({

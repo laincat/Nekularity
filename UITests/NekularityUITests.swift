@@ -1266,9 +1266,10 @@ final class NekularityUITests: XCTestCase {
 
     /// HLS with subtitles, on the engine this build pins.
     ///
-    /// The fixture is a master playlist with two WebVTT groups (中文 default,
+    /// The fixture is a 30 s master playlist with two WebVTT groups (中文 default,
     /// English alternate) over fMP4 byte ranges, every request refused without the
-    /// source's `Referer`. The case asks four things in turn: the picture advances,
+    /// source's `Referer`. The WebVTT segments carry `X-TIMESTAMP-MAP`, without
+    /// which AVFoundation never puts a cue on the media timeline. The case asks four things in turn: the picture advances,
     /// the English track can be chosen, its cue is actually drawn (the overlay's
     /// text, not the track name in a menu), and turning subtitles off removes it.
     func testHLSPlaysAndSwitchesSubtitles() throws {
@@ -1342,7 +1343,7 @@ final class NekularityUITests: XCTestCase {
         if let paused, let second {
             XCTAssertGreaterThan(second, paused,
                                  "the picture did not advance while playing: \(paused)s then \(second)s")
-            XCTAssertLessThan(second, 10, "the clip ended before it could be paused; no cue is due at the end")
+            XCTAssertLessThan(second, 30, "the clip ended before it could be paused; no cue is due at the end")
         }
 
         showTransport()
@@ -1355,6 +1356,10 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(english.waitForExistence(timeout: 10), "the menu offers no English track")
         english.tap()
 
+        // A cue only reaches the legible output while the picture is moving;
+        // the case pauses before opening the menu, so resume here.
+        element(app, "video.playPause").tap()
+        Thread.sleep(forTimeInterval: 2)
         showTransport()
         let diagnostic = app.descendants(matching: .any)
             .matching(identifier: "video.diagnostic").firstMatch
