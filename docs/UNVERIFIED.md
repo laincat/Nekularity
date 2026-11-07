@@ -1,20 +1,23 @@
 [English](UNVERIFIED.en.md) · 简体中文
 
-## HLS 双字幕在界面上未绘出（CI 发现，待查，2026-11-06）
+## HLS 双字幕：cue 没交给客户端，用例的判据与时序也都不成立（只读诊断，2026-11-07）
 
-用例 `testHLSPlaysAndSwitchesSubtitles`（HLS 夹具，中文默认、英文备选）在 CI run `42218134206`（AetherEngine 7.58.0，iPhone 17 Pro / iOS 26.5 模拟器）上**失败**，这是真实发现，不是测试误差：
+这一轮只读源码、日志与截图，没有改产品代码。结论分三层，前两层是代码事实，第三层是用例事实。
 
-- 通过的部分：`/hls/master.m3u8` 与 `sub-en.vtt` 均 200，画面时钟 4 s → 7 s 推进，字幕菜单可打开、英文项可选。
-- 失败的部分：选择英文后，屏幕上没有 `Subtitle rendering proof` 文字。截图（暂停在 0:07，字幕应在 0–10 s 生效）只有画面与控件，没有字幕；无障碍树里的文字也不含 cue。
-- 引擎文档（`docs/api.md`，`nativeSubtitleDefaultOrdinal`）说明：原生通路上程序化选择的 WebVTT 轨只有 `DEFAULT=YES` 那条才会渲染。当前 App 用 `selectSubtitleTrack(index:)`，走的是宿主叠层路径，cue 是否进入 `$subtitleCues` 尚未证实。
-- 未知：是引擎没把 WebVTT cue 交给 `subtitleCues`，还是 App 叠层没画，还是菜单选中的并非英文轨。需要引擎日志或 `$subtitleCues` 的计数来区分。
+1. **`.remoteBypass` 上引擎不发布 cue 文本**。`AetherEngine+Subtitles.swift` 的 `selectRemoteHLSSubtitleTrack(id:)`（2980–2997 行）选轨后立刻 `subtitleCues = []`，只驱动 AVMediaSelection，注释写明「AVPlayer renders the cues itself; there is no overlay pipeline」。所以客户端 `model.cues` 恒为 0——诊断行的 `cues=0` 是这个原因，不是数据丢了。全仓只有 `RemoteHLSCueClockObserver` 会读 AVPlayer 的 legible 文本，而它由 `attachRemoteHLSCueClock`（`AetherEngine+Loading.swift:651`）按 guard 创建：需要 `remoteHLSSubtitleProxy?.provider`，也就是 #316 注入的外部 sidecar。本夹具没有 `externalSubtitles`，日志里也没有 `AE#616` 行，说明它**根本没有挂载**。
+   - **更正上一版记录**：此前写的「`AVPlayerItem` 只有一个 legible output 槽位、已被 `RemoteHLSCueClockObserver` 占用」不成立。本夹具下引擎没有挂任何 legible output；宿主自己挂的那个没收到文字，原因不在这里，见第 3 条。
+2. **AVPlayer 的字幕是画进 `AVPlayerLayer` 的像素，不是无障碍元素**。播放器承载是 `AetherPlayerSurface` → `AetherPlayerView`，原生通路挂 `AVPlayerLayer`（`View/AetherPlayerView.swift` 开头的说明）。引擎文档 `docs/formats.md` 的「Native subtitle renditions」段写明：PiP / AirPlay / 外接显示器只合成 `AVPlayerLayer` 的内容、宿主叠层不可见，所以引擎才把每条文字字幕做成真正的 `SUBTITLES` rendition——反过来说明，rendition 的字幕正是在 `AVPlayerLayer` 上呈现。**因此 `app.staticTexts["Subtitle rendering proof"]` 在这条路由上永远匹配不到，哪怕画面里字很清楚。**
+3. **每次失败都发生在暂停之后，且片段已经走到 0:10**。run `42309608676` 的界面活动日志：`t=68.28 / 70.42 / 73.13` 三次点 `video.playPause`（时钟 2→3→6），`t=77.49` 打开字幕菜单，`t=80.42` 选英文——**选轨时播放器是暂停的**。之后用例等 20 秒找 cue，失败截图显示时钟 `0:10`，画面停在片尾。夹具唯一的 cue 是 `00:00:00.000 --> 00:00:10.000`，区间 `[0,10)`，片尾本来就没有 cue。历史 Mac 验收的文字截图是「**播放中**选择」，与此不同。
 
-处理：用例保持失败，不改为跳过。修复需要改播放器字幕路由（换 `nativeSubtitlePreferredLanguages` 或改选择方式），按项目约定属于播放器控件改动，**待用户确认方案后再做**。
-- 追加（2026-11-06，run `42228654474`，提交 `72c3719`）：播放器已按系统语言默认选字幕（`nativeSubtitlePreferredLanguages` 与 `preferredSubtitleLanguages` 都取自 `Locale.preferredLanguages`，去地区码，保留 zh-Hans/zh-Hant）。编译通过，但 HLS 用例仍失败：选英文后屏上仍无 cue。这说明默认语言不是根因。系统语言为中文时，`DEFAULT=YES` 落在中文轨，用户手动选英文仍走宿主叠层路径，而叠层没有画出 cue。根因未定，仍需 `$subtitleCues` 计数与引擎日志。
-- 根因已确认（2026-11-06，run `42252292384`，提交 `768aeb6` 的 `NK_VIDEO_DIAGNOSTIC=1`）：`route=remoteBypass cues=0 tracks=2 active=200000 native=0 default=0`。字幕轨确实在菜单里，选中项的 id 也变了；但引擎没有把 WebVTT cue 交给 `$subtitleCues`，宿主叠层自然无字可画。该路由下 AVPlayer 自己渲染 legible track，引擎文档说明程序化选中的非默认轨会被 AVKit 隐藏。**这是路由与选择方式不匹配，不是默认语言、不是夹具、也不是无障碍树看不到**。
-  - 可选修法：在 `.remoteBypass` 上让想要的轨成为 `DEFAULT=YES`（`nativeSubtitlePreferredLanguages` + 选中 `nativeSubtitleDefaultOrdinal`，切换需 `reloadAtCurrentPosition`），或改走引擎自己取流、由叠层画 cue 的路由。两者都是播放器字幕控件改动，按约定仍待用户确认方案。
-  - 进一步排除（2026-11-07，run `42309608676`，提交 `11c322b`）：宿主自己挂第二个 `AVPlayerItemLegibleOutput` 也拿不到文字。原因是 `AVPlayerItem` 只有一个 legible output 槽位，引擎的 `RemoteHLSCueClockObserver` 已经占用（它要用它测 AE#616 的字幕超前量），所以第二个被忽略。同时确认 `AVPlayerLayer` 本身不渲染字幕（字幕由 `AVPlayerViewController` 或 legible output 消费方绘制）。
-  - 因此修复必须来自引擎：在 `.remoteBypass` 上把 AVPlayer **实际呈现的** cue 文本发布出来（例如 `RemoteHLSCueClockObserver` 顺带发布一个 `presentedSubtitleLines` 数组，或在 `subtitleCues` 里以文本 cue 形式给出），客户端可直接复用现有叠层。客户端已把默认字幕语言（`SubtitlePreference`）与"选择即默认、可恢复跟随系统"做完，缺的只有这一步。
+**根因（按「客户端拿不到 cue」定义）**：`.remoteBypass` 上没有任何一条通路把 cue 文本交给宿主——引擎主动清空 `subtitleCues`，`RemoteHLSCueClockObserver` 只在有注入 sidecar 时存在且只算时间偏移、不发布文本；AVPlayer 则把字幕画成像素，不进无障碍树。所以「cue 丢失」是**路由设计 + 用例判据 + 用例时序**叠加，不是某处丢了数据。
+
+**下一步（三选一，都未实施，待确认）**：
+
+- **A. 引擎加接口**：在 `.remoteBypass` 上把 AVPlayer 实际呈现的 cue 文本发布出来。`RemoteHLSCueClockObserver` 的 delegate 已经拿到 `strings`，只是只喂给了 `RemoteHLSCueClock`；增加一个 `presentedSubtitleLines`（它是 non-suppressing，不影响系统渲染）即可，客户端叠层直接复用，无障碍与断言都成立。
+- **B. 用例改判据与素材**：改用截图/像素或 OCR 判断字幕是否呈现，选轨放在播放中，并换 30 秒带字幕的夹具，避免片尾。不改产品。
+- **C. 换播放承载**：把 `.remoteBypass` 的字幕交给 `AVPlayerViewController`，或自建 suppressing legible output（后者会牺牲 PiP / AirPlay 的字幕）。
+
+证据：`E:/Temp/nk-diag/engine.log`（44 行，含 `AE#154 legible group surfaced 2`、`legible select ordinal=0 (英语)`，无 `AE#616`）、`E:/Temp/nk-diag/uitests-run.log`（上列时间点）、`E:/Temp/nk-diag/shot1.png`（时钟 0:10、无字幕）；交付归档 `E:/Code/deliveries/2026-11-07-hls-subtitle-diagnosis/`。
 
 ## 标准 AI 的流式界面在 2026-11-06 转入已验证
 
