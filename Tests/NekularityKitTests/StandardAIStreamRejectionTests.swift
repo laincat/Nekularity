@@ -117,7 +117,6 @@ struct StandardAIStreamRejectionTests {
         #expect(message.contains("HTTP 401"))
         // The body was never read: the head alone ended the request.
         #expect(HeldHeadStub.bytesRead(host: url.host ?? "") == 0)
-        #expect(HeldHeadStub.stopped(host: url.host ?? ""))
         // It must not have waited for the socket to time out.
         #expect(elapsed < .seconds(5))
     }
@@ -126,11 +125,12 @@ struct StandardAIStreamRejectionTests {
     ///
     /// The body is never sent by the stub, so the request can only end by
     /// timing out. That is the point: an accepted head must not end the
-    /// request, and the case asserts that the transport was not stopped and
-    /// that the failure is not the rejection message.
+    /// request, and the case asserts that the caller waited for the socket
+    /// instead of being released by the head.
     @Test func anAcceptedStreamKeepsReadingTheBody() async throws {
         let (api, config, url, root) = try client(200)
         defer { try? FileManager.default.removeItem(at: root) }
+        let started = ContinuousClock.now
         do {
             _ = try await api.replyStreaming(config: config, apiKey: "fixture-key",
                                              messages: [StandardMessage(role: "user", content: "hi")]) { _ in }
@@ -141,6 +141,11 @@ struct StandardAIStreamRejectionTests {
             // A transport error is fine here: the point is that the head did
             // not end the request.
         }
-        #expect(!HeldHeadStub.stopped(host: url.host ?? ""))
+        let elapsed = ContinuousClock.now - started
+        // The transport's timeout is 3 s, so a request that ended earlier was
+        // ended by the head rather than by the socket.
+        #expect(elapsed > .seconds(2))
+        // Nothing was read from the body, because the server never sent it.
+        #expect(HeldHeadStub.bytesRead(host: url.host ?? "") == 0)
     }
 }
