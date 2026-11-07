@@ -21,6 +21,11 @@
 #   NK_SCHEME        default Nekularity
 #   NK_DD            derivedDataPath (default: xcodebuild's own)
 #   NK_XCODE_FLAGS   extra xcodebuild flags, e.g. -disableAutomaticPackageResolution
+#   NK_SERVE_ONLY    1 = stop after the pre-flight and leave both servers up
+#                    (CI runs its own xcodebuild afterwards); the script prints
+#                    "theme-fixture: ready" when the CA is trusted and both
+#                    ports answer. NK_PID_FILE names where to write the server
+#                    pid so the caller can stop exactly what it started.
 set -eu
 
 device=${1:-booted}
@@ -150,6 +155,18 @@ port_open 18791 && port_open 18792 || die "the fixtures did not take both ports"
 
 say "trusting the CA in simulator $device only"
 xcrun simctl keychain "$device" add-root-cert "$ca" || die "simctl could not add the CA"
+
+# A CI job needs the servers up while it runs its OWN xcodebuild invocation.
+# Leave the background server alive, drop the EXIT trap that would kill it, and
+# say when the trust store and both listeners are ready.
+if [ "${NK_SERVE_ONLY:-}" = "1" ]; then
+	[ -n "${NK_PID_FILE:-}" ] && printf '%s
+' "$server" >"$NK_PID_FILE"
+	trap - EXIT INT TERM
+	say "ready: CA trusted in $device; https 18791, http 18792; server pid $server"
+	say "certificates kept in: $work"
+	exit 0
+fi
 
 say "pre-flight: https://127.0.0.1:18791/valid.json through $work/ca.pem"
 if ! body=$(curl -sS --cacert "$ca" https://127.0.0.1:18791/valid.json); then
