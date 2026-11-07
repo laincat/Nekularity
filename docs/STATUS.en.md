@@ -19,6 +19,14 @@ English · [简体中文](STATUS.md)
 
 
 
+## The default subtitle follows the system language; HLS captions need an engine interface (second round, 2026-11-07)
+
+**What was built**: `SubtitlePreference` (`Sources/NekularityKit/Media/SubtitlePreference.swift`) owns three rules - a language chosen in the player comes first, otherwise the system language order, and `关闭` is a choice that is remembered too. Chinese keeps its script (`zh-Hans`/`zh-Hant`), inferred from the region; the two scripts do not match each other, and an unscripted `zh` is accepted for either. Nine Kit tests (`SubtitlePreferenceTests`). The player fills `nativeSubtitlePreferredLanguages` and `preferredSubtitleLanguages` from that list at load; picking a language or 关闭 writes the choice back, and a new "跟随系统语言" entry gives the default back to the system - the HLS case uses it to restore state.
+
+**HLS captions still do not draw, but the cause is narrowed to one place**: the diagnostic line on run `42309608676` reads `route=remoteBypass cues=0 tracks=2 active=200000 native=0 default=0`, and a second `AVPlayerItemLegibleOutput` attached by the host receives no text either - an `AVPlayerItem` has a single legible-output slot and the engine's `RemoteHLSCueClockObserver` holds it; `AVPlayerLayer` renders no captions at all. The fix therefore has to come from the engine publishing the cue text it actually presents (the interface requirement is written down in UNVERIFIED), which the client's overlay can draw unchanged. The case stays failing rather than being skipped.
+
+**Regression**: CI run `42316207841` (same commit) resume **PASS in 107.9 s** (`saved 8 s → requested start 10.0 s → reopened 15 s`); run `42313063540` video advancing **PASS in 52.8 s**, where the resume case skipped because the source wait was 10 s (the seed and source were present); the wait is now 60 s and re-tested. Logs `E:/Temp/nk-ai-stream-ci/resume4.log`, `combo3.log`, `hls14.log`.
+
 ## Resume works on a CI simulator; the HLS subtitle root cause is located (2026-11-07)
 
 **Resume**: the new `testResumeStartsWhereTheVideoWasLeft` uses the 30 s HLS fixture (a save point at 7 s is far from the end). It plays past 7 s, closes the player, terminates and relaunches the app, opens the same episode again, and reads the **start position the app handed the engine** rather than a later clock reading - the latter would mistake "started at zero and has now played 13 s" for a resume. CI run `42271738998`: **PASS in 184.8 s**, log `saved at 9 s, requested start 13.0 s, reopened at 20 s` (the picture kept moving while the close button was tapped, so the request is later than the reading). It then asserts the picture continues advancing from there.

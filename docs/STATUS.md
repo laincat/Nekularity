@@ -19,6 +19,14 @@
 
 
 
+## 默认字幕跟系统语言；HLS 字幕缺的是引擎接口（2026-11-07 第二轮）
+
+**做了什么**：`SubtitlePreference`（`Sources/NekularityKit/Media/SubtitlePreference.swift`）统一三条规则——播放器里选过的语言优先，否则按系统语言顺序，`关闭`也是一次会被记住的选择；中文保留文字系统（`zh-Hans`/`zh-Hant`），按地区推断，异体不互相匹配，未写文字系统的 `zh` 对两者都接受。Kit 单测 9 条（`SubtitlePreferenceTests`）。播放器加载时用这个列表填 `nativeSubtitlePreferredLanguages` 与 `preferredSubtitleLanguages`；菜单里选语言/关闭会写回偏好，新增「跟随系统语言」把默认还给系统，HLS 用例结束时用它还原。
+
+**HLS 字幕仍然画不出来，但原因已排除到只剩一处**：run `42309608676` 的诊断行 `route=remoteBypass cues=0 tracks=2 active=200000 native=0 default=0`，宿主自己再挂一个 `AVPlayerItemLegibleOutput` 也收不到文字——`AVPlayerItem` 只有一个 legible output 槽位，已被引擎的 `RemoteHLSCueClockObserver` 占用；`AVPlayerLayer` 本身不渲染字幕。因此修复必须由引擎发布"实际呈现的 cue 文本"（见 UNVERIFIED 里的接口要求），客户端叠层可直接复用。用例保持失败，不改成跳过。
+
+**回归**：CI run `42316207841`（同一提交）续播 **PASS 107.9 s**（`saved 8 s → requested start 10.0 s → reopened 15 s`）；run `42313063540` 视频画面推进 **PASS 52.8 s**，当次续播用例因等待源只给 10 秒而跳过（种子与源都在），等待已改为 60 秒并复测通过。日志 `E:/Temp/nk-ai-stream-ci/resume4.log`、`combo3.log`、`hls14.log`。
+
 ## 续播闭环在 CI 模拟器上跑通；HLS 字幕根因已定位（2026-11-07）
 
 **续播**：新增 `testResumeStartsWhereTheVideoWasLeft`，用 30 秒 HLS 夹具（7 秒保存点离片尾足够远）。用例播到 7 秒以上、关闭播放器、终止并重启 App、再打开同一集，读 App 传给引擎的**起始位置**而不是事后时钟——后者会把"从 0 开始但已经播了 13 秒"误判为续播。CI run `42271738998`：**PASS 184.8 s**，日志 `saved at 9 s, requested start 13.0 s, reopened at 20 s`（点关闭按钮期间画面继续走了几秒，所以请求起始比读取值大）。随后断言画面从该点继续推进。
