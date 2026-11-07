@@ -1129,8 +1129,11 @@ final class NekularityUITests: XCTestCase {
             throw XCTSkip("the 视频 tab has no source picker")
         }
         picker.tap()
+        // First launch after an install reads the seed while Core is still
+        // starting; 10 s was not enough on a run of 2026-11-07 and the case
+        // skipped with the source present all along.
         let provider = app.buttons["Video Probe"].firstMatch
-        guard provider.waitForExistence(timeout: 10) else {
+        guard provider.waitForExistence(timeout: 60) else {
             throw XCTSkip("the video fixture is not seeded: run scripts/seed-simulator.sh")
         }
         provider.tap()
