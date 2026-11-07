@@ -248,8 +248,15 @@ public final class CoreClient: @unchecked Sendable {
     /// The connection is the client's, so cancellation, cookies and certificates
     /// behave as they do everywhere else; the protocol's SSE parsing is Core's,
     /// so there is one implementation shared with every other caller.
+    ///
+    /// `onHead` is called as soon as the response head arrives, before any body
+    /// piece. A provider that answers `401` with no body would otherwise leave
+    /// the caller waiting for an answer that is never coming: the status is
+    /// known long before the body ends, so it is handed over early and the
+    /// caller can stop.
     public func streamAIRequest(configJSON: String, bodyJSON: String, name: String,
-                                onDelta: @escaping @Sendable (String) -> Void) async throws -> StandardAIAnswer {
+                                onDelta: @escaping @Sendable (String) -> Void,
+                                onHead: (@Sendable (StandardAIAnswer) -> Void)? = nil) async throws -> StandardAIAnswer {
         let wire = try await buildAIRequest(configJSON: configJSON, bodyJSON: bodyJSON)
         guard let url = URL(string: wire.url) else { throw CoreError("invalid URL \(wire.url)") }
         var headers = wire.headers
@@ -274,7 +281,17 @@ public final class CoreClient: @unchecked Sendable {
             headers: headers,
             body: body,
             useCookies: wire.cookies ?? false,
-            partition: wire.partition ?? "")) { data in
+            partition: wire.partition ?? ""), onResponse: { head in
+            // The head carries the status and the headers, and no body yet.
+            onHead?(StandardAIAnswer(status: head.status, headers: head.headers,
+                                     bodyBase64: "", finalUrl: head.finalURL.absoluteString,
+                                     streamed: true))
+        }, stopAfterHead: { head in
+            // A rejected request is answered by the head alone. Reading the
+            // body of a `401` that a provider holds open would leave the user
+            // waiting for an answer that is never coming.
+            !(200..<300).contains(head.status)
+        }) { data in
             collector.push(data)
         }
         if let failure = collector.failure { throw failure }

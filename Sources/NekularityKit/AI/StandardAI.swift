@@ -154,15 +154,33 @@ public final class StandardAI: @unchecked Sendable {
     /// the returned reply carries the whole text. A stream that ends without
     /// saying it completed is an error, because a truncated answer shown as a
     /// whole one is worse than an error.
+    ///
+    /// A rejected request is reported as soon as the response head says so. A
+    /// provider that answers `401` and then holds the connection open would
+    /// otherwise leave the user staring at an empty answer until the socket
+    /// times out, so the head ends the request straight away.
     public func replyStreaming(config: StandardAIConfig, apiKey: String, messages: [StandardMessage],
                                onDelta: @escaping @Sendable (String) -> Void) async throws -> StandardAIReply {
         guard !messages.isEmpty else { throw StandardAIError("没有要发送的消息") }
         let trimmedModel = config.model.trimmingCharacters(in: .whitespaces)
         guard !trimmedModel.isEmpty else { throw StandardAIError("先填一个模型名") }
         let body = try Self.requestBody(config: config, model: trimmedModel, messages: messages, stream: true)
-        let answer = try await core.streamAIRequest(configJSON: try config.wireJSON(apiKey: apiKey),
+        // The head arrives on the transport's queue, so the status it carries
+        // lives behind a lock rather than in a captured var.
+        let rejection = HeadRejection()
+        let answer: StandardAIAnswer
+        do {
+            answer = try await core.streamAIRequest(configJSON: try config.wireJSON(apiKey: apiKey),
                                                     bodyJSON: body, name: config.protocol.rawValue) { delta in
-            onDelta(delta)
+                onDelta(delta)
+            } onHead: { head in
+                guard !(200..<300).contains(head.status) else { return }
+                rejection.record(head.status)
+            }
+        } catch {
+            // A head that said `401` is the reason the transfer was stopped.
+            if let status = rejection.status { throw StandardAIError("接口返回 HTTP \(status)") }
+            throw error
         }
         guard (200..<300).contains(answer.status) else {
             throw StandardAIError("接口返回 HTTP \(answer.status)")
@@ -283,4 +301,24 @@ public struct StandardAIError: Error, LocalizedError, Sendable {
     public let message: String
     public init(_ message: String) { self.message = message }
     public var errorDescription: String? { message }
+}
+
+/// The status a rejected response head carried.
+///
+/// The head arrives on the transport's queue and the answer is read on the
+/// caller's task, so the status lives behind a lock rather than in a captured
+/// var - Swift 6 refuses a captured var that two queues touch.
+final class HeadRejection: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Int?
+
+    func record(_ status: Int) {
+        lock.lock(); defer { lock.unlock() }
+        if value == nil { value = status }
+    }
+
+    var status: Int? {
+        lock.lock(); defer { lock.unlock() }
+        return value
+    }
 }

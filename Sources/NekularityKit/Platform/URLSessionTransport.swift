@@ -88,13 +88,21 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable {
     /// `Response` still carries the whole body, because a caller may want both.
     /// `onResponse` receives accepted final headers with an empty body before
     /// any body callback, including HTTP error statuses.
+    ///
+    /// `stopAfterHead` is asked about the response head alone. When it says
+    /// yes, the transfer is stopped there: the body is never read. That is what
+    /// a rejected request needs - a provider that answers `401` and then holds
+    /// the connection open must not keep the caller waiting for a body that
+    /// will never come.
     public func sendStreaming(_ r: Request,
                               onResponse: (@Sendable (Response) -> Void)? = nil,
+                              stopAfterHead: (@Sendable (Response) -> Bool)? = nil,
                               onChunk: @escaping @Sendable (Data) -> Void) async throws -> Response {
-        try await perform(r, onResponse: onResponse, onChunk: onChunk)
+        try await perform(r, onResponse: onResponse, stopAfterHead: stopAfterHead, onChunk: onChunk)
     }
 
     private func perform(_ r: Request, onResponse: (@Sendable (Response) -> Void)? = nil,
+                         stopAfterHead: (@Sendable (Response) -> Bool)? = nil,
                          onChunk: (@Sendable (Data) -> Void)?) async throws -> Response {
         if takeEarlyCancellation(r.id) {
             throw CoreError("request cancelled before it started")
@@ -120,7 +128,8 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable {
 
         let state = TaskState(limit: maxBodyBytes, partition: r.partition, useCookies: r.useCookies,
                               manualHeaders: manual, manualCookie: manualCookie,
-                              cookies: cookies, origin: r.url, onResponse: onResponse, onChunk: onChunk)
+                              cookies: cookies, origin: r.url, onResponse: onResponse,
+                              stopAfterHead: stopAfterHead, onChunk: onChunk)
         // A failure, size refusal or cancellation used to skip both cleanup
         // lines below; the delegate then kept the state (and its body/chunk
         // closure) for the process lifetime.
@@ -287,7 +296,16 @@ final class TransportDelegate: NSObject, URLSessionDataDelegate, URLSessionTaskD
             completionHandler(.cancel)
             return
         }
-        state.received(http)
+        switch state.received(http) {
+        case .stop:
+            // The caller wanted the head only. The body is left unread, so a
+            // provider that holds the connection open after a rejection cannot
+            // keep the caller waiting.
+            completionHandler(.cancel)
+            return
+        case .continue:
+            break
+        }
         completionHandler(.allow)
     }
 
@@ -304,6 +322,12 @@ final class TransportDelegate: NSObject, URLSessionDataDelegate, URLSessionTaskD
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard let state = state(for: task), let final = task.currentRequest?.url ?? task.response?.url else { return }
         if let error {
+            // A transfer stopped on purpose after the head is not a failure:
+            // the caller asked for the head only and got it.
+            if state.stoppedAfterHead {
+                state.finish(.success(final))
+                return
+            }
             state.finish(.failure(error))
         } else if state.isFinished {
             // Already reported, for example when the size limit stopped it.
@@ -396,6 +420,8 @@ final class TaskState: @unchecked Sendable {
     let origin: URL
     /// Called when the final response head is accepted, before body pieces.
     private let onResponse: (@Sendable (URLSessionTransport.Response) -> Void)?
+    /// Asked about the head alone; when it says yes the body is never read.
+    private let stopAfterHead: (@Sendable (URLSessionTransport.Response) -> Bool)?
     /// Called with every accepted piece, for the streaming path.
     private let onChunk: (@Sendable (Data) -> Void)?
 
@@ -405,10 +431,14 @@ final class TaskState: @unchecked Sendable {
     private var http: HTTPURLResponse?
     private var done = false
     private var cancelled = false
+    /// The caller asked for the head only, so the transfer was stopped on
+    /// purpose. The completion that follows is that stop, not a failure.
+    private var headOnly = false
 
     init(limit: Int, partition: String, useCookies: Bool, manualHeaders: [String: [String]],
          manualCookie: String?, cookies: CookieJars, origin: URL,
          onResponse: (@Sendable (URLSessionTransport.Response) -> Void)? = nil,
+         stopAfterHead: (@Sendable (URLSessionTransport.Response) -> Bool)? = nil,
          onChunk: (@Sendable (Data) -> Void)? = nil) {
         self.limit = limit
         self.partition = partition
@@ -418,6 +448,7 @@ final class TaskState: @unchecked Sendable {
         self.cookies = cookies
         self.origin = origin
         self.onResponse = onResponse
+        self.stopAfterHead = stopAfterHead
         self.onChunk = onChunk
     }
 
@@ -441,22 +472,41 @@ final class TaskState: @unchecked Sendable {
         if let finishNow { k.resume(throwing: finishNow) }
     }
 
-    func received(_ response: HTTPURLResponse) {
+    /// What the head decided about the body.
+    enum HeadDecision {
+        /// Read the body as usual.
+        case continue
+        /// The body is not wanted; the caller asked for the head only.
+        case stop
+    }
+
+    func received(_ response: HTTPURLResponse) -> HeadDecision {
         let notify = lock.withLock {
             guard !done, http == nil else { return false }
             http = response
             return true
         }
-        guard notify, let onResponse else { return }
+        guard notify else { return .continue }
         var headers: [String: [String]] = [:]
         for (key, value) in response.allHeaderFields {
             guard let key = key as? String, let value = value as? String else { continue }
             headers[key, default: []].append(value)
         }
+        let head = URLSessionTransport.Response(status: response.statusCode, headers: headers,
+                                               body: Data(), finalURL: response.url ?? origin)
         // Notify outside the state lock: a consumer may cancel from this call.
-        onResponse(URLSessionTransport.Response(status: response.statusCode, headers: headers,
-                                                 body: Data(), finalURL: response.url ?? origin))
+        onResponse?(head)
+        // A caller that only wanted the head says so here, and the body is
+        // then never read.
+        if let stopAfterHead, stopAfterHead(head) {
+            lock.withLock { headOnly = true }
+            return .stop
+        }
+        return .continue
     }
+
+    /// Whether the transfer was stopped on purpose after the head.
+    var stoppedAfterHead: Bool { lock.withLock { headOnly } }
 
     /// Appends one piece, refusing the piece that would cross the limit.
     ///
