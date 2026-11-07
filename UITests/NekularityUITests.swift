@@ -1436,7 +1436,8 @@ final class NekularityUITests: XCTestCase {
         try server.start()
         addTeardownBlock { server.stop() }
         let env = ["NK_SHELF_FILE": "uitest-hls30-\(UUID().uuidString).json"]
-        let app = launch(environment: env)
+        // The engine log says which legible option AVPlayer actually selected.
+        let app = launch(diagnostic: true, environment: env)
 
         try openProbe(app, title: "Probe HLS 30")
         XCTAssertTrue(element(app, "video.close").waitForExistence(timeout: 60),
