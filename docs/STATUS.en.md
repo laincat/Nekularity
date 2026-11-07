@@ -19,6 +19,19 @@ English · [简体中文](STATUS.md)
 
 
 
+## 0.4.3 / build 25 released and verified (2026-11-07)
+
+The complete interface suite on final HEAD `f486376` is **32 passed / 0 failed / 2 skipped** (run `42386284795`; 490 Kit tests across 84 suites passed), and `v0.4.3` was released from it (`87db928`, CI run `42392553106`, `success`):
+
+- **IPA**: `https://github.com/laincat/Nekularity/releases/download/v0.4.3/Nekularity.ipa`, HTTP **200**, **29,942,512 bytes**, SHA-256 `cc64a26d97945871ee6fc74ccecf4f5fe50d4c38b18018ce00690960c83dda2c`.
+- **App / Widget**: `com.laincat.nekularity` and `com.laincat.nekularity.widgets` are both **0.4.3 / 25**, minimum **iOS 26.0**.
+- **Core pin**: the app binary contains `d9a18516520b19f70ce9ff791cfeca408df8128e`.
+- **Licences**: the bundled `LICENSE` md5 `94003cec…` and `COPYING` md5 `1ebbd3e3…` match the repository.
+- **All three AltStore entries**: `raw.githubusercontent.com/laincat/AltStore/main/apps.json`, `cnb.cool/laincat/AltStore/-/git/raw/main/apps.json` and `github.com/laincat/AltStore/releases/download/latest/apps.json` all read **0.4.3 / 25 / 29,942,512**; workflow `42395224855` `success`. The raw entry is CDN-cached and agrees after a few minutes.
+- Receipt and IPA copy: `E:/Code/deliveries/2026-11-07-nekularity-043/` (`receipt.json`, `Nekularity.ipa`).
+
+This build carries the HLS caption fix (`X-TIMESTAMP-MAP` plus the host legible overlay, verified by pixel OCR and accessibility), the system-language default subtitle with a way to change it back in the player, the "follow system language" entry, 30 s HLS resume, and the CI theme-HTTPS fixture. **Boundaries**: a simulator is not a device; PiP/AirPlay captions are uncovered while a suppressing output is attached; the two skips still need the `nhentai`/`Komiic` source scripts that are not in the repository.
+
 ## HLS subtitles: real root cause and fix (2026-11-07, plan B verification plus a minimal host fix)
 
 The previous read-only diagnosis narrowed the problem to "nobody draws the cue", but its screenshot was parked at the end of the clip and the fixture lacked a timestamp map, so a product defect could not be told from a fixture defect. A 30 s dual-subtitle HLS fixture (`hls-subs/resume/master30.m3u8`, cue `0-30 s`), **picking the track during playback** and **Vision OCR over the whole screen** removed both confounders and located the actual causes:

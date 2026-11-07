@@ -19,6 +19,19 @@
 
 
 
+## 0.4.3 / build 25 已发布并核对（2026-11-07）
+
+最终 HEAD `f486376` 的完整界面套件 **32 通过 / 0 失败 / 2 跳过**（run `42386284795`，Kit 490 tests / 84 suites 通过），按此发布 `v0.4.3`（`87db928`，CI run `42392553106`，`success`）：
+
+- **IPA**：`https://github.com/laincat/Nekularity/releases/download/v0.4.3/Nekularity.ipa`，HTTP **200**，**29,942,512 字节**，SHA-256 `cc64a26d97945871ee6fc74ccecf4f5fe50d4c38b18018ce00690960c83dda2c`。
+- **App / Widget**：`com.laincat.nekularity` 与 `com.laincat.nekularity.widgets` 均为 **0.4.3 / 25**，最低 **iOS 26.0**。
+- **Core pin**：App 二进制含 `d9a18516520b19f70ce9ff791cfeca408df8128e`。
+- **许可证**：包内 `LICENSE` md5 `94003cec…`、`COPYING` md5 `1ebbd3e3…`，与仓库一致。
+- **AltStore 三入口**：`raw.githubusercontent.com/laincat/AltStore/main/apps.json`、`cnb.cool/laincat/AltStore/-/git/raw/main/apps.json`、`github.com/laincat/AltStore/releases/download/latest/apps.json` 均为 **0.4.3 / 25 / 29,942,512**；工作流 `42395224855` `success`。raw 入口有 CDN 缓存，约数分钟后一致。
+- 回执与 IPA 副本：`E:/Code/deliveries/2026-11-07-nekularity-043/`（`receipt.json`、`Nekularity.ipa`）。
+
+本版包含：HLS 字幕修复（`X-TIMESTAMP-MAP` + 宿主 legible 叠层，像素 OCR 与无障碍双验证）、默认字幕跟系统语言并可在播放器改回、「跟随系统语言」入口、30 秒 HLS 续播、CI 主题 HTTPS 夹具。**边界**：模拟器 ≠ 真机；PiP/AirPlay 字幕在 suppressing output 下未覆盖；2 条跳过仍需仓库外的 `nhentai`/`Komiic` 脚本。
+
 ## HLS 字幕真实根因与修复（2026-11-07，方案 B 验证 + 最小宿主修复）
 
 上一轮只读诊断把范围收窄到"没有任何一方画 cue"，但当时的截图停在片尾、且夹具缺时间戳映射，所以还不能判断是产品缺陷还是素材缺陷。本轮用 30 秒双字幕 HLS 夹具（`hls-subs/resume/master30.m3u8`，cue `0–30 s`）、**播放中选轨**与 **Vision OCR 读整屏像素**把两条干扰排除，定位到真正原因：
