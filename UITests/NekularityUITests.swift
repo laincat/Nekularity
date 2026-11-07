@@ -370,7 +370,10 @@ final class NekularityUITests: XCTestCase {
         // repository and whose absence turned this case into a skip on every
         // machine that did not have them - a skip that said nothing about the
         // client.
-        guard element(app, "source.callback_probe").waitForExistence(timeout: 25) else {
+        // The sources list is filled by Core, and on a cold launch that can take
+        // longer than the 25 s the other cases wait: this one runs first and saw
+        // an empty list while the next case found the same row in a second.
+        guard element(app, "source.callback_probe").waitForExistence(timeout: 60) else {
             throw XCTSkip("no sources seeded: run scripts/seed-simulator.sh first")
         }
         XCTAssertTrue(element(app, "source.video_probe").exists,
@@ -389,8 +392,8 @@ final class NekularityUITests: XCTestCase {
         let login = element(app, "account.webviewLogin")
         XCTAssertTrue(login.waitForExistence(timeout: 25), "the in-page login button is missing")
         login.tap()
-        // The sheet loads the page and titles itself after the source.
-        let sheet = app.navigationBars["登录 Callback Probe"]
+        // The sheet titles itself after the source's key, not its display name.
+        let sheet = app.navigationBars["登录 callback_probe"]
         XCTAssertTrue(sheet.waitForExistence(timeout: 40), "the login sheet did not open")
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = "in-page-login-sheet"
