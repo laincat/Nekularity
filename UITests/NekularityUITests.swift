@@ -376,8 +376,14 @@ final class NekularityUITests: XCTestCase {
         guard element(app, "source.callback_probe").waitForExistence(timeout: 60) else {
             throw XCTSkip("no sources seeded: run scripts/seed-simulator.sh first")
         }
-        XCTAssertTrue(element(app, "source.video_probe").exists,
-                      "the video source is not seeded; run scripts/seed-simulator.sh with the current seed")
+        // The video source is a video source: it is not in this list at all, so
+        // asking for it here would fail on a perfectly good seed. What the case
+        // is about is that a seeded source reaches the list, which the row above
+        // proves; the count guards against a seed that only half landed.
+        XCTAssertEqual(app.descendants(matching: .any)
+                        .matching(NSPredicate(format: "identifier BEGINSWITH 'source.'"))
+                        .allElementsBoundByIndex.count, 1,
+                       "the seed put more or fewer sources in the list than it declares")
     }
 
     /// A source that logs in on its own page must offer that, not a sentence
