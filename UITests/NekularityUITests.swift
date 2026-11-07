@@ -1456,14 +1456,14 @@ final class NekularityUITests: XCTestCase {
         english.tap()
 
         Thread.sleep(forTimeInterval: 3)
-        let shot = app.screenshot().image
-        let seen = recognizedText(shot)
+        let screen = app.screenshot()
+        let seen = recognizedText(screen.image)
         print("HLS30 OCR: \(seen)")
         print("HLS30 subtitle requests: \(server.subtitleFilesRequested())")
         XCTAssertTrue(server.subtitleFilesRequested().contains { $0.contains("sub-en30.vtt") },
                       "the selected track was never fetched: \(server.subtitleFilesRequested())")
         if !seen.lowercased().contains("subtitle") {
-            let attachment = XCTAttachment(screenshot: shot)
+            let attachment = XCTAttachment(screenshot: screen)
             attachment.name = "hls30-no-caption"
             attachment.lifetime = .keepAlways
             add(attachment)
@@ -1472,7 +1472,7 @@ final class NekularityUITests: XCTestCase {
                       "the picture shows no caption: \(seen)")
 
         // Leave the default where it was.
-        showTransport()
+        _ = showClock(app)
         menu.tap()
         let followSystem = app.buttons["跟随系统语言"].firstMatch
         if followSystem.waitForExistence(timeout: 10) { followSystem.tap() }
