@@ -19,6 +19,19 @@
 
 
 
+## 0.4.4 / build 26 已发布并核对（2026-11-07）
+
+包含本轮两处修复：字幕改由 AVPlayer 绘制、标准 AI 流式在被拒响应头即判定。最终 HEAD 的完整界面套件 **32 通过 / 0 失败 / 2 跳过**（run `42405822352`，Kit **492 tests / 85 suites 通过**），发布 `v0.4.4`（`b86a2dc`，CI run `42411664429`，`success`）：
+
+- **IPA**：`https://github.com/laincat/Nekularity/releases/download/v0.4.4/Nekularity.ipa`，HTTP **200**，**29,947,415 字节**，SHA-256 `a9349d523fc0187ab829bee3964a164827f30bde5258b1df705865b1bbc12d83`。
+- **App / Widget**：`com.laincat.nekularity` 与 `com.laincat.nekularity.widgets` 均为 **0.4.4 / 26**，最低 **iOS 26.0**。
+- **Core pin**：App 二进制含 `d9a18516520b19f70ce9ff791cfeca408df8128e`。
+- **许可证**：包内 `LICENSE` md5 `94003cec…`、`COPYING` md5 `1ebbd3e3…`，与仓库一致。
+- **AltStore 三入口**：raw / CNB / latest 均为 **0.4.4 / 26 / 29,947,415**；工作流 `42415196780` `success`。
+- 回执与 IPA 副本：`E:/Code/deliveries/2026-11-08-nekularity-044/`。
+
+**边界**：模拟器 ≠ 真机，PiP / AirPlay / 外接显示器的字幕仍需真机；2 条跳过仍需仓库外的 `nhentai`/`Komiic` 脚本；真机签名安装、后台/锁屏、Live Activity、实际扬声器仍待交接。
+
 ## 字幕改由 AVPlayer 绘制，PiP/AirPlay 不再没有字幕（2026-11-07）
 
 上一版把 `AVPlayerItemLegibleOutput` 设为 `suppressesPlayerRendering = true`，让宿主叠层成为唯一绘制者。完整套件因此在 OCR 里读到两行相同文字（叠层已按文本去重，另一行来自 AVPlayer 自己把字幕合成进图层）。**这说明此前"AVPlayerLayer 不画字幕"的判断是错的**：AVPlayer 本来就会把字幕画进图层。

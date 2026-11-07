@@ -19,6 +19,19 @@ English · [简体中文](STATUS.md)
 
 
 
+## 0.4.4 / build 26 released and verified (2026-11-07)
+
+Carries this round's two fixes: captions are drawn by AVPlayer, and a rejected standard AI stream is decided at the response head. The complete interface suite on the final HEAD is **32 passed / 0 failed / 2 skipped** (run `42405822352`; **492 Kit tests across 85 suites**), and `v0.4.4` was released from it (`b86a2dc`, CI run `42411664429`, `success`):
+
+- **IPA**: `https://github.com/laincat/Nekularity/releases/download/v0.4.4/Nekularity.ipa`, HTTP **200**, **29,947,415 bytes**, SHA-256 `a9349d523fc0187ab829bee3964a164827f30bde5258b1df705865b1bbc12d83`.
+- **App / Widget**: `com.laincat.nekularity` and `com.laincat.nekularity.widgets` are both **0.4.4 / 26**, minimum **iOS 26.0**.
+- **Core pin**: the app binary contains `d9a18516520b19f70ce9ff791cfeca408df8128e`.
+- **Licences**: the bundled `LICENSE` md5 `94003cec…` and `COPYING` md5 `1ebbd3e3…` match the repository.
+- **All three AltStore entries**: raw / CNB / latest all read **0.4.4 / 26 / 29,947,415**; workflow `42415196780` `success`.
+- Receipt and IPA copy: `E:/Code/deliveries/2026-11-08-nekularity-044/`.
+
+**Boundaries**: a simulator is not a device, and the PiP / AirPlay / external-display captions still need one; the two skips still need the out-of-repository `nhentai`/`Komiic` scripts; device signing and install, background/lock screen, Live Activity and real speakers remain open dependencies.
+
 ## Captions are drawn by AVPlayer, so PiP/AirPlay keep them (2026-11-07)
 
 The previous build set `AVPlayerItemLegibleOutput.suppressesPlayerRendering = true`, making the host overlay the only drawer. The full suite then read the same line twice in the OCR (the overlay was already de-duplicated, so the other copy came from AVPlayer compositing captions into its layer). **That means the earlier claim that an `AVPlayerLayer` draws no captions was wrong**: AVPlayer does draw them.
