@@ -1446,8 +1446,10 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["0:30"].waitForExistence(timeout: 10),
                       "the 30 s fixture did not load: \(server.clipSummary())")
 
-        // The picture is playing: the menu is opened over it, which is the state
-        // a person is in when they reach for subtitles.
+        // Pause before opening the menu: on this runner the menu alone can take
+        // 25 s, which is most of a 30 s clip. The cue is then presented when we
+        // resume, rather than having expired while XCTest was finding buttons.
+        element(app, "video.playPause").tap()
         let menu = element(app, "video.subtitles")
         XCTAssertTrue(menu.waitForExistence(timeout: 20), "no subtitle menu")
         menu.tap()
@@ -1456,6 +1458,8 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(english.waitForExistence(timeout: 10), "the menu offers no English track")
         english.tap()
 
+        // Resume: AVPlayer only presents a cue while the picture is running.
+        element(app, "video.playPause").tap()
         Thread.sleep(forTimeInterval: 3)
         let screen = app.screenshot()
         let seen = recognizedText(screen.image)
