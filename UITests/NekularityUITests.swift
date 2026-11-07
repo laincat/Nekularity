@@ -1470,6 +1470,21 @@ final class NekularityUITests: XCTestCase {
         }
         XCTAssertTrue(seen.lowercased().contains("subtitle") || seen.lowercased().contains("proof"),
                       "the picture shows no caption: \(seen)")
+        // The host overlay draws a real SwiftUI Text, so the same words must
+        // also be readable without looking at pixels.
+        let caption = app.staticTexts["Subtitle rendering proof"]
+        XCTAssertTrue(caption.waitForExistence(timeout: 10),
+                      "the caption is not an accessibility element: \(seen)")
+
+        // Turning captions off withdraws the line.
+        _ = showClock(app)
+        menu.tap()
+        let off = app.buttons["关闭字幕"].firstMatch
+        XCTAssertTrue(off.waitForExistence(timeout: 10), "the menu has no 关闭字幕")
+        off.tap()
+        let goneBy = Date().addingTimeInterval(10)
+        while Date() < goneBy, caption.exists { Thread.sleep(forTimeInterval: 0.2) }
+        XCTAssertFalse(caption.exists, "turning subtitles off left the caption on screen")
 
         // Leave the default where it was.
         _ = showClock(app)
