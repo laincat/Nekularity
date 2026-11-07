@@ -303,7 +303,7 @@ final class TransportDelegate: NSObject, URLSessionDataDelegate, URLSessionTaskD
             // keep the caller waiting.
             completionHandler(.cancel)
             return
-        case .continue:
+        case .read:
             break
         }
         completionHandler(.allow)
@@ -475,7 +475,7 @@ final class TaskState: @unchecked Sendable {
     /// What the head decided about the body.
     enum HeadDecision {
         /// Read the body as usual.
-        case continue
+        case read
         /// The body is not wanted; the caller asked for the head only.
         case stop
     }
@@ -486,7 +486,7 @@ final class TaskState: @unchecked Sendable {
             http = response
             return true
         }
-        guard notify else { return .continue }
+        guard notify else { return .read }
         var headers: [String: [String]] = [:]
         for (key, value) in response.allHeaderFields {
             guard let key = key as? String, let value = value as? String else { continue }
@@ -502,7 +502,7 @@ final class TaskState: @unchecked Sendable {
             lock.withLock { headOnly = true }
             return .stop
         }
-        return .continue
+        return .read
     }
 
     /// Whether the transfer was stopped on purpose after the head.
