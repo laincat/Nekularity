@@ -1,3 +1,4 @@
+import Vision
 import XCTest
 
 /// Drives the app the way a person would, on a simulator seeded with sources.
@@ -1401,6 +1402,81 @@ final class NekularityUITests: XCTestCase {
         XCTAssertTrue(followSystem.waitForExistence(timeout: 10),
                       "the menu offers no way back to the system language")
         followSystem.tap()
+    }
+
+    /// Reads the text actually drawn on screen, which is the only way to see a
+    /// caption AVPlayer composites into its layer: those glyphs are pixels, not
+    /// accessibility elements.
+    private func recognizedText(_ image: UIImage) -> String {
+        guard let cg = image.cgImage else { return "" }
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = false
+        request.recognitionLanguages = ["en-US"]
+        do {
+            try VNImageRequestHandler(cgImage: cg, options: [:]).perform([request])
+        } catch {
+            return "ocr-failed: \(error)"
+        }
+        let lines = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
+        return lines.joined(separator: "\n")
+    }
+
+    /// Captions on the AVPlayer-owned route, checked where they are drawn.
+    ///
+    /// The client's overlay has no text here by design (the engine hands the
+    /// legible selection to AVPlayer and keeps `subtitleCues` empty), and
+    /// AVPlayer composites the caption into its layer as pixels. So the case
+    /// reads the screen, not the accessibility tree, and it picks the track
+    /// while the picture is playing: an earlier version chose one after pausing
+    /// and asserted after a ten-second clip had already ended, which could not
+    /// have shown a cue at all.
+    func testHLSLongSubtitlesAreDrawnInThePicture() throws {
+        let server = try LocalImageServer()
+        try server.start()
+        addTeardownBlock { server.stop() }
+        let env = ["NK_SHELF_FILE": "uitest-hls30-\(UUID().uuidString).json"]
+        let app = launch(environment: env)
+
+        try openProbe(app, title: "Probe HLS 30")
+        XCTAssertTrue(element(app, "video.close").waitForExistence(timeout: 60),
+                      "the player never opened: \(server.clipSummary())")
+        XCTAssertTrue(showClock(app), "the player has no visible clock: \(server.clipSummary())")
+        XCTAssertTrue(app.staticTexts["0:30"].waitForExistence(timeout: 10),
+                      "the 30 s fixture did not load: \(server.clipSummary())")
+
+        // The picture is playing: the menu is opened over it, which is the state
+        // a person is in when they reach for subtitles.
+        let menu = element(app, "video.subtitles")
+        XCTAssertTrue(menu.waitForExistence(timeout: 20), "no subtitle menu")
+        menu.tap()
+        let english = app.buttons.matching(NSPredicate(
+            format: "label CONTAINS[c] %@ OR label CONTAINS %@", "English", "英语")).firstMatch
+        XCTAssertTrue(english.waitForExistence(timeout: 10), "the menu offers no English track")
+        english.tap()
+
+        Thread.sleep(forTimeInterval: 3)
+        let shot = app.screenshot().image
+        let seen = recognizedText(shot)
+        print("HLS30 OCR: \(seen)")
+        print("HLS30 subtitle requests: \(server.subtitleFilesRequested())")
+        XCTAssertTrue(server.subtitleFilesRequested().contains { $0.contains("sub-en30.vtt") },
+                      "the selected track was never fetched: \(server.subtitleFilesRequested())")
+        if !seen.lowercased().contains("subtitle") {
+            let attachment = XCTAttachment(screenshot: shot)
+            attachment.name = "hls30-no-caption"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+        XCTAssertTrue(seen.lowercased().contains("subtitle") || seen.lowercased().contains("proof"),
+                      "the picture shows no caption: \(seen)")
+
+        // Leave the default where it was.
+        showTransport()
+        menu.tap()
+        let followSystem = app.buttons["跟随系统语言"].firstMatch
+        if followSystem.waitForExistence(timeout: 10) { followSystem.tap() }
+        element(app, "video.close").tap()
     }
 
     /// The batch update, driven through the interface it is reached by.

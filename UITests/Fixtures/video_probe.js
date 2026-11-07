@@ -19,6 +19,9 @@ class VideoProbe extends VideoSource {
                 {id: "hls", title: "Probe HLS", subtitle: "loopback hls"},
                 // 30 s, no subtitles: a save point at 7 s is far from the end.
                 {id: "resume", title: "Probe Resume", subtitle: "loopback resume"},
+                // 30 s with two subtitle groups: long enough that picking a
+                // track mid-playback cannot run into the end of the clip.
+                {id: "hls30", title: "Probe HLS 30", subtitle: "loopback hls 30s"},
             ],
             maxPage: 1,
         }),
@@ -27,7 +30,8 @@ class VideoProbe extends VideoSource {
     video = {
         loadInfo: async (id) => ({
             id: id,
-            title: id === "hls" ? "Probe HLS" : id === "resume" ? "Probe Resume" : "Probe Clip",
+            title: id === "hls" ? "Probe HLS" : id === "resume" ? "Probe Resume"
+                : id === "hls30" ? "Probe HLS 30" : "Probe Clip",
             description: "a clip served by the test runner",
             lines: [
                 {id: "line1", name: "Line 1", episodes: [{id: "ep1", title: "Episode 1"}]},
@@ -35,7 +39,11 @@ class VideoProbe extends VideoSource {
         }),
         // The episode id alone does not say which video it belongs to, so the
         // play answer branches on the video id.
-        loadPlay: async (videoId) => videoId === "resume" ? {
+        loadPlay: async (videoId) => videoId === "hls30" ? {
+            url: "http://127.0.0.1:18731/hls/resume/master30.m3u8",
+            format: "hls",
+            headers: {Referer: "http://127.0.0.1:18731/"},
+        } : videoId === "resume" ? {
             url: "http://127.0.0.1:18731/hls/resume/master.m3u8",
             format: "hls",
             headers: {Referer: "http://127.0.0.1:18731/"},
