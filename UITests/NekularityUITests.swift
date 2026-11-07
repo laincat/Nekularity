@@ -365,28 +365,32 @@ final class NekularityUITests: XCTestCase {
     func testSeededSourcesAppear() throws {
         let app = launch()
         try openSources(app)
-        guard element(app, "source.nhentai").waitForExistence(timeout: 25) else {
+        // The seed the repository ships carries the two sources the other cases
+        // press. It used to carry `nhentai` and `Komiic`, which are not in this
+        // repository and whose absence turned this case into a skip on every
+        // machine that did not have them - a skip that said nothing about the
+        // client.
+        guard element(app, "source.callback_probe").waitForExistence(timeout: 25) else {
             throw XCTSkip("no sources seeded: run scripts/seed-simulator.sh first")
         }
-        XCTAssertTrue(element(app, "source.Komiic").exists, "a second seeded source is missing")
-        // The repository's own source is in the seed too: the callback and tag
-        // cases press it, and a device still holding an older seed would make them
-        // skip for a reason that has nothing to do with the client.
-        XCTAssertTrue(element(app, "source.callback_probe").exists,
-                      "the test source is not seeded; run scripts/seed-simulator.sh with the current seed")
+        XCTAssertTrue(element(app, "source.video_probe").exists,
+                      "the video source is not seeded; run scripts/seed-simulator.sh with the current seed")
     }
 
     /// A source that logs in on its own page must offer that, not a sentence
     /// saying the client cannot.
     func testSourceOffersInPageLogin() throws {
         let app = launch()
-        try openSettings(app, source: "nhentai")
+        // The repository's own source declares the browser login real sources
+        // declare, so this runs without `nhentai` and without a site. The URL it
+        // names is the test runner's loopback server.
+        try openSettings(app, source: "callback_probe")
 
         let login = element(app, "account.webviewLogin")
         XCTAssertTrue(login.waitForExistence(timeout: 25), "the in-page login button is missing")
         login.tap()
-        // The sheet loads the site and titles itself after the source.
-        let sheet = app.navigationBars["登录 nhentai"]
+        // The sheet loads the page and titles itself after the source.
+        let sheet = app.navigationBars["登录 Callback Probe"]
         XCTAssertTrue(sheet.waitForExistence(timeout: 40), "the login sheet did not open")
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = "in-page-login-sheet"

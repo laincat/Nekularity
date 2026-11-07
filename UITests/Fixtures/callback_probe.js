@@ -117,6 +117,18 @@ class CallbackProbe extends ComicSource {
         }),
     }
 
+    // A browser login, declared where Core looks for it. Real sources that log
+    // in on their own page (`nhentai`, `ehentai`, `ccc`, `manga_dex`, `mycomic`)
+    // write exactly this; the URL points at the test runner's loopback server so
+    // the sheet opens without a site, an account or the network.
+    account = {
+        loginWithWebview: {
+            url: "http://127.0.0.1:18731/login",
+            checkStatus: (url, title) => false,
+            onLoginSuccess: async () => {},
+        },
+    }
+
     // The source's own favourites, declared where Core looks for them: a
     // top-level `favorites` object, not inside `comic`.
     favorites = {
