@@ -2,6 +2,12 @@
 
 [简体中文](ROADMAP.md) | English
 
+## 0.4.3 release, final regression and desktop 0.2.27 (2026-11-07)
+
+Closed in this round's order: the complete UI suite on final HEAD `f486376` is **32 passed / 0 failed / 2 skipped** (run `42386284795`; 490 Kit tests in 84 suites), and OCR now reads only one caption line after the HLS fix; then `v0.4.3/build 25` was released (`87db928`, CI `42392553106`): IPA HTTP 200 / 29,942,512 bytes / SHA-256 `cc64a26d…`, App and Widget both 0.4.3/25 with minimum iOS 26.0, Core pin `d9a1851`, bundled LICENSE/COPYING md5 identical to the repository; all three AltStore entries (raw, CNB, latest) read 0.4.3/25. Desktop `0.2.27` Windows ZIP and installer passed an isolated-profile verification **14 PASS / 0 FAIL**, delivered at `E:/Code/deliveries/2026-11-07-nekophage-0.2.27/`. The Core's official-source sweep is **34/34, 0 failed**, so no new compatibility gap was found and both client pins stay at `d9a1851`.
+
+Remaining external dependencies are listed separately: device signing/install, background/lock screen, Live Activity, PiP and real speakers; the out-of-repository `nhentai`/`Komiic` scripts needed by the two skips; Nekophage has no Git remote and no public release destination; the macOS search -> detail -> reader mainline on the current pin needs a Mac; PiP/AirPlay captions remain uncovered while a suppressing legible output is attached.
+
 ## Online danmaku is deferred and will come as a plugin (decision, 2026-11-07)
 
 The user confirmed: **online danmaku is not important and can be implemented later as a plugin**. P0—P3 therefore no longer pull site scraping, episode matching or a third-party danmaku service into the client's main line, and no further acceptance items are added for it. The existing local danmaku path (file import, parsing, overlay drawn against the playback clock) and its unit tests stay as the drawing layer a plugin can reuse. No plugin contract is fixed in advance: it gets designed when the Magpie/service-plugin system and Core's capability boundary are clear. Trakt sync and the studio stay in P4.
