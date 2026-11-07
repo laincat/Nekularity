@@ -1,5 +1,9 @@
 [English](UNVERIFIED.en.md) · 简体中文
 
+## `.remoteBypass` 字幕的 PiP / AirPlay 边界（2026-11-07）
+
+宿主在 `.remoteBypass` 上挂 `AVPlayerItemLegibleOutput` 并设 `suppressesPlayerRendering=true`，由 SwiftUI 叠层画字幕（也是无障碍元素）。引擎文档 `docs/formats.md` 说明 PiP / AirPlay / 外接显示器只合成 `AVPlayerLayer` 内容、不合成宿主视图树，因此这些场景在 suppressing output 挂载期间**没有字幕**。要覆盖它们需要让引擎自己把字幕做成原生 `SUBTITLES` rendition（`prepareNativeSubtitles` / #316 注入），或按是否在 PiP 动态切换 `suppressesPlayerRendering`；两者都未在真机验证，属于后续项。当前全屏字幕在 CI 模拟器上已用像素 OCR + 无障碍文字双重验证。
+
 ## HLS 双字幕：cue 没交给客户端，用例的判据与时序也都不成立（只读诊断，2026-11-07）
 
 这一轮只读源码、日志与截图，没有改产品代码。结论分三层，前两层是代码事实，第三层是用例事实。

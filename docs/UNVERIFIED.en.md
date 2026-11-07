@@ -1,5 +1,9 @@
 English · [简体中文](UNVERIFIED.md)
 
+## `.remoteBypass` caption boundary for PiP / AirPlay (2026-11-07)
+
+The host attaches an `AVPlayerItemLegibleOutput` on `.remoteBypass` with `suppressesPlayerRendering=true`, so the SwiftUI overlay draws the caption (and exposes it as an accessibility element). The engine's `docs/formats.md` explains that PiP / AirPlay / external displays composite only `AVPlayerLayer` content and never the host's view tree, so those surfaces show **no caption** while a suppressing output is attached. Covering them needs the engine to serve captions as native `SUBTITLES` renditions (`prepareNativeSubtitles` / #316 injection), or a dynamic switch of `suppressesPlayerRendering` when entering PiP; neither is verified on a device and both are follow-up work. Full-screen captions are verified on the CI simulator by pixel OCR and by the accessibility text.
+
 ## HLS dual subtitles: no cue text reaches the client, and the case's assertion and timing do not hold either (read-only diagnosis, 2026-11-07)
 
 This round only read source, logs and screenshots; no product code changed. The finding has three layers - two are code facts, the third is about the case itself.
