@@ -30,6 +30,7 @@
 **主题夹具接进 CI**（提交 `3e65431` 之后）：`scripts/theme-fixture.sh` 增加 `NK_SERVE_ONLY=1`，自建一次性 CA、只 `simctl keychain add-root-cert` 到当前模拟器、起 18791/18792 两个 loopback 监听后打印 `ready` 并保持服务；CI 在测试前等 ready、跑完按 pid 收掉，不碰宿主 Keychain、不做 `keychain reset`。run `42328084949`：`testHTTPSThemeInstallSelectAndRelaunch` **PASS 50.8 s**、`testHTTPSInvalidThemeShowsErrorAndPreservesSelection` **PASS 77.9 s**、`testHTTPThemeLinkIsRejected` **PASS 29.4 s**，日志 `E:/Temp/nk-ai-stream-ci/theme1.log`。
 
 **结论**：第 ① 项的完整套件结果现在由 CI 提供（不依赖反复异常终止的 Mac Worker）；第 ③ 项的主题 HTTPS 安装与长按/拖放/大小持久化在当前 CI 模拟器上均有通过证据。仍不是真机，也不是全绿：1 个已知缺陷失败、2 个外部源跳过。
+- 带主题 HTTPS 夹具的**完整套件复跑**（run `42331728546`）：**30 通过 / 2 跳过 / 1 失败**，取代上面的 28/5/1 清单（上面的清单属于夹具接入之前）。主题三条在完整套件内再次通过（39.8 s / 42.0 s / 24.3 s），拖放 44.8 s、长按与大小 40.9 s、明暗 75.0 s、横屏三列 50.8 s 均通过。仅剩两条外部源跳过与一条已知的 HLS 字幕失败。日志 `E:/Temp/nk-ai-stream-ci/full2.log`。
 
 ## 默认字幕跟系统语言；HLS 字幕缺的是引擎接口（2026-11-07 第二轮）
 
