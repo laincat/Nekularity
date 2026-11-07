@@ -46,7 +46,7 @@
 
 测试隔离：`ShelfStore` 支持按文件名打开，App 读 `NK_SHELF_FILE`；用例用 UUID 命名的独立文件，既不继承也不污染默认的 `shelf.json`。服务器上 `/hls/` 允许一层子目录，`video_probe` 增加 `Probe Resume` 条目，种子重生成。
 
-**字幕根因**：`NK_VIDEO_DIAGNOSTIC=1` 下的诊断行在 run `42252292384` 给出 `route=remoteBypass cues=0 tracks=2 active=200000 native=0 default=0`：字幕轨在菜单里，选中项也变了，但引擎未把 WebVTT cue 交给 `$subtitleCues`，由 AVPlayer 自己渲染；引擎文档说明程序化选中的非默认轨会被 AVKit 隐藏。**不是默认语言、不是夹具、也不是无障碍树看不到**。按系统语言选择默认字幕（`72c3719`）已实现且编译通过，但不解决这一路由问题。修法是播放器字幕控件改动，仍待用户确认方案；`testHLSPlaysAndSwitchesSubtitles` 保持失败，不改成跳过。
+**字幕根因（已由 2026-11-07 的只读诊断更正，详见 [UNVERIFIED](UNVERIFIED.md) 同名条目）**：`.remoteBypass` 上引擎主动清空 `subtitleCues` 且没有发布 cue 文本的接口，AVPlayer 把字幕画进 `AVPlayerLayer` 的像素——**不进无障碍树**，所以 `staticTexts` 断言在这条路由上永远匹配不到；此外用例在暂停时选轨、失败截图已在 0:10（cue 区间 `[0,10)`），无法据此判定字幕未呈现。此前写的「不是无障碍树看不到」「legible output 槽位被引擎占用」均不成立。按系统语言选择默认字幕（`72c3719`）已实现且编译通过，但不解决这一路由问题。`testHLSPlaysAndSwitchesSubtitles` 保持失败，不改成跳过；下一步 A/B/C 三种方案待确认。
 
 **边界**：模拟器 ≠ 真机；无音轨，不证明扬声器、后台、PiP；续播为同一环境内重启 App，未跨设备或跨备份还原。
 - 组合回归（2026-11-07，CI run `42284633653`，同一提交）：`testResumeStartsWhereTheVideoWasLeft` **PASS 161.7 s**（`saved at 8 s, requested start 11.0 s, reopened at 23 s`）、`testVideoPlaysTheSourcesClip` **PASS 55.4 s**、`testStreamedAnswer` **PASS 119.7 s**、`testStreamCutoff` **PASS 118.3 s**；作业 `success`。前一次同配置的 run `42280119879` 在启动前被取消（job 没有任何步骤），与代码无关。收紧后的续播断言仍通过：请求起始位置既不小于关闭时刻，也不超出 10 秒。
