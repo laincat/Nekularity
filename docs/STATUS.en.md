@@ -19,6 +19,18 @@ English · [简体中文](STATUS.md)
 
 
 
+## The complete interface suite has a CI inventory; all three theme-HTTPS cases pass once the fixture is started (2026-11-07)
+
+**Full suite, run `42320617497`** (AetherEngine 7.58.0, iPhone 17 Pro / iOS 26.5 simulator): **28 passed / 5 skipped / 1 failed**. Log `E:/Temp/nk-ai-stream-ci/full1.log`.
+
+- `testBoardDragOrderSurvivesRelaunch`, the long-missing evidence for step ③, **PASSed in 53.4 s** here; long-press, size persistence and appearance/layout cases passed too. The earlier CI drag failure did not recur. This is recorded as a measured pass, not as a "fix" - the real-device gesture is still unverified.
+- The only real failure is `testHLSPlaysAndSwitchesSubtitles`: the missing piece is an engine interface that publishes cue text on `.remoteBypass` (see UNVERIFIED). The case stays failing.
+- Five skips: two need source scripts that are not in the repository (`nhentai`, `Komiic`) and three needed the local HTTPS theme fixture, which CI did not start then (they skipped in 0.1 s).
+
+**Theme fixture wired into CI** (from commit `3e65431`): `scripts/theme-fixture.sh` gained `NK_SERVE_ONLY=1`, which makes a throwaway CA, trusts it via `simctl keychain add-root-cert` in the one simulator only, starts both 18791/18792 loopback listeners, prints `ready` and leaves them up. CI waits for ready, then kills exactly the pid it started; the host Keychain is untouched and there is no `keychain reset`. Run `42328084949`: `testHTTPSThemeInstallSelectAndRelaunch` **PASS in 50.8 s**, `testHTTPSInvalidThemeShowsErrorAndPreservesSelection` **PASS in 77.9 s**, `testHTTPThemeLinkIsRejected` **PASS in 29.4 s**; log `E:/Temp/nk-ai-stream-ci/theme1.log`.
+
+**Conclusion**: step ① now has a full-suite result from CI (no dependence on the repeatedly dying Mac worker), and step ③ has pass evidence on the current CI simulator for theme HTTPS installation, long-press, drag and size persistence. It is still not a device and not all green: one known defect fails and two external-source cases skip.
+
 ## The default subtitle follows the system language; HLS captions need an engine interface (second round, 2026-11-07)
 
 **What was built**: `SubtitlePreference` (`Sources/NekularityKit/Media/SubtitlePreference.swift`) owns three rules - a language chosen in the player comes first, otherwise the system language order, and `关闭` is a choice that is remembered too. Chinese keeps its script (`zh-Hans`/`zh-Hant`), inferred from the region; the two scripts do not match each other, and an unscripted `zh` is accepted for either. Nine Kit tests (`SubtitlePreferenceTests`). The player fills `nativeSubtitlePreferredLanguages` and `preferredSubtitleLanguages` from that list at load; picking a language or 关闭 writes the choice back, and a new "跟随系统语言" entry gives the default back to the system - the HLS case uses it to restore state.

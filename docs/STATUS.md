@@ -19,6 +19,18 @@
 
 
 
+## 完整界面套件在 CI 上拿到清单；主题 HTTPS 三条补上夹具后通过（2026-11-07）
+
+**完整套件 run `42320617497`**（AetherEngine 7.58.0，iPhone 17 Pro / iOS 26.5 模拟器）：**28 通过 / 5 跳过 / 1 失败**。日志 `E:/Temp/nk-ai-stream-ci/full1.log`。
+
+- 第 ③ 项里长期缺证据的 `testBoardDragOrderSurvivesRelaunch` 这次**PASS 53.4 s**（长按、大小持久化、明暗/窄宽屏相关用例也全部通过）。此前 CI 上的拖拽失败未再复现；不把它写成"修复"，只记录本次实测通过，仍需真机手势。
+- 真实失败只有 `testHLSPlaysAndSwitchesSubtitles`：缺的是引擎在 `.remoteBypass` 上发布 cue 文本的接口，见 UNVERIFIED。用例保持失败。
+- 跳过 5 条：2 条需要仓库外的真实源脚本（`nhentai`、`Komiic`），3 条主题链接需要本地 HTTPS 夹具（当时 CI 没起，0.1 s 跳过）。
+
+**主题夹具接进 CI**（提交 `3e65431` 之后）：`scripts/theme-fixture.sh` 增加 `NK_SERVE_ONLY=1`，自建一次性 CA、只 `simctl keychain add-root-cert` 到当前模拟器、起 18791/18792 两个 loopback 监听后打印 `ready` 并保持服务；CI 在测试前等 ready、跑完按 pid 收掉，不碰宿主 Keychain、不做 `keychain reset`。run `42328084949`：`testHTTPSThemeInstallSelectAndRelaunch` **PASS 50.8 s**、`testHTTPSInvalidThemeShowsErrorAndPreservesSelection` **PASS 77.9 s**、`testHTTPThemeLinkIsRejected` **PASS 29.4 s**，日志 `E:/Temp/nk-ai-stream-ci/theme1.log`。
+
+**结论**：第 ① 项的完整套件结果现在由 CI 提供（不依赖反复异常终止的 Mac Worker）；第 ③ 项的主题 HTTPS 安装与长按/拖放/大小持久化在当前 CI 模拟器上均有通过证据。仍不是真机，也不是全绿：1 个已知缺陷失败、2 个外部源跳过。
+
 ## 默认字幕跟系统语言；HLS 字幕缺的是引擎接口（2026-11-07 第二轮）
 
 **做了什么**：`SubtitlePreference`（`Sources/NekularityKit/Media/SubtitlePreference.swift`）统一三条规则——播放器里选过的语言优先，否则按系统语言顺序，`关闭`也是一次会被记住的选择；中文保留文字系统（`zh-Hans`/`zh-Hant`），按地区推断，异体不互相匹配，未写文字系统的 `zh` 对两者都接受。Kit 单测 9 条（`SubtitlePreferenceTests`）。播放器加载时用这个列表填 `nativeSubtitlePreferredLanguages` 与 `preferredSubtitleLanguages`；菜单里选语言/关闭会写回偏好，新增「跟随系统语言」把默认还给系统，HLS 用例结束时用它还原。
