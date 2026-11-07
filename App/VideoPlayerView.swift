@@ -129,13 +129,17 @@ final class VideoPlayerModel {
     /// AVPlayer's legible output is the one source of cue text on the bypass.
     /// It must be attached before a track is chosen: a cue only reaches the
     /// delegate when it is presented, which a paused or ended item never does.
-    /// `suppressesPlayerRendering` stays false, so PiP / AirPlay / an external
-    /// display keep whatever AVKit draws there.
+    /// `suppressesPlayerRendering = true` makes the host overlay the only
+    /// drawer: with it false AVPlayer composites the same line into its layer
+    /// and the words appear twice. The delegate still receives the strings.
+    /// Trade-off: PiP / AirPlay / an external display render `AVPlayerLayer`
+    /// only, so they show no caption while a suppressing output is attached -
+    /// recorded in UNVERIFIED.
     private func watchCues(_ engine: AetherEngine) {
         guard let item = engine.currentAVPlayer?.currentItem, item !== cueItem else { return }
         cueItem = item
         let output = AVPlayerItemLegibleOutput()
-        output.suppressesPlayerRendering = false
+        output.suppressesPlayerRendering = true
         output.advanceIntervalForDelegateInvocation = 0
         let sink = CueSink { [weak self] lines in
             Task { @MainActor [weak self] in self?.nativeCues = lines }

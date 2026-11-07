@@ -19,6 +19,18 @@ English · [简体中文](STATUS.md)
 
 
 
+## HLS subtitles: real root cause and fix (2026-11-07, plan B verification plus a minimal host fix)
+
+The previous read-only diagnosis narrowed the problem to "nobody draws the cue", but its screenshot was parked at the end of the clip and the fixture lacked a timestamp map, so a product defect could not be told from a fixture defect. A 30 s dual-subtitle HLS fixture (`hls-subs/resume/master30.m3u8`, cue `0-30 s`), **picking the track during playback** and **Vision OCR over the whole screen** removed both confounders and located the actual causes:
+
+1. **The HLS WebVTT segments lacked `X-TIMESTAMP-MAP`.** They carried only `WEBVTT` and the cue. AVFoundation needs that header to map WebVTT local time onto the media timeline; without it `sub-en30.vtt` returned 200 and the legible option was selected (engine log `AE#154: remote-HLS legible select ordinal=0 (英语)`), yet the cue was never presented, so neither the host legible output nor the picture saw any text. Adding `X-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:0` to `sub-en30.vtt` / `sub-zh30.vtt`, and per-segment `MPEGTS:i*180000` to the six original 10 s VTTs, made cues appear.
+2. **On `.remoteBypass` the client genuinely had no renderer.** The engine's `selectRemoteHLSSubtitleTrack` clears `subtitleCues` and only drives `AVMediaSelection`, while the host mounts a bare `AVPlayerLayer` (`AetherPlayerSurface`), which composites no legible track in full screen. The fix attaches a **non-suppressing** `AVPlayerItemLegibleOutput` after load (`suppressesPlayerRendering=false`, so PiP / AirPlay / external displays are unaffected) and feeds the `NSAttributedString`s AVPlayer actually presents into the **existing** subtitle overlay. One cue can arrive as several attributed strings, so `CueSink` de-duplicates by text to avoid drawing it twice.
+3. **Case timing**: the engine log showed `paused t+31.56s` - the 30 s clip ended during the 25 s XCTest spent finding the menu button (the older 10 s case was worse). The case now pauses first, picks the track, then resumes for 2-3 s; a cue is only presented while the picture moves.
+
+**Verification (CI run `42373927765`, `testHLSLongSubtitlesAreDrawnInThePicture` PASS in 194.4 s)**: OCR read `Subtitle rendering proof` from the full screen, `app.staticTexts["Subtitle rendering proof"]` exists (the overlay is an accessibility element), `sub-en30.vtt 200`, and the words disappear after turning captions off. Log `E:/Temp/nk-ai-stream-ci/hls30-5.log`. Three intervening failures fixed the `XCUIScreenshot`/`UIImage` type, the missing timestamp map, and the clip ending before the pick; logs `hls30-1.log`-`hls30-4.log`.
+
+**Boundaries**: a simulator is not a device; captions in PiP / AirPlay were not verified. The Chinese default track and the "follow system language" path are covered by Kit unit tests, not re-run language by language in this pixel case. The older `testHLSPlaysAndSwitchesSubtitles` now uses the same 30 s fixture and resumes playback after picking the track.
+
 ## The complete interface suite has a CI inventory; all three theme-HTTPS cases pass once the fixture is started (2026-11-07)
 
 **Full suite, run `42320617497`** (AetherEngine 7.58.0, iPhone 17 Pro / iOS 26.5 simulator): **28 passed / 5 skipped / 1 failed**. Log `E:/Temp/nk-ai-stream-ci/full1.log`.
