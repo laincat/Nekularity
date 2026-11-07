@@ -36,9 +36,12 @@ final class VideoPlayerModel {
     /// the request itself.
     private(set) var startPosition: Double = 0
     /// Caption lines AVPlayer actually presents on `.remoteBypass`. That route
-    /// hands the legible selection to AVPlayer and clears `subtitleCues`, while a
-    /// bare `AVPlayerLayer` composites no captions in full screen - so without
-    /// this source the words are selected, fetched and then drawn by nobody.
+    /// hands the legible selection to AVPlayer and clears `subtitleCues`.
+    ///
+    /// AVPlayer composites the caption into its own layer, so the picture shows
+    /// it - including in PiP, AirPlay and an external display, which only ever
+    /// get the layer. The host does not draw a second copy; it keeps the text
+    /// here so the caption is also an accessibility element.
     private(set) var nativeCues: [String] = []
     @ObservationIgnored private var cueItem: AVPlayerItem?
     @ObservationIgnored private var cueOutput: AVPlayerItemLegibleOutput?
@@ -129,17 +132,17 @@ final class VideoPlayerModel {
     /// AVPlayer's legible output is the one source of cue text on the bypass.
     /// It must be attached before a track is chosen: a cue only reaches the
     /// delegate when it is presented, which a paused or ended item never does.
-    /// `suppressesPlayerRendering = true` makes the host overlay the only
-    /// drawer: with it false AVPlayer composites the same line into its layer
-    /// and the words appear twice. The delegate still receives the strings.
-    /// Trade-off: PiP / AirPlay / an external display render `AVPlayerLayer`
-    /// only, so they show no caption while a suppressing output is attached -
-    /// recorded in UNVERIFIED.
+    /// `suppressesPlayerRendering` stays false, so AVPlayer keeps compositing
+    /// the caption into its layer. That is what puts the words on screen, and it
+    /// is also what carries them into PiP, AirPlay and an external display:
+    /// those surfaces only ever receive the layer, never the host's view tree.
+    /// The host therefore does not draw a second copy - it only keeps the text
+    /// for accessibility. The delegate still receives the strings.
     private func watchCues(_ engine: AetherEngine) {
         guard let item = engine.currentAVPlayer?.currentItem, item !== cueItem else { return }
         cueItem = item
         let output = AVPlayerItemLegibleOutput()
-        output.suppressesPlayerRendering = true
+        output.suppressesPlayerRendering = false
         output.advanceIntervalForDelegateInvocation = 0
         let sink = CueSink { [weak self] lines in
             Task { @MainActor [weak self] in self?.nativeCues = lines }
@@ -264,6 +267,7 @@ struct VideoPlayerView: View {
                     AetherPlayerSurface(engine: engine)
                         .ignoresSafeArea(edges: .bottom)
                         .overlay { subtitleLayer }
+                        .overlay { nativeCaptionLayer }
                         .overlay { danmakuLayer }
                         .overlay(alignment: .bottom) { bottomBar(engine) }
                 } else if let failure = model.failure {
@@ -437,7 +441,7 @@ struct VideoPlayerView: View {
     /// it to the path that already does it.
     @ViewBuilder
     private var subtitleLayer: some View {
-        let lines = visibleSubtitleLines
+        let lines = engineCueLines
         if !lines.isEmpty {
             VStack {
                 Spacer()
@@ -461,16 +465,39 @@ struct VideoPlayerView: View {
         }
     }
 
-    /// What to draw: the engine's cues on the paths where it decodes them, and
-    /// on `.remoteBypass` the text AVPlayer presented, read from its legible
-    /// output. Both reach the same overlay, so the caption is also an
-    /// accessibility element.
-    private var visibleSubtitleLines: [String] {
-        let cues = model.cues
+    /// The caption text on the route where AVPlayer draws it.
+    ///
+    /// It carries no pixels: AVPlayer composites the caption into its own
+    /// layer, and drawing it here as well would show the same words twice.
+    /// It is here so the caption is still an accessibility element - a picture
+    /// of a caption is not something a screen reader can read.
+    @ViewBuilder
+    private var nativeCaptionLayer: some View {
+        let lines = model.nativeCues
+        if !lines.isEmpty {
+            VStack {
+                Spacer()
+                VStack(spacing: 2) {
+                    ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                        Text(line)
+                            .font(.callout)
+                            .opacity(0)
+                    }
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityElement(children: .contain)
+        }
+    }
+
+    /// What the host draws: the engine's own cues on the paths where it decodes
+    /// them. On `.remoteBypass` the engine clears `subtitleCues` and hands the
+    /// legible selection to AVPlayer, which draws the caption itself.
+    private var engineCueLines: [String] {
+        model.cues
             .filter { $0.startTime <= model.time && model.time < $0.endTime }
             .compactMap(\.text)
             .filter { !$0.isEmpty }
-        return cues.isEmpty ? model.nativeCues : cues
     }
 
     private func danmakuLine(_ comment: DanmakuComment) -> some View {

@@ -1427,15 +1427,34 @@ final class NekularityUITests: XCTestCase {
         return lines.joined(separator: "\n")
     }
 
+    /// How many times a phrase appears in recognised text.
+    ///
+    /// A caption drawn twice - once by AVPlayer into its layer and once by the
+    /// host overlay - reads as two lines with the same words, so counting the
+    /// occurrences is how a duplicate is told apart from one clean caption.
+    private func occurrences(of phrase: String, in text: String) -> Int {
+        let needle = phrase.lowercased()
+        var count = 0
+        var haystack = text.lowercased()
+        while let range = haystack.range(of: needle) {
+            count += 1
+            haystack = String(haystack[range.upperBound...])
+        }
+        return count
+    }
+
     /// Captions on the AVPlayer-owned route, checked where they are drawn.
     ///
-    /// The client's overlay has no text here by design (the engine hands the
-    /// legible selection to AVPlayer and keeps `subtitleCues` empty), and
-    /// AVPlayer composites the caption into its layer as pixels. So the case
-    /// reads the screen, not the accessibility tree, and it picks the track
-    /// while the picture is playing: an earlier version chose one after pausing
-    /// and asserted after a ten-second clip had already ended, which could not
-    /// have shown a cue at all.
+    /// The engine hands the legible selection to AVPlayer and keeps
+    /// `subtitleCues` empty, and AVPlayer composites the caption into its own
+    /// layer as pixels. So the case reads the screen, not the accessibility
+    /// tree, and it picks the track while the picture is playing: an earlier
+    /// version chose one after pausing and asserted after a ten-second clip had
+    /// already ended, which could not have shown a cue at all.
+    ///
+    /// AVPlayer drawing the caption is also what carries it into PiP, AirPlay
+    /// and an external display, so the host must not draw a second copy. The
+    /// case therefore checks that the words appear exactly once.
     func testHLSLongSubtitlesAreDrawnInThePicture() throws {
         let server = try LocalImageServer()
         try server.start()
@@ -1480,6 +1499,11 @@ final class NekularityUITests: XCTestCase {
         }
         XCTAssertTrue(seen.lowercased().contains("subtitle") || seen.lowercased().contains("proof"),
                       "the picture shows no caption: \(seen)")
+        // Exactly once: AVPlayer owns the pixels, the host only keeps the text
+        // for accessibility, so a second copy means both drew it.
+        let repeats = occurrences(of: "subtitle rendering proof", in: seen)
+        XCTAssertEqual(repeats, 1,
+                       "the caption is drawn \(repeats) times: \(seen)")
         // The host overlay draws a real SwiftUI Text, so the same words must
         // also be readable without looking at pixels.
         let caption = app.staticTexts["Subtitle rendering proof"]
