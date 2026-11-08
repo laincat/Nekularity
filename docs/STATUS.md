@@ -19,6 +19,18 @@
 
 
 
+## 两条长期跳过项消除；完整 UI 34/0/0（2026-11-08）
+
+`testSeededSourcesAppear` 与 `testSourceOffersInPageLogin` 原先依赖仓库外的 `nhentai` / `Komiic` 源脚本，每次完整套件都按设计跳过。改成用仓库自带夹具覆盖同样的客户端行为：
+
+- `UITests/Fixtures/callback_probe.js` 增加 `account.loginWithWebview`（URL 指向测试运行器的 loopback）；种子由 Nekophage `cmd/seedgen` 重新生成。`testSeededSourcesAppear` 断言 `callback_probe` 行出现且漫画源列表条目数为 1（视频源本来不在漫画源列表里）。
+- `testSourceOffersInPageLogin` 用 `callback_probe` 打开页内登录；标题断言改为 source key（`登录 callback_probe`），不是显示名。
+- 顺带修一处真实脆弱：`testVideoPlaysTheSourcesClip` 原来用 10 秒片段、隔 4 秒读两次时钟，片段在第二次读取前已播完（`10s → 10s`）；改用 30 秒 `Probe Resume` 片段。
+
+定向 run `42423015736` / `42419877388` / `42431447041` 分别验证三条；最终 HEAD 完整套件 run `42434319855`：**34 通过 / 0 失败 / 0 跳过**，Kit **492 tests / 85 suites 通过**。日志 `E:/Temp/nk-ai-stream-ci/full7.log`、`full7-summary.txt`。
+
+**边界**：这只证明客户端能列出种子源、能按声明打开页内登录页；不证明 `nhentai` 站点本身可登录，也不证明真机、真实账号或真实站源脚本的行为。
+
 ## 0.4.4 / build 26 已发布并核对（2026-11-07）
 
 包含本轮两处修复：字幕改由 AVPlayer 绘制、标准 AI 流式在被拒响应头即判定。最终 HEAD 的完整界面套件 **32 通过 / 0 失败 / 2 跳过**（run `42405822352`，Kit **492 tests / 85 suites 通过**），发布 `v0.4.4`（`b86a2dc`，CI run `42411664429`，`success`）：
@@ -30,7 +42,7 @@
 - **AltStore 三入口**：raw / CNB / latest 均为 **0.4.4 / 26 / 29,947,415**；工作流 `42415196780` `success`。
 - 回执与 IPA 副本：`E:/Code/deliveries/2026-11-08-nekularity-044/`。
 
-**边界**：模拟器 ≠ 真机，PiP / AirPlay / 外接显示器的字幕仍需真机；2 条跳过仍需仓库外的 `nhentai`/`Komiic` 脚本；真机签名安装、后台/锁屏、Live Activity、实际扬声器仍待交接。
+**边界**：模拟器 ≠ 真机，PiP / AirPlay / 外接显示器的字幕仍需真机；这版仍有 2 条跳过（后来在 0.4.5 由仓库夹具消除，见顶部）；真机签名安装、后台/锁屏、Live Activity、实际扬声器仍待交接。
 
 ## 字幕改由 AVPlayer 绘制，PiP/AirPlay 不再没有字幕（2026-11-07）
 

@@ -19,6 +19,18 @@ English · [简体中文](STATUS.md)
 
 
 
+## Two long-standing skips removed; complete UI 34/0/0 (2026-11-08)
+
+`testSeededSourcesAppear` and `testSourceOffersInPageLogin` used to depend on the `nhentai` / `Komiic` source scripts that live outside this repository, so every complete suite skipped them by design. They now cover the same client behaviour with in-repository fixtures:
+
+- `UITests/Fixtures/callback_probe.js` declares `account.loginWithWebview` (its URL points at the test runner's loopback server); the seed was rebuilt with Nekophage's `cmd/seedgen`. `testSeededSourcesAppear` asserts the `callback_probe` row appears and that the comic-source list has exactly one entry (a video source does not belong in that list at all).
+- `testSourceOffersInPageLogin` opens the in-page login of `callback_probe`; the title assertion uses the source key (`登录 callback_probe`), not the display name.
+- One real fragility fixed along the way: `testVideoPlaysTheSourcesClip` used the 10 s clip and read the clock twice four seconds apart, so the clip had ended before the second reading (`10s -> 10s`); it now uses the 30 s `Probe Resume` clip.
+
+Targeted runs `42423015736` / `42419877388` / `42431447041` verified the three cases; the complete suite on the final HEAD, run `42434319855`, is **34 passed / 0 failed / 0 skipped**, with the kit at **492 tests across 85 suites**. Logs `E:/Temp/nk-ai-stream-ci/full7.log` and `full7-summary.txt`.
+
+**Boundaries**: this proves the client lists seeded sources and opens an in-page login sheet from a declaration; it does not prove the `nhentai` site itself can be logged into, nor anything about a device, a real account or a real source script.
+
 ## 0.4.4 / build 26 released and verified (2026-11-07)
 
 Carries this round's two fixes: captions are drawn by AVPlayer, and a rejected standard AI stream is decided at the response head. The complete interface suite on the final HEAD is **32 passed / 0 failed / 2 skipped** (run `42405822352`; **492 Kit tests across 85 suites**), and `v0.4.4` was released from it (`b86a2dc`, CI run `42411664429`, `success`):
@@ -30,7 +42,7 @@ Carries this round's two fixes: captions are drawn by AVPlayer, and a rejected s
 - **All three AltStore entries**: raw / CNB / latest all read **0.4.4 / 26 / 29,947,415**; workflow `42415196780` `success`.
 - Receipt and IPA copy: `E:/Code/deliveries/2026-11-08-nekularity-044/`.
 
-**Boundaries**: a simulator is not a device, and the PiP / AirPlay / external-display captions still need one; the two skips still need the out-of-repository `nhentai`/`Komiic` scripts; device signing and install, background/lock screen, Live Activity and real speakers remain open dependencies.
+**Boundaries**: a simulator is not a device, and the PiP / AirPlay / external-display captions still need one; this build still had two skips (removed in 0.4.5 with in-repository fixtures, see the top of this file); device signing and install, background/lock screen, Live Activity and real speakers remain open dependencies.
 
 ## Captions are drawn by AVPlayer, so PiP/AirPlay keep them (2026-11-07)
 
