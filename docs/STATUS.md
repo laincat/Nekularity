@@ -19,6 +19,20 @@
 
 
 
+## 当前 Core pin 的 Magpie 本地 HTTP 夹具实跑（2026-11-08）
+
+历史证据用的是发布 Core `3be57b5`；这次在两端当前 pin `d9a1851` 的干净 worktree 上重跑同一份 `scripts/fixtures/magpie-http/` 夹具与 Go 客户端，命令 `python3 E:/Temp/nk-magpie-current/run.py`，**7 PASS / 0 FAIL**：
+
+- 模型目录与刷新后的假凭据可持久化；首段 `第一段 ` 在 HTTP 正文结束前到达。
+- `ChatCancel` 被 loopback 服务端观察为 `peer_closed`（真实连接停止，不是 UI 停止）。
+- 重建实例消费持久化凭据、不再刷新第二次，Unicode 回答 `第一段 第二段🐾` 完整。
+- 指定请求 release 后剩余 SSE 文字与结束标记补齐；HTTP 503 报成 chat error 而不是成功。
+- 服务端事件：`refresh` 1、`request` 6、`first_chunk` 3、`peer_closed` 1、`answered` 2、`rejected` 1、**`expired` 0**；所有请求带假 Bearer 且无 Cookie。
+
+日志 `E:/Temp/nk-magpie-current/core-http.log`、`events.json`；回执 `E:/Code/deliveries/2026-11-08-magpie-current-pin/receipt.json`。
+
+**边界**：这是 Go 客户端对 Core 公共 `mobile` API 发的真实 loopback HTTP 请求，**不是** Swift URLSession、iOS 界面、钥匙串、设备上的 App 重启，也不是真实供应商账号。iOS 侧仍需实际导入/登录、显示目录与回答、取消、保存刷新结果并重启读取。
+
 ## 0.4.5 / build 27 已发布并核对（2026-11-08）
 
 `c0b603e` 打上 `v0.4.5`，发布 CI run `42439654644` **success**（网页标题 `0.4.5 / build 27 · laincat/Nekularity@c0b603e`、success 图标、零失败标记，证据 `E:/Temp/run045.html`）。最终 HEAD 的完整界面套件 run `42434319855` **34 通过 / 0 失败 / 0 跳过**，Kit **492 tests / 85 suites 通过**；`check-docs.sh`、`check-swift.py`、`check-seed.sh` 均通过，日志 `E:/Temp/nk-ai-stream-ci/full7.log`。

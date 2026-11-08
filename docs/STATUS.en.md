@@ -19,6 +19,20 @@ English · [简体中文](STATUS.md)
 
 
 
+## Magpie local HTTP fixture on the current Core pin (2026-11-08)
+
+The earlier evidence used the released Core `3be57b5`; this time the same `scripts/fixtures/magpie-http/` fixture and Go client ran against a clean worktree of the current pin `d9a1851` used by both clients, via `python3 E:/Temp/nk-magpie-current/run.py`: **7 PASS / 0 FAIL**.
+
+- The model catalogue and the refreshed fake credential are available for persistence; the first text `第一段 ` arrives before the HTTP body completes.
+- `ChatCancel` is observed by the loopback server as `peer_closed` (a real connection stop, not a UI stop).
+- A rebuilt instance consumes the persisted credential without a second refresh, and the Unicode reply `第一段 第二段🐾` is complete.
+- A targeted release completes the remaining SSE text and end marker; HTTP 503 surfaces as a chat error rather than success.
+- Server events: `refresh` 1, `request` 6, `first_chunk` 3, `peer_closed` 1, `answered` 2, `rejected` 1, **`expired` 0**; every request carries the fake Bearer credential and no Cookie.
+
+Logs `E:/Temp/nk-magpie-current/core-http.log` and `events.json`; receipt `E:/Code/deliveries/2026-11-08-magpie-current-pin/receipt.json`.
+
+**Boundaries**: this is a Go client making real loopback HTTP requests against Core's public `mobile` API - **not** Swift URLSession, the iOS interface, the Keychain, an App restart on a device, or a real provider account. The iOS side still needs an actual import / sign-in, catalogue and answer display, cancellation, saved refresh result and a restart that reads it back.
+
 ## 0.4.5 / build 27 published and verified (2026-11-08)
 
 `c0b603e` was tagged `v0.4.5`; release CI run `42439654644` is **success** (page title `0.4.5 / build 27 · laincat/Nekularity@c0b603e`, success icons, zero failure markers; evidence `E:/Temp/run045.html`). The complete interface suite on the final HEAD, run `42434319855`, is **34 passed / 0 failed / 0 skipped**, with the kit at **492 tests across 85 suites**; `check-docs.sh`, `check-swift.py` and `check-seed.sh` all pass. Log `E:/Temp/nk-ai-stream-ci/full7.log`.
