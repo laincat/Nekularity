@@ -19,6 +19,10 @@
 
 
 
+## Core pin 升到 `3d61c62`（2026-11-08）
+
+Core `3d61c62`：`new URL` 对特殊 scheme 按标准移除 `.`/`..` 路径段（此前相对地址 `../img/1.jpg` 以字面 `/b/c/../img/1.jpg` 发出），属生产 `init.js` 行为变更，故两端跟进。本机：`check-core-pin.sh` ok；Magpie loopback HTTP 夹具在新 pin 上 **7 PASS / 0 FAIL**（`E:/Temp/nk-magpie-3d61.log`）。iOS 编译、Kit 与 UI 需 CI 结论，以 run 记录为准，不凭本机推断。
+
 ## Magpie HTTP 夹具进常驻 CI（2026-11-08）
 
 此前 `scripts/fixtures/magpie-http/` 只在 Windows 上用临时脚本跑过，仓库里没有可复现命令，CI 也不跑它。现在补上：

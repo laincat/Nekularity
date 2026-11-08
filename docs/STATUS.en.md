@@ -19,6 +19,10 @@ English · [简体中文](STATUS.md)
 
 
 
+## Core pin moved to `3d61c62` (2026-11-08)
+
+Core `3d61c62`: `new URL` drops `.`/`..` path segments for special schemes as the standard does (before, the relative `../img/1.jpg` was sent as the literal `/b/c/../img/1.jpg`). That is a production `init.js` behaviour change, so both clients follow. Locally `check-core-pin.sh` is ok and the Magpie loopback HTTP fixture on the new pin is **7 PASS / 0 FAIL** (`E:/Temp/nk-magpie-3d61.log`). The iOS build, Kit tests and UI need a CI result and are recorded from the run, not inferred from this machine.
+
 ## The Magpie HTTP fixture now runs in CI (2026-11-08)
 
 Previously `scripts/fixtures/magpie-http/` had only been run on Windows with a temporary script: the repository had no reproducible command and CI never ran it. That is now fixed:
