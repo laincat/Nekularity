@@ -19,6 +19,10 @@
 
 
 
+## Core pin 升到 `da23603`（2026-11-08）
+
+Core `da23603`：`new URL` 保留原始查询串与片段标记（原先会把 `?sig=a/b` 重写为 `?sig=a%2Fb`，是签名链接的真实缺陷），属生产 `init.js` 行为变更，两端跟进。本机 `check-core-pin.sh` ok，Magpie loopback HTTP 夹具在新 pin 上 **7 PASS / 0 FAIL**；Core CI `42475605038` 四个 job 全 success。iOS 编译、Kit 与 UI 以 CI run 为准，不凭本机推断。回执 `E:/Code/deliveries/2026-11-08-core-url-raw-query/receipt.json`。
+
 ## 0.4.6 / build 28 发布核对（2026-11-08）
 
 Core pin `3d61c62`（`new URL` 移除 `.`/`..` 路径段）。发版前回归为 `0f1a46a` 的 CI `42460155664`：完整 UI **34 个、0 失败、0 跳过**，Kit **492 tests / 85 suites passed**；其后只改文档与版本号。tag `v0.4.6`（`442a63c`），发布 CI `42464844452` **success**。
