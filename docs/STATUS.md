@@ -21,7 +21,7 @@
 
 ## Core pin 升到 `3d61c62`（2026-11-08）
 
-Core `3d61c62`：`new URL` 对特殊 scheme 按标准移除 `.`/`..` 路径段（此前相对地址 `../img/1.jpg` 以字面 `/b/c/../img/1.jpg` 发出），属生产 `init.js` 行为变更，故两端跟进。本机：`check-core-pin.sh` ok；Magpie loopback HTTP 夹具在新 pin 上 **7 PASS / 0 FAIL**（`E:/Temp/nk-magpie-3d61.log`）。iOS 编译、Kit 与 UI 需 CI 结论，以 run 记录为准，不凭本机推断。
+Core `3d61c62`：`new URL` 对特殊 scheme 按标准移除 `.`/`..` 路径段（此前相对地址 `../img/1.jpg` 以字面 `/b/c/../img/1.jpg` 发出），属生产 `init.js` 行为变更，故两端跟进。本机：`check-core-pin.sh` ok；Magpie loopback HTTP 夹具在新 pin 上 **7 PASS / 0 FAIL**（`E:/Temp/nk-magpie-3d61.log`）。CI run `42460155664`（`0f1a46a`，`ui_tests=true`）**success**：完整 UI **34 个、0 失败、0 跳过**，Kit **492 tests / 85 suites passed**，Magpie 步骤 success。回执 `E:/Code/deliveries/2026-11-08-core-url-dot-segments/receipt.json`。真机仍未验证。
 
 ## Magpie HTTP 夹具进常驻 CI（2026-11-08）
 

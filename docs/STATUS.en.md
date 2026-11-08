@@ -21,7 +21,7 @@ English · [简体中文](STATUS.md)
 
 ## Core pin moved to `3d61c62` (2026-11-08)
 
-Core `3d61c62`: `new URL` drops `.`/`..` path segments for special schemes as the standard does (before, the relative `../img/1.jpg` was sent as the literal `/b/c/../img/1.jpg`). That is a production `init.js` behaviour change, so both clients follow. Locally `check-core-pin.sh` is ok and the Magpie loopback HTTP fixture on the new pin is **7 PASS / 0 FAIL** (`E:/Temp/nk-magpie-3d61.log`). The iOS build, Kit tests and UI need a CI result and are recorded from the run, not inferred from this machine.
+Core `3d61c62`: `new URL` drops `.`/`..` path segments for special schemes as the standard does (before, the relative `../img/1.jpg` was sent as the literal `/b/c/../img/1.jpg`). That is a production `init.js` behaviour change, so both clients follow. Locally `check-core-pin.sh` is ok and the Magpie loopback HTTP fixture on the new pin is **7 PASS / 0 FAIL** (`E:/Temp/nk-magpie-3d61.log`). CI run `42460155664` (`0f1a46a`, `ui_tests=true`) is **success**: the full UI suite ran **34 tests, 0 failures, 0 skipped**, Kit **492 tests in 85 suites passed**, and the Magpie step succeeded. Receipt `E:/Code/deliveries/2026-11-08-core-url-dot-segments/receipt.json`. Devices remain unverified.
 
 ## The Magpie HTTP fixture now runs in CI (2026-11-08)
 
