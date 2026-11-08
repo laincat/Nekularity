@@ -14,7 +14,7 @@
 
 ## 0.4.3 发布、最终回归与桌面 0.2.27（2026-11-07）
 
-按本轮顺序收口：最终 HEAD `f486376` 的完整 UI 套件 **32 通过 / 0 失败 / 2 跳过**（run `42386284795`，Kit 490/84），HLS 字幕修复后 OCR 只读到一行文字；随后发布 `v0.4.3/build 25`（`87db928`，CI `42392553106`）：IPA HTTP 200 / 29,942,512 字节 / SHA-256 `cc64a26d…`，App 与 Widget 都是 0.4.3/25、最低 iOS 26.0，Core pin `d9a1851`，包内 LICENSE/COPYING 与仓库 md5 一致；AltStore 三入口（含 raw、CNB、latest）均为 0.4.3/25。桌面 `0.2.27` Windows ZIP 与安装包在隔离资料下 **14 PASS / 0 FAIL**，交付 `E:/Code/deliveries/2026-11-07-nekophage-0.2.27/`。Core 官方源巡检 **34/34、0 失败**，没有新增兼容缺口，两端 pin 保持 `d9a1851`。
+按本轮顺序收口：最终 HEAD `f486376` 的完整 UI 套件 **32 通过 / 0 失败 / 2 跳过**（run `42386284795`，Kit 490/84），HLS 字幕修复后 OCR 只读到一行文字；随后发布 `v0.4.3/build 25`（`87db928`，CI `42392553106`）：IPA HTTP 200 / 29,942,512 字节 / SHA-256 `cc64a26d…`，App 与 Widget 都是 0.4.3/25、最低 iOS 26.0，Core pin `d9a1851`，包内 LICENSE/COPYING 与仓库 md5 一致；AltStore 三入口（含 raw、CNB、latest）均为 0.4.3/25。桌面 `0.2.27` Windows ZIP 与安装包在隔离资料下 **14 PASS / 0 FAIL**，交付 `E:/Code/deliveries/2026-11-07-nekophage-0.2.27/`。Core 官方源巡检 **34/34、0 失败**，没有新增兼容缺口，两端 pin 保持 `d9a1851`。 **2026-11-08 更新**：Core 升到 `3d61c62`（`new URL` 点段解析）后，桌面重打 `0.2.28`（`719d852`）：ZIP 23,002,081 B、安装包 19,913,306 B，隔离安装 **14 PASS / 0 FAIL**，新 pin 上 Windows 原生阅读主线 PASS；iOS 在新 pin 上 CI `42460155664` 完整 UI **34/0/0**、Kit **492/85**。交付 `E:/Code/deliveries/2026-11-08-nekophage-0.2.28/`。
 
 剩余外部依赖单列：真机签名安装、后台/锁屏、Live Activity、PiP 与实际扬声器；`nhentai`/`Komiic` 两条跳过用例所需的仓库外源脚本；Nekophage 没有 Git remote，公开发布目的地未指定；macOS 当前 pin 的搜索→详情→阅读主线需要 Mac；PiP/AirPlay 字幕在 suppressing legible output 下仍不覆盖。
 
