@@ -19,6 +19,14 @@
 
 
 
+## 0.4.7 / build 29 发布核对（2026-11-08）
+
+Core pin `da23603`（`new URL` 保留原始查询串与片段标记，签名链接不再被改写）。发版前回归为 `836f824` 的 CI `42476685394`：完整 UI **34 个、0 失败、0 跳过**，Kit **492 tests / 85 suites passed**，Magpie 步骤 success，结论 success。tag `v0.4.7`（`716a635`），发布 CI `42481149097` **success**。
+
+IPA 29,949,283 字节，SHA-256 `a3dfb4f2ca8ebad2d467eedc2f841bcbb36164ee69560f9701e3708909b3b03f`，公开下载 HTTP 200。内容核对 **12 PASS / 0 FAIL**：App 与 Widget 均 0.4.7/29、最低 iOS 26.0、二进制含 `da23603` 且不含旧 pin `3d61c62`、LICENSE/COPYING 与仓库 md5 一致。AltStore `update-source.yml` run `42483412073` success；raw、CNB、`latest` 三入口均回读 **0.4.7 / 29 / 29,949,283**。回执 `E:/Code/deliveries/2026-11-08-nekularity-047/receipt.json`。
+
+**边界**：发布、IPA 内容与源条目核对；未在真机安装，签名、后台、Live Activity、PiP 仍未在硬件上验证。
+
 ## Core pin 升到 `da23603`（2026-11-08）
 
 Core `da23603`：`new URL` 保留原始查询串与片段标记（原先会把 `?sig=a/b` 重写为 `?sig=a%2Fb`，是签名链接的真实缺陷），属生产 `init.js` 行为变更，两端跟进。本机 `check-core-pin.sh` ok，Magpie loopback HTTP 夹具在新 pin 上 **7 PASS / 0 FAIL**；Core CI `42475605038` 四个 job 全 success。iOS 编译、Kit 与 UI 以 CI run 为准，不凭本机推断。回执 `E:/Code/deliveries/2026-11-08-core-url-raw-query/receipt.json`。

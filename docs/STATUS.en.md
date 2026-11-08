@@ -19,6 +19,14 @@ English · [简体中文](STATUS.md)
 
 
 
+## 0.4.7 / build 29 release check (2026-11-08)
+
+Core pin `da23603` (`new URL` keeps the raw query and fragment marker, so signed links are no longer rewritten). The pre-release regression is CI `42476685394` on `836f824`: the full UI ran **34 tests, 0 failures, 0 skipped**, Kit **492 tests in 85 suites passed**, the Magpie step succeeded, and the run is success. Tag `v0.4.7` (`716a635`), release CI `42481149097` **success**.
+
+IPA 29,949,283 bytes, SHA-256 `a3dfb4f2ca8ebad2d467eedc2f841bcbb36164ee69560f9701e3708909b3b03f`, public download HTTP 200. Content check **12 PASS / 0 FAIL**: App and Widget are both 0.4.7/29, minimum iOS 26.0, the binary contains `da23603` and not the old pin `3d61c62`, and LICENSE/COPYING match by md5. AltStore `update-source.yml` run `42483412073` succeeded; raw, CNB and `latest` all read back **0.4.7 / 29 / 29,949,283**. Receipt `E:/Code/deliveries/2026-11-08-nekularity-047/receipt.json`.
+
+**Boundaries**: release, IPA contents and source entries; not installed on a device, so signing, background, Live Activity and PiP remain unverified on hardware.
+
 ## Core pin moved to `da23603` (2026-11-08)
 
 Core `da23603`: `new URL` keeps the raw query and fragment marker (it used to rewrite `?sig=a/b` as `?sig=a%2Fb`, a real defect for signed links). That is a production `init.js` behaviour change, so both clients follow. Locally `check-core-pin.sh` is ok and the Magpie loopback HTTP fixture on the new pin is **7 PASS / 0 FAIL**; Core CI `42475605038` passed all four jobs. The iOS build, Kit and UI results come from a CI run, not from this machine. Receipt `E:/Code/deliveries/2026-11-08-core-url-raw-query/receipt.json`.

@@ -2,6 +2,16 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+## 2026-11-08 收口：0.4.7 与 0.2.29 已发布，Core 修好签名 URL 查询串
+
+**iOS**：`v0.4.7` / build 29（`716a635`）已发布并核对——发布 CI `42481149097` success，IPA 29,949,283 字节 / SHA-256 `a3dfb4f2…b03f`，内容检查 **12 PASS / 0 FAIL**（App 与 Widget 均 0.4.7/29、最低 iOS 26.0、二进制含 Core `da23603` 且不含旧 pin、LICENSE/COPYING md5 一致）；AltStore 三入口均 0.4.7/29/29,949,283。发版前回归 CI `42476685394`：完整 UI **34/0/0**，Kit **492/85**，Magpie 步骤 success。
+
+**Core**：`da23603` 修 `new URL`——保留原始查询串与片段标记。此前 `?sig=a/b` 会被重写成 `?sig=a%2Fb`，签名链接因此失效；裸 `?` 丢失、`u.hash = "y"` 生成 `https://a.com/py`。以 Node WHATWG URL 做 23 条差分：修复前 12 一致、修复后 **23/23**；URL 点段差分 19/20、内建 53/53；新增两条测试并有变异检验；`go test ./...` 23 包 PASS、官方源 34/34；Core CI `42475605038` 四 job 全 success。
+
+**桌面**：Nekophage `0.2.29`（`4935ca9`，Core `da23603`）已发布到公开仓库 `https://github.com/laincat/Nekophage`（tag `v0.2.29`）：Windows 隔离安装 **14/0**，`check.sh` **7/7**，桌面探针 **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**，四资产 API 回读 4/4、校验和 2 OK。macOS 当前 pin 阅读主线此前已由 Orca Worker 在 `Laincat-Mini` 实跑通过（ad-hoc 签名，非 Developer ID/公证）。
+
+**仍需外部条件**：真机签名安装、后台/锁屏、Live Activity、PiP / AirPlay / 外接显示器字幕、实际扬声器、真实账号与站点、真实折叠设备上的窄宽屏。
+
 ## 2026-11-08 收口：0.4.6 已发布，桌面 0.2.28 已公开，macOS 当前 pin 主线已跑通
 
 **iOS**：`v0.4.6` / build 28（`442a63c`）已发布并核对——发布 CI `42464844452` success，IPA 29,947,286 字节 / SHA-256 `362278cf…5935`，内容检查 **12 PASS / 0 FAIL**（App 与 Widget 均 0.4.6/28、最低 iOS 26.0、二进制含 Core `3d61c62` 且不含旧 pin `d9a1851`、LICENSE/COPYING md5 一致）；AltStore 三入口（raw / CNB / latest）均 0.4.6/28/29,947,286。发版前回归为 `0f1a46a` 的 CI `42460155664`：完整 UI **34 通过 / 0 失败 / 0 跳过**，Kit **492 tests / 85 suites**；该日志中长按编排、拖放顺序持久化、卡片尺寸持久化、明暗选择及重启保持、主题 HTTPS 安装/错误显示/HTTP 拒绝、横屏三列共 8 个用例逐条 `passed`。公开下载地址偶发 GitHub 网关 504，随后复核 IPA 为 HTTP 200 / 29,947,286 字节。

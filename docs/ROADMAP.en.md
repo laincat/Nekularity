@@ -2,6 +2,16 @@
 
 [简体中文](ROADMAP.md) | English
 
+## 2026-11-08 close-out: 0.4.7 and 0.2.29 published, Core fixes signed URL queries
+
+**iOS**: `v0.4.7` / build 29 (`716a635`) is published and verified - release CI `42481149097` success, IPA 29,949,283 bytes / SHA-256 `a3dfb4f2…b03f`, content check **12 PASS / 0 FAIL** (App and Widget both 0.4.7/29, minimum iOS 26.0, binary contains Core `da23603` and not the old pin, LICENSE/COPYING md5 match); all three AltStore entries are 0.4.7/29/29,949,283. The pre-release regression CI `42476685394` ran the full UI **34/0/0**, Kit **492/85**, and the Magpie step succeeded.
+
+**Core**: `da23603` fixes `new URL` - the raw query and fragment marker are kept. Before it, `?sig=a/b` became `?sig=a%2Fb` and broke signed links; a bare `?` disappeared and `u.hash = "y"` produced `https://a.com/py`. A 23-case differential against Node's WHATWG URL agreed on 12 before and **23/23** after; the URL dot-segment differential is 19/20 and the built-ins 53/53; two new tests with a mutation check; `go test ./...` passes 23 packages and the official-source sweep is 34/34; Core CI `42475605038` passed all four jobs.
+
+**Desktop**: Nekophage `0.2.29` (`4935ca9`, Core `da23603`) is published in the public repository `https://github.com/laincat/Nekophage` (tag `v0.2.29`): Windows isolated install **14/0**, `check.sh` **7/7**, desktop probes **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**, and all four assets read back 4/4 through the API with 2 checksums OK. The macOS current-pin reading mainline was previously run on `Laincat-Mini` by an Orca Worker and passed (ad-hoc signed, not Developer ID/notarised).
+
+**Still external**: signed device install, background / lock screen, Live Activity, PiP / AirPlay / external-display captions, an audible speaker, real accounts and sites, and narrow/wide layouts on a real foldable.
+
 ## 2026-11-08 close-out: 0.4.6 published, desktop 0.2.28 public, macOS mainline on the current pin passed
 
 **iOS**: `v0.4.6` / build 28 (`442a63c`) is published and verified - release CI `42464844452` success, IPA 29,947,286 bytes / SHA-256 `362278cf…5935`, content check **12 PASS / 0 FAIL** (App and Widget both 0.4.6/28, minimum iOS 26.0, binary contains Core `3d61c62` and not the old pin `d9a1851`, LICENSE/COPYING md5 match); all three AltStore entries (raw / CNB / latest) are 0.4.6/28/29,947,286. The pre-release regression is CI `42460155664` on `0f1a46a`: full UI **34 tests, 0 failures, 0 skipped**, Kit **492 tests / 85 suites**; that log shows all eight P1-1 cases passing individually (long-press arranging, drag order persistence, card size persistence, light/dark choice and relaunch, HTTPS theme install / error display / HTTP rejection, landscape three columns). The public download URL hit GitHub gateway 504s at first and later returned HTTP 200 / 29,947,286 bytes.

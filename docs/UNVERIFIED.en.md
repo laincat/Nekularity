@@ -1,8 +1,8 @@
 English · [简体中文](UNVERIFIED.md)
 
-## 0.4.6 is published, but device behaviour is still unverified (2026-11-08)
+## 0.4.7 is published, but device behaviour is still unverified (2026-11-08)
 
-CI, the IPA contents and all three AltStore entries for 0.4.6 / build 28 have been verified (see [STATUS](STATUS.en.md)). **That is not device verification**: signed install and device launch, background / lock-screen playback, Live Activity, captions in PiP / AirPlay / external displays, an audible speaker, real accounts and real site scripts have never run on a device. The CI simulator's 34/0/0 only proves the UI cases pass on a CI simulator.
+CI, the IPA contents and all three AltStore entries for 0.4.7 / build 29 have been verified (see [STATUS](STATUS.en.md)). **That is not device verification**: signed install and device launch, background / lock-screen playback, Live Activity, captions in PiP / AirPlay / external displays, an audible speaker, real accounts and real site scripts have never run on a device. The CI simulator's 34/0/0 only proves the UI cases pass on a CI simulator.
 
 
 ## `.remoteBypass` captions: the PiP / AirPlay behaviour is still unverified (2026-11-07)
