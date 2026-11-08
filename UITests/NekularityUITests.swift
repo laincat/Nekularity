@@ -1079,7 +1079,11 @@ final class NekularityUITests: XCTestCase {
         field.typeText("probe")
         app.typeText("\n")
 
-        let card = firstElement(app, containing: "Probe Clip")
+        // The 30 s clip, not the 10 s one: this case reads the clock, waits four
+        // seconds and reads it again, and a 10 s clip has reached its end by the
+        // second reading - the picture then reports 10 s twice and the case
+        // fails for having run out of clip rather than for being broken.
+        let card = firstElement(app, containing: "Probe Resume")
         guard card.waitForExistence(timeout: 60) else {
             throw XCTSkip("the video fixture did not answer search")
         }
