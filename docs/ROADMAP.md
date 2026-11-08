@@ -2,15 +2,15 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
-## 2026-11-08 现状：0.4.5 已发布并核对，桌面当前 pin 主线已跑通（2026-11-08）
+## 2026-11-08 收口：0.4.6 已发布，桌面 0.2.28 已公开，macOS 当前 pin 主线已跑通
 
-**iOS**：`v0.4.5` / build 27 已发布并核对——发布 CI `42439654644` success，IPA HTTP 200 / 29,947,418 字节 / SHA-256 `9342dc44…42cd15`，包内 App 与 Widget 都是 0.4.5/27、最低 iOS 26.0、Core pin `d9a1851`，LICENSE/COPYING md5 与仓库一致；AltStore 三入口（raw / CNB / latest）均为 **0.4.5 / 27 / 29,947,418**（`update-source` REST dispatch 204，工作流 `2026-11-08T05:10:53Z` 成功，提交 `31590d9`）。最终 HEAD 完整界面套件 **34 通过 / 0 失败 / 0 跳过**（run `42434319855`），Kit **492 tests / 85 suites**。
+**iOS**：`v0.4.6` / build 28（`442a63c`）已发布并核对——发布 CI `42464844452` success，IPA 29,947,286 字节 / SHA-256 `362278cf…5935`，内容检查 **12 PASS / 0 FAIL**（App 与 Widget 均 0.4.6/28、最低 iOS 26.0、二进制含 Core `3d61c62` 且不含旧 pin `d9a1851`、LICENSE/COPYING md5 一致）；AltStore 三入口（raw / CNB / latest）均 0.4.6/28/29,947,286。发版前回归为 `0f1a46a` 的 CI `42460155664`：完整 UI **34 通过 / 0 失败 / 0 跳过**，Kit **492 tests / 85 suites**；该日志中长按编排、拖放顺序持久化、卡片尺寸持久化、明暗选择及重启保持、主题 HTTPS 安装/错误显示/HTTP 拒绝、横屏三列共 8 个用例逐条 `passed`。公开下载地址偶发 GitHub 网关 504，随后复核 IPA 为 HTTP 200 / 29,947,286 字节。
 
-**Core**：pin `d9a1851` 与 main `15187e9` 相差 7 个提交，但**零生产代码改动**（非测试 `.go` 文件 0 个、`go.mod`/`go.sum` 未变），因此两端 pin 不必跟进；官方源巡检 **34/34、0 失败**。当前 pin 上 Magpie 本地 HTTP 夹具实跑 **7 PASS / 0 FAIL**（含服务端 `peer_closed`）。
+**Core**：两端 pin `3d61c6239eba1ce9a21a32a1afe71f3c792b9ba5`（`new URL` 按标准移除 `.`/`..` 路径段）；随后 `3e99e75` 只加 Convert 与 Node/OpenSSL 差分的测试、不改生产代码，故 pin 不跟进。Core CI `42468236745` 四个 job 全 success（Windows / Ubuntu / macOS 26 / Apple xcframework + Swift smoke），官方源巡检 **34/34**。
 
-**桌面**：0.2.27 的桌面探针 **21 PASS / 0 FAIL / 0 SKIP**、`scripts/check.sh` **7/7**；**Windows 原生阅读主线已在当前 pin 上用真实 UIA 点击跑通**（搜索→详情→阅读→进度落盘→正常关窗→重启→书架续读，两个进程退出码都是 0），证据 `E:/Code/deliveries/2026-11-08-windows-native-mainline/`。
+**桌面**：Nekophage `0.2.28` 已在公开仓库 `https://github.com/laincat/Nekophage` 发布（tag `v0.2.28` 指向 `719d852`，四资产 API 与公开 URL 回读均 HTTP 200 且逐字节一致）；Windows 隔离安装 **14/0**、原生阅读主线 PASS、全套探针 **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**、`check.sh` **7/7**。**macOS 当前 pin 阅读主线已由 Orca Worker `mac-mainline-3d61` 在 `Laincat-Mini` 实跑通过**：4 次 readercheck、uicheck 搜索/详情、shelf-probe、`Nekophage.app` 两次真实启动出主窗口并正常退出（exit 0）；签名为 ad-hoc，不是 Developer ID/公证。Worker 同时发现的 `readercheck` 就绪断言被清空已在 `c908011` 修复并纳入默认负向用例。
 
-**仍需外部条件**：macOS 当前 pin 主线（本机无 macOS，Mac 设备上没有可用模型路由：一次性调度报 `Scheduled remote model route unavailable: unreachable`）、真机签名安装、后台/锁屏、Live Activity、PiP / AirPlay / 外接显示器字幕、实际扬声器、真实账号与站点、Nekophage 公开发布目的地、LGPL 例外法务意见。
+**仍需外部条件**：真机签名安装、后台/锁屏、Live Activity、PiP / AirPlay / 外接显示器字幕、实际扬声器、真实账号与真实站点；以及真实折叠设备上的窄宽屏（模拟器宽度不等于折叠屏）。
 
 ## 0.4.3 发布、最终回归与桌面 0.2.27（2026-11-07）
 
@@ -118,7 +118,7 @@ Nekularity 早期完整 UI 验证提交 `5d9a5a1dfd5ce0e9d58fead6371d5cc4b3f842c
 |---|---|---|
 | P0-1 | 收口当前 iOS 回归(合并树 `9498b4c` 已完成) | 同一提交上 Swift 416/76 suites、完整 UI 27 PASS/0 FAIL/0 SKIP;三类计数为 23+3+1,xcresult 与日志一致。中英文 STATUS/UNVERIFIED 已同步;单独分支的通过与负向对照保留原提交归属,不替代本轮整包 |
 | P0-2 | 发布当前修复测试版（**0.3.5/build17已发布**） | 7c0d61b/Core ccb6268的CI41791891766成功；公开IPA HTTP200/29,478,760字节、资产摘要/CRC/App与Widget0.3.5/17/最低26.0通过；AltStore刷新41797483555及三个公开入口一致。CI只编译UI，真机签名安装仍需设备 |
-| P1-1 | 把发现页和主题界面验证完整 | 本轮三项链接用例及8张明暗/横竖空状态截图已记录,竖屏402×874pt、横屏874×402pt;最大辅助字号单列修复已过Mac定向验收,发现/设置末端可操作,普通字号两列与顺序保留;同名下载分组修复也通过。12张封面的明暗/横竖四组合已实测;详情进入仅证明导航,不扩称未安装源的内容加载,详见UNVERIFIED。 长按进入编排、拖放顺序持久化、小/中尺寸持久化;主题 HTTPS 安装成功与错误显示;浅/深色、窄/宽屏截图核对,区分模拟器宽度与真实折叠设备 |
+| P1-1 | 把发现页和主题界面验证完整 | 本轮三项链接用例及8张明暗/横竖空状态截图已记录,竖屏402×874pt、横屏874×402pt;最大辅助字号单列修复已过Mac定向验收,发现/设置末端可操作,普通字号两列与顺序保留;同名下载分组修复也通过。12张封面的明暗/横竖四组合已实测;详情进入仅证明导航,不扩称未安装源的内容加载,详见UNVERIFIED。 长按进入编排、拖放顺序持久化、小/中尺寸持久化;主题 HTTPS 安装成功与错误显示;浅/深色、窄/宽屏截图核对,区分模拟器宽度与真实折叠设备 | **P1-1 收口（2026-11-08）**：`0f1a46a` 的 CI `42460155664` 完整 UI **34/0/0**，其中长按进入编排、拖放顺序持久化、小/中尺寸持久化、明暗选择跨重启、主题 HTTPS 安装/错误显示/HTTP 拒绝、横屏三列共 8 个用例逐条 `passed`（日志 `E:/Code/deliveries/2026-11-08-core-url-dot-segments/ios-job.log.gz`）。模拟器宽度不等于真实折叠设备，后者仍待真机。
 | P1-2 | 下载与播放真机闭环 | 本地模拟器已验HLS中文/英文/关闭及Referer/Range206;手势/按钮进度保存通过,30秒夹具的两种关闭及页面重开恢复已通过;原10秒的回零调用原因仍不确定。 下载开始/结束时 Live Activity、锁屏/灵动岛;断网阅读;播放/字幕/续播/画中画/后台音频;记录版本、设备、动作、结果。可先用本地媒体与夹具完成不需账号的部分 |
 | P1-3 | iOS AI 两条接入的真实闭环 | **本地签名模拟器闭环已通过**(3be57b5候选):标准API三协议整包答复、模型目录、UI停止后的同请求peer_closed、模型目录401与重启凭据恢复;Magpie登录/模型、正文尾部释放前首段、UI停止peer_closed、重启认证恢复与刷新总数1。原始证据分别为 `/tmp/nk-standardai-acceptance/evidence/`、`/tmp/nk-d367-acceptance/ios-diagnostic/`。产品绑定修复与两条真实Core回归已随3574346受测组合整合main,CI/IPA核验通过。标准AI页面仍整包;真机、真实供应商账号和零正文完全扣住时的提前响应头行为不在通过范围 |
 | P2-1 | 桌面阅读性能与取消 | 被新搜索/浏览/详情替代的请求真正取消;共享封面下载限制并发,缓存按实际字节预算;用慢响应验证旧请求停止、当前结果不受影响,并跑相应 race 测试。**本地工程验收已完成**:搜索/浏览/详情取消、4 个图片下载槽位、32/128 MiB 缓存预算,全套 race/vet 通过,详见 Nekophage STATUS |
