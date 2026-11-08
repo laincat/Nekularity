@@ -1,5 +1,10 @@
 English · [简体中文](UNVERIFIED.md)
 
+## 0.4.5 is published, but device behaviour is still unverified (2026-11-08)
+
+CI, the IPA contents and all three AltStore entries for 0.4.5 / build 27 have been verified (see [STATUS](STATUS.en.md)). **That is not device verification**: signed install and device launch, background / lock-screen playback, Live Activity, captions in PiP / AirPlay / external displays, real speakers, real accounts and real site scripts have never run on a device. The simulator's 34/0/0 only proves that the interface tests pass in CI's simulator.
+
+
 ## `.remoteBypass` captions: the PiP / AirPlay behaviour is still unverified (2026-11-07)
 
 Captions are now drawn by **AVPlayer** (`suppressesPlayerRendering=false`), and the host only keeps a transparent accessibility text. So PiP / AirPlay / an external display should carry captions as well, because those surfaces composite only the `AVPlayerLayer` content and the captions are pixels on that layer.

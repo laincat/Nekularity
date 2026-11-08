@@ -19,13 +19,16 @@ English · [简体中文](STATUS.md)
 
 
 
-## 0.4.5 / build 27: tag pushed, artifact verification waits for the network (2026-11-08)
+## 0.4.5 / build 27 published and verified (2026-11-08)
 
-`c0b603e` was tagged `v0.4.5` and pushed, and release CI run `42439654644` was created. **The artifact was not verified this round**: the GitHub API and `github.com` kept returning connection failures / HTTP 000 from this machine (`gh run view` EOF, `curl -I` 000) while CNB was reachable; the AltStore CNB mirror still reads 0.4.4/26. So the IPA HTTP 200, size and digest, the App/Widget versions, the LICENSE/COPYING md5s and the three AltStore entries **have no evidence yet** and cannot be reported as verified the way 0.4.4 was.
+`c0b603e` was tagged `v0.4.5`; release CI run `42439654644` is **success** (page title `0.4.5 / build 27 · laincat/Nekularity@c0b603e`, success icons, zero failure markers; evidence `E:/Temp/run045.html`). The complete interface suite on the final HEAD, run `42434319855`, is **34 passed / 0 failed / 0 skipped**, with the kit at **492 tests across 85 suites**; `check-docs.sh`, `check-swift.py` and `check-seed.sh` all pass. Log `E:/Temp/nk-ai-stream-ci/full7.log`.
 
-What is done and does not depend on the network: the complete interface suite on the final HEAD, run `42434319855`, is **34 passed / 0 failed / 0 skipped**, with the kit at **492 tests across 85 suites**; `check-docs.sh`, `check-swift.py` and `check-seed.sh` all pass. Log `E:/Temp/nk-ai-stream-ci/full7.log`.
+- **IPA**: `https://github.com/laincat/Nekularity/releases/download/v0.4.5/Nekularity.ipa`, HTTP **200**, **29,947,418 bytes**, SHA-256 `9342dc449092860596ffa5a447c7a4e9e3bd99b2570f1f72c42a22234942cd15`. A copy and the receipt are in `E:/Code/deliveries/2026-11-08-nekularity-045/`.
+- **Inside the package**: App and Widget are both **0.4.5 / 27**, minimum **iOS 26.0**, Core pin `d9a1851`; LICENSE md5 `94003cec751b8c34850d71a2200b6a19` and COPYING md5 `1ebbd3e34237af26da5dc08a4e440464` match the repository.
+- **All three AltStore entries**: raw / CNB / latest all read **0.4.5 / 27 / 29,947,418**, with the same `publishedAt` of `2026-11-08T03:06:06Z`. A REST `POST /repos/laincat/AltStore/actions/workflows/update-source.yml/dispatches` returned **204**; the workflow finished successfully at `2026-11-08T05:10:53Z` and committed `31590d9`. All three entries were read back.
+- **Network note**: `api.github.com` is intermittently unreachable from this machine (GraphQL EOF, REST 000), while the `github.com` web and git endpoints work; `curl --http1.1` and `git -c http.version=HTTP/1.1` get around the schannel handshake failure. The `latest` entry first returns 302, then 200 when the signed asset URL is followed.
 
-Next step (one command batch once the network is back): read the conclusion of run `42439654644`, `gh release view v0.4.5`, download the IPA and check App/Widget `0.4.5/27` plus Core pin `d9a1851`, then trigger AltStore `update-source` and check all three entries.
+**Boundaries**: a simulator is not a device. Device signing and install, background / lock screen, Live Activity, PiP / AirPlay / external-display captions, real speakers and real accounts are still unverified. What was verified is the content of the artifact, not behaviour on a device.
 
 ## Two long-standing skips removed; complete UI 34/0/0 (2026-11-08)
 

@@ -19,13 +19,16 @@
 
 
 
-## 0.4.5 / build 27：tag 已推送，产物核对待网络恢复（2026-11-08）
+## 0.4.5 / build 27 已发布并核对（2026-11-08）
 
-`c0b603e` 已打上 `v0.4.5` 并推送，发布 CI run `42439654644` 已创建。**但本轮没有核对到产物**：GitHub API 与 `github.com` 从本机持续返回连接中断/HTTP 000（`gh run view` EOF、`curl -I` 000），而 CNB 可达；AltStore CNB 镜像仍为 0.4.4/26。因此IPA HTTP 200、大小、摘要、App/Widget 版本、LICENSE/COPYING md5、AltStore 三入口**都还没有证据**，不能按 0.4.4 那样宣称已核对。
+`c0b603e` 打上 `v0.4.5`，发布 CI run `42439654644` **success**（网页标题 `0.4.5 / build 27 · laincat/Nekularity@c0b603e`、success 图标、零失败标记，证据 `E:/Temp/run045.html`）。最终 HEAD 的完整界面套件 run `42434319855` **34 通过 / 0 失败 / 0 跳过**，Kit **492 tests / 85 suites 通过**；`check-docs.sh`、`check-swift.py`、`check-seed.sh` 均通过，日志 `E:/Temp/nk-ai-stream-ci/full7.log`。
 
-已完成的、不依赖网络的部分：最终 HEAD 完整界面套件 run `42434319855` **34 通过 / 0 失败 / 0 跳过**，Kit **492 tests / 85 suites 通过**；`check-docs.sh`、`check-swift.py`、`check-seed.sh` 均通过。日志 `E:/Temp/nk-ai-stream-ci/full7.log`。
+- **IPA**：`https://github.com/laincat/Nekularity/releases/download/v0.4.5/Nekularity.ipa`，HTTP **200**，**29,947,418 字节**，SHA-256 `9342dc449092860596ffa5a447c7a4e9e3bd99b2570f1f72c42a22234942cd15`。副本与回执在 `E:/Code/deliveries/2026-11-08-nekularity-045/`。
+- **包内**：App / Widget 均 **0.4.5 / 27**，最低 **iOS 26.0**，Core pin `d9a1851`；LICENSE md5 `94003cec751b8c34850d71a2200b6a19`、COPYING md5 `1ebbd3e34237af26da5dc08a4e440464`，与仓库一致。
+- **AltStore 三入口**：raw / CNB / latest 均为 **0.4.5 / 27 / 29,947,418**，`publishedAt` 一致为 `2026-11-08T03:06:06Z`。REST `POST /repos/laincat/AltStore/actions/workflows/update-source.yml/dispatches` 返回 **204**，工作流在 `2026-11-08T05:10:53Z` 成功跑完并提交 `31590d9`；三个入口分别回读成功。
+- **网络说明**：`api.github.com` 从本机间歇不可达（GraphQL EOF、REST 000），`github.com` 网页与 git 端点可用；`curl --http1.1` 与 `git -c http.version=HTTP/1.1` 可绕过 schannel 握手失败。`latest` 入口先返回 302，再按签名资产 URL 回读 200。
 
-下一步（网络恢复后一条命令可补）：查 run `42439654644` 的结论、`gh release view v0.4.5`、下载 IPA 核对 App/Widget `0.4.5/27` 与 Core pin `d9a1851`、触发 AltStore `update-source` 并核对三入口。
+**边界**：模拟器 ≠ 真机；真机签名安装、后台/锁屏、Live Activity、PiP / AirPlay / 外接显示器字幕、实际扬声器与真实账号仍未验收。发布核对的是产物内容，不是设备行为。
 
 ## 两条长期跳过项消除；完整 UI 34/0/0（2026-11-08）
 
