@@ -19,6 +19,18 @@ English · [简体中文](STATUS.md)
 
 
 
+## The Magpie HTTP fixture now runs in CI (2026-11-08)
+
+Previously `scripts/fixtures/magpie-http/` had only been run on Windows with a temporary script: the repository had no reproducible command and CI never ran it. That is now fixed:
+
+- New `scripts/fixtures/magpie-http/run.py` starts the fixture on a random loopback port, makes real HTTP calls through Core's public `mobile.NewMagpieWithStream`, asserts each behaviour and exits non-zero on failure; `probe.go` is the Go client inside the repository (no longer a one-off file under `E:/Temp`).
+- `.github/workflows/ios-release.yml` gains a step right after "Build pinned Core": `python3 scripts/fixtures/magpie-http/run.py build/core`, so every iOS build checks the seven behaviours with no account and no outside network.
+- Ran locally using exactly the CI invocation shape (relative `build/core`, relative evidence directory): `python3 scripts/fixtures/magpie-http/run.py build/core build/magpie-http-probe` gives **7 PASS / 0 FAIL**; repeating against a clean worktree of the current pin `d9a1851` also passes. Logs `E:/Temp/nk-magpie-ci-sim.log`, `E:/Temp/nk-magpie-pinned-ci-sim.log`, `build/magpie-http-probe-pinned/core-http.log`.
+- Also fixed a real path defect in the new runner: the evidence directory was relative while the Go subprocess runs with Core as its cwd, so `fake-auth.json` landed in the wrong place; paths are now absolute.
+- `check-docs.sh`, `check-swift.py`, `check-kit-core-calls.py`, `check-magpie-event.py` and `check-checks.sh` all PASS; the workflow YAML parses into 19 steps.
+
+**Boundaries**: this is a Go client making real HTTP calls against Core's public API - **not** the iOS interface, Swift URLSession, the Keychain, a device or a real provider account. The CI step itself still needs one GitHub Actions run for its final verdict.
+
 ## Magpie local HTTP fixture on the current Core pin (2026-11-08)
 
 The earlier evidence used the released Core `3be57b5`; this time the same `scripts/fixtures/magpie-http/` fixture and Go client ran against a clean worktree of the current pin `d9a1851` used by both clients, via `python3 E:/Temp/nk-magpie-current/run.py`: **7 PASS / 0 FAIL**.

@@ -40,3 +40,14 @@ python3 -m zipfile -c /tmp/magpie-local-http.zip package.json index.mjs
 Windows 已用发布 Core `3be57b5` 的 `mobile.NewMagpieWithStream` 发真实 HTTP 请求：模型目录、刷新写回、首段先于正文完成、ChatCancel 对端关闭、指定请求释放、Unicode 回答、HTTP 503 均通过。将 SavedAuth 写入临时文件并重建实例后仍能调用，刷新次数保持一次。证据：`E:/Temp/nk-magpie-http-evidence/core-http.log` 与 `events.json`。
 
 这证明 Core 公共接口与本夹具的合同，不证明 Swift URLSession、iOS UI、钥匙串、App 重启或真实供应商账号已通过。客户端验收还需实际导入/登录、显示目录与回答、取消、保存刷新结果并重启读取；不要手工改写客户端凭据来替代持久化验证。
+
+## 常驻回归命令
+
+在仓库根目录执行（CI 与本机相同）：
+
+```sh
+python3 scripts/fixtures/magpie-http/run.py build/core
+```
+
+`build/core` 是 `scripts/fetch-core.sh` 按 pin 取出的 Core 源码；本机也可以直接指向本地 Core 目录，第二个参数是证据输出目录。脚本在 `127.0.0.1` 的随机端口起夹具，用公共 `mobile.NewMagpieWithStream` 发真实 HTTP 请求，断言七项行为，任一失败返回非零退出码；日志写入 `build/magpie-http-probe/core-http.log` 与 `events.json`。它不需要账号、网络或钥匙串，但**不能替代** iOS 界面、Swift 传输或真机验收。
+

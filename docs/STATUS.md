@@ -19,6 +19,18 @@
 
 
 
+## Magpie HTTP 夹具进常驻 CI（2026-11-08）
+
+此前 `scripts/fixtures/magpie-http/` 只在 Windows 上用临时脚本跑过，仓库里没有可复现命令，CI 也不跑它。现在补上：
+
+- 新增 `scripts/fixtures/magpie-http/run.py`：起随机 loopback 端口的夹具，用 Core 公共 `mobile.NewMagpieWithStream` 发真实 HTTP，逐项断言并返回非零失败码；`probe.go` 是仓库内的 Go 客户端（不再是 `E:/Temp` 下的一次性文件）。
+- `.github/workflows/ios-release.yml` 在「Build pinned Core」之后新增一步 `python3 scripts/fixtures/magpie-http/run.py build/core`，每次 iOS 构建都验证七项行为，无需账号或外网。
+- 本地按 CI 的调用形式（相对 `build/core`、相对证据目录）实跑：`python3 scripts/fixtures/magpie-http/run.py build/core build/magpie-http-probe` **7 PASS / 0 FAIL**；再用当前 pin 的干净 worktree `d9a1851` 复跑同样通过。日志 `E:/Temp/nk-magpie-ci-sim.log`、`E:/Temp/nk-magpie-pinned-ci-sim.log`、`build/magpie-http-probe-pinned/core-http.log`。
+- 顺带修了脚本里一个真实路径缺陷：证据目录原用相对路径，而 Go 子进程 cwd 是 Core 目录，导致 `fake-auth.json` 写到错误位置；现在统一转成绝对路径。
+- `check-docs.sh`、`check-swift.py`、`check-kit-core-calls.py`、`check-magpie-event.py`、`check-checks.sh` 等本地检查全部 PASS；工作流 YAML 解析为 19 步。
+
+**边界**：这是 Go 客户端对 Core 公共 API 的真实 HTTP 回归，**不是** iOS 界面、Swift URLSession、钥匙串、真机或真实供应商账号；CI 步骤本身需由一次 GitHub Actions 运行给出最终结论。
+
 ## 当前 Core pin 的 Magpie 本地 HTTP 夹具实跑（2026-11-08）
 
 历史证据用的是发布 Core `3be57b5`；这次在两端当前 pin `d9a1851` 的干净 worktree 上重跑同一份 `scripts/fixtures/magpie-http/` 夹具与 Go 客户端，命令 `python3 E:/Temp/nk-magpie-current/run.py`，**7 PASS / 0 FAIL**：

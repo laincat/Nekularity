@@ -40,3 +40,14 @@ Logs omit keys, headers, prompts and arbitrary URLs. They contain known routes, 
 On Windows, published Core `3be57b5` used `mobile.NewMagpieWithStream` against actual HTTP: remote models, refreshed-auth writeback, first text before body completion, ChatCancel peer closure, targeted release, Unicode answers and HTTP 503 all passed. SavedAuth was written to a temporary file and loaded into a new instance, which remained usable with exactly one refresh. Evidence: `E:/Temp/nk-magpie-http-evidence/core-http.log` and `events.json`.
 
 This verifies the public Core API and fixture contract, not Swift URLSession, iOS UI, Keychain, app restarts or real provider accounts. Client acceptance still needs actual import/sign-in, displayed models/replies, cancellation, refreshed-auth storage and restart readback. Do not manually rewrite client credentials as a substitute for persistence verification.
+
+## Resident regression command
+
+From the repository root (CI and the local machine run the same line):
+
+```sh
+python3 scripts/fixtures/magpie-http/run.py build/core
+```
+
+`build/core` is the pinned Core checkout produced by `scripts/fetch-core.sh`; on a local machine it can point at any Core directory, and the second argument is the evidence directory. The script starts the fixture on a random `127.0.0.1` port, makes real HTTP calls through the public `mobile.NewMagpieWithStream`, asserts seven behaviours and exits non-zero on any failure; logs go to `build/magpie-http-probe/core-http.log` and `events.json`. It needs no account, network or Keychain, but it **does not replace** the iOS interface, Swift transport or device acceptance.
+

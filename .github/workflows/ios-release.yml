@@ -33,6 +33,12 @@ jobs:
         run: brew install xcodegen
       - name: Build pinned Core
         run: sh scripts/fetch-core.sh
+      - name: Magpie loopback HTTP acceptance
+        # Real HTTP against the pinned Core's public mobile API: model list,
+        # refreshed credentials, first text before the body completes, the peer
+        # closing on cancellation, a targeted release, Unicode and HTTP 503.
+        # It needs no account or network and fails on any of the seven checks.
+        run: python3 scripts/fixtures/magpie-http/run.py build/core
       - name: Check the tree before building it
         run: |
           # After the Core fetch on purpose: one of these checks compares the kit's
