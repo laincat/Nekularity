@@ -19,6 +19,16 @@ English · [简体中文](STATUS.md)
 
 
 
+## 0.4.6 / build 28 release check (2026-11-08)
+
+Core pin `3d61c62` (`new URL` drops `.`/`..` path segments). The pre-release regression is CI `42460155664` on `0f1a46a`: the full UI suite ran **34 tests, 0 failures, 0 skipped** and Kit **492 tests in 85 suites passed**; only docs and the version number changed after it. Tag `v0.4.6` (`442a63c`), release CI `42464844452` **success**.
+
+IPA 29,947,286 B, SHA-256 `362278cf1c86344b02e0a291508f897c4bd5f38a4c2a131d965d114b64c45935`, content check **12 PASS / 0 FAIL**: App and Widget are both 0.4.6/28, minimum iOS 26.0, the binary contains `3d61c62` and not the old pin `d9a1851`, and LICENSE/COPYING match the repository by md5. The public download URL got 504 from GitHub's gateway several times; one GET returned HTTP 200 with bytes identical to the API asset download.
+
+AltStore: the first `update-source.yml` run `42467153175` hit a 504 probing v0.4.6 and, by its fallback rule, kept 0.4.5; the second run `42467280734` found stable 0.4.6. raw, CNB and `latest` all read back **0.4.6 / 28 / 29,947,286** (raw first hit a 300 s CDN cache; by commit SHA and after the window it is 0.4.6). Receipt `E:/Code/deliveries/2026-11-08-nekularity-046/receipt.json`.
+
+**Boundaries**: release, IPA contents and source entries; not installed on a device, so signing, background, Live Activity and PiP remain unverified on hardware.
+
 ## Core pin moved to `3d61c62` (2026-11-08)
 
 Core `3d61c62`: `new URL` drops `.`/`..` path segments for special schemes as the standard does (before, the relative `../img/1.jpg` was sent as the literal `/b/c/../img/1.jpg`). That is a production `init.js` behaviour change, so both clients follow. Locally `check-core-pin.sh` is ok and the Magpie loopback HTTP fixture on the new pin is **7 PASS / 0 FAIL** (`E:/Temp/nk-magpie-3d61.log`). CI run `42460155664` (`0f1a46a`, `ui_tests=true`) is **success**: the full UI suite ran **34 tests, 0 failures, 0 skipped**, Kit **492 tests in 85 suites passed**, and the Magpie step succeeded. Receipt `E:/Code/deliveries/2026-11-08-core-url-dot-segments/receipt.json`. Devices remain unverified.

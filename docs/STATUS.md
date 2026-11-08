@@ -19,6 +19,16 @@
 
 
 
+## 0.4.6 / build 28 发布核对（2026-11-08）
+
+Core pin `3d61c62`（`new URL` 移除 `.`/`..` 路径段）。发版前回归为 `0f1a46a` 的 CI `42460155664`：完整 UI **34 个、0 失败、0 跳过**，Kit **492 tests / 85 suites passed**；其后只改文档与版本号。tag `v0.4.6`（`442a63c`），发布 CI `42464844452` **success**。
+
+IPA 29,947,286 B，SHA-256 `362278cf1c86344b02e0a291508f897c4bd5f38a4c2a131d965d114b64c45935`，内容核对 **12 PASS / 0 FAIL**：App 与 Widget 均 0.4.6/28、最低 iOS 26.0、二进制含 `3d61c62` 且不含旧 pin `d9a1851`、LICENSE/COPYING 与仓库 md5 一致。公开下载地址多次被 GitHub 网关回 504，其中一次 HTTP 200 且字节与 API 资产下载完全一致。
+
+AltStore：首次 `update-source.yml` run `42467153175` 探测 v0.4.6 时遇 504、按其回退规则沿用 0.4.5；第二次 run `42467280734` 探测到 stable 0.4.6。raw、CNB、`latest` 三入口均回读 **0.4.6 / 28 / 29,947,286**（raw 先命中 300 秒 CDN 缓存，按提交 SHA 读取及缓存过期后均为 0.4.6）。回执 `E:/Code/deliveries/2026-11-08-nekularity-046/receipt.json`。
+
+**边界**：发布、IPA 内容与源条目核对；未在真机安装，签名、后台、Live Activity、PiP 仍未在硬件上验证。
+
 ## Core pin 升到 `3d61c62`（2026-11-08）
 
 Core `3d61c62`：`new URL` 对特殊 scheme 按标准移除 `.`/`..` 路径段（此前相对地址 `../img/1.jpg` 以字面 `/b/c/../img/1.jpg` 发出），属生产 `init.js` 行为变更，故两端跟进。本机：`check-core-pin.sh` ok；Magpie loopback HTTP 夹具在新 pin 上 **7 PASS / 0 FAIL**（`E:/Temp/nk-magpie-3d61.log`）。CI run `42460155664`（`0f1a46a`，`ui_tests=true`）**success**：完整 UI **34 个、0 失败、0 跳过**，Kit **492 tests / 85 suites passed**，Magpie 步骤 success。回执 `E:/Code/deliveries/2026-11-08-core-url-dot-segments/receipt.json`。真机仍未验证。
