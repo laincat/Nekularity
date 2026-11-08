@@ -19,6 +19,10 @@ English · [简体中文](STATUS.md)
 
 
 
+## Release artifacts carry the fix marker (2026-11-08)
+
+Not only the version number: `Nekularity.app/Nekularity` taken from the 0.4.7 IPA contains the comment Core `da23603` added to `comic/js/init.js`, `The query is kept exactly as written`, **once** (go:embed keeps comments); the same check on the 0.4.6 IPA finds **0**, so the old artifact does not contain the fix and the new one does. `Nekophage.exe` inside the 0.2.29 Windows ZIP also finds **1**, and 0.2.28 finds **0**. The NSIS setup is an LZMA-packed payload and cannot be searched with `strings`; the ZIP executable is the same payload. Evidence `E:/Code/deliveries/2026-11-08-release-content-marker/`.
+
 ## 0.4.7 / build 29 release check (2026-11-08)
 
 Core pin `da23603` (`new URL` keeps the raw query and fragment marker, so signed links are no longer rewritten). The pre-release regression is CI `42476685394` on `836f824`: the full UI ran **34 tests, 0 failures, 0 skipped**, Kit **492 tests in 85 suites passed**, the Magpie step succeeded, and the run is success. Tag `v0.4.7` (`716a635`), release CI `42481149097` **success**.

@@ -19,6 +19,10 @@
 
 
 
+## 发布产物含修复标记的核对（2026-11-08）
+
+不只核对版本号：从 0.4.7 IPA 取出 `Nekularity.app/Nekularity`，`strings` 能找到 Core `da23603` 在 `comic/js/init.js` 里新增的注释 `The query is kept exactly as written`（`go:embed` 保留注释），出现 **1 次**；同一方法检查 0.4.6 IPA 为 **0 次**，说明旧产物确实不含这次修复，新产物确实包含。0.2.29 Windows ZIP 里的 `Nekophage.exe` 同样为 **1 次**，0.2.28 为 **0 次**。安装包是 LZMA 压缩载荷，`strings` 不可搜，ZIP 内的可执行文件就是同一载荷。证据 `E:/Code/deliveries/2026-11-08-release-content-marker/`。
+
 ## 0.4.7 / build 29 发布核对（2026-11-08）
 
 Core pin `da23603`（`new URL` 保留原始查询串与片段标记，签名链接不再被改写）。发版前回归为 `836f824` 的 CI `42476685394`：完整 UI **34 个、0 失败、0 跳过**，Kit **492 tests / 85 suites passed**，Magpie 步骤 success，结论 success。tag `v0.4.7`（`716a635`），发布 CI `42481149097` **success**。
