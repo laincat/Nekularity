@@ -19,6 +19,14 @@
 
 
 
+## 0.4.5 / build 27：tag 已推送，产物核对待网络恢复（2026-11-08）
+
+`c0b603e` 已打上 `v0.4.5` 并推送，发布 CI run `42439654644` 已创建。**但本轮没有核对到产物**：GitHub API 与 `github.com` 从本机持续返回连接中断/HTTP 000（`gh run view` EOF、`curl -I` 000），而 CNB 可达；AltStore CNB 镜像仍为 0.4.4/26。因此IPA HTTP 200、大小、摘要、App/Widget 版本、LICENSE/COPYING md5、AltStore 三入口**都还没有证据**，不能按 0.4.4 那样宣称已核对。
+
+已完成的、不依赖网络的部分：最终 HEAD 完整界面套件 run `42434319855` **34 通过 / 0 失败 / 0 跳过**，Kit **492 tests / 85 suites 通过**；`check-docs.sh`、`check-swift.py`、`check-seed.sh` 均通过。日志 `E:/Temp/nk-ai-stream-ci/full7.log`。
+
+下一步（网络恢复后一条命令可补）：查 run `42439654644` 的结论、`gh release view v0.4.5`、下载 IPA 核对 App/Widget `0.4.5/27` 与 Core pin `d9a1851`、触发 AltStore `update-source` 并核对三入口。
+
 ## 两条长期跳过项消除；完整 UI 34/0/0（2026-11-08）
 
 `testSeededSourcesAppear` 与 `testSourceOffersInPageLogin` 原先依赖仓库外的 `nhentai` / `Komiic` 源脚本，每次完整套件都按设计跳过。改成用仓库自带夹具覆盖同样的客户端行为：

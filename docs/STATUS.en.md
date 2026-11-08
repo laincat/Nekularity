@@ -19,6 +19,14 @@ English · [简体中文](STATUS.md)
 
 
 
+## 0.4.5 / build 27: tag pushed, artifact verification waits for the network (2026-11-08)
+
+`c0b603e` was tagged `v0.4.5` and pushed, and release CI run `42439654644` was created. **The artifact was not verified this round**: the GitHub API and `github.com` kept returning connection failures / HTTP 000 from this machine (`gh run view` EOF, `curl -I` 000) while CNB was reachable; the AltStore CNB mirror still reads 0.4.4/26. So the IPA HTTP 200, size and digest, the App/Widget versions, the LICENSE/COPYING md5s and the three AltStore entries **have no evidence yet** and cannot be reported as verified the way 0.4.4 was.
+
+What is done and does not depend on the network: the complete interface suite on the final HEAD, run `42434319855`, is **34 passed / 0 failed / 0 skipped**, with the kit at **492 tests across 85 suites**; `check-docs.sh`, `check-swift.py` and `check-seed.sh` all pass. Log `E:/Temp/nk-ai-stream-ci/full7.log`.
+
+Next step (one command batch once the network is back): read the conclusion of run `42439654644`, `gh release view v0.4.5`, download the IPA and check App/Widget `0.4.5/27` plus Core pin `d9a1851`, then trigger AltStore `update-source` and check all three entries.
+
 ## Two long-standing skips removed; complete UI 34/0/0 (2026-11-08)
 
 `testSeededSourcesAppear` and `testSourceOffersInPageLogin` used to depend on the `nhentai` / `Komiic` source scripts that live outside this repository, so every complete suite skipped them by design. They now cover the same client behaviour with in-repository fixtures:
