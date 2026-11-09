@@ -21,7 +21,7 @@
 
 ## 0.4.8 / build 30 已发布并核对（2026-11-09）
 
-`v0.4.8` 指向 `5a71605`，Core pin `6d40ec2`，包含 Core 的 `new URL` WHATWG 对齐与下载失败 Live Activity 状态修复。发布 CI `42561394003` **success**（tag 触发）。
+`v0.4.8` 指向 `5a71605`，Core pin `6d40ec2`，包含 Core 的 `new URL` WHATWG 对齐与下载失败 Live Activity 状态修复。相对受测提交 `8bc857c`，`5a71605` 只多文档与版本元数据（`project.yml`），产品代码相同。发布 CI `42561394003` **success**（tag 触发；该流水线只编译界面测试目标，不执行 UI 套件，界面结论归 `42554701625`）。
 
 公开 IPA：HTTP **200**、**29,963,357 字节**、SHA-256 `93184267fcc1cc0edccd18ae9d4d5041d6ba5fb6dfd24a9c6a629ea87b969050`。包内 `Nekularity.app` 与 `NekularityWidgets.appex` 均为 **0.4.8 / 30**、最低 iOS **26.0**；应用二进制含 Core `6d40ec2` **1 次**、不含旧 pin `da23603` **0 次**；`DEFAULT_PORTS` 标记 2 次、`mailto:a@b` 1 次，说明这版确实带 `new URL` 修复。`LICENSE` md5 `94003cec…` 与 `COPYING` md5 `1ebbd3e3…` 与仓库一致。
 

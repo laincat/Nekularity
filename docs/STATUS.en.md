@@ -21,7 +21,7 @@ English · [简体中文](STATUS.md)
 
 ## 0.4.8 / build 30 released and checked (2026-11-09)
 
-`v0.4.8` points at `5a71605`, Core pin `6d40ec2`, and carries Core's WHATWG `new URL` alignment plus the failed-download Live Activity state fix. Release CI `42561394003` **succeeded** (triggered by the tag).
+`v0.4.8` points at `5a71605`, Core pin `6d40ec2`, and carries Core's WHATWG `new URL` alignment plus the failed-download Live Activity state fix. Compared with the tested commit `8bc857c`, `5a71605` adds only documentation and version metadata (`project.yml`); the product code is identical. Release CI `42561394003` **succeeded** (triggered by the tag; that pipeline only compiles the interface test target and does not run the UI suite, so the interface conclusion belongs to `42554701625`).
 
 Public IPA: HTTP **200**, **29,963,357 bytes**, SHA-256 `93184267fcc1cc0edccd18ae9d4d5041d6ba5fb6dfd24a9c6a629ea87b969050`. Inside, `Nekularity.app` and `NekularityWidgets.appex` are both **0.4.8 / 30** with minimum iOS **26.0**; the app binary contains Core `6d40ec2` **once** and the old pin `da23603` **zero** times; `DEFAULT_PORTS` appears twice and `mailto:a@b` once, so this build really carries the `new URL` fix. The `LICENSE` md5 `94003cec…` and `COPYING` md5 `1ebbd3e3…` match the repository.
 
