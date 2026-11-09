@@ -19,6 +19,16 @@ English · [简体中文](STATUS.md)
 
 
 
+## A failed download now reaches the Live Activity (2026-11-09)
+
+`Live/DownloadActivity.swift` already had a `failure` state and the word "failed", but it was never shown: on failure `DownloadStore.write` clears `active[id]`, and `activitySignature` only enumerated `active`. The signature became empty, so `RootView.onChange` had `DownloadActivityBridge` call `end()` immediately. The failed chapter stayed in the downloads screen with a retry button, while the island and Lock Screen never said it had failed.
+
+Commit `969d2c2` fixes it: `activitySignature` now also emits `fail|id|reason` lines, so a retry, dismissal or archive changes the signature again; the kit gains `DownloadActivityState` / `DownloadActivitySelection` (plain values, no ActivityKit dependency) which decide the single activity state — running chapters win, the shown chapter stays stable, a failure is shown when nothing is running; `DownloadActivityBridge` now only translates that state into ActivityKit calls. A failure activity follows the `failures` lifetime: it ends when a retry succeeds or the user dismisses it, so no stale activity is left behind.
+
+Verification: `scripts/check-swift.sh` parses 199 files; local `check-tree.sh` / `check-checks.sh` / `check-docs.sh` / `check-partitions.sh` / `check-capabilities.sh` / `check-surface-offline.sh` all PASS (`check-seed.sh` and `check-core-surface.sh` need CI artifacts and are not applicable on this machine). iOS CI `42543074993` (`ui_tests=false`) **succeeded**: Kit unit tests **499 tests / 86 suites passed** (up from 492/85, exactly +7 tests / +1 suite), with all 7 new cases executed; the device app and the interface test target both compiled. The first CI run `42541401968` failed on a `compactMap` generic-inference error at `DownloadStore.swift:93`; explicit types were added and a test whose retry reused an always-throwing fetcher was corrected before the passing rerun. Evidence `E:/Code/deliveries/2026-11-09-live-activity-failure/`.
+
+**Boundary**: this is a kit state-machine and unit-test closure. With `ui_tests=false` the simulator UI suite was compiled, not executed; ActivityKit's real rendering on a device's Lock Screen / Dynamic Island, updates during background downloads, and behaviour when authorization is denied have **never been verified on hardware**. The Core pin remains `da23603`; no Core change, no version bump and no new IPA were made this round, so the latest public release is still 0.4.7 / build 29.
+
 ## Release artifacts carry the fix marker (2026-11-08)
 
 Not only the version number: `Nekularity.app/Nekularity` taken from the 0.4.7 IPA contains the comment Core `da23603` added to `comic/js/init.js`, `The query is kept exactly as written`, **once** (go:embed keeps comments); the same check on the 0.4.6 IPA finds **0**, so the old artifact does not contain the fix and the new one does. `Nekophage.exe` inside the 0.2.29 Windows ZIP also finds **1**, and 0.2.28 finds **0**. The NSIS setup is an LZMA-packed payload and cannot be searched with `strings`; the ZIP executable is the same payload. Evidence `E:/Code/deliveries/2026-11-08-release-content-marker/`.

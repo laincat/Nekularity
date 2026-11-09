@@ -19,6 +19,16 @@
 
 
 
+## 下载失败现在真正进入 Live Activity（2026-11-09）
+
+`Live/DownloadActivity.swift` 早就定义了 `failure` 状态和「失败」文案，但它从未被显示：下载失败时 `DownloadStore.write` 会清掉 `active[id]`，而 `activitySignature` 只枚举 `active`，签名变空后 `RootView.onChange` 让 `DownloadActivityBridge` 直接 `end()`。失败章节留在下载页并可重试，灵动岛/锁屏却没有说过它失败了。
+
+提交 `969d2c2` 修复：`activitySignature` 现在额外给出 `fail|id|原因` 行，重试、丢弃、归档都会再次改变签名；Kit 层新增 `DownloadActivityState` / `DownloadActivitySelection`（纯值类型，不依赖 ActivityKit），按「运行中优先、已显示章节保持稳定、无运行时显示失败」决定唯一活动状态；`DownloadActivityBridge` 只剩把该状态翻译成 ActivityKit 调用。失败活动跟随 `failures` 生命周期，重试成功后或用户丢弃后结束，不会留下陈旧活动。
+
+验证：`scripts/check-swift.sh` 199 文件通过解析；本机 `check-tree.sh` / `check-checks.sh` / `check-docs.sh` / `check-partitions.sh` / `check-capabilities.sh` / `check-surface-offline.sh` 均 PASS（`check-seed.sh` 与 `check-core-surface.sh` 需 CI 产物，本机不适用）。iOS CI `42543074993`（`ui_tests=false`）**success**：Kit 单测 **499 tests / 86 suites 全通过**（较此前 492/85 正好 +7 tests / +1 suite），新增 7 条用例逐条执行；设备 App 与界面测试目标均编译通过。首次 CI `42541401968` 曾因 `DownloadStore.swift:93` 的 `compactMap` 泛型推断失败而 `failure`，已补显式类型并修正「重试仍复用一直抛错的 fetch」的测试逻辑，复测通过。证据 `E:/Code/deliveries/2026-11-09-live-activity-failure/`。
+
+**边界**：这是 Kit 状态机与单测层的闭环；`ui_tests=false` 只编译界面测试目标，未执行模拟器 UI 套件，ActivityKit 在真机锁屏/灵动岛上的实际呈现、后台下载时的更新、授权拒绝时的表现**一次都没有在设备上验证**。Core pin 仍为 `da23603`，本轮未改 Core、未改版本、未发布新 IPA；公开最新版仍是 0.4.7 / build 29。
+
 ## 发布产物含修复标记的核对（2026-11-08）
 
 不只核对版本号：从 0.4.7 IPA 取出 `Nekularity.app/Nekularity`，`strings` 能找到 Core `da23603` 在 `comic/js/init.js` 里新增的注释 `The query is kept exactly as written`（`go:embed` 保留注释），出现 **1 次**；同一方法检查 0.4.6 IPA 为 **0 次**，说明旧产物确实不含这次修复，新产物确实包含。0.2.29 Windows ZIP 里的 `Nekophage.exe` 同样为 **1 次**，0.2.28 为 **0 次**。安装包是 LZMA 压缩载荷，`strings` 不可搜，ZIP 内的可执行文件就是同一载荷。证据 `E:/Code/deliveries/2026-11-08-release-content-marker/`。

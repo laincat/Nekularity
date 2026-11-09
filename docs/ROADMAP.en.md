@@ -2,6 +2,12 @@
 
 [简体中文](ROADMAP.md) | English
 
+## 2026-11-09: P1-2's failed-download Live Activity state
+
+In P1-2 ("Live Activity, Lock Screen / Dynamic Island when a download starts/ends"), the failure branch was dead code: `Live/DownloadActivity.swift` had `failure` text, but `activitySignature` contained only `active`, so on failure the signature emptied and the activity ended immediately. `969d2c2` includes failures in the signature and in the kit's single-activity selection, with 7 new tests for running-chapter priority, shown-chapter stability, the failure signature, and ending after dismissal or retry. CI `42543074993` succeeded with Kit **499/86** and both the device app and the interface test target compiled; the first CI run `42541401968` failed on a Swift 6 generic-inference error, which was fixed and retested. Local Swift syntax check parsed 199 files and six repository checks PASS.
+
+This is still a fixture / unit-test layer: **the failure rendering on a real device's Lock Screen and Dynamic Island, activity updates during background downloads, authorization and system-end behaviour are unverified**; `ui_tests=false` compiled the interface test target without running the simulator UI suite. The Core pin stays `da23603`; no version bump and no new IPA, so 0.4.7 / build 29 is still the latest public artifact. Trakt, online danmaku, the authoring studio and Linux remain deferred.
+
 ## 2026-11-08 close-out: 0.4.7 and 0.2.29 published, Core fixes signed URL queries
 
 **iOS**: `v0.4.7` / build 29 (`716a635`) is published and verified - release CI `42481149097` success, IPA 29,949,283 bytes / SHA-256 `a3dfb4f2…b03f`, content check **12 PASS / 0 FAIL** (App and Widget both 0.4.7/29, minimum iOS 26.0, binary contains Core `da23603` and not the old pin, LICENSE/COPYING md5 match); all three AltStore entries are 0.4.7/29/29,949,283. The pre-release regression CI `42476685394` ran the full UI **34/0/0**, Kit **492/85**, and the Magpie step succeeded.

@@ -2,6 +2,12 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+## 2026-11-09：补上 P1-2 的下载失败 Live Activity 状态
+
+P1-2「下载开始/结束时 Live Activity、锁屏/灵动岛」里，失败分支此前是死的：`Live/DownloadActivity.swift` 有 `failure` 文案，但 `activitySignature` 只含 `active`，失败时签名变空、活动立即 `end()`。`969d2c2` 把失败纳入签名与 Kit 层的单一活动状态选择，新增 7 条单测覆盖运行中优先、已显示章节稳定、失败签名、丢弃与重试后结束。CI `42543074993` success，Kit **499/86**、设备 App 与界面测试目标编译通过；首次 CI `42541401968` 的 Swift 6 泛型推断失败已修复并复测。本机 Swift 语法检查 199 文件通过、六项仓库检查 PASS。
+
+这仍是夹具/单测层：**真机锁屏与灵动岛上的失败呈现、后台下载时的活动更新、授权与系统结束行为未验**；`ui_tests=false` 只编译界面测试目标，未跑模拟器 UI。Core pin 保持 `da23603`，未升版本、未发新 IPA，0.4.7 / build 29 仍是最新公开产物。Trakt、在线弹幕、制作台与 Linux 继续后置。
+
 ## 2026-11-08 收口：0.4.7 与 0.2.29 已发布，Core 修好签名 URL 查询串
 
 **iOS**：`v0.4.7` / build 29（`716a635`）已发布并核对——发布 CI `42481149097` success，IPA 29,949,283 字节 / SHA-256 `a3dfb4f2…b03f`，内容检查 **12 PASS / 0 FAIL**（App 与 Widget 均 0.4.7/29、最低 iOS 26.0、二进制含 Core `da23603` 且不含旧 pin、LICENSE/COPYING md5 一致）；AltStore 三入口均 0.4.7/29/29,949,283。发版前回归 CI `42476685394`：完整 UI **34/0/0**，Kit **492/85**，Magpie 步骤 success。
