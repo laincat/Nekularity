@@ -1,5 +1,9 @@
 English · [简体中文](UNVERIFIED.md)
 
+## Boundary of the new Core pin (2026-11-09)
+
+Core `6d40ec2` fixes 7 real gaps in `new URL` and the iOS client has followed the pin; CI `42554701625` succeeded on `8bc857c` (Kit 499/86, simulator interface 34/0/0, Magpie fixture success, with the log confirming Core `6d40ec2`). **Still unverified**: ActivityKit's Lock Screen / Dynamic Island rendering on a real device, background / locked downloads and playback, PiP / AirPlay / external-display captions, actual speaker output, real accounts and real-site scripts, and the narrow/wide layout of a real foldable. The CI simulator's 34/0/0 and the published artifact are different things: the latest 0.4.7 / build 29 binary still carries the old pin `da23603`, and no new version was released this round. Evidence `E:/Code/deliveries/2026-11-09-core-url-whatwg/`.
+
 ## Failed-download Live Activity: state machine verified, device not (2026-11-09)
 
 `969d2c2` puts failure into the state mapping for the island / Lock Screen and covers priority, shown-chapter stability, the failure signature, dismissal and retry with 7 kit tests on macOS. CI `42543074993` passed the full Kit suite (499/86); the later full regression `42545229418` also passed the simulator interface suite **34/0/0** (including the failed-download retry case), with Kit 499/86. A passing simulator interface is **not** a passing device island.

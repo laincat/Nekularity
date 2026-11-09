@@ -2,6 +2,12 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+## 2026-11-09：Core `6d40ec2` 对齐 WHATWG，两端 pin 跟进
+
+P3-1「共享 Core 的真实兼容缺口」本轮收口一批：以 Node v26.12.1 的 WHATWG URL 为参照做两批共 177 条差分，找出并修复 `new URL` 的 7 处真实缺口（默认端口未去掉、路径未百分号编码、特殊 scheme 的反斜杠、无主机 scheme 的 `href` 硬拼 `//`、点段只对特殊 scheme 解析、`searchParams.size` 缺失、非特殊 scheme 的 `origin`）。修复后 **173/177 与 Node 一致**（第二波 59/59），剩余 4 条均非 URL 行为；Core `go test ./...` 23 包 PASS、官方源巡检 34/34、变异检验 7/7、Core CI `42553165294` 四 job 全 success。既有「非特殊 scheme 保留点段」的已知差异结论被证明是错的，测试已改为锁定真正的 opaque path 差异。证据 `E:/Code/deliveries/2026-11-09-core-url-whatwg/`。
+
+两端 pin 已跟进 `6d40ec2d5885c405258f395b828198285a1edca1`：Nekophage `01704ec`（`check.sh` 7/7、桌面探针 **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**），Nekularity `8bc857c`（CI `42554701625` success：Kit **499/86**、模拟器界面 **34/0/0**、Magpie 夹具 success）。真实源脚本 `manhuaren.js` 用 `new URL(imageUrl).host` 构造请求头，旧 pin 下会得到多余的 `:443`，新 pin 与浏览器一致。**边界**：本轮未发新版本，公开 0.4.7 / build 29 与 0.2.29 仍含旧 pin；真机、真实站点、扬声器与真实账号仍单列。
+
 ## 2026-11-09：补上 P1-2 的下载失败 Live Activity 状态
 
 P1-2「下载开始/结束时 Live Activity、锁屏/灵动岛」里，失败分支此前是死的：`Live/DownloadActivity.swift` 有 `failure` 文案，但 `activitySignature` 只含 `active`，失败时签名变空、活动立即 `end()`。`969d2c2` 把失败纳入签名与 Kit 层的单一活动状态选择，新增 7 条单测覆盖运行中优先、已显示章节稳定、失败签名、丢弃与重试后结束。CI `42543074993` success，Kit **499/86**、设备 App 与界面测试目标编译通过；首次 CI `42541401968` 的 Swift 6 泛型推断失败已修复并复测。本机 Swift 语法检查 199 文件通过、六项仓库检查 PASS。

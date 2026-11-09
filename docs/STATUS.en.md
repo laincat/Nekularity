@@ -25,7 +25,9 @@ Core `6d40ec2` fixes 7 real gaps in `new URL`: the default port no longer stays 
 
 Evidence on the Core side: `go test ./...` passes all **23 packages**, the official-source sweep is **34/34**, the two differential batches total 177 cases and **173/177 agree with Node v26.12.1** (the remaining 4 are not URL behaviour: the strict-mode case's wording, the browser-only `DOMException`, the recorded GBK `TextDecoder` limit, and a TypeError message difference), the mutation check **caught 7/7**, and Core CI `42553165294` **succeeded in all four jobs** (including the Apple xcframework and the Swift smoke test, 9/0). On the desktop side the same pin gives `check.sh` **7/7 PASS** and desktop probes **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP** (no skips once `NK_OFFICIAL_SRC` is supplied).
 
-**Boundary**: this is a Core behaviour change, and the iOS interface regression is carried by the CI run on this pin (its conclusion belongs to its own run ID); devices, the real sites and the speaker stay out of scope. No new version was released this round, so 0.4.7 / build 29 is still the latest public artifact.
+**The iOS regression on the new pin is complete**: CI `42554701625` (`8bc857c`, `ui_tests=true`) **succeeded**, and its log confirms `Core: 6d40ec2 (pinned 6d40ec2…)`; Kit **499 tests / 86 suites**, the simulator interface **34 passed / 0 failed / 0 skipped** (`Executed 34 tests, with 0 failures`), and the Magpie loopback HTTP fixture step succeeded. Evidence log `E:/Code/deliveries/2026-11-09-core-url-whatwg/ios-ci-42554701625.log`.
+
+**Boundary**: CI shows the new pin does not regress the interface suite on the CI simulator or the Kit unit tests; it says nothing about devices, the real sites or the speaker. No new version was released this round, so 0.4.7 / build 29 is still the latest public artifact (and its binary still carries the old pin `da23603`).
 
 ## A failed download now reaches the Live Activity (2026-11-09)
 
