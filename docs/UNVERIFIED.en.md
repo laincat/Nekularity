@@ -2,7 +2,7 @@ English · [简体中文](UNVERIFIED.md)
 
 ## Failed-download Live Activity: state machine verified, device not (2026-11-09)
 
-`969d2c2` puts failure into the state mapping for the island / Lock Screen and covers priority, shown-chapter stability, the failure signature, dismissal and retry with 7 kit tests on macOS. CI `42543074993` passed the full Kit suite (499/86); the interface test target was compiled but not executed.
+`969d2c2` puts failure into the state mapping for the island / Lock Screen and covers priority, shown-chapter stability, the failure signature, dismissal and retry with 7 kit tests on macOS. CI `42543074993` passed the full Kit suite (499/86); the later full regression `42545229418` also passed the simulator interface suite **34/0/0** (including the failed-download retry case), with Kit 499/86. A passing simulator interface is **not** a passing device island.
 
 **Still unverified**: whether ActivityKit actually draws "failed" on a device's Lock Screen and Dynamic Island, whether the activity keeps updating during background / locked downloads, what happens when authorization is denied or the system ends the activity, and whether a failure activity disappears as intended after a successful retry. These are device behaviours and cannot be inferred from kit tests or a compile; signed device install, background playback, PiP / AirPlay / external-display captions, actual speaker output, real accounts and real sites remain separate. No new version was published this round; 0.4.7 / build 29 is still the latest public artifact.
 

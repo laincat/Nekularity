@@ -27,7 +27,9 @@
 
 验证：`scripts/check-swift.sh` 199 文件通过解析；本机 `check-tree.sh` / `check-checks.sh` / `check-docs.sh` / `check-partitions.sh` / `check-capabilities.sh` / `check-surface-offline.sh` 均 PASS（`check-seed.sh` 与 `check-core-surface.sh` 需 CI 产物，本机不适用）。iOS CI `42543074993`（`ui_tests=false`）**success**：Kit 单测 **499 tests / 86 suites 全通过**（较此前 492/85 正好 +7 tests / +1 suite），新增 7 条用例逐条执行；设备 App 与界面测试目标均编译通过。首次 CI `42541401968` 曾因 `DownloadStore.swift:93` 的 `compactMap` 泛型推断失败而 `failure`，已补显式类型并修正「重试仍复用一直抛错的 fetch」的测试逻辑，复测通过。证据 `E:/Code/deliveries/2026-11-09-live-activity-failure/`。
 
-**边界**：这是 Kit 状态机与单测层的闭环；`ui_tests=false` 只编译界面测试目标，未执行模拟器 UI 套件，ActivityKit 在真机锁屏/灵动岛上的实际呈现、后台下载时的更新、授权拒绝时的表现**一次都没有在设备上验证**。Core pin 仍为 `da23603`，本轮未改 Core、未改版本、未发布新 IPA；公开最新版仍是 0.4.7 / build 29。
+同提交的完整回归 CI `42545229418`（`ui_tests=true`）随后也 **success**：模拟器界面套件 **34 通过 / 0 失败 / 0 跳过**（`Executed 34 tests, with 0 failures`），Kit **499/86**；其中 `testAFailedDownloadCanBeRetriedFromTheDownloadsScreen` 逐条 `passed`。该用例只证明下载界面的失败重试在模拟器可用，不代表灵动岛呈现。
+
+**边界**：这是 Kit 状态机、单测与 CI 模拟器界面的闭环；ActivityKit 在真机锁屏/灵动岛上的实际呈现、后台下载时的更新、授权拒绝时的表现**一次都没有在设备上验证**。Core pin 仍为 `da23603`，本轮未改 Core、未改版本、未发布新 IPA；公开最新版仍是 0.4.7 / build 29。
 
 ## 发布产物含修复标记的核对（2026-11-08）
 
