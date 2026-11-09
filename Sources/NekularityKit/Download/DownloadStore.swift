@@ -82,13 +82,44 @@ public final class DownloadStore {
     /// this file.
     public private(set) var active: [String: Request] = [:]
 
-    /// One line per running chapter: `id|done|total|failure`. A view observes this to
-    /// know something changed, without watching a dictionary of structs.
+    /// One line per running chapter and per failure: `id|done|total|failure`
+    /// for a download in progress, and `fail|id|reason` for one that stopped.
+    /// A failure has to be part of the signature. The window's `onChange` is the
+    /// only thing that calls the Live Activity bridge, and a failure used to
+    /// clear `active` without adding anything: the island ended without ever
+    /// showing why the chapter never arrived. A retry or a dismissal changes
+    /// this list again, which ends the failure activity.
     public var activitySignature: [String] {
-        active.keys.sorted().compactMap { id in
+        // The explicit types matter: without the enclosing `[String]` return
+        // type, Swift 6 cannot infer compactMap's ElementOfResult from a closure
+        // that returns both `nil` and a String.
+        let running: [String] = active.keys.sorted().compactMap { id in
             guard let request = active[id], let progress = progress[id] else { return nil }
             return "\(id)|\(progress.done)|\(progress.total)|\(progress.failure ?? "")"
         }
+        let failed: [String] = failures.keys.sorted().map { id in
+            "fail|\(id)|\(failures[id]?.message ?? "")"
+        }
+        return running + failed
+    }
+
+    /// The state for the one Live Activity, as a plain value the kit's tests can
+    /// read on macOS. ActivityKit only exists on iOS, so the bridge stays a thin
+    /// adapter over this.
+    public func activityState(shown: String?) -> DownloadActivityState? {
+        let running: [DownloadActivitySelection.Entry] = active.keys.sorted().compactMap { id in
+            guard let request = active[id], let progress = progress[id] else { return nil }
+            return .init(id: id, comicTitle: request.comicTitle,
+                         chapterTitle: request.chapterTitle, done: progress.done,
+                         total: progress.total, failure: progress.failure)
+        }
+        let failed: [DownloadActivitySelection.Entry] = failures.keys.sorted().compactMap { id in
+            guard let failure = failures[id] else { return nil }
+            return .init(id: id, comicTitle: failure.request.comicTitle,
+                         chapterTitle: failure.request.chapterTitle, done: 0,
+                         total: failure.request.pages.count, failure: failure.message)
+        }
+        return DownloadActivitySelection.select(running: running, failed: failed, shown: shown)
     }
 
     /// Fetches one page with the reader's own request rules. The store takes a

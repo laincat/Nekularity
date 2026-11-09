@@ -21,21 +21,19 @@ final class DownloadActivityBridge {
     private var activity: Activity<DownloadActivity>?
     private var shown: String?
 
-    /// Called whenever the download queue changes.
+    /// Called whenever the download queue changes. The kit owns which chapter
+    /// and which numbers to show; this file only translates them into ActivityKit.
     func sync(_ downloads: DownloadStore) async {
-        guard let id = DownloadActivityChoice.chapter(active: Array(downloads.active.keys),
-                                                      shown: shown),
-              let request = downloads.active[id],
-              let progress = downloads.progress[id] else {
+        guard let state = downloads.activityState(shown: shown) else {
             await end()
             return
         }
 
-        let state = DownloadActivity.ContentState(done: progress.done,
-                                                 total: progress.total,
-                                                 failure: progress.failure)
-        if let activity, shown == id {
-            await activity.update(ActivityContent(state: state, staleDate: nil))
+        let content = DownloadActivity.ContentState(done: state.done,
+                                                    total: state.total,
+                                                    failure: state.failure)
+        if let activity, shown == state.id {
+            await activity.update(ActivityContent(state: content, staleDate: nil))
             return
         }
 
@@ -45,19 +43,21 @@ final class DownloadActivityBridge {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         do {
             activity = try Activity.request(
-                attributes: DownloadActivity(comicTitle: request.comicTitle,
-                                             chapterTitle: request.chapterTitle),
-                content: ActivityContent(state: state, staleDate: nil),
+                attributes: DownloadActivity(comicTitle: state.comicTitle,
+                                             chapterTitle: state.chapterTitle),
+                content: ActivityContent(state: content, staleDate: nil),
                 pushType: nil)
-            shown = id
+            shown = state.id
         } catch {
             activity = nil
             shown = nil
         }
     }
 
-    /// Ends the activity. `dismissImmediately` because a finished download is not a
-    /// result to dwell on: the chapter is in the library, which is where it belongs.
+    /// Ends the activity. A finished download is not a result to dwell on: the
+    /// chapter is in the library, which is where it belongs. A failed one is not
+    /// ended until the failure is retried or dismissed — the kit keeps it in
+    /// `activitySignature` for exactly that long.
     func end() async {
         guard let activity else { return }
         self.activity = nil
