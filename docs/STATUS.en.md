@@ -19,6 +19,14 @@ English · [简体中文](STATUS.md)
 
 
 
+## Core pin moved to `6d40ec2`: `new URL` aligned with WHATWG (2026-11-09)
+
+Core `6d40ec2` fixes 7 real gaps in `new URL`: the default port no longer stays in the address (`https://a.com:443/p` → `https://a.com/p`), the path is percent-encoded as the standard says (`/a b` → `/a%20b`, with an escape the source wrote such as `%2f` kept as it is), a backslash is a separator for a special scheme (`https:\\a.com\\p` → `https://a.com/p`), the `href` of a scheme without a host no longer forces a `//` (`mailto:a@b` no longer becomes `mailto://a@b`), dot segments are resolved for every path that has a host or begins with `/` (`foo:/a/../b` → `/b`), `URLSearchParams` gained `size`, and the `origin` of a scheme that is not special answers `null`. This changes production `init.js` behaviour, so both clients follow the pin. Evidence `E:/Code/deliveries/2026-11-09-core-url-whatwg/`.
+
+Evidence on the Core side: `go test ./...` passes all **23 packages**, the official-source sweep is **34/34**, the two differential batches total 177 cases and **173/177 agree with Node v26.12.1** (the remaining 4 are not URL behaviour: the strict-mode case's wording, the browser-only `DOMException`, the recorded GBK `TextDecoder` limit, and a TypeError message difference), the mutation check **caught 7/7**, and Core CI `42553165294` **succeeded in all four jobs** (including the Apple xcframework and the Swift smoke test, 9/0). On the desktop side the same pin gives `check.sh` **7/7 PASS** and desktop probes **26 PASS / 0 FAIL / 1 SKIP**.
+
+**Boundary**: this is a Core behaviour change, and the iOS interface regression is carried by the CI run on this pin (its conclusion belongs to its own run ID); devices, the real sites and the speaker stay out of scope. No new version was released this round, so 0.4.7 / build 29 is still the latest public artifact.
+
 ## A failed download now reaches the Live Activity (2026-11-09)
 
 `Live/DownloadActivity.swift` already had a `failure` state and the word "failed", but it was never shown: on failure `DownloadStore.write` clears `active[id]`, and `activitySignature` only enumerated `active`. The signature became empty, so `RootView.onChange` had `DownloadActivityBridge` call `end()` immediately. The failed chapter stayed in the downloads screen with a retry button, while the island and Lock Screen never said it had failed.
