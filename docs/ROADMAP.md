@@ -2,6 +2,14 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+## 2026-11-09：十项产品决定与桌面便携化
+
+用户已答完十道选择题，方向记录见 `VeneraCat Core/docs/OPEN-QUESTIONS.md`：默认 HTTPS 且由规则/源决定是否放行 http、备份 Cookie 每次确认、社区标签词典、AI 上色后置且允许自装非商用模型并警告、桌面只出便携版、iOS 侧载与 App Store 两条路且先侧载、Core 继续用提交号 pin、旧 Mac Worker 归档、依赖升级后做服务插件化/上色/Core 加固而不重写 UI。
+
+本轮已落地其中两项：旧 Worker 已归档；Nekophage 便携版把 `data/`、`cache/`、`logs/`、`webview/` 放进程序目录，真实包两次正常退出 0、迁移与只读回退均有证据（`E:/Code/deliveries/2026-11-09-nekophage-portable/`）。**其余是决定，不是完成**：ATS 仍为全局放开、Cookie 导入仍是布尔参数、TMDB/Bangumi 仍硬编码在 Kit、社区词典与 AI 上色尚未实现。
+
+依赖核对：Go 1.27.3 / cascadia / htmlquery / xpath / x/net / x/text / x/mobile / hls.js 1.7.4 均为最新；moejs 今天发布 v0.1.0、mygo 最新 v0.8.3、sqlite 最新 v1.62.0、AetherEngine 最新 7.62.0，四项待按既定规则升级并分别回归。日志 `E:/Temp/dep-audit/`。
+
 ## 2026-11-09 收口：0.4.9/build 31 与 0.2.31 已发布
 
 **iOS**：`v0.4.9` / build 31（`01016b5`，Core `2bafd88`）已发布并核对——发布 CI `42578286568` success，IPA **29,963,615 字节**、SHA-256 `b75fa0ea…70c`、公开下载 HTTP 200 且与 API 下载逐字节一致；包内 App/Widget 均 **0.4.9/31**、最低 iOS 26.0，二进制含新 pin `2bafd88` 1 次、旧 pin `6d40ec2` 0 次、本轮 `resolveReference` 标记 2 次，`LICENSE`/`COPYING` md5 与仓库一致；Range 请求 206。相对受测提交 `b70a309` 只改 `project.yml` 版本号，界面结论仍归 `42570317039`（完整 UI 34/0/0、Kit 499/86、Magpie success）。

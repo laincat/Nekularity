@@ -2,6 +2,14 @@
 
 [简体中文](ROADMAP.md) | English
 
+## 2026-11-09: ten product decisions and the portable desktop layout
+
+The user answered all ten questions; the record is in `VeneraCat Core/docs/OPEN-QUESTIONS.md`: HTTPS by default with http decided by rules/sources, per-import cookie confirmation, a community tag glossary, AI colourisation deferred then allowing user-installed non-commercial models with a warning, portable desktop only, both iOS routes with sideloading first, Core's commit pins, archiving the old Mac Worker, and after dependency upgrades service plugins/colourisation/Core hardening but no UI rewrite.
+
+Two are done this round: the old Worker is archived, and Nekophage's portable layout puts `data/`, `cache/`, `logs/` and `webview/` in the program folder, with a real package starting twice and exiting 0 plus migration and read-only fallback evidence (`E:/Code/deliveries/2026-11-09-nekophage-portable/`). **The rest are decisions, not completion**: ATS is still a blanket exception, cookie import still takes a Boolean, TMDB/Bangumi are still hard-coded in the Kit, and the community glossary and AI colourisation are unimplemented.
+
+Dependency audit: Go 1.27.3, cascadia, htmlquery, xpath, x/net, x/text, x/mobile and hls.js 1.7.4 are current; moejs published v0.1.0 today, mygo is at v0.8.3, sqlite at v1.62.0 and AetherEngine at 7.62.0, so four upgrades with separate regressions remain. Logs `E:/Temp/dep-audit/`.
+
 ## 2026-11-09 wrap-up: 0.4.9/build 31 and 0.2.31 shipped
 
 **iOS**: `v0.4.9` / build 31 (`01016b5`, Core `2bafd88`) is released and checked — release CI `42578286568` succeeded, the IPA is **29,963,615 bytes** with SHA-256 `b75fa0ea…70c`, the public download answers HTTP 200 and is byte-identical to the API download; App and Widget are both **0.4.9/31** with minimum iOS 26.0, the binary carries the new pin `2bafd88` once, the old pin `6d40ec2` zero times, and this round's `resolveReference` marker twice; the `LICENSE`/`COPYING` md5s match the repository, and a ranged request returns 206. Relative to the tested commit `b70a309` only the version fields in `project.yml` change, so the interface conclusion still belongs to `42570317039` (full UI 34/0/0, Kit 499/86, Magpie success).
