@@ -25,7 +25,9 @@ Core `2bafd88` 补上 `new URL` 的另一半：协议相对地址（`//cdn.examp
 
 Core 侧证据：`go test ./...` **23 包 PASS**、官方源巡检 **34/34**、第三批差分 **41/41 与 Node v26.12.1 一致**（前两批无回归）、变异检验 **9/9 被捕获**。桌面端在同 pin 上 `check.sh` **7/7 PASS**、桌面探针 **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**。
 
-**边界**：iOS 的界面回归由本 pin 的 CI 承担，结论以其自身 run ID 归属；真机、真实站点与扬声器仍不在范围。
+**iOS 回归已完成**：CI `42570317039`（`b70a309`，`ui_tests=true`）**success**，日志确认 `Core: 2bafd88 (pinned 2bafd88…)`；Kit **499 tests / 86 suites**、模拟器界面 **34 通过 / 0 失败 / 0 跳过**（`Executed 34 tests, with 0 failures`），Magpie loopback HTTP 夹具步骤 success。日志 `E:/Code/deliveries/2026-11-09-core-url-relative/ios-ci-42570317039.log`。
+
+**边界**：CI 证明新 pin 在 CI 模拟器界面套件与 Kit 单测下无回归，不证明真机、真实站点或扬声器。本轮未发新版本，公开 0.4.8 / build 30 仍含 `6d40ec2`。
 
 ## 0.4.8 / build 30 已发布并核对（2026-11-09）
 

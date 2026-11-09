@@ -25,7 +25,9 @@ Core `2bafd88` adds the other half of `new URL`: a protocol-relative address (`/
 
 On the Core side `go test ./...` passes **23 packages**, the official-source sweep is **34/34**, the third differential batch is **41/41 with Node v26.12.1** (the earlier batches do not regress) and the mutation check **caught 9/9**. On the desktop the same pin gives `check.sh` **7/7 PASS** and desktop probes **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**.
 
-**Boundary**: the iOS interface regression is carried by the CI run on this pin and its conclusion belongs to its own run ID; devices, the real sites and the speaker stay out of scope.
+**The iOS regression is complete**: CI `42570317039` (`b70a309`, `ui_tests=true`) **succeeded**, and its log confirms `Core: 2bafd88 (pinned 2bafd88…)`; Kit **499 tests / 86 suites**, simulator interface **34 passed / 0 failed / 0 skipped** (`Executed 34 tests, with 0 failures`), and the Magpie loopback HTTP fixture step succeeded. Log `E:/Code/deliveries/2026-11-09-core-url-relative/ios-ci-42570317039.log`.
+
+**Boundary**: CI shows the new pin does not regress the interface suite on the CI simulator or the Kit unit tests; it says nothing about devices, the real sites or the speaker. No new version this round, so public 0.4.8 / build 30 still carries `6d40ec2`.
 
 ## 0.4.8 / build 30 released and checked (2026-11-09)
 

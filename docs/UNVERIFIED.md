@@ -2,7 +2,7 @@
 
 ## Core `2bafd88` 已进主线但未进公开产物（2026-11-09）
 
-`2bafd88` 补齐 `new URL` 的相对地址、`URLSearchParams` 迭代与 `URL.parse`，两端 pin 已跟进，但**没有发新版本**：最新公开的 0.4.8 / build 30 二进制仍含 `6d40ec2`，Nekophage 0.2.30 同理。因此公开产物不含这批修复，不能把主线 pin 的验证结果归到已发布包上。Core 侧 23 包、官方源 34/34、差分 41/41、变异 9/9 与 Core CI `42569120105` 四 job success 属于 `2bafd88`；iOS 界面回归 `42570317039` 属于该 pin 的 CI，结论以其自身 run ID 归属。真机、真实账号与真实站点仍未验证。证据 `E:/Code/deliveries/2026-11-09-core-url-relative/`。
+`2bafd88` 补齐 `new URL` 的相对地址、`URLSearchParams` 迭代与 `URL.parse`，两端 pin 已跟进，但**没有发新版本**：最新公开的 0.4.8 / build 30 二进制仍含 `6d40ec2`，Nekophage 0.2.30 同理。因此公开产物不含这批修复，不能把主线 pin 的验证结果归到已发布包上。Core 侧 23 包、官方源 34/34、差分 41/41、变异 9/9 与 Core CI `42569120105` 四 job success 属于 `2bafd88`；iOS 界面回归 `42570317039` **success**：Kit 499/86、模拟器界面 34/0/0、Magpie 夹具 success，日志确认 `Core: 2bafd88`。真机、真实账号与真实站点仍未验证。证据 `E:/Code/deliveries/2026-11-09-core-url-relative/`。
 
 ## 0.4.8 已发布，但设备行为仍未验证（2026-11-09）
 
