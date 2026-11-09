@@ -23,7 +23,7 @@
 
 Core `6d40ec2` 修 `new URL` 的 7 处真实缺口：默认端口不再留在地址里（`https://a.com:443/p` → `https://a.com/p`）、路径按标准百分号编码（`/a b` → `/a%20b`，已转义的 `%2f` 原样保留）、特殊 scheme 的反斜杠按分隔符处理（`https:\\a.com\\p` → `https://a.com/p`）、无主机 scheme 的 `href` 不再硬拼 `//`（`mailto:a@b` 不再变成 `mailto://a@b`）、点段对所有「有主机或以 `/` 开头」的路径解析（`foo:/a/../b` → `/b`）、`URLSearchParams` 补上 `size`、非特殊 scheme 的 `origin` 返回 `null`。这是生产 `init.js` 行为变更，故两端跟进 pin。证据 `E:/Code/deliveries/2026-11-09-core-url-whatwg/`。
 
-Core 侧证据：`go test ./...` **23 包 PASS**、官方源巡检 **34/34**、两批差分共 177 条 **173/177 与 Node v26.12.1 一致**（剩余 4 条均非 URL 行为：严格模式用例写法、浏览器专有 `DOMException`、已记录的 GBK `TextDecoder` 限制、TypeError 文案措辞）、变异检验 **7/7 被捕获**、Core CI `42553165294` **四个 job 全 success**（含 Apple xcframework 与 Swift smoke 9/0）。桌面端在同 pin 上 `check.sh` **7/7 PASS**、桌面探针 **26 PASS / 0 FAIL / 1 SKIP**。
+Core 侧证据：`go test ./...` **23 包 PASS**、官方源巡检 **34/34**、两批差分共 177 条 **173/177 与 Node v26.12.1 一致**（剩余 4 条均非 URL 行为：严格模式用例写法、浏览器专有 `DOMException`、已记录的 GBK `TextDecoder` 限制、TypeError 文案措辞）、变异检验 **7/7 被捕获**、Core CI `42553165294` **四个 job 全 success**（含 Apple xcframework 与 Swift smoke 9/0）。桌面端在同 pin 上 `check.sh` **7/7 PASS**、桌面探针 **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**（提供 `NK_OFFICIAL_SRC` 后无跳过）。
 
 **边界**：这是 Core 行为变更，iOS 端的界面回归由本 pin 的 CI 承担（结论以其自身 run ID 归属）；真机、真实站点与扬声器仍不在范围。本轮未发新版本，0.4.7 / build 29 仍是最新公开产物。
 
