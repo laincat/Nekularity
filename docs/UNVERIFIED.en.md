@@ -1,8 +1,14 @@
 English · [简体中文](UNVERIFIED.md)
 
+## 0.4.9 / build 31 shipped, device behaviour still unverified (2026-11-09)
+
+The CI, IPA contents and all three AltStore entries for 0.4.9 are checked (see [STATUS](STATUS.en.md)), and the public artifact really does carry Core `2bafd88`. **That is still not device verification**: signed installation and launch on hardware, background and lock-screen playback, ActivityKit presentation on the lock screen and Dynamic Island, subtitles under PiP / AirPlay / external displays, the real speaker, real accounts and real site scripts have never run on a device.
+
+This round adds no interface conclusion: relative to the tested commit `b70a309`, 0.4.9 only changes version metadata, so the interface and unit-test conclusions still belong to CI `42570317039` (simulator 34/0/0). A simulator neither exercises ActivityKit on hardware nor represents a foldable's narrow layout.
+
 ## Core `2bafd88` is on main but not in a public artifact (2026-11-09)
 
-`2bafd88` adds relative `new URL` resolution, `URLSearchParams` iteration and `URL.parse`, and both client pins follow it, but **no new version was released**: the latest public 0.4.8 / build 30 binary still carries `6d40ec2`, as does Nekophage 0.2.30. The public artifacts therefore do not contain this batch, and the mainline pin's verification must not be attributed to them. Core's 23 packages, the 34/34 official-source sweep, the 41/41 differential, the 9/9 mutation check and Core CI `42569120105` (all four jobs) belong to `2bafd88`; the iOS interface regression `42570317039` **succeeded**: Kit 499/86, simulator interface 34/0/0, Magpie fixture success, with the log confirming `Core: 2bafd88`. Devices, real accounts and the real sites remain unverified. Evidence `E:/Code/deliveries/2026-11-09-core-url-relative/`.
+`2bafd88` adds relative `new URL` resolution, `URLSearchParams` iteration and `URL.parse`, and both client pins follow it; 0.4.9 / build 31 and Nekophage 0.2.31 were then released with `2bafd88` in the binary markers. The public artifacts therefore do not contain this batch, and the mainline pin's verification must not be attributed to them. Core's 23 packages, the 34/34 official-source sweep, the 41/41 differential, the 9/9 mutation check and Core CI `42569120105` (all four jobs) belong to `2bafd88`; the iOS interface regression `42570317039` **succeeded**: Kit 499/86, simulator interface 34/0/0, Magpie fixture success, with the log confirming `Core: 2bafd88`. Devices, real accounts and the real sites remain unverified. Evidence `E:/Code/deliveries/2026-11-09-core-url-relative/`.
 
 ## 0.4.8 is published, but device behaviour is still unverified (2026-11-09)
 

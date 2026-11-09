@@ -19,6 +19,16 @@
 
 
 
+## 0.4.9 / build 31 已发布并核对（2026-11-09）
+
+`v0.4.9` 指向 `01016b5`，Core pin `2bafd88`，包含 Core 的相对地址解析、`URLSearchParams` 迭代与 `URL.parse` 修复。`01016b5` 相对受测提交 `b70a309` 只改 `project.yml` 的版本号，产品代码相同，界面结论仍归 CI `42570317039`（Kit 499/86、模拟器界面 34/0/0）。
+
+发布 CI `42578286568` **success**。公开 IPA：HTTP **200**、**29,963,615 字节**、SHA-256 `b75fa0ea178f7786f3b92e764054172a1255bf38cd17d0a35e17952a0d0be70c`，与 API 资源端点下载逐字节一致；包内 App 与 Widget 均 **0.4.9 / 31**、最低 iOS **26.0**；二进制含 Core `2bafd88` 1 次、旧 pin `6d40ec2` 0 次、本轮修复标记 `resolveReference` 2 次；`LICENSE` / `COPYING` md5 与仓库一致；Range 请求 **206**。
+
+AltStore 三个入口（GitHub Raw、CNB `/-/git/raw/`、固定 Release）均为 **0.4.9/31/29,963,615**、20 个应用，图标 200 / 443,517 字节。前两轮刷新（`42581029656`、`42581346509`）都因 `releases/download` 路由返回 504 而沿用 0.4.8；给源构建器补了退避重试与「API 资源端点取签名地址」兜底（`laincat/AltStore` `5444064`，39 项单测 OK）之后，由提交触发的 `42582601315` 生成出 0.4.9。证据 `E:/Code/deliveries/2026-11-09-nekularity-049/`、`E:/Code/deliveries/2026-11-09-altstore-probe-fallback/`。
+
+**边界**：本轮只发版本，没有新增界面或真机结论；真机、真实站点与扬声器仍未验证。
+
 ## Core pin 升到 `2bafd88`：相对地址与参数迭代（2026-11-09）
 
 Core `2bafd88` 补上 `new URL` 的另一半：协议相对地址（`//cdn.example/x.jpg`）不再被拼到页面路径后面、只有查询/片段/空串的引用保留 base 的路径与查询、opaque path 只接受片段、`URLSearchParams` 可迭代（`entries`/`keys`/`values`/`[Symbol.iterator]`，复制构造拷贝参数对）、新增 `URL.parse`。这是生产 `init.js` 行为变更，故两端跟进 pin。证据 `E:/Code/deliveries/2026-11-09-core-url-relative/`。

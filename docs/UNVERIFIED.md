@@ -1,8 +1,14 @@
 [English](UNVERIFIED.en.md) · 简体中文
 
-## Core `2bafd88` 已进主线但未进公开产物（2026-11-09）
+## 0.4.9 / build 31 已发布，设备行为仍未验证（2026-11-09）
 
-`2bafd88` 补齐 `new URL` 的相对地址、`URLSearchParams` 迭代与 `URL.parse`，两端 pin 已跟进，但**没有发新版本**：最新公开的 0.4.8 / build 30 二进制仍含 `6d40ec2`，Nekophage 0.2.30 同理。因此公开产物不含这批修复，不能把主线 pin 的验证结果归到已发布包上。Core 侧 23 包、官方源 34/34、差分 41/41、变异 9/9 与 Core CI `42569120105` 四 job success 属于 `2bafd88`；iOS 界面回归 `42570317039` **success**：Kit 499/86、模拟器界面 34/0/0、Magpie 夹具 success，日志确认 `Core: 2bafd88`。真机、真实账号与真实站点仍未验证。证据 `E:/Code/deliveries/2026-11-09-core-url-relative/`。
+0.4.9 的 CI、IPA 内容与 AltStore 三入口都已核对（见 [STATUS](STATUS.md)），公开产物确实含 Core `2bafd88`。**这仍不等同于真机验证**：签名安装与真机启动、后台/锁屏播放、ActivityKit 在硬件上的锁屏/灵动岛呈现、PiP / AirPlay / 外接显示器上的字幕、实际扬声器、真实账号与真实站点脚本，一次都没有在设备上跑过。
+
+本轮没有新增界面结论：0.4.9 相对受测提交 `b70a309` 只改版本元数据，界面与单测结论仍归 CI `42570317039`（模拟器 34/0/0）。模拟器不执行 ActivityKit 的真机呈现，也不代表折叠设备上的窄宽屏。
+
+## Core `2bafd88` 已随 0.4.9 公开（2026-11-09，见上）
+
+`2bafd88` 补齐 `new URL` 的相对地址、`URLSearchParams` 迭代与 `URL.parse`，两端 pin 已跟进，且随后发布了 0.4.9 / build 31 与 Nekophage 0.2.31，公开二进制含 `2bafd88`（二进制标记已核对）。但主线 pin 上的 Core/桌面/iOS 验证仍不能被当成「已发布包的界面或真机结论」。Core 侧 23 包、官方源 34/34、差分 41/41、变异 9/9 与 Core CI `42569120105` 四 job success 属于 `2bafd88`；iOS 界面回归 `42570317039` **success**：Kit 499/86、模拟器界面 34/0/0、Magpie 夹具 success，日志确认 `Core: 2bafd88`。真机、真实账号与真实站点仍未验证。证据 `E:/Code/deliveries/2026-11-09-core-url-relative/`。
 
 ## 0.4.8 已发布，但设备行为仍未验证（2026-11-09）
 

@@ -19,6 +19,16 @@ English · [简体中文](STATUS.md)
 
 
 
+## 0.4.9 / build 31 shipped and checked (2026-11-09)
+
+`v0.4.9` points at `01016b5`, Core pin `2bafd88`, and carries Core's relative-reference resolution, `URLSearchParams` iteration and `URL.parse` fixes. Relative to the tested commit `b70a309`, `01016b5` only changes the version fields in `project.yml`, so the product code is identical and the interface conclusion still belongs to CI `42570317039` (Kit 499/86, simulator interface 34/0/0).
+
+Release CI `42578286568` **succeeded**. The public IPA answers HTTP **200**, is **29,963,615 bytes**, SHA-256 `b75fa0ea178f7786f3b92e764054172a1255bf38cd17d0a35e17952a0d0be70c`, and is byte-identical to the API asset download; App and Widget are both **0.4.9 / 31** with minimum iOS **26.0**; the binary carries Core `2bafd88` once, the old pin `6d40ec2` zero times, and this round's `resolveReference` marker twice; the `LICENSE` / `COPYING` md5s match the repository; a ranged request returns **206**.
+
+All three AltStore entries (GitHub Raw, CNB `/-/git/raw/`, fixed release) read **0.4.9/31/29,963,615** across 20 apps, with the icon at 200 / 443,517 bytes. The two earlier refreshes (`42581029656`, `42581346509`) kept 0.4.8 because the `releases/download` route answered 504; after the builder gained backoff retries and an "API asset endpoint signed address" fallback (`laincat/AltStore` `5444064`, 39 unit tests OK), the push-triggered `42582601315` produced 0.4.9. Evidence `E:/Code/deliveries/2026-11-09-nekularity-049/`, `E:/Code/deliveries/2026-11-09-altstore-probe-fallback/`.
+
+**Boundary**: this round only ships a version and adds no new interface or device conclusion; devices, the real sites and the speaker remain unverified.
+
 ## Core pin moved to `2bafd88`: relative references and parameter iteration (2026-11-09)
 
 Core `2bafd88` adds the other half of `new URL`: a protocol-relative address (`//cdn.example/x.jpg`) is no longer appended to the page path, a query-only / fragment-only / empty reference keeps the base's path and query, an opaque path accepts only a fragment, `URLSearchParams` is iterable (`entries`/`keys`/`values`/`[Symbol.iterator]`, with a copy constructor that copies pairs) and `URL.parse` was added. This changes production `init.js` behaviour, so both clients follow the pin. Evidence `E:/Code/deliveries/2026-11-09-core-url-relative/`.

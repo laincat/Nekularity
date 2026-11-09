@@ -2,6 +2,16 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+## 2026-11-09 收口：0.4.9/build 31 与 0.2.31 已发布
+
+**iOS**：`v0.4.9` / build 31（`01016b5`，Core `2bafd88`）已发布并核对——发布 CI `42578286568` success，IPA **29,963,615 字节**、SHA-256 `b75fa0ea…70c`、公开下载 HTTP 200 且与 API 下载逐字节一致；包内 App/Widget 均 **0.4.9/31**、最低 iOS 26.0，二进制含新 pin `2bafd88` 1 次、旧 pin `6d40ec2` 0 次、本轮 `resolveReference` 标记 2 次，`LICENSE`/`COPYING` md5 与仓库一致；Range 请求 206。相对受测提交 `b70a309` 只改 `project.yml` 版本号，界面结论仍归 `42570317039`（完整 UI 34/0/0、Kit 499/86、Magpie success）。
+
+**AltStore**：Raw / CNB / 固定 Release 三入口均 **0.4.9/31/29,963,615**、20 个应用，图标 200 / 443,517 字节。前两轮刷新因 `releases/download` 路由 504 退回 0.4.8；给源构建器补了退避重试与 API 签名地址兜底（`laincat/AltStore` `5444064`，39 项单测 OK、`verify_source` 通过）后，由提交触发的 `42582601315` 生成出 0.4.9。
+
+**桌面**：Nekophage 0.2.31（`c10410d`，同一 Core pin）已发布——`check.sh` 7/7、桌面探针 27 PASS / 0 FAIL、隔离安装 14 PASS；ZIP 23,000,870 字节、安装包 19,914,010 字节，公开下载 200 且逐字节一致。
+
+**仍待外部条件**：真机签名安装与后台/锁屏、ActivityKit 硬件呈现、PiP / AirPlay / 外接显示器字幕、扬声器、真实账号与真实站点、真实折叠设备窄宽屏、正式 App Store/DRM 分发前的 LGPL 例外法务确认。证据 `E:/Code/deliveries/2026-11-09-nekularity-049/`、`E:/Code/deliveries/2026-11-09-nekophage-0.2.31/`、`E:/Code/deliveries/2026-11-09-altstore-probe-fallback/`。
+
 ## 2026-11-09 收口：0.4.8/build 30 与 0.2.30 已发布
 
 **iOS**：`v0.4.8` / build 30（`5a71605`，Core `6d40ec2`）已发布并核对——发布 CI `42561394003` success，IPA **29,963,357 字节**、SHA-256 `93184267…9050`、公开下载 HTTP 200；包内 App/Widget 均 **0.4.8/30**、最低 iOS 26.0，二进制含新 pin `6d40ec2` 1 次、旧 pin `da23603` 0 次，`LICENSE`/`COPYING` md5 与仓库一致。AltStore 刷新 `42564112978` success，Raw / CNB / 固定 Release 三入口均 **0.4.8/30/29,963,357**，图标 200、IPA 分段 206。发版前回归 CI `42554701625`：完整 UI **34/0/0**、Kit **499/86**、Magpie 步骤 success。

@@ -2,6 +2,16 @@
 
 [简体中文](ROADMAP.md) | English
 
+## 2026-11-09 wrap-up: 0.4.9/build 31 and 0.2.31 shipped
+
+**iOS**: `v0.4.9` / build 31 (`01016b5`, Core `2bafd88`) is released and checked — release CI `42578286568` succeeded, the IPA is **29,963,615 bytes** with SHA-256 `b75fa0ea…70c`, the public download answers HTTP 200 and is byte-identical to the API download; App and Widget are both **0.4.9/31** with minimum iOS 26.0, the binary carries the new pin `2bafd88` once, the old pin `6d40ec2` zero times, and this round's `resolveReference` marker twice; the `LICENSE`/`COPYING` md5s match the repository, and a ranged request returns 206. Relative to the tested commit `b70a309` only the version fields in `project.yml` change, so the interface conclusion still belongs to `42570317039` (full UI 34/0/0, Kit 499/86, Magpie success).
+
+**AltStore**: the Raw, CNB and fixed-release entries all read **0.4.9/31/29,963,615** across 20 apps, with the icon at 200 / 443,517 bytes. Two earlier refreshes fell back to 0.4.8 because the `releases/download` route answered 504; after the builder gained backoff retries and an API signed-address fallback (`laincat/AltStore` `5444064`, 39 unit tests OK, `verify_source` passing), the push-triggered `42582601315` produced 0.4.9.
+
+**Desktop**: Nekophage 0.2.31 (`c10410d`, same Core pin) is released — `check.sh` 7/7, desktop probes 27 PASS / 0 FAIL, isolated install 14 PASS; the ZIP is 23,000,870 bytes and the installer 19,914,010 bytes, both HTTP 200 and byte-identical to the local files.
+
+**Still waiting on external conditions**: signed device install with background and lock screen, ActivityKit presentation on hardware, subtitles under PiP / AirPlay / external displays, the speaker, real accounts and real sites, a real foldable's narrow layout, and the LGPL exception review before any App Store/DRM binary distribution. Evidence `E:/Code/deliveries/2026-11-09-nekularity-049/`, `E:/Code/deliveries/2026-11-09-nekophage-0.2.31/`, `E:/Code/deliveries/2026-11-09-altstore-probe-fallback/`.
+
 ## 2026-11-09 close-out: 0.4.8/build 30 and 0.2.30 published
 
 **iOS**: `v0.4.8` / build 30 (`5a71605`, Core `6d40ec2`) is published and checked — release CI `42561394003` succeeded, the IPA is **29,963,357 bytes** with SHA-256 `93184267…9050` and the public download answers HTTP 200; App and Widget are both **0.4.8/30** with minimum iOS 26.0, the binary carries the new pin `6d40ec2` once and the old pin `da23603` zero times, and `LICENSE`/`COPYING` md5 match the repository. AltStore refresh `42564112978` succeeded: Raw, CNB and the fixed Release all read **0.4.8/30/29,963,357**, the icon answers 200 and an IPA range request answers 206. The pre-release regression CI `42554701625` gave a full UI **34/0/0**, Kit **499/86** and a successful Magpie step.
