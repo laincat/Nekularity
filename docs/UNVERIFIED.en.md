@@ -1,5 +1,9 @@
 English · [简体中文](UNVERIFIED.md)
 
+## Core `2bafd88` is on main but not in a public artifact (2026-11-09)
+
+`2bafd88` adds relative `new URL` resolution, `URLSearchParams` iteration and `URL.parse`, and both client pins follow it, but **no new version was released**: the latest public 0.4.8 / build 30 binary still carries `6d40ec2`, as does Nekophage 0.2.30. The public artifacts therefore do not contain this batch, and the mainline pin's verification must not be attributed to them. Core's 23 packages, the 34/34 official-source sweep, the 41/41 differential, the 9/9 mutation check and Core CI `42569120105` (all four jobs) belong to `2bafd88`; the iOS interface regression `42570317039` belongs to the CI run on that pin and its conclusion is its own. Devices, real accounts and the real sites remain unverified. Evidence `E:/Code/deliveries/2026-11-09-core-url-relative/`.
+
 ## 0.4.8 is published, but device behaviour is still unverified (2026-11-09)
 
 0.4.8 / build 30 has been checked in CI, in the IPA contents and across all three AltStore entries (see [STATUS](STATUS.md)). **That is not device verification**: signed install and launch on a device, background / locked playback, ActivityKit's Lock Screen / Dynamic Island rendering on hardware (the first build to carry the failure state), PiP / AirPlay / external-display captions, the actual speaker, real accounts and real-site scripts have never been run on a device. The CI simulator's 34/0/0 only proves the interface cases pass on the CI simulator; a simulator does not exercise ActivityKit's device rendering.

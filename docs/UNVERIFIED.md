@@ -1,5 +1,9 @@
 [English](UNVERIFIED.en.md) · 简体中文
 
+## Core `2bafd88` 已进主线但未进公开产物（2026-11-09）
+
+`2bafd88` 补齐 `new URL` 的相对地址、`URLSearchParams` 迭代与 `URL.parse`，两端 pin 已跟进，但**没有发新版本**：最新公开的 0.4.8 / build 30 二进制仍含 `6d40ec2`，Nekophage 0.2.30 同理。因此公开产物不含这批修复，不能把主线 pin 的验证结果归到已发布包上。Core 侧 23 包、官方源 34/34、差分 41/41、变异 9/9 与 Core CI `42569120105` 四 job success 属于 `2bafd88`；iOS 界面回归 `42570317039` 属于该 pin 的 CI，结论以其自身 run ID 归属。真机、真实账号与真实站点仍未验证。证据 `E:/Code/deliveries/2026-11-09-core-url-relative/`。
+
 ## 0.4.8 已发布，但设备行为仍未验证（2026-11-09）
 
 0.4.8 / build 30 的 CI、IPA 内容与 AltStore 三入口都已核对（见 [STATUS](STATUS.md)）。**这不等同于真机验证**：签名安装与真机启动、后台/锁屏播放、ActivityKit 在硬件上的锁屏/灵动岛呈现（这版第一次带失败状态）、PiP / AirPlay / 外接显示器上的字幕、实际扬声器、真实账号与真实站点脚本，一次都没有在设备上跑过。CI 模拟器的 34/0/0 只证明界面用例在 CI 模拟器上通过；模拟器不执行 ActivityKit 的真机呈现。
