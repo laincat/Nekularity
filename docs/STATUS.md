@@ -19,6 +19,14 @@
 
 
 
+## Core pin 升到 `2bafd88`：相对地址与参数迭代（2026-11-09）
+
+Core `2bafd88` 补上 `new URL` 的另一半：协议相对地址（`//cdn.example/x.jpg`）不再被拼到页面路径后面、只有查询/片段/空串的引用保留 base 的路径与查询、opaque path 只接受片段、`URLSearchParams` 可迭代（`entries`/`keys`/`values`/`[Symbol.iterator]`，复制构造拷贝参数对）、新增 `URL.parse`。这是生产 `init.js` 行为变更，故两端跟进 pin。证据 `E:/Code/deliveries/2026-11-09-core-url-relative/`。
+
+Core 侧证据：`go test ./...` **23 包 PASS**、官方源巡检 **34/34**、第三批差分 **41/41 与 Node v26.12.1 一致**（前两批无回归）、变异检验 **9/9 被捕获**。桌面端在同 pin 上 `check.sh` **7/7 PASS**、桌面探针 **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**。
+
+**边界**：iOS 的界面回归由本 pin 的 CI 承担，结论以其自身 run ID 归属；真机、真实站点与扬声器仍不在范围。
+
 ## 0.4.8 / build 30 已发布并核对（2026-11-09）
 
 `v0.4.8` 指向 `5a71605`，Core pin `6d40ec2`，包含 Core 的 `new URL` WHATWG 对齐与下载失败 Live Activity 状态修复。相对受测提交 `8bc857c`，`5a71605` 只多文档与版本元数据（`project.yml`），产品代码相同。发布 CI `42561394003` **success**（tag 触发；该流水线只编译界面测试目标，不执行 UI 套件，界面结论归 `42554701625`）。

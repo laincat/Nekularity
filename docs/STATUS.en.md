@@ -19,6 +19,14 @@ English · [简体中文](STATUS.md)
 
 
 
+## Core pin moved to `2bafd88`: relative references and parameter iteration (2026-11-09)
+
+Core `2bafd88` adds the other half of `new URL`: a protocol-relative address (`//cdn.example/x.jpg`) is no longer appended to the page path, a query-only / fragment-only / empty reference keeps the base's path and query, an opaque path accepts only a fragment, `URLSearchParams` is iterable (`entries`/`keys`/`values`/`[Symbol.iterator]`, with a copy constructor that copies pairs) and `URL.parse` was added. This changes production `init.js` behaviour, so both clients follow the pin. Evidence `E:/Code/deliveries/2026-11-09-core-url-relative/`.
+
+On the Core side `go test ./...` passes **23 packages**, the official-source sweep is **34/34**, the third differential batch is **41/41 with Node v26.12.1** (the earlier batches do not regress) and the mutation check **caught 9/9**. On the desktop the same pin gives `check.sh` **7/7 PASS** and desktop probes **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**.
+
+**Boundary**: the iOS interface regression is carried by the CI run on this pin and its conclusion belongs to its own run ID; devices, the real sites and the speaker stay out of scope.
+
 ## 0.4.8 / build 30 released and checked (2026-11-09)
 
 `v0.4.8` points at `5a71605`, Core pin `6d40ec2`, and carries Core's WHATWG `new URL` alignment plus the failed-download Live Activity state fix. Compared with the tested commit `8bc857c`, `5a71605` adds only documentation and version metadata (`project.yml`); the product code is identical. Release CI `42561394003` **succeeded** (triggered by the tag; that pipeline only compiles the interface test target and does not run the UI suite, so the interface conclusion belongs to `42554701625`).
