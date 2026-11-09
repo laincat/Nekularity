@@ -2,6 +2,14 @@
 
 [简体中文](ROADMAP.md) | English
 
+## 2026-11-09 close-out: 0.4.8/build 30 and 0.2.30 published
+
+**iOS**: `v0.4.8` / build 30 (`5a71605`, Core `6d40ec2`) is published and checked — release CI `42561394003` succeeded, the IPA is **29,963,357 bytes** with SHA-256 `93184267…9050` and the public download answers HTTP 200; App and Widget are both **0.4.8/30** with minimum iOS 26.0, the binary carries the new pin `6d40ec2` once and the old pin `da23603` zero times, and `LICENSE`/`COPYING` md5 match the repository. AltStore refresh `42564112978` succeeded: Raw, CNB and the fixed Release all read **0.4.8/30/29,963,357**, the icon answers 200 and an IPA range request answers 206. The pre-release regression CI `42554701625` gave a full UI **34/0/0**, Kit **499/86** and a successful Magpie step.
+
+**Desktop**: Nekophage `0.2.30` (`03bb36d`, Core `6d40ec2`) is published at `https://github.com/laincat/Nekophage/releases/tag/v0.2.30`: ZIP **23,000,744 bytes** (sha256 `9f6ed150…b413`) and installer **19,911,507 bytes** (sha256 `73320c6a…901e`); the isolated install is **14 PASS / 0 FAIL** (install, version marker, real window, normal close with exit 0, uninstall removing the directory, profile preserved); all four assets read back through the API and the public ZIP/setup downloads are byte-identical to the local files. `check.sh` is **7/7** and the desktop probes are **27/0/0/0**.
+
+**Still needs outside conditions**: signed device install, background / locked playback, Live Activity on hardware, PiP / AirPlay / external-display captions, the actual speaker, real accounts and sites, a real foldable's narrow layout, and legal advice on the LGPL exception before a formal App Store/DRM binary distribution.
+
 ## 2026-11-09: Core `6d40ec2` aligned with WHATWG, both pins follow
 
 A batch of P3-1 ("real compatibility gaps in the shared Core") closed this round: two differential batches totalling 177 cases against Node v26.12.1's WHATWG URL found and fixed 7 real gaps in `new URL` (the default port not dropped, the path not percent-encoded, backslashes for a special scheme, `href` forcing `//` onto a scheme without a host, dot segments resolved for a special scheme only, `searchParams.size` missing, and the `origin` of a scheme that is not special). After the fix **173/177 agree with Node** (the second wave is 59/59) and the remaining 4 are not URL behaviour; Core's `go test ./...` passes all 23 packages, the official-source sweep is 34/34, the mutation check caught 7/7, and Core CI `42553165294` succeeded in all four jobs. The recorded "known difference" claiming a non-special scheme keeps its dot segments turned out to be wrong; the test now pins the real opaque-path difference. Evidence `E:/Code/deliveries/2026-11-09-core-url-whatwg/`.

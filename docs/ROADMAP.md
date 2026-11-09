@@ -2,6 +2,14 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+## 2026-11-09 收口：0.4.8/build 30 与 0.2.30 已发布
+
+**iOS**：`v0.4.8` / build 30（`5a71605`，Core `6d40ec2`）已发布并核对——发布 CI `42561394003` success，IPA **29,963,357 字节**、SHA-256 `93184267…9050`、公开下载 HTTP 200；包内 App/Widget 均 **0.4.8/30**、最低 iOS 26.0，二进制含新 pin `6d40ec2` 1 次、旧 pin `da23603` 0 次，`LICENSE`/`COPYING` md5 与仓库一致。AltStore 刷新 `42564112978` success，Raw / CNB / 固定 Release 三入口均 **0.4.8/30/29,963,357**，图标 200、IPA 分段 206。发版前回归 CI `42554701625`：完整 UI **34/0/0**、Kit **499/86**、Magpie 步骤 success。
+
+**桌面**：Nekophage `0.2.30`（`03bb36d`，Core `6d40ec2`）已发布到 `https://github.com/laincat/Nekophage/releases/tag/v0.2.30`：ZIP **23,000,744 字节**（sha256 `9f6ed150…b413`）、安装包 **19,911,507 字节**（sha256 `73320c6a…901e`）；隔离安装 **14 PASS / 0 FAIL**（安装、版本 marker、真实窗口、正常关窗退出 0、卸载删目录、资料保留）；四资产 API 回读齐全，ZIP 与 setup 公开下载与本地逐字节一致。`check.sh` **7/7**、桌面探针 **27/0/0/0**。
+
+**仍需外部条件**：真机签名安装、后台/锁屏、Live Activity 在硬件上的呈现、PiP / AirPlay / 外接显示器字幕、实际扬声器、真实账号与站点、真实折叠设备窄宽屏，以及正式 App Store/DRM 分发前的 LGPL 例外法务意见。
+
 ## 2026-11-09：Core `6d40ec2` 对齐 WHATWG，两端 pin 跟进
 
 P3-1「共享 Core 的真实兼容缺口」本轮收口一批：以 Node v26.12.1 的 WHATWG URL 为参照做两批共 177 条差分，找出并修复 `new URL` 的 7 处真实缺口（默认端口未去掉、路径未百分号编码、特殊 scheme 的反斜杠、无主机 scheme 的 `href` 硬拼 `//`、点段只对特殊 scheme 解析、`searchParams.size` 缺失、非特殊 scheme 的 `origin`）。修复后 **173/177 与 Node 一致**（第二波 59/59），剩余 4 条均非 URL 行为；Core `go test ./...` 23 包 PASS、官方源巡检 34/34、变异检验 7/7、Core CI `42553165294` 四 job 全 success。既有「非特殊 scheme 保留点段」的已知差异结论被证明是错的，测试已改为锁定真正的 opaque path 差异。证据 `E:/Code/deliveries/2026-11-09-core-url-whatwg/`。

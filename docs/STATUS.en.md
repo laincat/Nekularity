@@ -19,6 +19,16 @@ English · [简体中文](STATUS.md)
 
 
 
+## 0.4.8 / build 30 released and checked (2026-11-09)
+
+`v0.4.8` points at `5a71605`, Core pin `6d40ec2`, and carries Core's WHATWG `new URL` alignment plus the failed-download Live Activity state fix. Release CI `42561394003` **succeeded** (triggered by the tag).
+
+Public IPA: HTTP **200**, **29,963,357 bytes**, SHA-256 `93184267fcc1cc0edccd18ae9d4d5041d6ba5fb6dfd24a9c6a629ea87b969050`. Inside, `Nekularity.app` and `NekularityWidgets.appex` are both **0.4.8 / 30** with minimum iOS **26.0**; the app binary contains Core `6d40ec2` **once** and the old pin `da23603` **zero** times; `DEFAULT_PORTS` appears twice and `mailto:a@b` once, so this build really carries the `new URL` fix. The `LICENSE` md5 `94003cec…` and `COPYING` md5 `1ebbd3e3…` match the repository.
+
+AltStore refresh `42564112978` **succeeded**: the stable track is **0.4.8/30/29,963,357**, and all three public entries — GitHub Raw, CNB (`/-/git/raw/`) and the fixed Release — read **0.4.8/30/29,963,357** with the download pointing at `v0.4.8`; the icon is HTTP 200 / 443,517 bytes / 1024×1024 PNG and a range request on the IPA returns **206** with 1,024 bytes.
+
+**Boundary**: the package is unsigned. Signed device install and launch, background / locked playback, Live Activity on hardware, PiP / AirPlay / external-display captions, the actual speaker and real accounts remain unverified. The CI simulator's 34/0/0 belongs to CI. Receipt `E:/Code/deliveries/2026-11-09-nekularity-048/`.
+
 ## Core pin moved to `6d40ec2`: `new URL` aligned with WHATWG (2026-11-09)
 
 Core `6d40ec2` fixes 7 real gaps in `new URL`: the default port no longer stays in the address (`https://a.com:443/p` → `https://a.com/p`), the path is percent-encoded as the standard says (`/a b` → `/a%20b`, with an escape the source wrote such as `%2f` kept as it is), a backslash is a separator for a special scheme (`https:\\a.com\\p` → `https://a.com/p`), the `href` of a scheme without a host no longer forces a `//` (`mailto:a@b` no longer becomes `mailto://a@b`), dot segments are resolved for every path that has a host or begins with `/` (`foo:/a/../b` → `/b`), `URLSearchParams` gained `size`, and the `origin` of a scheme that is not special answers `null`. This changes production `init.js` behaviour, so both clients follow the pin. Evidence `E:/Code/deliveries/2026-11-09-core-url-whatwg/`.

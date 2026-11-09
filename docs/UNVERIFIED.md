@@ -1,5 +1,9 @@
 [English](UNVERIFIED.en.md) · 简体中文
 
+## 0.4.8 已发布，但设备行为仍未验证（2026-11-09）
+
+0.4.8 / build 30 的 CI、IPA 内容与 AltStore 三入口都已核对（见 [STATUS](STATUS.md)）。**这不等同于真机验证**：签名安装与真机启动、后台/锁屏播放、ActivityKit 在硬件上的锁屏/灵动岛呈现（这版第一次带失败状态）、PiP / AirPlay / 外接显示器上的字幕、实际扬声器、真实账号与真实站点脚本，一次都没有在设备上跑过。CI 模拟器的 34/0/0 只证明界面用例在 CI 模拟器上通过；模拟器不执行 ActivityKit 的真机呈现。
+
 ## 新 Core pin 的边界（2026-11-09）
 
 Core `6d40ec2` 修 `new URL` 的 7 处真实缺口，iOS 端已跟进 pin；CI `42554701625` 在 `8bc857c` 上 success（Kit 499/86、模拟器界面 34/0/0、Magpie 夹具 success，日志确认 Core 为 `6d40ec2`）。**仍未验证**：真机上 ActivityKit 的锁屏/灵动岛呈现、后台/锁屏下载与播放、PiP / AirPlay / 外接显示器字幕、实际扬声器、真实账号与真实站点脚本、真实折叠设备窄宽屏。CI 模拟器的 34/0/0 与公开产物是两件事：最新的 0.4.7 / build 29 二进制仍含旧 pin `da23603`，本轮未发新版。证据 `E:/Code/deliveries/2026-11-09-core-url-whatwg/`。

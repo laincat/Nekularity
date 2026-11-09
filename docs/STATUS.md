@@ -19,6 +19,16 @@
 
 
 
+## 0.4.8 / build 30 已发布并核对（2026-11-09）
+
+`v0.4.8` 指向 `5a71605`，Core pin `6d40ec2`，包含 Core 的 `new URL` WHATWG 对齐与下载失败 Live Activity 状态修复。发布 CI `42561394003` **success**（tag 触发）。
+
+公开 IPA：HTTP **200**、**29,963,357 字节**、SHA-256 `93184267fcc1cc0edccd18ae9d4d5041d6ba5fb6dfd24a9c6a629ea87b969050`。包内 `Nekularity.app` 与 `NekularityWidgets.appex` 均为 **0.4.8 / 30**、最低 iOS **26.0**；应用二进制含 Core `6d40ec2` **1 次**、不含旧 pin `da23603` **0 次**；`DEFAULT_PORTS` 标记 2 次、`mailto:a@b` 1 次，说明这版确实带 `new URL` 修复。`LICENSE` md5 `94003cec…` 与 `COPYING` md5 `1ebbd3e3…` 与仓库一致。
+
+AltStore 刷新 `42564112978` **success**：稳定轨道为 **0.4.8/30/29,963,357**；GitHub Raw、CNB（`/-/git/raw/`）与固定 Release 三个公开入口均读到 **0.4.8/30/29,963,357**，下载地址指向 `v0.4.8`；图标 HTTP 200 / 443,517 字节 / 1024×1024 PNG，IPA 分段请求 **206**、1,024 字节。
+
+**边界**：包未签名；真机签名安装与启动、后台/锁屏播放、Live Activity 在硬件上的呈现、PiP / AirPlay / 外接显示器字幕、实际扬声器与真实账号仍未验证。CI 模拟器 34/0/0 只属于 CI。回执 `E:/Code/deliveries/2026-11-09-nekularity-048/`。
+
 ## Core pin 升到 `6d40ec2`：`new URL` 对齐 WHATWG（2026-11-09）
 
 Core `6d40ec2` 修 `new URL` 的 7 处真实缺口：默认端口不再留在地址里（`https://a.com:443/p` → `https://a.com/p`）、路径按标准百分号编码（`/a b` → `/a%20b`，已转义的 `%2f` 原样保留）、特殊 scheme 的反斜杠按分隔符处理（`https:\\a.com\\p` → `https://a.com/p`）、无主机 scheme 的 `href` 不再硬拼 `//`（`mailto:a@b` 不再变成 `mailto://a@b`）、点段对所有「有主机或以 `/` 开头」的路径解析（`foo:/a/../b` → `/b`）、`URLSearchParams` 补上 `size`、非特殊 scheme 的 `origin` 返回 `null`。这是生产 `init.js` 行为变更，故两端跟进 pin。证据 `E:/Code/deliveries/2026-11-09-core-url-whatwg/`。

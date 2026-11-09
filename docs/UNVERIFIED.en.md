@@ -1,5 +1,9 @@
 English · [简体中文](UNVERIFIED.md)
 
+## 0.4.8 is published, but device behaviour is still unverified (2026-11-09)
+
+0.4.8 / build 30 has been checked in CI, in the IPA contents and across all three AltStore entries (see [STATUS](STATUS.md)). **That is not device verification**: signed install and launch on a device, background / locked playback, ActivityKit's Lock Screen / Dynamic Island rendering on hardware (the first build to carry the failure state), PiP / AirPlay / external-display captions, the actual speaker, real accounts and real-site scripts have never been run on a device. The CI simulator's 34/0/0 only proves the interface cases pass on the CI simulator; a simulator does not exercise ActivityKit's device rendering.
+
 ## Boundary of the new Core pin (2026-11-09)
 
 Core `6d40ec2` fixes 7 real gaps in `new URL` and the iOS client has followed the pin; CI `42554701625` succeeded on `8bc857c` (Kit 499/86, simulator interface 34/0/0, Magpie fixture success, with the log confirming Core `6d40ec2`). **Still unverified**: ActivityKit's Lock Screen / Dynamic Island rendering on a real device, background / locked downloads and playback, PiP / AirPlay / external-display captions, actual speaker output, real accounts and real-site scripts, and the narrow/wide layout of a real foldable. The CI simulator's 34/0/0 and the published artifact are different things: the latest 0.4.7 / build 29 binary still carries the old pin `da23603`, and no new version was released this round. Evidence `E:/Code/deliveries/2026-11-09-core-url-whatwg/`.
