@@ -28,7 +28,7 @@ struct PartitionSchemeTests {
     /// After a request, the partition's scheme is known.
     @Test func aRequestTeachesThePartitionItsScheme() async throws {
         let t = transport()
-        _ = try await t.send(request("http://plain.test/a", partition: "comic:plain"))
+        _ = try await t.send(request("http://plain.localhost/a", partition: "comic:plain"))
         #expect(t.scheme(partition: "comic:plain") == "http")
     }
 
@@ -36,7 +36,7 @@ struct PartitionSchemeTests {
     /// over https must not change each other's images.
     @Test func partitionsKeepTheirOwnSchemes() async throws {
         let t = transport()
-        _ = try await t.send(request("http://plain.test/a", partition: "comic:plain"))
+        _ = try await t.send(request("http://plain.localhost/a", partition: "comic:plain"))
         _ = try await t.send(request("https://secure.test/a", partition: "comic:secure"))
         #expect(t.scheme(partition: "comic:plain") == "http")
         #expect(t.scheme(partition: "comic:secure") == "https")

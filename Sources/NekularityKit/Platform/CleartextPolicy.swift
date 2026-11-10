@@ -49,7 +49,7 @@ public enum CleartextPolicy {
     static func isLocal(_ host: String) -> Bool {
         // Foundation may keep the brackets of an IPv6 literal in `host`.
         let host = host.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
-        if host == "localhost" || host == "::1" { return true }
+        if host == "localhost" || host.hasSuffix(".localhost") || host == "::1" { return true }
         if host.hasSuffix(".local") { return true }
         // IPv6 link-local (fe80::/10) and unique-local (fc00::/7).
         if host.hasPrefix("fe8") || host.hasPrefix("fe9") || host.hasPrefix("fea")

@@ -34,6 +34,7 @@ struct CleartextPolicyTests {
     @Test func localAddressesAreAllowedEverywhere() {
         let local = [
             "http://localhost:8096/x",
+            "http://plain.localhost:9000/x",
             "http://127.0.0.1:18731/x",
             "http://127.10.20.30/x",
             "http://10.0.0.5/x",
