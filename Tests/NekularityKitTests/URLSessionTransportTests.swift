@@ -334,3 +334,48 @@ struct URLSessionTransportTests {
         #expect(String(decoding: fast.body, as: UTF8.self) == "now")
     }
 }
+
+/// The app's own cleartext gate, checked at the transport rather than only on
+/// the policy value: a bug that skipped the call site would still pass the
+/// unit tests above.
+extension URLSessionTransportTests {
+    @Test func aPublicCleartextRequestIsRefusedBeforeItStarts() async throws {
+        let host = "cleartext.test"
+        TransportStub.reply("http://\(host)/x", with: .init(body: Data("must not run".utf8)))
+        let (t, _) = transport()
+
+        do {
+            _ = try await t.send(request("http://\(host)/x", partition: "ai"))
+            Issue.record("a public http request reached the session")
+        } catch let error as CoreError {
+            #expect(error.message.contains("cleartext http is not allowed"))
+        }
+        #expect(TransportStub.requests(host: host).isEmpty)
+    }
+
+    @Test func aLocalCleartextRequestStillRuns() async throws {
+        let host = "127.0.0.1"
+        TransportStub.reply("http://\(host):9/ok", with: .init(body: Data("local".utf8)))
+        let (t, _) = transport()
+
+        let response = try await t.send(request("http://\(host):9/ok", partition: "ai"))
+
+        #expect(String(decoding: response.body, as: UTF8.self) == "local")
+    }
+
+    @Test func aDeclaredSourceHostRunsForAComicPartitionOnly() async throws {
+        let host = "lrr.tvc-16.science"
+        TransportStub.reply("http://\(host)/api/search", with: .init(body: Data("lan".utf8)))
+        let (t, _) = transport()
+
+        let response = try await t.send(request("http://\(host)/api/search", partition: "comic:lanraragi"))
+        #expect(String(decoding: response.body, as: UTF8.self) == "lan")
+
+        do {
+            _ = try await t.send(request("http://\(host)/api/search", id: 2, partition: "ai"))
+            Issue.record("the declared source host was allowed for an AI request")
+        } catch let error as CoreError {
+            #expect(error.message.contains("cleartext http is not allowed"))
+        }
+    }
+}

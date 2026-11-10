@@ -29,6 +29,16 @@ public struct WireCookie: Codable, Sendable, Hashable {
 /// could have written to the bare key and still passed its own test.
 public enum CookiePartition {
     public static func comic(_ key: String) -> String { "comic:" + key }
+    public static func video(_ key: String) -> String { "video:" + key }
+
+    /// Whether a partition belongs to a content source rather than to one of
+    /// the app's own endpoints (AI, Magpie, a service, the collection index).
+    ///
+    /// The prefix is spelled here, next to the functions above, because a
+    /// second spelling is how a restore once wrote cookies nothing would send.
+    public static func isContentSource(_ partition: String) -> Bool {
+        partition.hasPrefix(comic("")) || partition.hasPrefix(video(""))
+    }
 }
 
 /// Cookie jars, one per partition (`comic:<key>` for comic sources).

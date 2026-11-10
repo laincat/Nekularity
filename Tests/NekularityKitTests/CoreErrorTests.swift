@@ -17,11 +17,18 @@ import Testing
     /// like a connection failure, so it gets its own sentence.
     @Test func aBlockedPlainHTTPConnectionSaysWhy() {
         let text = CoreError.readable("Error Domain=NSURLErrorDomain Code=-1022 \"The resource could not be loaded because the App Transport Security policy requires the use of a secure connection.\"")
-        // The app allows http, so seeing this means the configuration did not take
-        // effect — the message says how to report it instead of telling the user to
-        // fix the source.
-        #expect(text.contains("ATS"))
-        #expect(text.contains("反馈"))
+        // The default is HTTPS, so the sentence tells the reader what to change
+        // rather than asking them to report a configuration that did not apply.
+        #expect(text.contains("HTTPS"))
+        #expect(text.contains("本机/局域网"))
+        #expect(!text.contains("反馈"))
+    }
+
+    /// The app's own gate refuses a public http source that ATS does not name.
+    @Test func aRefusedCleartextSourceSaysWhy() {
+        let text = CoreError.readable("cleartext http is not allowed for this request (example.test)")
+        #expect(text.contains("HTTPS"))
+        #expect(text.contains("本机/局域网"))
     }
 
     /// Foundation reports a dead network in English sentences, before Core is

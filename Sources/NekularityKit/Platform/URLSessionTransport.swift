@@ -107,6 +107,13 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable {
         if takeEarlyCancellation(r.id) {
             throw CoreError("request cancelled before it started")
         }
+        // ATS permits local networking and one declared source host; this is the
+        // app's own rule, so a public http address is refused before a socket is
+        // opened even where ATS would let it through (for example a simulator
+        // with a debug configuration).
+        guard CleartextPolicy.allows(r.url, partition: r.partition) else {
+            throw CoreError("cleartext http is not allowed for this request (\(r.url.host ?? ""))")
+        }
         var req = URLRequest(url: r.url)
         req.httpMethod = r.method
         req.httpBody = r.body
