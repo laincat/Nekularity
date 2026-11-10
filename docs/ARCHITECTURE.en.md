@@ -87,7 +87,7 @@ Rules:
 ## Dependencies
 
 - `VeneraCatCore.xcframework`: built by `scripts/fetch-core.sh`, which runs `scripts/mac-verify.sh` in the Core repository, and placed in `Vendor/`; it is not committed.
-- `AetherEngine 7.58.0`: the Swift package pinned exactly in project.yml and already used by the App.
+- `AetherEngine 7.62.0`: the Swift package pinned exactly in project.yml and already used by the App.
 - See the[ecosystem survey](../../VeneraCat%20Sources/docs/ECOSYSTEM.en.md) for future editor/plugin SDK reuse;candidates are not automatically production dependencies.
 
 ## Verification

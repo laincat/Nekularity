@@ -75,7 +75,7 @@ App/                         「AI 供应商」页、登录页、用量页、选
 ## 依赖
 
 - `VeneraCatCore.xcframework`:由 `scripts/fetch-core.sh` 调用 Core 仓库的 `scripts/mac-verify.sh` 生成,放在 `Vendor/`,不提交到仓库。
-- `AetherEngine 7.58.0`:由project.yml精确固定的Swift Package,App已直接使用其播放引擎。
+- `AetherEngine 7.62.0`:由project.yml精确固定的Swift Package,App已直接使用其播放引擎。
 - 后续编辑器/插件SDK等直接复用选型见[生态调研](../../VeneraCat%20Sources/docs/ECOSYSTEM.md);候选未自动加入生产依赖。
 
 ## 验证
