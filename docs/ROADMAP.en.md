@@ -6,7 +6,7 @@
 
 The three repositories' current state, the decided directions (the user's ten answers of 2026-11-09), what the last three rounds changed, the dependency-upgrade results, the open items and a suggested order are written up in `E:/Code/deliveries/2026-11-10-handoff/README.md` and `README.en.md`, with `receipt.json` and the dependency and official-source sweep logs attached.
 
-Key points: both pins are `0405a64` (moejs v0.1.0 + sqlite v1.62.0) and Core HEAD `93c8fea` is only a docs commit ahead; the published 0.4.9/build 31 and 0.2.31 packages still carry `2bafd88`, so **another release is needed for the public packages to carry the new pin**; the full iOS regression CI `42731094758` (`27553ca`) was still running the interface suite, and **the new pin's interface conclusion must come from that run** rather than the old pin's 34/0; the `NSAllowsArbitraryLoads` in `App/Info.plist`, the Boolean cookie import and the hard-coded TMDB/Bangumi are the three places that contradict the decided directions and are next.
+Key points: both pins are `0405a64` (moejs v0.1.0 + sqlite v1.62.0) and Core HEAD `93c8fea` is only a docs commit ahead; the published 0.4.9/build 31 and 0.2.31 packages still carry `2bafd88`, so **another release is needed for the public packages to carry the new pin**; the full iOS regression CI `42731094758` (`27553ca`) **succeeded**: the log confirms `Core: 0405a64`, Kit **499/86**, simulator interface **34/0/0**, log `E:/Code/deliveries/2026-11-10-handoff/ios-ci-42731094758.log`; the `NSAllowsArbitraryLoads` in `App/Info.plist`, the Boolean cookie import and the hard-coded TMDB/Bangumi are the three places that contradict the decided directions and are next.
 
 ## 2026-11-09: ten product decisions and the portable desktop layout
 
