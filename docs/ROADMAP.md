@@ -2,6 +2,12 @@
 
 [English](ROADMAP.en.md) | 简体中文
 
+## 2026-11-10：项目接手说明已整理
+
+三仓当前状态、已定方向（2026-11-09 十项答复）、最近三轮改动、依赖升级结果、未完成清单与建议顺序，整理为 `E:/Code/deliveries/2026-11-10-handoff/README.md` 与 `README.en.md`，回执 `receipt.json`，附依赖升级与官方源巡检日志。
+
+要点：两端 pin 均为 `0405a64`（moejs v0.1.0 + sqlite v1.62.0），Core HEAD `93c8fea` 只多文档；公开 0.4.9/build 31 与 0.2.31 包内仍是 `2bafd88`，**要让公开包带上新 pin 需再发一版**；iOS 完整回归 CI `42731094758`（`27553ca`）当时仍在跑界面套件，**新 pin 的界面结论必须取这一条 run**，不能用旧 pin 的 34/0 代替；`App/Info.plist` 的 `NSAllowsArbitraryLoads`、备份 Cookie 的布尔参数、TMDB/Bangumi 硬编码三处与已定方向不一致，是下一批要做的事。
+
 ## 2026-11-09：十项产品决定与桌面便携化
 
 用户已答完十道选择题，方向记录见 `VeneraCat Core/docs/OPEN-QUESTIONS.md`：默认 HTTPS 且由规则/源决定是否放行 http、备份 Cookie 每次确认、社区标签词典、AI 上色后置且允许自装非商用模型并警告、桌面只出便携版、iOS 侧载与 App Store 两条路且先侧载、Core 继续用提交号 pin、旧 Mac Worker 归档、依赖升级后做服务插件化/上色/Core 加固而不重写 UI。
