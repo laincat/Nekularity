@@ -1,5 +1,9 @@
 English · [简体中文](UNVERIFIED.md)
 
+## The behaviour of public http sources on a device is still unknown (2026-11-10)
+
+After ATS became HTTPS by default, an installed source pointing at a public http address fails **on a device**: of the official sources only LANraragi uses http, and the exception domain keeps it working, while any other user-installed public http source is refused with an error that says to use https or a local address. The simulator's 34/0/0 only shows the interface suite passing over loopback and https, **not how a real site behaves over http**, and not that a user's own installed source still works.
+
 ## 0.4.9 / build 31 shipped, device behaviour still unverified (2026-11-09)
 
 The CI, IPA contents and all three AltStore entries for 0.4.9 are checked (see [STATUS](STATUS.en.md)), and the public artifact really does carry Core `2bafd88`. **That is still not device verification**: signed installation and launch on hardware, background and lock-screen playback, ActivityKit presentation on the lock screen and Dynamic Island, subtitles under PiP / AirPlay / external displays, the real speaker, real accounts and real site scripts have never run on a device.

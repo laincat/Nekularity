@@ -19,6 +19,18 @@ English · [简体中文](STATUS.md)
 
 
 
+## ATS is HTTPS by default, with http allowed per source (2026-11-10)
+
+`App/Info.plist` drops `NSAllowsArbitraryLoads=true` and keeps `NSAllowsLocalNetworking` (the interface fixtures, a LAN media server and a local Magpie need http on loopback), plus one `NSExceptionDomains` entry for the official LANraragi default address `lrr.tvc-16.science`. This implements the 2026-11-09 decision: HTTPS by default, and http allowed only where a rule or a source asks for it.
+
+ATS cannot ask a source what it needs at run time, so `Sources/NekularityKit/Platform/CleartextPolicy.swift` is the inner gate: https is always allowed; http is allowed only to local addresses (`localhost`, `.localhost`, loopback, private IPv4/IPv6, `.local`, in any partition) and to a declared public source host (only `comic:` / `video:` partitions); a public http request for AI, Magpie, a service or the collection index is refused **before a socket is opened**, with an error that says to use https or a local address. The partition prefixes are now spelled once in `CookiePartition.isContentSource`, so `check-partitions.sh` still allows exactly one spelling.
+
+**Which sources break**: of the 34 official sources only `lanraragi.js` really needs http (its default is `http://lrr.tvc-16.science`, the API address is user-editable, and the exception domain keeps it working), while `jcomic.js` only tests for the prefix and `wnacg.js` only mentions http in a comment. Any other user-installed public http source is now refused by the new default, which is the intended behaviour of this decision.
+
+Regressions: CI `42743715195` (`9b64e1a`) **succeeded**, Kit **509 tests / 87 suites**, simulator interface **34 passed / 0 failed / 0 skipped**; all 11 new cases passed one by one. The first CI `42741191188` failed in the Kit stage because two existing cases used the public fake host `http://plain.test` to check partition scheme memory; `.localhost` now counts as local and the cases use `plain.localhost`.
+
+**Boundary**: a CI simulator is not a device; real-user feedback about public http sources is still missing; the exception host is one entry in a maintained list, so a different deployment means updating `Info.plist` and `CleartextPolicy.declaredHTTPHosts` together. Log `E:/Code/deliveries/2026-11-10-handoff/ios-42743715195.log`.
+
 ## 0.4.9 / build 31 shipped and checked (2026-11-09)
 
 `v0.4.9` points at `01016b5`, Core pin `2bafd88`, and carries Core's relative-reference resolution, `URLSearchParams` iteration and `URL.parse` fixes. Relative to the tested commit `b70a309`, `01016b5` only changes the version fields in `project.yml`, so the product code is identical and the interface conclusion still belongs to CI `42570317039` (Kit 499/86, simulator interface 34/0/0).

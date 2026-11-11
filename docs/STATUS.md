@@ -19,6 +19,18 @@
 
 
 
+## ATS 改为默认 HTTPS，http 按源放行（2026-11-10）
+
+`App/Info.plist` 去掉 `NSAllowsArbitraryLoads=true`，保留 `NSAllowsLocalNetworking`（界面夹具、局域网媒体服务器与本机 Magpie 需要 http 回环），并给官方 Lanraragi 的默认地址 `lrr.tvc-16.science` 加唯一一条 `NSExceptionDomains`。这是 2026-11-09 决定的落地：默认 HTTPS，是否放行 http 由规则/源决定。
+
+ATS 无法在运行期问源「你要什么」，所以新增 `Sources/NekularityKit/Platform/CleartextPolicy.swift` 作内层判断：https 一律允许；http 只对本机/局域网地址（`localhost`、`.localhost`、回环、私有 IPv4/IPv6、`.local`，任意分区）与已声明的公网源域名（仅 `comic:` / `video:` 分区）放行；AI、Magpie、服务、合集索引的公网 http 一律拒绝，且**在建立 socket 之前**拒绝，错误文案提示改用 https 或本机地址。分区前缀改由 `CookiePartition.isContentSource` 统一拼写，`check-partitions.sh` 继续只允许一处。
+
+**哪些源会断**：官方 34 源里真正需要 http 的只有 `lanraragi.js`（默认 `http://lrr.tvc-16.science`，API 地址用户可改，已用例外域名保住）；`jcomic.js` 只判断前缀、`wnacg.js` 只在注释里提到 http。用户自装的其它公网 http 源会按新默认被拒绝，这是本次决定的预期行为。
+
+回归：CI `42743715195`（`9b64e1a`）**success**，Kit **509 tests / 87 suites**、模拟器界面 **34 通过 / 0 失败 / 0 跳过**；11 条新用例逐条 passed。第一次 CI `42741191188` 在 Kit 阶段有两条既有用例用公网假域名 `http://plain.test` 验证分区 scheme 记忆而被新规则挡住，已把 `.localhost` 归为本机并把用例改成 `plain.localhost`。
+
+**边界**：CI 模拟器不等于真机；公网 http 源的真实用户反馈仍未取得；例外域名是维护清单的一条，实际部署换域名要同步 `Info.plist` 与 `CleartextPolicy.declaredHTTPHosts`。日志 `E:/Code/deliveries/2026-11-10-handoff/ios-42743715195.log`。
+
 ## 0.4.9 / build 31 已发布并核对（2026-11-09）
 
 `v0.4.9` 指向 `01016b5`，Core pin `2bafd88`，包含 Core 的相对地址解析、`URLSearchParams` 迭代与 `URL.parse` 修复。`01016b5` 相对受测提交 `b70a309` 只改 `project.yml` 的版本号，产品代码相同，界面结论仍归 CI `42570317039`（Kit 499/86、模拟器界面 34/0/0）。
