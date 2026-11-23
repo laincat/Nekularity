@@ -11,4 +11,4 @@
 
 ## 30 秒续播夹具
 
-`hls-subs/resume/` 是同一授权片段重复三次、无音轨的 30 秒 HLS（`scripts/fixtures/hls-subtitles/media30/` 的副本），没有字幕。7 秒保存点离片尾足够远，满足客户端「位置 > 5 秒且未到 95%」的续播规则。测试用的 shelf 文件名带 UUID，不读写默认的 `shelf.json`。
+`hls-subs/resume/` 是同一授权片段重复三次、无音轨的 30 秒 HLS（与 `scripts/fixtures/hls-subtitles/main.go` 共用此单一目录），没有字幕。7 秒保存点离片尾足够远，满足客户端「位置 > 5 秒且未到 95%」的续播规则。测试用的 shelf 文件名带 UUID，不读写默认的 `shelf.json`。

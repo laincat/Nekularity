@@ -2,7 +2,7 @@
 
 English | [简体中文](README.md)
 
-This service supports targeted iOS player acceptance and reads media from the supplied directory. The repository includes the media30/ resume test clip; bilingual subtitle media is still supplied from an external directory. Attribution and licensing are below. No real accounts or credentials are included.
+This service supports targeted iOS player acceptance and reads media from the supplied directory. The 30 s resume media is shared with the UI tests at `UITests/Fixtures/media/hls-subs/resume/` (used by default when `-root` is omitted); bilingual subtitle media lives at `UITests/Fixtures/media/hls-subs/`. Attribution and licensing are below. No real accounts or credentials are included.
 
 ```sh
 go run scripts/fixtures/hls-subtitles/main.go -root /path/to/hls-subs
@@ -16,7 +16,7 @@ The Lead verified the source URL, missing-Referer 403 responses, bilingual playl
 
 ## Thirty-second resume media
 
-`media30/` repeats the same licensed clip three times and repackages it as thirty-second HLS, with video only and no audio or subtitles. Supply that directory as `-root` to reuse the service; retain the original ten-second bilingual media for subtitle cases. Seven seconds now sits well before the end and satisfies the client’s strict greater-than-five-second resume rule. Playing the original ten-second clip from seven seconds for about 2.7 seconds reaches its tail; pressing play afterward can legitimately rewind the engine. A later zero position alone does not establish failure of the initial resume.
+`UITests/Fixtures/media/hls-subs/resume/` repeats the same licensed clip three times and repackages it as thirty-second HLS, with video only and no audio or subtitles. Supply that directory as `-root` to reuse the service; retain the original ten-second bilingual media for subtitle cases. Seven seconds now sits well before the end and satisfies the client’s strict greater-than-five-second resume rule. Playing the original ten-second clip from seven seconds for about 2.7 seconds reaches its tail; pressing play afterward can legitimately rewind the engine. A later zero position alone does not establish failure of the initial resume.
 
 Windows FFmpeg actually decoded 900 frames, playlist duration totals 30 seconds, and frame digests at zero and seven seconds differ; evidence: `E:/Temp/nk-hls-resume-30-evidence/`. iOS must still verify persisted and reopened positions. Do not inject progress or require this media to validate subtitles. Picture attribution remains Blender Foundation/CC BY 3.0 above; changes are repetition and lossless repackaging.
 

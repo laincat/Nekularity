@@ -6,7 +6,7 @@
 # Third-party licence texts (LICENSE-*.txt) are not Markdown and are ignored.
 set -eu
 # CHECK_DOCS_ROOT points the same rules at a tree that is not a repository, so
-# scripts/check-checks.sh can prove the rules still fire. Without it this checks
+# isolated fixture trees can be checked without git. Without it this checks
 # the repository it lives in.
 cd "${CHECK_DOCS_ROOT:-$(dirname "$0")/..}"
 

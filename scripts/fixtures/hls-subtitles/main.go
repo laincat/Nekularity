@@ -36,10 +36,10 @@ func (w *responseLog) Write(data []byte) (int, error) {
 }
 
 func main() {
-	root := flag.String("root", "", "directory containing master.m3u8 and the local HLS/subtitle media")
+	root := flag.String("root", "UITests/Fixtures/media/hls-subs/resume", "directory containing master.m3u8 and the local HLS/subtitle media")
 	flag.Parse()
 	if *root == "" {
-		log.Fatal("-root is required")
+		log.Fatal("-root must not be empty")
 	}
 	if info, err := os.Stat(filepath.Join(*root, "master.m3u8")); err != nil || info.IsDir() {
 		log.Fatal("media root must contain master.m3u8")

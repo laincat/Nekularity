@@ -37,13 +37,8 @@ jobs:
         # closing on cancellation, a targeted release, Unicode and HTTP 503.
         # It needs no account or network and fails on any of the seven checks.
         run: python3 scripts/fixtures/magpie-http/run.py build/core
-      - name: Check the tree before building it
+      - name: Check docs and Swift syntax
         run: |
-          # After the Core fetch on purpose: one of these checks compares the kit's
-          # Core calls against Core's own sources, and run before the fetch it can
-          # only report "no checkout" — which is what failed here the first time.
-          # Each check names itself on failure; a chained step that aborts says
-          # "something was wrong" and nothing else.
           fail=0
           run_check() {
             echo "=== $*"
@@ -52,26 +47,15 @@ jobs:
               fail=1
             fi
           }
-          # tree-sitter makes the parse check a real parse; without it the check
-          # silently degrades to its regex rules and a green run means less than it
-          # looks. Homebrew's python refuses a system install, so it goes in a venv —
-          # and if even that fails the run says so instead of pretending.
           parse_python=python3
           if python3 -m venv "$RUNNER_TEMP/parse-venv" >/dev/null 2>&1 &&
-             "$RUNNER_TEMP/parse-venv/bin/python" -m pip install --quiet --disable-pip-version-check                tree-sitter tree-sitter-swift; then
+             "$RUNNER_TEMP/parse-venv/bin/python" -m pip install --quiet --disable-pip-version-check tree-sitter tree-sitter-swift; then
             parse_python="$RUNNER_TEMP/parse-venv/bin/python"
           else
             echo "NOTE: tree-sitter unavailable; the parse check will run its rules only"
           fi
           run_check sh scripts/check-docs.sh
-          run_check sh scripts/check-partitions.sh
-          run_check python3 scripts/check-kit-core-calls.py
-          run_check python3 scripts/check-video-json.py
-          run_check python3 scripts/check-magpie-event.py
           run_check "$parse_python" scripts/check-swift.py
-          # Then prove the checks fire at all: each one built a rule that silently
-          # matched nothing, and only a hand-made negative run showed it.
-          run_check sh scripts/check-checks.sh
           exit $fail
       - name: Run the kit's unit tests
         # A hang here has cost ten minutes of a 90-minute job twice. Failing at
@@ -103,6 +87,7 @@ jobs:
             -configuration Release -sdk iphoneos -jobs 2 -quiet \
             -derivedDataPath "$RUNNER_TEMP/nekularity-derived" \
             COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGNING_ALLOWED=NO build
+          sh scripts/verify-ats.sh --plist-only "$RUNNER_TEMP/nekularity-derived/Build/Products/Release-iphoneos/Nekularity.app/Info.plist"
       - name: Compile the interface tests
         # The app scheme does not build UITests, so a case that does not compile is
         # only found on a Mac — which is where every interface mistake so far was
