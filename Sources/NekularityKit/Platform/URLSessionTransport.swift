@@ -178,7 +178,10 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable {
         }
         let finalURL = http.url ?? r.url
         if r.useCookies {
-            cookies.store(partition: r.partition, url: finalURL, setCookieHeaders: Self.setCookieHeaders(http))
+            let received = Self.responseCookies(http)
+            if !received.isEmpty {
+                cookies.save(partition: r.partition, url: finalURL, cookies: received)
+            }
         }
         rememberScheme(partition: r.partition, url: finalURL)
         return Response(status: http.statusCode, headers: headers, body: data, finalURL: finalURL)
@@ -225,30 +228,38 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable {
         lock.withLock { cancelledEarly.remove(id) != nil }
     }
 
-    /// Set-Cookie values. Foundation folds repeated headers into one string,
-    /// which `HTTPCookie` can split; values are then re-serialised so the jar
-    /// parses them uniformly.
-    static func setCookieHeaders(_ http: HTTPURLResponse) -> [String] {
+    /// Extracts cookies directly from `HTTPURLResponse` without formatting and
+    /// reparsing `Set-Cookie` strings. Skips work completely when the response
+    /// carries no `Set-Cookie` header.
+    static func responseCookies(_ http: HTTPURLResponse) -> [WireCookie] {
         guard let url = http.url else { return [] }
-        let fields = http.allHeaderFields.reduce(into: [String: String]()) { out, kv in
-            if let k = kv.key as? String, let v = kv.value as? String { out[k] = v }
+        var fields: [String: String] = [:]
+        var hasSetCookie = false
+        for (key, value) in http.allHeaderFields {
+            guard let name = key as? String, let text = value as? String else { continue }
+            if name.caseInsensitiveCompare("Set-Cookie") == .orderedSame {
+                hasSetCookie = true
+                fields[name] = text
+            }
         }
-        return HTTPCookie.cookies(withResponseHeaderFields: fields, for: url).map { c in
-            var s = "\(c.name)=\(c.value); Path=\(c.path)"
-            if c.domain.hasPrefix(".") { s += "; Domain=\(c.domain)" }
-            if let d = c.expiresDate { s += "; Expires=\(httpDate(d))" }
-            if c.isSecure { s += "; Secure" }
-            if c.isHTTPOnly { s += "; HttpOnly" }
-            return s
+        guard hasSetCookie else { return [] }
+        return HTTPCookie.cookies(withResponseHeaderFields: fields, for: url).map { cookie in
+            var expires: Int64?
+            if let date = cookie.expiresDate {
+                let ms = Int64((date.timeIntervalSince1970 * 1000).rounded())
+                expires = ms <= 0 ? 1 : ms
+            }
+            return WireCookie(
+                name: cookie.name,
+                value: cookie.value,
+                domain: cookie.domain.hasPrefix(".") ? cookie.domain : nil,
+                path: cookie.path.isEmpty ? nil : cookie.path,
+                expires: expires,
+                maxAge: nil,
+                secure: cookie.isSecure ? true : nil,
+                httpOnly: cookie.isHTTPOnly ? true : nil
+            )
         }
-    }
-
-    static func httpDate(_ d: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "GMT")
-        f.dateFormat = "EEE, dd MMM yyyy HH:mm:ss 'GMT'"
-        return f.string(from: d)
     }
 }
 
@@ -533,7 +544,9 @@ final class TaskState: @unchecked Sendable {
 
     func storeHopCookies(from url: URL, response: HTTPURLResponse) {
         guard useCookies else { return }
-        cookies.store(partition: partition, url: url, setCookieHeaders: URLSessionTransport.setCookieHeaders(response))
+        let received = URLSessionTransport.responseCookies(response)
+        guard !received.isEmpty else { return }
+        cookies.save(partition: partition, url: url, cookies: received)
     }
 
     func finish(_ result: Result<URL, Error>) {

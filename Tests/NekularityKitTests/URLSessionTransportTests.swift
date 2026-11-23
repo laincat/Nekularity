@@ -379,3 +379,43 @@ extension URLSessionTransportTests {
         }
     }
 }
+
+extension URLSessionTransportTests {
+    @Test func responseWithoutSetCookiePerformsZeroJarWrites() async throws {
+        let host = "nocookiewrite.test"
+        TransportStub.reply("https://\(host)/img", with: .init(body: Data("ok".utf8)))
+        let file = FileManager.default.temporaryDirectory.appending(path: "transport-cookies-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: file) }
+        let jars = CookieJars(file: file)
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [TransportStub.self]
+        let t = URLSessionTransport(cookies: jars, defaultUserAgent: "nk-test/1", configuration: config)
+
+        _ = try await t.send(request("https://\(host)/img", partition: "comic:img"))
+        #expect(jars.diskWriteCount == 0)
+        #expect(!FileManager.default.fileExists(atPath: file.path))
+    }
+
+    @Test func redirectHopSetCookiePersistsAcrossReopen() async throws {
+        let host = "hoppersist.test"
+        TransportStub.reply("https://\(host)/start", with: .init(
+            status: 302,
+            headers: [
+                "Location": "https://\(host)/end",
+                "Set-Cookie": "hop=yes; Path=/; Expires=Wed, 01 Jan 2031 00:00:00 GMT",
+            ]))
+        TransportStub.reply("https://\(host)/end", with: .init(body: Data("done".utf8)))
+        let file = FileManager.default.temporaryDirectory.appending(path: "hop-cookies-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: file) }
+        let jars = CookieJars(file: file)
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [TransportStub.self]
+        let t = URLSessionTransport(cookies: jars, defaultUserAgent: "nk-test/1", configuration: config)
+
+        let res = try await t.send(request("https://\(host)/start", partition: "comic:hop"))
+        #expect(String(decoding: res.body, as: UTF8.self) == "done")
+        #expect(jars.diskWriteCount == 1)
+        let reopened = CookieJars(file: file)
+        #expect(reopened.cookies(partition: "comic:hop", url: URL(string: "https://\(host)/end")!).map(\.value) == ["yes"])
+    }
+}

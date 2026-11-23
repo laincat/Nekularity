@@ -65,6 +65,9 @@ public final class CookieJars: @unchecked Sendable {
     private var jars: [String: [Stored]] = [:]
     private let file: URL?
     private let now: @Sendable () -> Date
+    private var persistCount = 0
+
+    var diskWriteCount: Int { lock.withLock { persistCount } }
 
     public init(file: URL?, now: @escaping @Sendable () -> Date = Date.init) {
         self.file = file
@@ -88,32 +91,46 @@ public final class CookieJars: @unchecked Sendable {
 
     /// Stores cookies received for url.
     public func save(partition: String, url: URL, cookies: [WireCookie]) {
-        guard let host = url.host()?.lowercased(), !host.isEmpty else { return }
+        guard !cookies.isEmpty, let host = url.host()?.lowercased(), !host.isEmpty else { return }
         lock.lock(); defer { lock.unlock() }
-        var jar = jars[partition] ?? []
-        for c in cookies {
-            guard let s = stored(c, host: host, url: url) else { continue }
-            jar.removeAll { $0.name == s.name && $0.domain == s.domain && $0.path == s.path }
-            if let exp = s.expiresAt, exp <= now() { continue } // an expired cookie deletes
-            jar.append(s)
+        let before = jars[partition] ?? []
+        let beforePersistent = persistentCookies(in: before)
+        var jar = before
+        let currentTime = now()
+        for cookie in cookies {
+            guard let row = stored(cookie, host: host, url: url, now: currentTime) else { continue }
+            let expired = row.expiresAt.map { $0 <= currentTime } ?? false
+            upsert(row, expired: expired, into: &jar)
         }
-        jars[partition] = jar
-        persist()
+        guard jar != before else { return }
+        jars[partition] = jar.isEmpty ? nil : jar
+        if persistentCookies(in: jar) != beforePersistent {
+            persist()
+        }
     }
 
     /// Removes every cookie that would be sent to url.
     public func delete(partition: String, url: URL) {
         lock.lock(); defer { lock.unlock() }
+        let before = jars[partition] ?? []
+        let beforePersistent = persistentCookies(in: before)
         let doomed = Set(matching(partition, url, ignoreSecure: true))
-        jars[partition]?.removeAll { doomed.contains($0) }
-        persist()
+        guard !doomed.isEmpty else { return }
+        var jar = jars[partition] ?? []
+        jar.removeAll { doomed.contains($0) }
+        jars[partition] = jar.isEmpty ? nil : jar
+        if persistentCookies(in: jar) != beforePersistent {
+            persist()
+        }
     }
 
     /// Removes a whole partition (on uninstall or logout).
     public func clear(partition: String) {
         lock.lock(); defer { lock.unlock() }
-        jars[partition] = nil
-        persist()
+        guard let removed = jars.removeValue(forKey: partition) else { return }
+        if !persistentCookies(in: removed).isEmpty {
+            persist()
+        }
     }
 
     // MARK: HTTP integration
@@ -128,7 +145,10 @@ public final class CookieJars: @unchecked Sendable {
 
     /// Stores Set-Cookie headers from a response.
     public func store(partition: String, url: URL, setCookieHeaders: [String]) {
-        let parsed = setCookieHeaders.compactMap { Self.parseSetCookie($0, now: now()) }
+        guard !setCookieHeaders.isEmpty else { return }
+        let currentTime = now()
+        let parsed = setCookieHeaders.compactMap { Self.parseSetCookie($0, now: currentTime) }
+        guard !parsed.isEmpty else { return }
         save(partition: partition, url: url, cookies: parsed)
     }
 
@@ -144,10 +164,14 @@ public final class CookieJars: @unchecked Sendable {
     /// returned is what was actually stored.
     @discardableResult
     public func restore(source key: String, cookies: [WireCookie]) -> Int {
+        guard !cookies.isEmpty else { return 0 }
         let partition = CookiePartition.comic(key)
         var stored = 0
         lock.lock(); defer { lock.unlock() }
-        var jar = jars[partition] ?? []
+        let before = jars[partition] ?? []
+        let beforePersistent = persistentCookies(in: before)
+        var jar = before
+        let currentTime = now()
         for c in cookies {
             let name = c.name.trimmingCharacters(in: .whitespaces)
             guard !name.isEmpty, !c.value.isEmpty else { continue }
@@ -161,18 +185,20 @@ public final class CookieJars: @unchecked Sendable {
                 let when = Date(timeIntervalSince1970: TimeInterval(ms) / 1000)
                 // Already dead: writing it would store a row the jar can never
                 // send, and the count would claim a sign-in that no longer works.
-                if when <= now() { continue }
+                if when <= currentTime { continue }
                 expiresAt = when
             }
             let row = Stored(name: name, value: c.value, domain: domain, hostOnly: hostOnly,
                              path: path.hasPrefix("/") ? path : "/" + path,
                              secure: c.secure ?? false, httpOnly: c.httpOnly ?? false, expiresAt: expiresAt)
-            jar.removeAll { $0.name == row.name && $0.domain == row.domain && $0.path == row.path }
-            jar.append(row)
+            upsert(row, expired: false, into: &jar)
             stored += 1
         }
-        jars[partition] = jar
-        persist()
+        guard jar != before else { return stored }
+        jars[partition] = jar.isEmpty ? nil : jar
+        if persistentCookies(in: jar) != beforePersistent {
+            persist()
+        }
         return stored
     }
 
@@ -184,23 +210,46 @@ public final class CookieJars: @unchecked Sendable {
 
     /// Copies cookies from a WebView after a challenge (cf_clearance).
     public func importCookies(partition: String, _ cookies: [HTTPCookie]) {
+        guard !cookies.isEmpty else { return }
         lock.lock(); defer { lock.unlock() }
-        var jar = jars[partition] ?? []
+        let before = jars[partition] ?? []
+        let beforePersistent = persistentCookies(in: before)
+        var jar = before
+        let currentTime = now()
         for c in cookies {
             let domain = c.domain.lowercased()
             let s = Stored(name: c.name, value: c.value, domain: domain.hasPrefix(".") ? String(domain.dropFirst()) : domain,
                            hostOnly: !domain.hasPrefix("."), path: c.path.isEmpty ? "/" : c.path,
                            secure: c.isSecure, httpOnly: c.isHTTPOnly, expiresAt: c.expiresDate)
-            jar.removeAll { $0.name == s.name && $0.domain == s.domain && $0.path == s.path }
-            jar.append(s)
+            let expired = s.expiresAt.map { $0 <= currentTime } ?? false
+            upsert(s, expired: expired, into: &jar)
         }
-        jars[partition] = jar
-        persist()
+        guard jar != before else { return }
+        jars[partition] = jar.isEmpty ? nil : jar
+        if persistentCookies(in: jar) != beforePersistent {
+            persist()
+        }
     }
 
     // MARK: Internals; callers hold the lock.
 
-    private func stored(_ c: WireCookie, host: String, url: URL) -> Stored? {
+    private func upsert(_ row: Stored, expired: Bool, into jar: inout [Stored]) {
+        if let index = jar.firstIndex(where: { $0.name == row.name && $0.domain == row.domain && $0.path == row.path }) {
+            if expired {
+                jar.remove(at: index)
+            } else if jar[index] != row {
+                jar[index] = row
+            }
+        } else if !expired {
+            jar.append(row)
+        }
+    }
+
+    private func persistentCookies(in jar: [Stored]) -> [Stored] {
+        jar.filter { $0.expiresAt != nil }
+    }
+
+    private func stored(_ c: WireCookie, host: String, url: URL, now currentTime: Date) -> Stored? {
         guard !c.name.isEmpty else { return nil }
         var domain = host
         var hostOnly = true
@@ -217,7 +266,7 @@ public final class CookieJars: @unchecked Sendable {
         var path = c.path ?? ""
         if !path.hasPrefix("/") { path = Self.defaultPath(url) }
         var expiresAt: Date?
-        if let m = c.maxAge, m != 0 { expiresAt = now().addingTimeInterval(TimeInterval(m)) }
+        if let m = c.maxAge, m != 0 { expiresAt = currentTime.addingTimeInterval(TimeInterval(m)) }
         else if let e = c.expires, e != 0 { expiresAt = Date(timeIntervalSince1970: TimeInterval(e) / 1000) }
         return Stored(name: c.name, value: c.value, domain: domain, hostOnly: hostOnly, path: path,
                       secure: c.secure ?? false, httpOnly: c.httpOnly ?? false, expiresAt: expiresAt)
@@ -245,6 +294,7 @@ public final class CookieJars: @unchecked Sendable {
         let persistent = jars.mapValues { $0.filter { $0.expiresAt != nil } }.filter { !$0.value.isEmpty }
         if let data = try? JSONEncoder().encode(persistent) {
             try? data.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            persistCount += 1
         }
     }
 
