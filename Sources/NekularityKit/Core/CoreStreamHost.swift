@@ -18,19 +18,31 @@ public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecke
     private final class Stream: @unchecked Sendable {
         private let lock = NSCondition()
         private var pending: [Data] = []
+        private var headIndex = 0
+        private var pendingBytes = 0
         private var ended = false
         private var head: URLSessionTransport.Response?
         private var headPending = false
         private var failure: Error?
         let requestID: Int64
+        let maxBufferedBytes: Int
 
-        init(requestID: Int64) {
+        init(requestID: Int64, maxBufferedBytes: Int) {
             self.requestID = requestID
+            self.maxBufferedBytes = maxBufferedBytes
+        }
+
+        private var hasPendingChunks: Bool { headIndex < pending.count }
+
+        private func clearPendingLocked() {
+            pending.removeAll(keepingCapacity: false)
+            headIndex = 0
+            pendingBytes = 0
         }
 
         func next() -> StreamChunk {
             lock.lock(); defer { lock.unlock() }
-            while pending.isEmpty && !headPending && !ended {
+            while !hasPendingChunks && !headPending && !ended {
                 lock.wait()
             }
             if headPending {
@@ -38,8 +50,18 @@ public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecke
                 return StreamChunk(done: false, chunkBase64: nil, status: head?.status,
                                    headers: head?.headers, finalUrl: head?.finalURL.absoluteString, error: nil)
             }
-            if !pending.isEmpty {
-                return StreamChunk(done: false, chunkBase64: pending.removeFirst().base64EncodedString(),
+            if hasPendingChunks {
+                let piece = pending[headIndex]
+                headIndex += 1
+                pendingBytes = max(0, pendingBytes - piece.count)
+                if headIndex == pending.count {
+                    pending.removeAll(keepingCapacity: false)
+                    headIndex = 0
+                } else if headIndex >= 64 && headIndex * 2 >= pending.count {
+                    pending.removeFirst(headIndex)
+                    headIndex = 0
+                }
+                return StreamChunk(done: false, chunkBase64: piece.base64EncodedString(),
                                    status: nil, headers: nil, finalUrl: nil, error: nil)
             }
             return StreamChunk(done: true, chunkBase64: nil, status: head?.status ?? 0,
@@ -55,17 +77,27 @@ public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecke
             lock.broadcast()
         }
 
-        func append(_ data: Data) {
+        func append(_ data: Data) -> Bool {
             lock.lock(); defer { lock.unlock() }
-            guard !ended, !data.isEmpty else { return }
+            guard !ended, !data.isEmpty else { return !ended }
+            if pendingBytes + data.count > maxBufferedBytes {
+                clearPendingLocked()
+                headPending = false
+                failure = CoreError("stream buffer exceeded \(maxBufferedBytes) bytes")
+                ended = true
+                lock.broadcast()
+                return false
+            }
             pending.append(data)
+            pendingBytes += data.count
             lock.signal()
+            return true
         }
 
         func finish(_ error: Error? = nil, discardingBody: Bool = false) {
             lock.lock(); defer { lock.unlock() }
             if discardingBody {
-                pending.removeAll()
+                clearPendingLocked()
                 headPending = false
             }
             guard !ended else { return }
@@ -76,12 +108,14 @@ public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecke
     }
 
     private let transport: URLSessionTransport
+    public let maxBufferedBytes: Int
     private let lock = NSLock()
     private var streams: [Int64: Stream] = [:]
     private var nextID: Int64 = 0
 
-    public init(transport: URLSessionTransport) {
+    public init(transport: URLSessionTransport, maxBufferedBytes: Int? = nil) {
         self.transport = transport
+        self.maxBufferedBytes = max(1, maxBufferedBytes ?? transport.maxBodyBytes)
         super.init()
     }
 
@@ -119,7 +153,7 @@ public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecke
             let request = URLSessionTransport.Request(id: w.id, method: w.method, url: url,
                                                       headers: w.headers ?? [:], body: body,
                                                       useCookies: false, partition: w.partition ?? "magpie")
-            let stream = Stream(requestID: w.id)
+            let stream = Stream(requestID: w.id, maxBufferedBytes: maxBufferedBytes)
             lock.lock()
             nextID += 1
             let id = nextID
@@ -128,13 +162,15 @@ public final class CoreStreamHost: NSObject, MobileHostStreamProtocol, @unchecke
 
             // The transfer runs beside Core's poll: the transport hands every
             // piece over as it arrives and the stream keeps them until Core
-            // asks for the next one.
+            // asks for the next one, bounded by `maxBufferedBytes`.
             Task {
                 do {
                     _ = try await transport.sendStreaming(request, onResponse: { response in
                         stream.received(response)
-                    }) { data in
-                        stream.append(data)
+                    }) { [transport] data in
+                        if !stream.append(data) {
+                            transport.cancel(id: stream.requestID)
+                        }
                     }
                     stream.finish()
                 } catch {

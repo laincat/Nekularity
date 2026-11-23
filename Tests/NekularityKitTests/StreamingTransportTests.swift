@@ -147,7 +147,9 @@ struct StreamingTransportTests {
         // above Foundation's batching threshold.
         #expect(collector.pieces.map { String(decoding: $0.prefix(5), as: UTF8.self).trimmingCharacters(in: .whitespaces) }
             == ["one", "two", "three"])
-        #expect(response.body.count == 3 * pieceSize)
+        // Streaming delivers bytes via onChunk without retaining a duplicate full body.
+        #expect(collector.pieces.reduce(0) { $0 + $1.count } == 3 * pieceSize)
+        #expect(response.body.isEmpty)
         #expect(response.status == 200)
     }
 
@@ -201,6 +203,65 @@ struct StreamingTransportTests {
         await #expect(throws: (any Error).self) {
             _ = try await t.sendStreaming(request("https://\(host)/chat")) { _ in }
         }
+    }
+
+    /// Streaming enforces the cumulative byte limit across multiple chunks
+    /// without buffering the entire response body in `Response.body`.
+    @Test func cumulativeLimitStopsMultiChunkStreamWithoutRetainingBody() async throws {
+        let host = "cumul.test"
+        StreamStub.reply("https://\(host)/ok", with: .init(
+            pieces: [Data(repeating: 1, count: 400), Data(repeating: 2, count: 400)], gap: 0.001))
+        StreamStub.reply("https://\(host)/over", with: .init(
+            pieces: [Data(repeating: 1, count: 600), Data(repeating: 2, count: 600)], gap: 0.001))
+        let t = transport()
+        t.maxBodyBytes = 1024
+
+        let collector = ChunkRecorder()
+        let okResponse = try await t.sendStreaming(request("https://\(host)/ok")) { data in
+            collector.append(data)
+        }
+        #expect(okResponse.status == 200)
+        #expect(okResponse.body.isEmpty)
+        #expect(collector.pieces.reduce(0) { $0 + $1.count } == 800)
+
+        await #expect(throws: (any Error).self) {
+            _ = try await t.sendStreaming(request("https://\(host)/over")) { _ in }
+        }
+    }
+
+    /// A slow consumer whose unread queue exceeds `CoreStreamHost.maxBufferedBytes`
+    /// fails cleanly without hanging or leaking buffered chunks.
+    @Test func coreStreamHostFailsWhenPendingBufferExceedsLimit() async throws {
+        let host = "slowstream.test"
+        StreamStub.reply("https://\(host)/chat", with: .init(
+            pieces: [piece("one"), piece("two")], gap: 0.005))
+        let t = transport()
+        let streamHost = CoreStreamHost(transport: t, maxBufferedBytes: 512)
+        let openReq = #"{"id":901,"method":"GET","url":"https://slowstream.test/chat","partition":"magpie"}"#
+        var openError: NSError?
+        let openRaw = streamHost.streamOpen(openReq, error: &openError)
+        #expect(openError == nil)
+
+        struct Opened: Decodable { var id: Int64 }
+        struct Chunk: Decodable { var done: Bool; var error: String? }
+        let id = try JSONDecoder().decode(Opened.self, from: Data(openRaw.utf8)).id
+        defer { streamHost.streamClose(id) }
+
+        var terminal: Chunk?
+        for _ in 0..<4 {
+            let chunk = try await Task.detached {
+                var nextError: NSError?
+                let raw = streamHost.streamNext(id, error: &nextError)
+                if let nextError { throw nextError }
+                return try JSONDecoder().decode(Chunk.self, from: Data(raw.utf8))
+            }.value
+            if chunk.done {
+                terminal = chunk
+                break
+            }
+        }
+        let ended = try #require(terminal)
+        #expect(ended.error?.contains("stream buffer exceeded") == true)
     }
 
     /// The pieces come in the order the server sent them.

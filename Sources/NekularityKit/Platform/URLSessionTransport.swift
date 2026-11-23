@@ -84,8 +84,9 @@ public final class URLSessionTransport: NSObject, @unchecked Sendable {
     ///
     /// Same request path, same cookies, same cancellation and the same size
     /// limit as `send`; the difference is that `onChunk` is called on the
-    /// delegate queue for every piece, before the reply is done. The returned
-    /// `Response` still carries the whole body, because a caller may want both.
+    /// delegate queue for every piece, before the reply is done. Streaming
+    /// enforces the cumulative byte limit without retaining a second full copy
+    /// in `Response.body` (which is returned empty).
     /// `onResponse` receives accepted final headers with an empty body before
     /// any body callback, including HTTP error statuses.
     ///
@@ -446,6 +447,7 @@ final class TaskState: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<(Data, HTTPURLResponse), Error>?
     private var body = Data()
+    private var receivedBytes = 0
     private var http: HTTPURLResponse?
     private var done = false
     private var cancelled = false
@@ -534,8 +536,11 @@ final class TaskState: @unchecked Sendable {
     func append(_ data: Data) -> Bool {
         let accepted: Bool = lock.withLock {
             guard !done else { return false }
-            if body.count + data.count > limit { return false }
-            body.append(data)
+            if receivedBytes + data.count > limit { return false }
+            receivedBytes += data.count
+            if onChunk == nil {
+                body.append(data)
+            }
             return true
         }
         if accepted, let onChunk { onChunk(data) }
@@ -559,10 +564,16 @@ final class TaskState: @unchecked Sendable {
             continuation = nil
             switch result {
             case .failure(let error):
+                body.removeAll(keepingCapacity: false)
                 return (k, .failure(error))
             case .success:
-                guard let http = http else { return (k, .failure(CoreError("not an HTTP response"))) }
-                return (k, .success((body, http)))
+                guard let http = http else {
+                    body.removeAll(keepingCapacity: false)
+                    return (k, .failure(CoreError("not an HTTP response")))
+                }
+                let resultBody = body
+                body.removeAll(keepingCapacity: false)
+                return (k, .success((resultBody, http)))
             }
         }
         toResume?.resume(with: outcome)
@@ -574,6 +585,7 @@ final class TaskState: @unchecked Sendable {
             cancelled = true
             guard !done else { return nil }
             done = true
+            body.removeAll(keepingCapacity: false)
             let k = continuation
             continuation = nil
             return k
