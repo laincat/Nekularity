@@ -180,11 +180,6 @@ public final class HomeLayout {
 
     public var visible: [HomeBlock] { blocks.filter(\.enabled) }
 
-    /// Sections the user added from a source.
-    public var sourceBlocks: [HomeBlock] {
-        blocks.filter { if case .source = $0.kind { true } else { false } }
-    }
-
     /// Moves the blocks at `from` so they land before `to`.
     ///
     /// Written out rather than taken from SwiftUI's `move(fromOffsets:toOffset:)`:

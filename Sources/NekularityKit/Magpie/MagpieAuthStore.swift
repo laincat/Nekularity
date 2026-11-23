@@ -13,18 +13,6 @@ public protocol MagpieAuthStore: Sendable {
     func remove(provider: String) throws
 }
 
-/// An account a Magpie provider package signs in to.
-public struct MagpieAccount: Codable, Hashable, Sendable {
-    public var provider: String
-    /// What the package last saved, as JSON text, exactly as it wrote it.
-    public var authJSON: String
-
-    public init(provider: String, authJSON: String) {
-        self.provider = provider
-        self.authJSON = authJSON
-    }
-}
-
 /// Keeps sign-ins in memory. Tests and previews use it; the app uses the
 /// Keychain, because an access token in a plist is readable by anyone who can
 /// read the container.

@@ -61,17 +61,7 @@ verification machine can clone Core but needs credentials for these sources.
 
 The Core surface can be checked here too: `scripts/check-surface-offline.sh` generates Core's ObjC header with gobind and runs the same selector list the Mac uses, in about ten seconds. It reads the **header**, not memory — a selector typed wrongly in the list used to surface only after a transfer.
 
-The client repository is not public, so Swift sources still have to travel to a second Mac; Core does not — it is public on GitHub, and `git clone` plus `scripts/mac-verify.sh` rebuilds it there. For the Swift sources, base64 segments with a checksum per segment remain more reliable than resending the archive (these tools stay for machines without network):
-
-```sh
-scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK TGZ_MD5 TGZ_BYTES SWIFT_FILES [WORKDIR] [clean]
-```
-
-It checks every segment's md5, joins and decodes, checks the archive's md5 and byte count, unpacks, counts `.swift` files, drops the xcframework in and runs `swift build`, printing one `PASS`/`FAIL` line per step. A trailing `clean` removes the unpacked tree, the joined file and the archive after reporting, leaving the machine as found. It uses `md5` rather than `shasum` because `md5` needs no extra permission on a locked-down machine.
-
-`scripts/make-bundle.sh OUTDIR [CHUNK]` produces the segmented bundle: every `.swift` under `Package.swift`, `Sources/`, `App/` and `Tests/` is added in sorted path order with mtime and ownership zeroed, packed into a ~47 KB archive, then split into base64 segments of `CHUNK` characters (default 1650), printing the archive md5 plus each segment's md5 and tail. The same tree always yields byte-identical output, so the checksums can be compared out of band.
-
-A change to a few files does not need the whole bundle again: `scripts/make-delta.sh SINCE OUTDIR [CHUNK]` takes the `.swift` files that differ from a revision, packs them the same way into `delta.tar.gz`, and extracting it over the old tree updates those files in place. Segments default to 1548 characters, and the archive md5 plus each segment md5 are printed. Checked byte for byte against the hand-written packing command.
+To verify on another Mac, prefer fetching the Git commit directly or running `.github/workflows/ios-release.yml`. When the machine cannot clone the remote, use `scripts/make-tree-transfer.sh` to bundle and round-trip-verify the full Git tree (including `.git` and project config).
 
 ## Licence
 

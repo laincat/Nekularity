@@ -29,10 +29,6 @@ public enum StandardProtocol: String, Codable, Sendable, CaseIterable, Identifia
     public var defaultBaseURL: String {
         self == .messages ? "https://api.anthropic.com/v1" : "https://api.openai.com/v1"
     }
-
-    /// The protocol requires a token limit: Anthropic refuses the request
-    /// without one, and a guess is worse than a documented default.
-    public var needsMaxTokens: Bool { self == .messages }
 }
 
 /// What the user configured for one protocol. The key is not part of it: it

@@ -60,17 +60,7 @@ App 本身不随附供应商包。要试,可以自己压一个:Core 仓库的 `m
 
 接口面也能在这里查:`scripts/check-surface-offline.sh` 用 gobind 生成 Core 的 ObjC 头,再跑与 Mac 同一份选择器清单,约十秒。它查的是**头文件**,不是记忆 —— 清单里写错一个选择器,以前要等一趟传输之后才会暴露。
 
-客户端仓库不公开,所以要在另一台 Mac 上验证时,Swift 源码仍需搬过去;Core 不必 —— 它公开在 GitHub 上,直接 `git clone` 后跑 `scripts/mac-verify.sh` 即可。搬 Swift 源码时,分段传输并逐段核对 md5 比整包重传可靠(下面这套工具仍保留,用于没有网络的机器):
-
-```sh
-scripts/mac-bundle-check.sh PARTS_DIR XCFRAMEWORK TGZ_MD5 TGZ_BYTES SWIFT_FILES [WORKDIR] [clean]
-```
-
-逐段对 md5、拼接、解码、核对归档 md5 与字节数、解包、数 `.swift`、把 xcframework 放进去、跑 `swift build`,每一步一行 `PASS`/`FAIL`。最后多传一个 `clean`,它会在报告之后删掉解包目录、拼接件和归档,机器保持原样。校验用 `md5` 而不是 `shasum`:受限机器上 `md5` 不需要额外授权。
-
-分段包由 `scripts/make-bundle.sh OUTDIR [CHUNK]` 生成:`Package.swift`、`Sources/`、`App/`、`Tests/` 里所有 `.swift` 按路径排序、mtime 与属主归零后打成一个 47 KB 左右的归档,再切成 `CHUNK`(默认 1650)字符的 base64 段,并打印归档 md5 与每段 md5/末尾字符。同样的文件树每次生成的归档逐字节相同,所以校验值可以写进对话里核对。
-
-只改了少数文件时不必重发整包:`scripts/make-delta.sh SINCE OUTDIR [CHUNK]` 用 `git diff --name-only` 取出相对某个提交变化的 `.swift`,按同样规则打成 `delta.tar.gz`,解到旧目录上就地覆盖。默认段长 1548 字符,并同样打印归档 md5 与每段 md5。实测它与手写打包命令产出的归档逐字节相同。
+在另一台 Mac 上验证时优先直接拉取 Git 提交或跑 `.github/workflows/ios-release.yml`;无法直接 clone 远程时,用 `scripts/make-tree-transfer.sh` 打包并回验整棵 Git 树(带 `.git` 与完整工程配置)。
 
 ## 许可证
 
