@@ -250,6 +250,83 @@ import Testing
         #expect(store.keptPages().isEmpty)
         #expect(ShelfStore(directory: dir).keptPages().isEmpty)
     }
+
+    @Test func unchangedProgressSkipsDiskWriteAndRapidFlipsCoalesceOnFlush() throws {
+        let dir = directory()
+        let store = ShelfStore(directory: dir)
+        store.progressSaveDelay = .seconds(60)
+        store.record(ShelfHistory(comic: comic("1"), chapter: "第 1 话", chapterIndex: 0, page: 1, percent: 10, time: 100))
+        let writesAfterRecord = store.diskWriteCount
+        #expect(writesAfterRecord == 1)
+
+        // Identical progress values do not mark dirty or write.
+        #expect(store.updateProgress(source: "copy_manga", id: "1", chapter: "第 1 话", chapterIndex: 0, page: 1, percent: 10))
+        store.flush()
+        #expect(store.diskWriteCount == writesAfterRecord)
+
+        // Rapid page turns stay in memory until flush, then persist the latest position once.
+        for page in 2...15 {
+            #expect(store.updateProgress(source: "copy_manga", id: "1", page: page, percent: min(100, page * 5)))
+        }
+        #expect(store.diskWriteCount == writesAfterRecord)
+        #expect(store.entry(source: "copy_manga", id: "1")?.page == 15)
+
+        store.flush()
+        #expect(store.diskWriteCount == writesAfterRecord + 1)
+
+        let reopened = ShelfStore(directory: dir)
+        #expect(reopened.entry(source: "copy_manga", id: "1")?.page == 15)
+        #expect(reopened.entry(source: "copy_manga", id: "1")?.percent == 75)
+    }
+
+    @Test func performBatchWritesOnceAndPreservesNewerEntries() {
+        let dir = directory()
+        let store = ShelfStore(directory: dir)
+        store.record(ShelfHistory(comic: comic("keep"), chapter: "本地新进度", chapterIndex: 5, page: 9, time: 500))
+        let baseline = store.diskWriteCount
+
+        store.performBatch {
+            #expect(!store.merge(ShelfHistory(comic: comic("keep"), chapter: "旧备份", chapterIndex: 1, page: 2, time: 100)))
+            for i in 1...25 {
+                #expect(store.merge(ShelfHistory(comic: comic("b\(i)"), chapter: "第 \(i) 话", chapterIndex: i, time: 200 + i)))
+                #expect(store.add(comic("b\(i)"), to: "导入"))
+            }
+        }
+
+        #expect(store.diskWriteCount == baseline + 1)
+        let reopened = ShelfStore(directory: dir)
+        #expect(reopened.entry(source: "copy_manga", id: "keep")?.chapter == "本地新进度")
+        #expect(reopened.counts.history == 26)
+        #expect(reopened.counts.favourites == 25)
+    }
+
+    @Test func failedWriteKeepsDirtyStateAndRetriesOnNextFlush() throws {
+        let dir = directory()
+        let store = ShelfStore(directory: dir)
+        store.progressSaveDelay = .seconds(60)
+        store.record(ShelfHistory(comic: comic("1"), chapter: "第 1 话", chapterIndex: 0, page: 1, time: 10))
+        let baseline = store.diskWriteCount
+
+        var shouldFail = true
+        store.fileWriter = { data, url in
+            if shouldFail { throw CoreError("disk full") }
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try data.write(to: url, options: .atomic)
+        }
+
+        #expect(store.updateProgress(source: "copy_manga", id: "1", page: 8, percent: 40))
+        store.flush()
+        #expect(store.lastError != nil)
+        #expect(store.diskWriteCount == baseline)
+
+        shouldFail = false
+        store.flush()
+        #expect(store.lastError == nil)
+        #expect(store.diskWriteCount == baseline + 1)
+
+        let reopened = ShelfStore(directory: dir)
+        #expect(reopened.entry(source: "copy_manga", id: "1")?.page == 8)
+    }
 }
 
 @Suite("Watching counts as history")

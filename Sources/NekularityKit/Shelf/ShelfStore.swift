@@ -199,6 +199,12 @@ public final class ShelfStore {
     private let url: URL
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    @ObservationIgnored private var batchDepth = 0
+    @ObservationIgnored private var dirty = false
+    @ObservationIgnored private var progressSaveTask: Task<Void, Never>?
+    @ObservationIgnored var progressSaveDelay: Duration = .milliseconds(800)
+    @ObservationIgnored private(set) var diskWriteCount = 0
+    @ObservationIgnored var fileWriter: ((Data, URL) throws -> Void)?
 
     /// Opens the shelf in a directory, creating the file on first write.
     ///
@@ -322,9 +328,31 @@ public final class ShelfStore {
         save()
     }
 
+    /// Groups multiple shelf mutations (such as a backup import) into a single
+    /// atomic write when the outermost batch finishes.
+    public func performBatch(_ body: () -> Void) {
+        batchDepth += 1
+        defer {
+            batchDepth -= 1
+            if batchDepth == 0, dirty {
+                writeNow()
+            }
+        }
+        body()
+    }
+
+    /// Writes any pending coalesced progress or failed write immediately.
+    public func flush() {
+        progressSaveTask?.cancel()
+        progressSaveTask = nil
+        guard dirty else { return }
+        writeNow()
+    }
+
     /// Writes how far the reader got, keeping the entry's place in the list:
     /// scrolling is not reading a new chapter. A comic the shelf does not
-    /// know is not added.
+    /// know is not added. Unchanged positions skip writing, and rapid updates
+    /// coalesce onto a single writer until `flush()` or the debounce window.
     @discardableResult
     public func updateProgress(
         source: String,
@@ -337,12 +365,17 @@ public final class ShelfStore {
         guard let index = history.firstIndex(where: { $0.source == source && $0.id == id }) else {
             return false
         }
-        if let chapter { history[index].chapter = chapter }
-        if let chapterIndex { history[index].chapterIndex = chapterIndex }
-        if let page { history[index].page = max(0, page) }
-        if let percent { history[index].percent = min(100, max(0, percent)) }
-        history[index].time = Int(Date().timeIntervalSince1970)
-        save()
+        var updated = history[index]
+        if let chapter { updated.chapter = chapter }
+        if let chapterIndex { updated.chapterIndex = chapterIndex }
+        if let page { updated.page = max(0, page) }
+        if let percent { updated.percent = min(100, max(0, percent)) }
+        guard updated != history[index] else {
+            return true
+        }
+        updated.time = Int(Date().timeIntervalSince1970)
+        history[index] = updated
+        scheduleProgressSave()
         return true
     }
 
@@ -358,7 +391,9 @@ public final class ShelfStore {
     }
 
     public func forgetHistory(source: String, id: String) {
+        let before = history.count
         history.removeAll { $0.source == source && $0.id == id }
+        guard history.count != before else { return }
         save()
     }
 
@@ -380,7 +415,9 @@ public final class ShelfStore {
     public func remove(_ comic: ShelfComic, from folderName: String? = nil) {
         let name = folderName ?? folderHolding(source: comic.source, id: comic.id) ?? Self.defaultFolder
         guard let index = folders.firstIndex(where: { $0.name == name }) else { return }
+        let before = folders[index].items.count
         folders[index].items.removeAll { $0.key == comic.key }
+        guard folders[index].items.count != before else { return }
         save()
     }
 
@@ -389,8 +426,12 @@ public final class ShelfStore {
     public func move(_ comic: ShelfComic, to folderName: String) -> Bool {
         let name = folderName.isEmpty ? Self.defaultFolder : folderName
         if folderHolding(source: comic.source, id: comic.id) == name { return false }
-        remove(comic)
-        return add(comic, to: name)
+        var added = false
+        performBatch {
+            remove(comic)
+            added = add(comic, to: name)
+        }
+        return added
     }
 
     public func createFolder(_ name: String) {
@@ -411,7 +452,9 @@ public final class ShelfStore {
     }
 
     public func deleteFolder(_ name: String) {
+        let before = folders.count
         folders.removeAll { $0.name == name }
+        guard folders.count != before else { return }
         save()
     }
 
@@ -433,7 +476,9 @@ public final class ShelfStore {
     }
 
     public func forgetPage(_ page: KeptPage) {
+        let before = pictures.count
         pictures.removeAll { $0.id == page.id }
+        guard pictures.count != before else { return }
         save()
     }
 
@@ -477,16 +522,52 @@ public final class ShelfStore {
     }
 
     private func save() {
+        dirty = true
+        if batchDepth > 0 { return }
+        writeNow()
+    }
+
+    private func scheduleProgressSave() {
+        dirty = true
+        if batchDepth > 0 { return }
         guard !inMemory else { return }
+        progressSaveTask?.cancel()
+        let delay = progressSaveDelay
+        progressSaveTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                return
+            }
+            guard let self, !Task.isCancelled else { return }
+            self.flush()
+        }
+    }
+
+    private func writeNow() {
+        progressSaveTask?.cancel()
+        progressSaveTask = nil
+        guard !inMemory else {
+            dirty = false
+            return
+        }
         do {
             let file = File(history: history, folders: folders,
                             pictures: pictures.isEmpty ? nil : pictures)
             let data = try encoder.encode(file)
-            try FileManager.default.createDirectory(
-                at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try data.write(to: url, options: .atomic)
+            if let fileWriter {
+                try fileWriter(data, url)
+            } else {
+                try FileManager.default.createDirectory(
+                    at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try data.write(to: url, options: .atomic)
+            }
+            diskWriteCount += 1
+            dirty = false
             lastError = nil
         } catch {
+            // Keep dirty set so the next flush() or mutation retries writing.
+            dirty = true
             lastError = "writing shelf.json: \(error.localizedDescription)"
         }
     }

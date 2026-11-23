@@ -65,47 +65,51 @@ public struct BackupImporter {
             }
         }
 
-        for item in plan.history ?? [] {
-            guard let key = item.sourceKey, !key.isEmpty, !item.id.isEmpty else { continue }
-            let comic = ShelfComic(source: key, id: item.id, title: item.title,
-                                   author: item.subtitle, cover: item.cover)
-            let entry = ShelfHistory(comic: comic,
-                                     chapter: nil,
-                                     chapterIndex: Int(item.ep),
-                                     page: item.page > 0 ? Int(item.page) : nil,
-                                     percent: nil,
-                                     time: Int(item.time / 1000))
-            if shelf.merge(entry) { out.historyAdded += 1 }
-        }
+        let mapped = BackupImporter.keptPages(from: plan)
+        out.picturesSkipped = mapped.picturesSkipped
+        out.pagesSkipped = mapped.pagesSkipped
 
-        for folder in plan.folders ?? [] {
-            let known = shelf.folderNames().contains(folder.name)
-            if !known, !folder.name.isEmpty {
-                shelf.createFolder(folder.name)
-                out.foldersCreated += 1
-            }
-            for item in folder.items {
+        shelf.performBatch {
+            for item in plan.history ?? [] {
                 guard let key = item.sourceKey, !key.isEmpty, !item.id.isEmpty else { continue }
-                let comic = ShelfComic(source: key, id: item.id, title: item.name,
-                                       author: item.author, cover: item.cover)
-                if shelf.add(comic, to: folder.name) { out.favouritesAdded += 1 }
+                let comic = ShelfComic(source: key, id: item.id, title: item.title,
+                                       author: item.subtitle, cover: item.cover)
+                let entry = ShelfHistory(comic: comic,
+                                         chapter: nil,
+                                         chapterIndex: Int(item.ep),
+                                         page: item.page > 0 ? Int(item.page) : nil,
+                                         percent: nil,
+                                         time: Int(item.time / 1000))
+                if shelf.merge(entry) { out.historyAdded += 1 }
+            }
+
+            for folder in plan.folders ?? [] {
+                let known = shelf.folderNames().contains(folder.name)
+                if !known, !folder.name.isEmpty {
+                    shelf.createFolder(folder.name)
+                    out.foldersCreated += 1
+                }
+                for item in folder.items {
+                    guard let key = item.sourceKey, !key.isEmpty, !item.id.isEmpty else { continue }
+                    let comic = ShelfComic(source: key, id: item.id, title: item.name,
+                                           author: item.author, cover: item.cover)
+                    if shelf.add(comic, to: folder.name) { out.favouritesAdded += 1 }
+                }
+            }
+
+            // Kept pages are references to the source's images, which this client
+            // can store now, so a restore keeps them instead of counting them.
+            for entry in mapped.pages {
+                if shelf.merge(entry) {
+                    out.pagesAdded += 1
+                } else {
+                    // Already on the shelf, with a local copy at least as new.
+                    out.pagesAlreadyKept += 1
+                }
             }
         }
 
         out.searchesAdded = searches.merge(plan.searchHistory ?? [])
-        // Kept pages are references to the source's images, which this client
-        // can store now, so a restore keeps them instead of counting them.
-        let mapped = BackupImporter.keptPages(from: plan)
-        out.picturesSkipped = mapped.picturesSkipped
-        out.pagesSkipped = mapped.pagesSkipped
-        for entry in mapped.pages {
-            if shelf.merge(entry) {
-                out.pagesAdded += 1
-            } else {
-                // Already on the shelf, with a local copy at least as new.
-                out.pagesAlreadyKept += 1
-            }
-        }
         // Cookies go last: their partitions are the sources this plan installs,
         // so a source whose script failed has no partition to write into — the
         // cookie would be stored where nothing can ever send it.

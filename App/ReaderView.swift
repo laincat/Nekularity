@@ -85,6 +85,8 @@ struct ReaderView: View {
         }
         .statusBarHidden(chromeHidden)
         .onTapGesture { withAnimation { chromeHidden.toggle() } }
+        .onChange(of: route.index) { shelf.flush() }
+        .onDisappear { shelf.flush() }
         .task(id: route.index) { await load() }
     }
 

@@ -6,6 +6,7 @@ import SwiftUI
 @main
 struct NekularityApp: App {
     @State private var app = AppModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -45,6 +46,9 @@ struct NekularityApp: App {
                 }
             }
             .task { await app.start() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active { app.flushShelf() }
+            }
         }
     }
 }
@@ -205,8 +209,15 @@ final class AppModel {
     /// A switch is not a filter over the same objects: Core itself is built from
     /// the environment's source records and its cookie jar, so the client has to
     /// be made again. The old one is dropped by dropping the environment.
+    func flushShelf() {
+        if case .ready(let env) = state {
+            env.shelf.flush()
+        }
+    }
+
     func switchProfile(to id: String) async {
         guard let profiles = profileStore, profiles.activeID != id else { return }
+        flushShelf()
         profiles.activate(id)
         state = .starting
         started = false
