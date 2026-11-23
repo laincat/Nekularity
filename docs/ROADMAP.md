@@ -1,205 +1,30 @@
-# 三项目推进路线图
+# 路线图与现行决定
 
 [English](ROADMAP.en.md) | 简体中文
 
-## 2026-11-10：项目接手说明已整理
+本页只保留仍然生效的产品/架构决定、当前推进顺序与停止规则；已发布版本的逐日流水留在 Git 历史与 [STATUS.md](STATUS.md)。
 
-三仓当前状态、已定方向（2026-11-09 十项答复）、最近三轮改动、依赖升级结果、未完成清单与建议顺序，整理为 `E:/Code/deliveries/2026-11-10-handoff/README.md` 与 `README.en.md`，回执 `receipt.json`，附依赖升级与官方源巡检日志。
+## 现行架构与产品决定
 
-要点：两端 pin 均为 `0405a64`（moejs v0.1.0 + sqlite v1.62.0），Core HEAD `93c8fea` 只多文档；公开 0.4.9/build 31 与 0.2.31 包内仍是 `2bafd88`，**要让公开包带上新 pin 需再发一版**；iOS 完整回归 CI `42731094758`（`27553ca`）**success**：日志确认 `Core: 0405a64`，Kit **499/86**、模拟器界面 **34/0/0**，日志 `E:/Code/deliveries/2026-11-10-handoff/ios-ci-42731094758.log`；`App/Info.plist` 的 `NSAllowsArbitraryLoads`、备份 Cookie 的布尔参数、TMDB/Bangumi 硬编码三处与已定方向不一致，是下一批要做的事。
+- **业务逻辑归 VeneraCat Core**：源执行、备份格式与跨端协议由 Core 维护，Nekularity 负责 SwiftUI 界面、网络、WebView、播放器与平台存储；客户端从 `e353650` 起默认跟 Core 上游 `main`。
+- **默认 HTTPS 与隔离安全**：ATS 默认关闭 `NSAllowsArbitraryLoads`，只对本机回环与显式声明的官方源域名放行 HTTP；Cookie 按源分区隔离，AI 与服务凭据进 Keychain；备份恢复 Cookie 必须由用户显式确认。
+- **界面将整体重写**：当前阶段不打磨旧 SwiftUI 页面的视觉与布局细节，只收口 Kit/App 边界、修正确性与性能开销，确保新界面直接经 Kit 入口访问能力。
+- **插件化与分发边界**：在线弹幕、外部元信息与扩展服务按插件/后置方向演进；iOS 兼顾侧载（AltStore）与未来 App Store 分发（正式上架前完成 LGPL 例外法务核对）。
 
-## 2026-11-09：十项产品决定与桌面便携化
+## 当前推进顺序
 
-用户已答完十道选择题，方向记录见 `VeneraCat Core/docs/OPEN-QUESTIONS.md`：默认 HTTPS 且由规则/源决定是否放行 http、备份 Cookie 每次确认、社区标签词典、AI 上色后置且允许自装非商用模型并警告、桌面只出便携版、iOS 侧载与 App Store 两条路且先侧载、Core 继续用提交号 pin、旧 Mac Worker 归档、依赖升级后做服务插件化/上色/Core 加固而不重写 UI。
-
-本轮已落地其中两项：旧 Worker 已归档；Nekophage 便携版把 `data/`、`cache/`、`logs/`、`webview/` 放进程序目录，真实包两次正常退出 0、迁移与只读回退均有证据（`E:/Code/deliveries/2026-11-09-nekophage-portable/`）。**其余是决定，不是完成**：ATS 仍为全局放开、Cookie 导入仍是布尔参数、TMDB/Bangumi 仍硬编码在 Kit、社区词典与 AI 上色尚未实现。
-
-依赖核对：Go 1.27.3 / cascadia / htmlquery / xpath / x/net / x/text / x/mobile / hls.js 1.7.4 均为最新；moejs 今天发布 v0.1.0、mygo 最新 v0.8.3、sqlite 最新 v1.62.0、AetherEngine 最新 7.62.0，四项待按既定规则升级并分别回归。日志 `E:/Temp/dep-audit/`。
-
-## 2026-11-09 收口：0.4.9/build 31 与 0.2.31 已发布
-
-**iOS**：`v0.4.9` / build 31（`01016b5`，Core `2bafd88`）已发布并核对——发布 CI `42578286568` success，IPA **29,963,615 字节**、SHA-256 `b75fa0ea…70c`、公开下载 HTTP 200 且与 API 下载逐字节一致；包内 App/Widget 均 **0.4.9/31**、最低 iOS 26.0，二进制含新 pin `2bafd88` 1 次、旧 pin `6d40ec2` 0 次、本轮 `resolveReference` 标记 2 次，`LICENSE`/`COPYING` md5 与仓库一致；Range 请求 206。相对受测提交 `b70a309` 只改 `project.yml` 版本号，界面结论仍归 `42570317039`（完整 UI 34/0/0、Kit 499/86、Magpie success）。
-
-**AltStore**：Raw / CNB / 固定 Release 三入口均 **0.4.9/31/29,963,615**、20 个应用，图标 200 / 443,517 字节。前两轮刷新因 `releases/download` 路由 504 退回 0.4.8；给源构建器补了退避重试与 API 签名地址兜底（`laincat/AltStore` `5444064`，39 项单测 OK、`verify_source` 通过）后，由提交触发的 `42582601315` 生成出 0.4.9。
-
-**桌面**：Nekophage 0.2.31（`c10410d`，同一 Core pin）已发布——`check.sh` 7/7、桌面探针 27 PASS / 0 FAIL、隔离安装 14 PASS；ZIP 23,000,870 字节、安装包 19,914,010 字节，公开下载 200 且逐字节一致。
-
-**仍待外部条件**：真机签名安装与后台/锁屏、ActivityKit 硬件呈现、PiP / AirPlay / 外接显示器字幕、扬声器、真实账号与真实站点、真实折叠设备窄宽屏、正式 App Store/DRM 分发前的 LGPL 例外法务确认。证据 `E:/Code/deliveries/2026-11-09-nekularity-049/`、`E:/Code/deliveries/2026-11-09-nekophage-0.2.31/`、`E:/Code/deliveries/2026-11-09-altstore-probe-fallback/`。
-
-## 2026-11-09 收口：0.4.8/build 30 与 0.2.30 已发布
-
-**iOS**：`v0.4.8` / build 30（`5a71605`，Core `6d40ec2`）已发布并核对——发布 CI `42561394003` success，IPA **29,963,357 字节**、SHA-256 `93184267…9050`、公开下载 HTTP 200；包内 App/Widget 均 **0.4.8/30**、最低 iOS 26.0，二进制含新 pin `6d40ec2` 1 次、旧 pin `da23603` 0 次，`LICENSE`/`COPYING` md5 与仓库一致。AltStore 刷新 `42564112978` success，Raw / CNB / 固定 Release 三入口均 **0.4.8/30/29,963,357**，图标 200、IPA 分段 206。发版前回归 CI `42554701625`：完整 UI **34/0/0**、Kit **499/86**、Magpie 步骤 success。
-
-**桌面**：Nekophage `0.2.30`（`03bb36d`，Core `6d40ec2`）已发布到 `https://github.com/laincat/Nekophage/releases/tag/v0.2.30`：ZIP **23,000,744 字节**（sha256 `9f6ed150…b413`）、安装包 **19,911,507 字节**（sha256 `73320c6a…901e`）；隔离安装 **14 PASS / 0 FAIL**（安装、版本 marker、真实窗口、正常关窗退出 0、卸载删目录、资料保留）；四资产 API 回读齐全，ZIP 与 setup 公开下载与本地逐字节一致。`check.sh` **7/7**、桌面探针 **27/0/0/0**。
-
-**仍需外部条件**：真机签名安装、后台/锁屏、Live Activity 在硬件上的呈现、PiP / AirPlay / 外接显示器字幕、实际扬声器、真实账号与站点、真实折叠设备窄宽屏，以及正式 App Store/DRM 分发前的 LGPL 例外法务意见。
-
-## 2026-11-09：Core `6d40ec2` 对齐 WHATWG，两端 pin 跟进
-
-P3-1「共享 Core 的真实兼容缺口」本轮收口一批：以 Node v26.12.1 的 WHATWG URL 为参照做两批共 177 条差分，找出并修复 `new URL` 的 7 处真实缺口（默认端口未去掉、路径未百分号编码、特殊 scheme 的反斜杠、无主机 scheme 的 `href` 硬拼 `//`、点段只对特殊 scheme 解析、`searchParams.size` 缺失、非特殊 scheme 的 `origin`）。修复后 **173/177 与 Node 一致**（第二波 59/59），剩余 4 条均非 URL 行为；Core `go test ./...` 23 包 PASS、官方源巡检 34/34、变异检验 7/7、Core CI `42553165294` 四 job 全 success。既有「非特殊 scheme 保留点段」的已知差异结论被证明是错的，测试已改为锁定真正的 opaque path 差异。证据 `E:/Code/deliveries/2026-11-09-core-url-whatwg/`。
-
-两端 pin 已跟进 `6d40ec2d5885c405258f395b828198285a1edca1`：Nekophage `01704ec`（`check.sh` 7/7、桌面探针 **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**），Nekularity `8bc857c`（CI `42554701625` success：Kit **499/86**、模拟器界面 **34/0/0**、Magpie 夹具 success）。真实源脚本 `manhuaren.js` 用 `new URL(imageUrl).host` 构造请求头，旧 pin 下会得到多余的 `:443`，新 pin 与浏览器一致。**边界**：本轮未发新版本，公开 0.4.7 / build 29 与 0.2.29 仍含旧 pin；真机、真实站点、扬声器与真实账号仍单列。
-
-## 2026-11-09：补上 P1-2 的下载失败 Live Activity 状态
-
-P1-2「下载开始/结束时 Live Activity、锁屏/灵动岛」里，失败分支此前是死的：`Live/DownloadActivity.swift` 有 `failure` 文案，但 `activitySignature` 只含 `active`，失败时签名变空、活动立即 `end()`。`969d2c2` 把失败纳入签名与 Kit 层的单一活动状态选择，新增 7 条单测覆盖运行中优先、已显示章节稳定、失败签名、丢弃与重试后结束。CI `42543074993` success，Kit **499/86**、设备 App 与界面测试目标编译通过；首次 CI `42541401968` 的 Swift 6 泛型推断失败已修复并复测。本机 Swift 语法检查 199 文件通过、六项仓库检查 PASS。
-
-随后完整回归 CI `42545229418`（`ui_tests=true`）**success**：模拟器界面套件 **34/0/0**（含下载失败重试用例）、Kit **499/86**，设备 App 打包成功。这仍是夹具/单测/模拟器层：**真机锁屏与灵动岛上的失败呈现、后台下载时的活动更新、授权与系统结束行为未验**。Core pin 保持 `da23603`，未升版本、未发新 IPA，0.4.7 / build 29 仍是最新公开产物。Trakt、在线弹幕、制作台与 Linux 继续后置。
-
-## 2026-11-08 收口：0.4.7 与 0.2.29 已发布，Core 修好签名 URL 查询串
-
-**iOS**：`v0.4.7` / build 29（`716a635`）已发布并核对——发布 CI `42481149097` success，IPA 29,949,283 字节 / SHA-256 `a3dfb4f2…b03f`，内容检查 **12 PASS / 0 FAIL**（App 与 Widget 均 0.4.7/29、最低 iOS 26.0、二进制含 Core `da23603` 且不含旧 pin、LICENSE/COPYING md5 一致）；AltStore 三入口均 0.4.7/29/29,949,283。发版前回归 CI `42476685394`：完整 UI **34/0/0**，Kit **492/85**，Magpie 步骤 success。
-
-**Core**：`da23603` 修 `new URL`——保留原始查询串与片段标记。此前 `?sig=a/b` 会被重写成 `?sig=a%2Fb`，签名链接因此失效；裸 `?` 丢失、`u.hash = "y"` 生成 `https://a.com/py`。以 Node WHATWG URL 做 23 条差分：修复前 12 一致、修复后 **23/23**；URL 点段差分 19/20、内建 53/53；新增两条测试并有变异检验；`go test ./...` 23 包 PASS、官方源 34/34；Core CI `42475605038` 四 job 全 success。
-
-**桌面**：Nekophage `0.2.29`（`4935ca9`，Core `da23603`）已发布到公开仓库 `https://github.com/laincat/Nekophage`（tag `v0.2.29`）：Windows 隔离安装 **14/0**，`check.sh` **7/7**，桌面探针 **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**，四资产 API 回读 4/4、校验和 2 OK。macOS 当前 pin 阅读主线此前已由 Orca Worker 在 `Laincat-Mini` 实跑通过（ad-hoc 签名，非 Developer ID/公证）。
-
-**仍需外部条件**：真机签名安装、后台/锁屏、Live Activity、PiP / AirPlay / 外接显示器字幕、实际扬声器、真实账号与站点、真实折叠设备上的窄宽屏。
-
-## 2026-11-08 收口：0.4.6 已发布，桌面 0.2.28 已公开，macOS 当前 pin 主线已跑通
-
-**iOS**：`v0.4.6` / build 28（`442a63c`）已发布并核对——发布 CI `42464844452` success，IPA 29,947,286 字节 / SHA-256 `362278cf…5935`，内容检查 **12 PASS / 0 FAIL**（App 与 Widget 均 0.4.6/28、最低 iOS 26.0、二进制含 Core `3d61c62` 且不含旧 pin `d9a1851`、LICENSE/COPYING md5 一致）；AltStore 三入口（raw / CNB / latest）均 0.4.6/28/29,947,286。发版前回归为 `0f1a46a` 的 CI `42460155664`：完整 UI **34 通过 / 0 失败 / 0 跳过**，Kit **492 tests / 85 suites**；该日志中长按编排、拖放顺序持久化、卡片尺寸持久化、明暗选择及重启保持、主题 HTTPS 安装/错误显示/HTTP 拒绝、横屏三列共 8 个用例逐条 `passed`。公开下载地址偶发 GitHub 网关 504，随后复核 IPA 为 HTTP 200 / 29,947,286 字节。
-
-**Core**：两端 pin `3d61c6239eba1ce9a21a32a1afe71f3c792b9ba5`（`new URL` 按标准移除 `.`/`..` 路径段）；随后 `3e99e75` 只加 Convert 与 Node/OpenSSL 差分的测试、不改生产代码，故 pin 不跟进。Core CI `42468236745` 四个 job 全 success（Windows / Ubuntu / macOS 26 / Apple xcframework + Swift smoke），官方源巡检 **34/34**。
-
-**桌面**：Nekophage `0.2.28` 已在公开仓库 `https://github.com/laincat/Nekophage` 发布（tag `v0.2.28` 指向 `719d852`，四资产 API 与公开 URL 回读均 HTTP 200 且逐字节一致）；Windows 隔离安装 **14/0**、原生阅读主线 PASS、全套探针 **27 PASS / 0 FAIL / 0 RETRY / 0 SKIP**、`check.sh` **7/7**。**macOS 当前 pin 阅读主线已由 Orca Worker `mac-mainline-3d61` 在 `Laincat-Mini` 实跑通过**：4 次 readercheck、uicheck 搜索/详情、shelf-probe、`Nekophage.app` 两次真实启动出主窗口并正常退出（exit 0）；签名为 ad-hoc，不是 Developer ID/公证。Worker 同时发现的 `readercheck` 就绪断言被清空已在 `c908011` 修复并纳入默认负向用例。
-
-**仍需外部条件**：真机签名安装、后台/锁屏、Live Activity、PiP / AirPlay / 外接显示器字幕、实际扬声器、真实账号与真实站点；以及真实折叠设备上的窄宽屏（模拟器宽度不等于折叠屏）。
-
-## 0.4.3 发布、最终回归与桌面 0.2.27（2026-11-07）
-
-按本轮顺序收口：最终 HEAD `f486376` 的完整 UI 套件 **32 通过 / 0 失败 / 2 跳过**（run `42386284795`，Kit 490/84），HLS 字幕修复后 OCR 只读到一行文字；随后发布 `v0.4.3/build 25`（`87db928`，CI `42392553106`）：IPA HTTP 200 / 29,942,512 字节 / SHA-256 `cc64a26d…`，App 与 Widget 都是 0.4.3/25、最低 iOS 26.0，Core pin `d9a1851`，包内 LICENSE/COPYING 与仓库 md5 一致；AltStore 三入口（含 raw、CNB、latest）均为 0.4.3/25。桌面 `0.2.27` Windows ZIP 与安装包在隔离资料下 **14 PASS / 0 FAIL**，交付 `E:/Code/deliveries/2026-11-07-nekophage-0.2.27/`。Core 官方源巡检 **34/34、0 失败**，没有新增兼容缺口，两端 pin 保持 `d9a1851`。 **2026-11-08 更新**：Core 升到 `3d61c62`（`new URL` 点段解析）后，桌面重打 `0.2.28`（`719d852`）：ZIP 23,002,081 B、安装包 19,913,306 B，隔离安装 **14 PASS / 0 FAIL**，新 pin 上 Windows 原生阅读主线 PASS；iOS 在新 pin 上 CI `42460155664` 完整 UI **34/0/0**、Kit **492/85**。交付 `E:/Code/deliveries/2026-11-08-nekophage-0.2.28/`。 **0.4.6 发布**：`v0.4.6/build 28`（`442a63c`，CI `42464844452`）IPA 29,947,286 B，内容 12/0，App/Widget 0.4.6/28，Core `3d61c62`；AltStore 三入口均 0.4.6/28/29,947,286。回执 `E:/Code/deliveries/2026-11-08-nekularity-046/receipt.json`。 **0.2.28 已公开发布**：`v0.2.28` / Release `https://github.com/laincat/Nekophage/releases/tag/v0.2.28`（四资产，API 回读 4/4 200、校验和 2 OK；ZIP 公开 URL 200，安装包公开 URL 本轮 504 为 GitHub 网关问题）。回执 `E:/Code/deliveries/2026-11-08-nekophage-0.2.28/receipt.json`。 **macOS 当前 pin 阅读主线已通过（2026-11-08）**：Orca Worker `mac-mainline-3d61` 在 `Laincat-Mini`（darwin arm64）上 clone `06b067b`，`build/core` 实际 HEAD `3d61c623…`；`go test` ok 19 包 / 0 失败；4 次 readercheck（进度/滚动恢复/双页/重试）、uicheck 搜索详情、shelf-probe 全 PASS；`Nekophage.app` 两次真实启动出主窗口并正常退出（exit 0），签名为 ad-hoc（非 Developer ID/公证）。Worker 同时发现 `readercheck` 的 `!ready` 断言被清空，已在 Nekophage `c908011` 修复并纳入默认负向用例（全套 27/0/0/0）。回执 `E:/Code/deliveries/2026-11-08-macos-mainline-3d61/`。
-
-剩余外部依赖单列：真机签名安装、后台/锁屏、Live Activity、PiP 与实际扬声器；`nhentai`/`Komiic` 两条跳过用例所需的仓库外源脚本；Nekophage 没有 Git remote，公开发布目的地未指定；macOS 当前 pin 的搜索→详情→阅读主线需要 Mac；PiP/AirPlay 字幕在 suppressing legible output 下仍不覆盖。
-
-## 在线弹幕后置，改由插件实现（2026-11-07 决策）
-
-用户确认：**在线弹幕不重要，放到后面用插件实现**。因此本阶段 P0—P3 不再把在线弹幕的站点抓取、剧集匹配、第三方弹幕服务接进客户端主线，也不再为它追加验收项；现有本地弹幕（文件导入、解析、按播放时钟绘制叠层）与相关单测保留，作为插件将来可复用的绘制层。插件契约未定，等 Magpie/服务插件体系与 Core 能力边界明确后单独设计，不预先写死接口。Trakt 同步与制作台仍按 P4 后置。
-
-同轮 CI 完整套件（带主题 HTTPS 夹具）run `42331728546`：**30 通过 / 2 跳过 / 1 失败**。通过项含长按编排、拖放顺序重启持久化、大小持久化、明暗设置、横屏三列、主题 HTTPS 安装与明文 HTTP 拒绝、下载重试、标准 AI 流式与断流、视频画面推进、30 秒 HLS 续播。跳过 2 条需要仓库外的 `nhentai`/`Komiic` 源脚本；唯一失败是已记录的 `testHLSPlaysAndSwitchesSubtitles`（`.remoteBypass` 上引擎没有把 cue 文本交给客户端）。日志 `E:/Temp/nk-ai-stream-ci/full2.log`、`full2-summary.txt`。
-
-## Core313951e三条源码主线已整合（2026-11-04）
-
-Core313951e已按单提交保树发布，Nekophage4273e06与Nekularityc751085功能候选已整合，两端pin同步。Core四作业CI41814080991、iOS CI41815696096的443/82与31/0、App及UI编译、候选IPA内容/摘要均通过。桌面实际Core pin、七项工程及文件/URL重装、索引身份负例通过；新Windows exe另经五进程合集流程验证。产品源码保持受测提交，详见[STATUS](STATUS.md)及 `E:/Code/deliveries/2026-11-04-core-313951e/`。
-
-公开iOS0.3.5/17、AltStore和既有桌面0.2.9安装包仍属于此前Coreccb版本；新候选不覆盖正式包。iOS仍保留重复键文字兼容，结构化跨桥错误/索引安装身份需单独推进；Mac源码查看补丁已逐字节整合为2b38049；Windows原生窗口和0.2.10包已验，Mac旧Core证据不提升为当前组合。合集GUI/安装、受限传输桥和模块/服务生命周期仍有独立工作。
-
-## Core ccb6268 与 iOS 消费端整合（2026-11-04）
-
-此前Core ccb6268发布时，两端功能pin一致。iOS现已正式发布0.3.5/build17（7c0d61b）：CI41791891766、公开IPA HTTP200/29,478,760字节、摘要/CRC/App与Widget/最低26.0/Core标记，以及AltStore三个入口均通过，详见[STATUS](STATUS.md)。UI只编译；bac68cda组合的443/82及31项XCTest计数保留原执行归属。桌面本地包仍为0.2.9/fe101db/Core ccb6268；Windows安装媒体和Mac开发WebView证据按各自提交范围记录。
-
-## 桌面统一合集客户端基础（2026-11-04）
-
-Nekophage当前源码已接Core313951e合集解析/能力匹配和独立订阅持久化，提供follow/list/refresh/unfollow命令入口。Windows七项工程和五个实际二进制进程验证7条目订阅、刷新、离线重开、取消订阅、安装记录保持及无制品请求；取消连接与失败保留由真实loopback/race回归覆盖。证据 `E:/Temp/nk-collection-client/`。尚未更新0.2.9安装包或验证Mac命令；目录GUI、条目安装、模块/服务宿主仍待推进。MyGo源码查看候选由已有Orca Worker继续，不能以此命令验收替代其Mac运行结果。
-
-## 当前主线:先完成底层、架构与基建(2026-11-04)
-
-用户已明确:Nekularity与Nekophage各客户端的UI/UX后续都要整体重构重写。当前先收束Core与宿主/平台职责边界、源脚本和API/媒体契约,处理网络请求/流的取消与资源生命周期、源和账号隔离、存储/备份/迁移/跨进程恢复,以及固定依赖、构建打包和发布基建。
-
-已有界面验收保留其历史证据,不再追加旧界面的布局、主题、视觉统一或截图矩阵。只保留证明底层行为所必需的触发与观察,例如跨App进程读取已保存播放位置。旧P0—P3编号用于追踪,后续执行服从本段顺序;UI/UX重写在上述基础工作之后启动。真实账号/设备和后置服务仍按既有边界交接。
-
-## 动态Liquid Glass与高度可定制界面目标（2026-11-04）
-
-用户明确iOS优先、桌面同方向：iOS27级别的动态Liquid Glass、动态图标、大画幅图片/漫画/视频、标签与高度自定义。按[材质清单与跨端方案](LIQUID-GLASS.md)推进：原生SwiftUI和现成MyGo Glass优先；首轮只调整材质，保持布局/间距/圆角/字体/图标身份/文案，新增控件先讨论。明暗tint按主题分别保存，降低透明度/动态效果与文字对比度优先。基础工作顺序保留；不能把原生材质库测试当成产品UI或iOS27专属API验收。
-
-## 生态复用与按需服务插件(2026-11-04新增方向)
-
-用户要求直接引用可维护的上游项目,整理JS引擎、编辑器高亮、Magpie兼容/桌面设计、主题与插件格式,并将Trakt/TMDB/Bangumi改为按需服务插件,安排漫画AI自动上色。新建本地[统一源目录工程](../../VeneraCat%20Sources/README.md),最新边界按用户纠正改为“一个源一个跨端合集”:插件/扩展/主题/模块统一收录,条目注明支持端和能力,订阅表示跟踪合集,不再按三项目分源。Surge风格简单配置模块也属于同一合集。目录构建及现有Core兼容格式契约均可运行;tmdb-ts加标准polyfill已在真实Core验证一个查询接口,服务宿主与客户端迁移尚未完成。Trakt的协议/插件设计进入当前底层工作,真实账号闭环仍单列,不因旧的后置条目阻止该基础设计。UI重写仍在底层之后。
-
-## 模拟器跨进程进度恢复(Orca Worker回传,2026-11-04)
-
-0.3.4/16、Core 3be57b5的专用模拟器定向测试中,第一App进程2020播放30秒HLS至7.211756秒,暂停并正常关闭播放器页,随后终止App。第二进程2099通过同一视频源的搜索和分集页重新进入,诊断起点7.000000秒,约2.08秒后自动播放至8.342057秒。修正测试PID千位逗号解析后,定向XCTest为1 test/0 failures。测试结束后磁盘历史为7秒/30秒/23%;这不是两次进程之间单独抓取的磁盘快照。
-
-该结果证明上述搜索/分集路径的模拟器跨进程位置恢复,不证明“继续观看/本地条目”直接入口,也不证明真机、后台或PiP。诊断构建临时读取PID、起始位置和时钟;产品源码已还原并重建安装,受测VideoPlayerView.swift还原SHA为0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37。原始日志在Mac `/tmp/nk-ios-cross-process-resume-evidence/`,本地 `E:/Temp/nk-ios-034-evidence/cross-process-worker-report.json` 仅是Worker回传记录,不是原日志副本。旧界面直接入口的UI验收按整体UI/UX重写计划后置。
-
-## 当前独立修复(2026-11-04)
-
-Nekularity的离线onResponse二次转换及HTTP200坏图被记为完成两项问题已修复,四份Mac受测文件按SHA逐字节整合并随0.3.4/16发布。Orca Worker完整单测436/81、最终build-for-testing和定向UI2/2通过;正式CI/IPA/AltStore三个公开入口均已验收,详见[STATUS](STATUS.md)。Lead另在Nekophage复现并修复图片镜像回退遗留旧POST正文/像素脚本的问题,真实Core、loopback HTTP和PNG解码回归已通过Windows race测试,证据 `E:/Temp/nk-image-fallback/`。这属于桌面客户端契约修复,提交0db2ead的Windows ZIP/安装器已通过包内容及隔离安装卸载核验,交付 `E:/Code/deliveries/2026-11-04-image-mirror-fix/README.md`。Core功能pin仍为3be57b5,旧c545212包不含该修复,Mac/GUI不因此提升为新版本通过。
-
-## Mac关窗与Core主线结果(2026-11-04)
-
-Orca Worker在用户解锁后,以隔离资料启动已核验c545212包,原生关闭按钮一次点击后窗口消失、原进程退出0,无信号终止。Core单提交main c0f0dfa在自身SHA完成三平台Go和Apple SDK/Swift四作业CI。详见[STATUS](STATUS.md);用户设备、账号与分发选择仍单列。
-
-## Core测试与兼容说明已整合(2026-11-04)
-
-经用户确认,Core main按单初始提交约定更新为c0f0dfa00c8a4daf7ce58fea5b615bc24eab88b7,文件树与通过完整CI41722875239的8922993完全一致,PR #3已关闭。只有测试与文档差异,生产转换实现未变;Nekularity/Nekophage仍使用功能pin3be57b5。保树/远端/两端pin回执 `E:/Temp/core-gbk-differential/main-published.json`。新主线SHA与已有CI受测SHA分别记录,不把旧CI改记为新SHA执行。
-
-## Mac主题与构建补验更新(2026-11-04)
-
-原Orca Worker已回传12张本地封面的明暗/横竖四组合、两处深色蓝字4.665:1、精确736e364本机430 tests/80 suites与IPA终态。详情进入只证明导航,源未安装不算内容加载;本机Xcode27.2/SDK27.2的IPA与正式CI发布包分别记录。详见[STATUS](STATUS.md)。离线图片正/负/恢复已验,完整受测文件与串行隔离修复已随a7b5fbd整合,历史完整UI计数不变。
-
-## 0.3.3发布验收更新(2026-11-04)
-
-736e364的0.3.3/15已发布:CI第二次成功,IPA HTTP200/29,457,850字节、摘要、App/Widget元数据与Core pin通过;AltStore修复生成步骤认证后,仓库及三个公开入口均0.3.3/15。详细回执见[STATUS](STATUS.md)。断网页图正/负/恢复对照已过Orca Worker实测,产品未改,测试已随a7b5fbd整合,连续负例→正例2/0。其余已派Mac任务仍按各自终态记录;真机、后台、账号等外部项不计通过。
-
-## 30秒 HLS 续播定向通过(2026-11-04)
-
-Orca Worker 在专用签名模拟器上用30秒本地素材,真实播放后分别下滑和点关闭按钮。关闭前位置7.24/7.30秒,均落盘7秒/30秒、23%;自动重开时未点暂停、播放或字幕,起点均为7.00秒,早期App/engine/source时钟分别为9.60/9.50秒。两次CoreMedia均记录postSeekPosition 7.000000,经过的约2.5秒包括自动播放和UI采样。临时只读诊断移除后App重新编译安装,最终VideoPlayerView SHA为0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37,与先前受测源码一致。素材Git原始主清单为LF/110字节,Windows CRLF副本114字节,其余素材按摘要核对。日志 `/tmp/nk-hls30-resume-evidence/`,回执 `E:/Temp/nk-ios-033-evidence/hls30-mac-receipt.json`。原10秒失败日志仍保留:晚期交互接近片尾可能触发正常重播,本次不据此断言其调用原因。本次通过仅覆盖模拟器页面关闭与重开,不涵盖跨进程、后台或真机。
-
-## 主线字幕修复安装包验收(2026-11-03)
-
-Lead 已构建并实际安装 0.2.7/`bf9cbd9`(Core `4f213ff`)。ZIP 21,566,978 bytes,安装器 18,720,774 bytes;CRC、逐文件摘要、实际版本与安装后 exe 一致性通过,产物和构建日志位于 `E:/Temp/nk-subtitle-package/`。使用此前测试实际保存的英文字幕/3.030709 秒资料的副本,仅调整本地夹具地址,经原生搜索建立夹具会话后继续观看:英文 Subtitle rendering proof 实际可见。通过字幕控件选择关闭后文字消失且 off=true 落盘;正常逐窗退出并启动新进程后,关闭选择仍保留,恢复位置仍为 3.030709,视频区域逐像素一致。
-
-回执、校验和截图见 `E:/Temp/nk-subtitle-package/accept-8acc7abc/receipt.json`、`verify.log`、`restored-english.png`、`off.png`、`reopened-off.png`。两轮应用均正常关闭,本任务夹具停止、临时安装卸载,实际资料文件哈希不变。此结果属于 bf9cbd9/Core 4f213ff 的 Windows 安装版,不代替 Core 3be57b5 候选安装包或 macOS 验收;夹具无音轨,不证明扬声器或真实账号自动登录。
-
-**Core 发布与消费端更新(2026-11-04)**:Core main为3be57b5。Nekophage main已整合为c545212并升级到3be57b5,包含WebKit字幕修复、关闭竞态修复、打包pin校验及关闭字幕跨进程探针;七项检查、实际WebView2新进程关闭恢复、ZIP/NSIS构建与版本核对通过,回执 `E:/Temp/nk-desktop-core-integration-evidence/receipt.json`。Windows安装版97e24b6的语言/关闭/跨进程续播证据与当前构建分开;Mac ca8f370/Core3be的阅读、视频和同一WebKit修复后字幕已验,当时包装窗口关闭被screen_locked拒绝,后续c545包正常关窗已通过,c545212/Core3be的播放器race及两个独立进程(13544、13564)从此前页面保存的off资料恢复关闭已通过,回执 `E:/Temp/nk-c545-mac-transfer/mac-acceptance.json`。截图全白不算视觉证据。临时源码gist在Mac核对接收后已删除。Nekularity main现已升级到3be57b5;独立d3672a8组合CI/IPA已核对,随后9ae1118整合与Mac受测文件一致的登录后绑定Core修复,签名专用模拟器Magpie UI1/1完成登录/模型/首段/停止peer_closed/重启凭据恢复,两条真实Core回归已逐字节收回。标准AI专用签名模拟器UI1/1通过Chat/Responses/Messages整包答复、停止请求22后peer_closed、模型目录401和重启假密钥恢复;回执 `E:/Temp/nk-standardai-ui-acceptance/receipt.json`。最终组合3574346的CI41689864772与未签名IPA已核验通过,IPA29,455,523字节、App/Widget0.3.2/14、3be57b5;摘要/CRC回执 `E:/Temp/nk-ios-final-integration/receipt.json`。产品与测试源码不变地整合main,不是新版本发布。旧零正文扣住时未提前交头的失败保留,标准AI页面仍整包,不把编译、Go宿主或旧版本证据当新UI通过。
-
-**桌面主线整合(2026-11-03)**:先前把 Nekophage 工作分支称作 main 的口径已更正;整合前真正 main 为 `28be4bd`/Core `214e778`,核对日志 `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`。现已将 `fix/subtitle-record-cap` 快进整合为真正 main 的 `67fc877`,pin 为 `4f213ff`,原分支保留;同时带回 WebView 探针隔离修复并移除误入版本控制的 Python 缓存。七项检查与 Windows 隔离阅读回归通过:两页解码、双页、55% 进度、重开恢复 1200,仅有本次章节存储键。回执 `E:/Temp/nk-desktop-integration/receipt.json`。`a079ce7`/Core `b55c1a4` 的 Windows 包仍属于独立候选,新 pin 的 macOS 消费端尚未验收;Nekularity main 仍 pin `4f213ff`。
-
-更新:2026-11-03。范围为 Nekularity、Nekophage、VeneraCat Core。按用户最新要求,当前优先 Core 脚本兼容、异步取消、分区隔离、存储/备份和客户端 API/媒体契约,再完成必要功能闭环;界面重排、视觉统一和截图矩阵后置。P0–P3 编号沿用原表便于追踪,当前执行次序以上述优先级为准。已运行的验证保留结果,不再追加纯界面任务;遇到需要真机、账号或服务器的事项,记录缺口并继续可独立完成的下一项。不能把一次发版当成整个路线图完成。
-
-## 项目判断与基线
-
-| 项目 | 当前事实 | 主要缺口 |
+| 阶段 | 目标 | 验收标准 |
 |---|---|---|
-| Nekularity | **0.3.5/build17已发布并核验**：7c0d61b/Core ccb6268，CI41791891766成功，IPA29,478,760字节；三个AltStore入口一致 | 发布CI执行Kit并编译UI；旧完整UI27/0/0及下载定向2/2保留原提交归属。真机、后台/锁屏、PiP、Live Activity和真实账号单列 |
-| Nekophage | MyGo主窗+WebView阅读/播放；当前本地包0.2.10/3f3efee、Core313951e | 七项工程、Windows原生源码查看/URL重装/新进程恢复，以及隔离安装主窗正常关闭退出0/卸载资料保留通过；源码查看动作属于2b38049 e2e构建，未新增安装版阅读/媒体验收。Mac当前e887914/Core313951e开发构建的阅读、只读源码查看、HLS/MP4鉴权Range画面及续播已验；音频计数和扬声器未通过。签名/公证与公开目的地单列 |
-| VeneraCat Core | 共享漫画/视频/备份/AI 协议逻辑;网络与系统能力交给客户端 | JS 引擎的少量兼容限制、客户端边界契约仍需维护;Sender 没有生产调用方 |
-
-证据按提交和执行渠道分别记录,不声称重新跑过三个项目的全部测试。两端main功能pin均为 `ccb626825bc116dad3b3e9a082867fd22c09caf4`;iOS 受测分支 `98e2e76` 已由 Orca Worker 重建 xcframework、通过 415 单测与四例定向 UI 后整合。已发布 Nekularity 0.3.2 的包内 pin 核到 `4f213ff`(旧 `8e14aad` 已不在包内),Nekophage `90e784f` 的 macOS 本地夹具搜索、阅读、进度恢复与双页现已在 `4f213ff` 验证;`c387e3f` 打包 App 已实际开窗,正常关闭因 `screen_locked` 待验。Core 后续文档提交不自动改变客户端 pin。
-
-**此前 b55c1a4 候选记录**:Core 取消修复经 `696a504` 的四个 CI 作业与真实 loopback 验收后,按仓库约定保树收拢为主线 `b55c1a4`。iOS 候选 `b39e6b0` 的 CI `41612614917` 与 IPA 内容核验已通过,仅编译 UI 用例,未执行或发布;桌面 `a079ce7` 已过七项检查与 Windows 安装版 HLS/中英字幕/关闭字幕/跨进程续播/鉴权/Range/正常关闭卸载,详见两端 STATUS。macOS 新 pin 消费端仍待验收。两端 main 仍为 `4f213ff`。Magpie 插件文字尚不能在正文结束前交付,这一限制已单独复现,不与取消通过混算。
-
-**较早的 2c9c83b 候选记录**:`2c9c83b` 的 CI `41590287663` 四个 job 全成功(含 Apple xcframework 与双平台 Swift smoke);SDK 下载哈希和三类切片已核对。两端独立候选分支均为 `update/core-2c9c83b`:Nekularity 已由初始 `0ea786f` 更新到 `5bc5b67`:预检发现旧候选缺少 `bb77b5d` HTTP 错误修复,现已整合 main `bf9d93d`,与该 main 的功能源码只差两处 pin。分支 CI `41599831561` 已核对 HEAD 并有终态:Kit 单测与设备 App 构建通过,UITests 编译步骤退出 65,IPA 打包与上传跳过。整体日志被插件地址校验拒绝,具体编译错误未取得,不作为回归通过;后续 `af48d65` 排除两份同名宿主 Python 资源并保留构建诊断 artifact,CI `41607054742` 已通过,验证 IPA 的 CRC/版本/pin 已核对(29,436,243 字节),不是公开发布或 UI 执行,详见 STATUS,Nekophage `db024bd` 已过七项检查,Windows 开发路径实测 HLS 解码/鉴权/页面进度重开恢复、MP4 206 范围响应及英文/关闭字幕持久化。另已生成同提交 ZIP/setup,实际临时安装后主窗可见、正常关闭并卸载保留资料;随后同一 `db024bd` 安装包已在独立资料下完成原生搜索→HLS/中英字幕与关闭选择、鉴权/Range 和跨进程续播,恢复视频区域逐像素一致且关闭字幕状态保留;通过原生搜索重新建立夹具登录,不声称自动登录。回执 `E:/Temp/nk-core-2c9-runtime/media-installed-0c334515/receipt.json`。日志与回执在 `E:/Temp/nk-core-2c9-runtime/`,候选文档提交 `755ea28`。它们尚未合入两端 main,不复用旧 pin 的 UI 证据。
-
-Nekularity 早期完整 UI 验证提交 `5d9a5a1dfd5ce0e9d58fead6371d5cc4b3f842c4`:Orca Worker 在专用 iPhone 17 Pro 上卸载旧 App、重新安装并补种,启动前 Themes 为空,完整 **24 条 / PASS 24 / FAIL 0 / SKIP 0**。HTTPS 安装/选中/重启、坏 JSON 保留原主题、HTTP 拒绝三条均通过,三列几何也通过;日志 `/tmp/nk-ui-full-5d9a5a1.log`。这是一轮完整执行,不由早期单项结果拼合。三列完整视觉仍需重拍,真机/后台/账号不在该证据范围。
-
-`0.2.7`(build 9)已发布并核对:提交 `90b98b0`,发布 CI `41465697611` 通过;IPA 29,368,112 字节、SHA-256 `182f62cf2aea32d6b8183effd0f0f31aede1deeab4270ce02d22b6a12bc8b7f3`、下载 HTTP 200,包内 App/Widget 均为 0.2.7/9 并含主题 HTTPS 拒绝文案;AltStore `update-source` `41471135708` 已把稳定轨道与扁平首个版本更新为 0.2.7/9,图标 200、IPA 分段 206。受测功能源码与 `5d9a5a1` 一致,版本元数据与文档有差异。包未签名,真机与签名安装仍未验证。`0.2.6`(build 8,CI `41431641042`)是上一个已发布版本。
-
-## 优先级与验收
-
-| 顺序 | 目标 | 完成条件 |
-|---|---|---|
-| P0-1 | 收口当前 iOS 回归(合并树 `9498b4c` 已完成) | 同一提交上 Swift 416/76 suites、完整 UI 27 PASS/0 FAIL/0 SKIP;三类计数为 23+3+1,xcresult 与日志一致。中英文 STATUS/UNVERIFIED 已同步;单独分支的通过与负向对照保留原提交归属,不替代本轮整包 |
-| P0-2 | 发布当前修复测试版（**0.3.5/build17已发布**） | 7c0d61b/Core ccb6268的CI41791891766成功；公开IPA HTTP200/29,478,760字节、资产摘要/CRC/App与Widget0.3.5/17/最低26.0通过；AltStore刷新41797483555及三个公开入口一致。CI只编译UI，真机签名安装仍需设备 |
-| P1-1 | 把发现页和主题界面验证完整 | 本轮三项链接用例及8张明暗/横竖空状态截图已记录,竖屏402×874pt、横屏874×402pt;最大辅助字号单列修复已过Mac定向验收,发现/设置末端可操作,普通字号两列与顺序保留;同名下载分组修复也通过。12张封面的明暗/横竖四组合已实测;详情进入仅证明导航,不扩称未安装源的内容加载,详见UNVERIFIED。 长按进入编排、拖放顺序持久化、小/中尺寸持久化;主题 HTTPS 安装成功与错误显示;浅/深色、窄/宽屏截图核对,区分模拟器宽度与真实折叠设备  **P1-1 收口（2026-11-08）**：`0f1a46a` 的 CI `42460155664` 完整 UI **34/0/0**，其中长按进入编排、拖放顺序持久化、小/中尺寸持久化、明暗选择跨重启、主题 HTTPS 安装/错误显示/HTTP 拒绝、横屏三列共 8 个用例逐条 `passed`（日志 `E:/Code/deliveries/2026-11-08-core-url-dot-segments/ios-job.log.gz`）。模拟器宽度不等于真实折叠设备，后者仍待真机。 |
-| P1-2 | 下载与播放真机闭环 | 本地模拟器已验HLS中文/英文/关闭及Referer/Range206;手势/按钮进度保存通过,30秒夹具的两种关闭及页面重开恢复已通过;原10秒的回零调用原因仍不确定。 下载开始/结束时 Live Activity、锁屏/灵动岛;断网阅读;播放/字幕/续播/画中画/后台音频;记录版本、设备、动作、结果。可先用本地媒体与夹具完成不需账号的部分 |
-| P1-3 | iOS AI 两条接入的真实闭环 | **本地签名模拟器闭环已通过**(3be57b5候选):标准API三协议整包答复、模型目录、UI停止后的同请求peer_closed、模型目录401与重启凭据恢复;Magpie登录/模型、正文尾部释放前首段、UI停止peer_closed、重启认证恢复与刷新总数1。原始证据分别为 `/tmp/nk-standardai-acceptance/evidence/`、`/tmp/nk-d367-acceptance/ios-diagnostic/`。产品绑定修复与两条真实Core回归已随3574346受测组合整合main,CI/IPA核验通过。标准AI页面仍整包;真机、真实供应商账号和零正文完全扣住时的提前响应头行为不在通过范围 |
-| P2-1 | 桌面阅读性能与取消 | 被新搜索/浏览/详情替代的请求真正取消;共享封面下载限制并发,缓存按实际字节预算;用慢响应验证旧请求停止、当前结果不受影响,并跑相应 race 测试。**本地工程验收已完成**:搜索/浏览/详情取消、4 个图片下载槽位、32/128 MiB 缓存预算,全套 race/vet 通过,详见 Nekophage STATUS |
-| P2-2 | 桌面交付与 macOS 可用性 | 在当前 pin 上运行 macOS 搜索→详情→阅读→进度保存,Windows 打包可启动。**当前Windows本地包为0.2.10/3f3efee、Core313951e**：ZIP/安装器与隔离安装、主窗正常关窗退出0、卸载及源记录保留均通过，详见 `E:/Code/deliveries/2026-11-04-nekophage-0210/README.md`。源码查看和URL重装由2b38049 e2e真实窗口验证，未重跑本包阅读/媒体；以下是**旧0.2.9/fe101db、Core ccb6268**：安装版既有English/3.030709秒恢复及鉴权/Range206已验，前台关闭字幕被USER_INPUT_ACTIVE拒绝，卸载资料保留通过，详见 `E:/Code/deliveries/2026-11-04-nekophage-029/README.md`。以下为**旧0.2.8/1de7f996、Core3be57b5包**：包含图片转换失败镜像回退修复，工程/内容摘要/隔离安装主窗启动和正常关闭/卸载资料保留已通过，回执 `E:/Code/deliveries/2026-11-04-nekophage-028/receipt.json`。本轮未重跑包装阅读或媒体。以下为**旧0.2.7/0db2ead包证据**：安装/卸载与资料保留、原生搜索、英文字幕/既有3.03秒恢复已验,视频裁剪逐像素一致;前台切换/关闭操作被USER_INPUT_ACTIVE拒绝,该轮清理终止不算正常关窗。回执 `E:/Temp/nk-0db-installed-media/run-a7f2d847/receipt.json`。旧c545212安装/正常退出证据仍归原提交。Mac当前pin阅读与字幕证据及c545补验见顶部,当前主线c545212的macOS arm64包已由Orca Worker构建并核验归档往返/ad-hoc签名,10,425,020字节,回执 `/tmp/nk-c545-acceptance/packages/receipt.json`;该包隔离原生关窗后原进程退出0也已验,Gatekeeper/公证仍需外部条件。以下为**历史0.2.7/`bf9cbd9`**:英文恢复、关闭及跨进程保持关闭见本页顶部安装包回执。以下是**较早的 0.2.7/`87e2ffc` 记录**,Core `4f213ff`:ZIP 21,565,682 字节(SHA-256 `c39857ee…c7df3f8`),setup 18,722,739 字节(SHA-256 `04416d28…41702c0`),CRC、逐文件哈希、版本均通过。明确 `/D` 安装到临时目录,安装版原生视频搜索→详情→选集→HLS/中文字幕可见,源 Referer/Cookie 鉴权、清单 200 无 Range、媒体字节 206 与页面进度落盘均有证据;完整回执 `E:/Temp/nk-package-87e2ffc-accept/receipt.json`。定向字幕按键曾被 `foreground_unavailable` 拒绝,本包英文/关闭字幕操作仍未验证;随后用原始实际资料重启同一便携包,经原生搜索重新建立夹具会话后点「继续观看」,页面带 `start=0.95312`,恢复画面与保存位置裁剪逐像素一致、与片尾不同。首次无会话请求返回 403 的记录保留,不声称自动跨进程登录。补验回执 `E:/Temp/nk-package-87e2ffc-accept/resume-receipt.json`。临时卸载删除安装目录并保留实际资料。**macOS 当前 pin `4f213ff` 已在 `90e784f` 通过本地搜索/阅读、进度恢复与双页**,`c387e3f` 打包 App 已实际开窗,正常关闭因 `screen_locked` 待验;旧 ad-hoc App 打包/启动证据见 Nekophage STATUS,不当作 Developer ID 签名或公证。包未签名、未公开发布;无远端时保留本地产物,Linux 后置 **2026-11-08 补**：当前 pin 上 Windows 原生主线已用真实 UIA 点击跑通（搜索→详情→阅读→进度落盘→`WM_CLOSE` 退出 0→重启→书架「继续」→再次退出 0），证据 `E:/Code/deliveries/2026-11-08-windows-native-mainline/`；**macOS 同一条主线仍缺**，因为本机没有 macOS，Mac 设备上也没有可用模型路由（一次性远程调度报 `Scheduled remote model route unavailable: unreachable`）。 |
-| P3-1 | 共享 Core 的真实兼容缺口 | 对仍可复现的 register 上限、冻结 atob 等问题做最小复现并选择上游修复/明确限制;不要把站点失效当客户端缺陷;Core 功能发布后两端 pin 与契约同步 |
-| P3-2 | 桌面视频最小闭环 | **当前pin补验**:c545212/3be57b5 Windows开发WebView2实读HLS音频18537字节、原生MP4音频17976字节;无音轨MP4及虚报AAC的HLS均为0并正确拒绝,日志 `E:/Temp/nk-c545-audio/`。不证明扬声器发声。以下保留较早版本记录,当前字幕/续播与Mac补验见顶部及Nekophage STATUS。 **本地夹具链路已验收且已进默认套件**(Nekophage `78ee0e1`,后由 `a3a4ed7`/`c7fc631` 把视频与字幕探针并入 `desktop-probes.sh`,无外部变量 11 PASS / 3 SKIP):真实 Windows WebView 验证 HLS.js/fMP4/字节范围/Referer/Cookie/视频帧回读,以及原生 MP4。页面自身暂停事件落盘、磁盘重读与「继续观看」实际恢复小数秒位置;已移除手工进度注入,失败探针返回非零退出码。`30d460f` 再完成普通源管理的类型选择、文件/URL 安装与持久化:真实 Windows 原生窗口安装两个视频源,关闭进程后重启仍可选,从 GUI 安装记录恢复后的 HLS 实际解码与续播通过。类型冲突、停用更新、磁盘恢复有 race 用例。`0d8ce15` 完成搜索/分页、详情与播放准备的分代取消,控制器接真实 Core/JS/慢 HTTP 验证替代/切源/关闭时连接停止、下一次读取成功、迟到结果不覆盖新状态和分页不混用输入词;Windows HLS 窗口回归仍可实际解码并续播。列表与详情加载状态分开,已开始播放的会话不随关闭搜索窗停止。音轨改用实际解码字节判据:`8f1d812` 的清单声明判据已作废(夹具可虚报 AAC),现在 HLS.js 路径实读 `18537` 字节、原生 MP4 路径实读 `17802` 字节,两个无音轨反例均为 0 且探针非零退出(`e27d5f7`、`9e2bdda`)。这仍不等于扬声器实际发声。字幕已按投递链路验证(`41a89da`):Core 重写 `EXT-X-MEDIA` URI,播放器经代理取到 `subs.m3u8` 与五个 `.vtt`,`showing` 轨读回 10 条 cue,首条文本为夹具内容;无字幕组素材为 0 并失败。`13e74cb` 将强制第一条改为尊重 `DEFAULT=YES`,无默认时关闭,并加入语言/关闭选择框。英文第一条、中文默认第二条的反例布局验证选中中文,只读 showing 轨的活动文本;两条 DEFAULT=NO 时保持 disabled。真实 Windows 窗口截图已看到中文叠加(`E:/Temp/desktop-subtitle-visible-window.png`)。旧轮的 `foreground_unavailable` 缺口已补验:0.2.4 安装包在同一暂停 0:01 画面完成 English 可见→关闭后文字消失→中文恢复,三张窗口截图与回执 `E:/Temp/desktop-subtitle-language-024-receipt.json` 对应;最终夹具使用支持 Range 与鉴权的 Go 文件服务。打包时又发现真实缺陷:默认走原生 HLS 时 WebView2 忽略字幕组,实测不请求 `subs.m3u8`;`851884d` 改为优先内置 HLS.js,原生仅作回退。`0.2.4` 打包 GUI 内已看到「第0段字幕 / 字幕渲染检查」与 `subs.m3u8`、`sub0.vtt` 请求。字号/位置样式、macOS、iOS 与在线源字幕仍未验证。**待验证**:PiP、macOS 与真实站点;DRM/嗅探/DASH 明确报不支持。最新本地交付为 `0.2.7`(`87e2ffc`),包含清单 Range 修复,包内 HLS/中文字幕、鉴权、字节范围及页面进度落盘通过;本包跨进程续播经界面重新登录夹具后已补验,英文/关闭字幕操作仍待验证,详见 P2-2;完整语言/关闭操作的旧证据仍保留原提交归属 **2026-11-08 补：请求头成为常驻回归**。`desktop-probes.sh` 新增三条：`hls_probe.js` 的 `-video-auth -video-hlsjs` 正向（真实 WebView 解码、`11` 段 `bytes=` Range、暂停落盘 `2.104s`、重开「继续观看」恢复），以及去掉 Referer / 去掉登录 Cookie 的两条负向（各得到 `auth rejected` + HTTP 403 + 非零退出）。这把「源声明的 Referer 与 Cookie 真的经媒体代理到达上游」从历史安装包证据升级为当前 pin 的默认回归；全套 **24 PASS / 0 FAIL / 0 SKIP**、`check.sh` **7/7**。日志与回执 `E:/Code/deliveries/2026-11-08-video-auth-probes/`。仍不证明真实站点、真机、macOS 或扬声器发声。 **2026-11-08 二次补**：`-video-auth` 与 `-video-subs` 首次组合，验证 Core 重写后的 `EXT-X-MEDIA` 字幕 URI 仍带 Referer/Cookie（12 次 `/sub*` 请求、0 次 403、`showing` 轨活动文本 `字幕渲染检查`），全套 **25 PASS / 0 FAIL / 0 SKIP**、`check.sh` **7/7**。回执 `E:/Code/deliveries/2026-11-08-video-subs-auth/receipt.json`。 **2026-11-08 三补**：原生 MP4 解码路径也验证带 Referer/Cookie（`decoder=native`、0 次 403），全套 **26 PASS / 0 FAIL / 0 SKIP**（含 1 次既有对话框 flake 重试）。回执 `E:/Code/deliveries/2026-11-08-native-mp4-auth/receipt.json`。 **2026-11-08 CI 结论**：`ios-release.yml` run `42456712087`（`cba7756`）`success`，其中 “Magpie loopback HTTP acceptance” 步骤 `success`，回执 `E:/Code/deliveries/2026-11-08-magpie-ci-verified/receipt.json`。 |
-| P4 | 账号与扩展能力 | Jellyfin/Emby/Plex、Bangumi、TMDB、Pixiv 登录逐项真连;Trakt 同步与制作台再评估;**在线弹幕后置,由插件实现,不进客户端主线**(见本页顶部 2026-11-07 决策)。不得把未实现功能误归为“只缺账号” |
+| Wave 2B（当前） | Nekularity 本地瘦身、冗余门禁与重复素材清理、源安装/设置边界收口、Cookie/流式传输/书架存储开销修复 | Windows 语法与双语文档检查全过；合回后 Apple CI 完整 Kit 单测、App 构建与定向回归全绿 |
+| Wave 3 | 与 VeneraCat Core / Sources 联动：收藏/账号/挑战规则与 Magpie 包入口下沉 Core、统一 `plugins/plex.js` 归属 | 跨端契约测试覆盖并合回主线 |
+| UI 重写阶段 | 在干净的 Kit 边界之上重构 iOS/iPadOS 交互与视觉体验 | 新界面通过完整模拟器套件与真机验收 |
 
 ## 需要外部条件的事项
 
-| 事项 | 依赖 | 处理方式 |
-|---|---|---|
-| 灵动岛、后台、通知、真实手势观感 | 合适 iPhone 与用户设备操作 | 提供 AltStore 测试版和短操作步骤,等待事实反馈 |
-| Bangumi/供应商/Pixiv 登录 | 用户授权的真实账号 | 用到再连接,不将凭据写进仓库或日志 |
-| 媒体服务器与 TMDB | 可访问服务与相应凭据 | 其余工作先推进,假传输不当作真服务证据 |
-| 桌面公开发布 | Nekophage 尚无远端 | 先准备可运行包,不擅自创建公开仓库 |
-
-## 不再重复做的旧待办
-
-代码核对已确认:iOS 传输层有分块大小限制、提前取消登记与跨 origin 鉴权头清理;ImageLoader 有共享等待者计数;标准 AI 设置/界面已接入;Magpie 已接 `MobileNewMagpieWithStream`。这些不再按“尚未实现”排队,后续只针对真实失败修复。`magpieplugin.Sender` 保留为无生产调用方的库接口,不为了证明它有用而硬接入桌面 Magpie。
-
-`accessibilityIdentifier` 的缺失不等于 VoiceOver 文案缺失。发现页这次的树显示标签存在,标识符被祖先覆盖;它证明的是自动化可寻址性问题,不能据此声称 VoiceOver 已被验证或不可用。
+- 真机签名安装、后台/锁屏播放、PiP、硬件 ActivityKit、扬声器声音、真实账号与真实公网站点（详见 [UNVERIFIED.md](UNVERIFIED.md) 与 [HANDOFF.md](HANDOFF.md)）。
+- 正式 App Store / DRM 分发前的许可证法务核对。
 
 ## 推进与停止规则
 
-每轮完成一个具体动作并留下证据:修复复现问题、运行相关用例、验证真实界面或交付安装包。只读旧日志、反复查询未变化的 CI 或重写文档不算新的工程完成。适当验证即可,不为推进额外堆检查器。
-
-既有 Orca Worker 负责 Mac 测试,Lead 负责分析、实现、契约与发布整合;不要重复启动同一套测试。完整日志写文件,汇报只给命令/结果/路径,失败附最相关错误行。
-
-本轮阶段目标是完成 P0 至 P3 中可在现有条件下独立验收的工作;需要外部条件的项目单列交接。只有逐项验收完成才能宣告该阶段完成,不能因一次发版完成就提前终止。P4 的新增产品能力后置,不自动扩大本阶段范围。
+- 优先消除真实正确性、数据一致性与内存/IO 开销隐患，再做跨仓契约收敛。
+- 不伪造未在 macOS / 真机上跑过的验证结论；任何构建或测试范围变更都要明确写出实际覆盖边界。

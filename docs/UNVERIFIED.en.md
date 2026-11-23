@@ -1,311 +1,38 @@
-English · [简体中文](UNVERIFIED.md)
-
-## The behaviour of public http sources on a device is still unknown (2026-11-10)
-
-After ATS became HTTPS by default, an installed source pointing at a public http address fails **on a device**: of the official sources only LANraragi uses http, and the exception domain keeps it working, while any other user-installed public http source is refused with an error that says to use https or a local address. The simulator's 34/0/0 only shows the interface suite passing over loopback and https, **not how a real site behaves over http**, and not that a user's own installed source still works.
-
-## 0.4.9 / build 31 shipped, device behaviour still unverified (2026-11-09)
-
-The CI, IPA contents and all three AltStore entries for 0.4.9 are checked (see [STATUS](STATUS.en.md)), and the public artifact really does carry Core `2bafd88`. **That is still not device verification**: signed installation and launch on hardware, background and lock-screen playback, ActivityKit presentation on the lock screen and Dynamic Island, subtitles under PiP / AirPlay / external displays, the real speaker, real accounts and real site scripts have never run on a device.
-
-This round adds no interface conclusion: relative to the tested commit `b70a309`, 0.4.9 only changes version metadata, so the interface and unit-test conclusions still belong to CI `42570317039` (simulator 34/0/0). A simulator neither exercises ActivityKit on hardware nor represents a foldable's narrow layout.
-
-## Core `2bafd88` is on main but not in a public artifact (2026-11-09)
-
-`2bafd88` adds relative `new URL` resolution, `URLSearchParams` iteration and `URL.parse`, and both client pins follow it; 0.4.9 / build 31 and Nekophage 0.2.31 were then released with `2bafd88` in the binary markers. The public artifacts therefore do not contain this batch, and the mainline pin's verification must not be attributed to them. Core's 23 packages, the 34/34 official-source sweep, the 41/41 differential, the 9/9 mutation check and Core CI `42569120105` (all four jobs) belong to `2bafd88`; the iOS interface regression `42570317039` **succeeded**: Kit 499/86, simulator interface 34/0/0, Magpie fixture success, with the log confirming `Core: 2bafd88`. Devices, real accounts and the real sites remain unverified. Evidence `E:/Code/deliveries/2026-11-09-core-url-relative/`.
-
-## 0.4.8 is published, but device behaviour is still unverified (2026-11-09)
-
-0.4.8 / build 30 has been checked in CI, in the IPA contents and across all three AltStore entries (see [STATUS](STATUS.md)). **That is not device verification**: signed install and launch on a device, background / locked playback, ActivityKit's Lock Screen / Dynamic Island rendering on hardware (the first build to carry the failure state), PiP / AirPlay / external-display captions, the actual speaker, real accounts and real-site scripts have never been run on a device. The CI simulator's 34/0/0 only proves the interface cases pass on the CI simulator; a simulator does not exercise ActivityKit's device rendering.
-
-## Boundary of the new Core pin (2026-11-09)
-
-Core `6d40ec2` fixes 7 real gaps in `new URL` and the iOS client has followed the pin; CI `42554701625` succeeded on `8bc857c` (Kit 499/86, simulator interface 34/0/0, Magpie fixture success, with the log confirming Core `6d40ec2`). **Still unverified**: ActivityKit's Lock Screen / Dynamic Island rendering on a real device, background / locked downloads and playback, PiP / AirPlay / external-display captions, actual speaker output, real accounts and real-site scripts, and the narrow/wide layout of a real foldable. The CI simulator's 34/0/0 and the published artifact are different things: the latest 0.4.7 / build 29 binary still carries the old pin `da23603`, and no new version was released this round. Evidence `E:/Code/deliveries/2026-11-09-core-url-whatwg/`.
-
-## Failed-download Live Activity: state machine verified, device not (2026-11-09)
-
-`969d2c2` puts failure into the state mapping for the island / Lock Screen and covers priority, shown-chapter stability, the failure signature, dismissal and retry with 7 kit tests on macOS. CI `42543074993` passed the full Kit suite (499/86); the later full regression `42545229418` also passed the simulator interface suite **34/0/0** (including the failed-download retry case), with Kit 499/86. A passing simulator interface is **not** a passing device island.
-
-**Still unverified**: whether ActivityKit actually draws "failed" on a device's Lock Screen and Dynamic Island, whether the activity keeps updating during background / locked downloads, what happens when authorization is denied or the system ends the activity, and whether a failure activity disappears as intended after a successful retry. These are device behaviours and cannot be inferred from kit tests or a compile; signed device install, background playback, PiP / AirPlay / external-display captions, actual speaker output, real accounts and real sites remain separate. No new version was published this round; 0.4.7 / build 29 is still the latest public artifact.
-
-## 0.4.7 is published, but device behaviour is still unverified (2026-11-08)
-
-CI, the IPA contents and all three AltStore entries for 0.4.7 / build 29 have been verified (see [STATUS](STATUS.en.md)). **That is not device verification**: signed install and device launch, background / lock-screen playback, Live Activity, captions in PiP / AirPlay / external displays, an audible speaker, real accounts and real site scripts have never run on a device. The CI simulator's 34/0/0 only proves the UI cases pass on a CI simulator.
-
-
-## `.remoteBypass` captions: the PiP / AirPlay behaviour is still unverified (2026-11-07)
-
-Captions are now drawn by **AVPlayer** (`suppressesPlayerRendering=false`), and the host only keeps a transparent accessibility text. So PiP / AirPlay / an external display should carry captions as well, because those surfaces composite only the `AVPlayerLayer` content and the captions are pixels on that layer.
-
-**What is still unverified**: the sentence above is a conclusion drawn from the documentation and from the pixel behaviour. There is no device here, and PiP, AirPlay and an external display have **never actually been run**. The CI simulator evidence covers the full-screen picture only: the OCR reads one `Subtitle rendering proof` line (run `42397054228`), and a new assertion requires the caption to appear **exactly once**. Whether it still appears once on a device, whether the PiP window carries a caption and whether the AirPlay receiver shows one all need a device or an external display.
-
-## HLS dual subtitles: no cue text reaches the client, and the case's assertion and timing do not hold either (read-only diagnosis, 2026-11-07)
-
-This round only read source, logs and screenshots; no product code changed. The finding has three layers - two are code facts, the third is about the case itself.
-
-1. **On `.remoteBypass` the engine publishes no cue text.** `selectRemoteHLSSubtitleTrack(id:)` in `AetherEngine+Subtitles.swift` (lines 2980-2997) sets `subtitleCues = []` right after selecting and only drives `AVMediaSelection`; its comment says "AVPlayer renders the cues itself; there is no overlay pipeline". So the client's `model.cues` is always empty - that is why the diagnostic line reads `cues=0`, not lost data. The only code that reads AVPlayer's legible text is `RemoteHLSCueClockObserver`, created by `attachRemoteHLSCueClock` (`AetherEngine+Loading.swift:651`) behind a guard on `remoteHLSSubtitleProxy?.provider`, i.e. a #316 injected sidecar. This fixture declares no `externalSubtitles` and the log has no `AE#616` line, so that observer was **never attached**.
-   - **Correction to the previous record**: the earlier claim that "an `AVPlayerItem` has a single legible-output slot already held by `RemoteHLSCueClockObserver`" is wrong. On this fixture the engine attaches no legible output at all; the host's own output received nothing for the reason in point 3.
-2. **AVPlayer's captions are pixels inside `AVPlayerLayer`, not accessibility elements.** The screen is `AetherPlayerSurface` -> `AetherPlayerView`, which mounts an `AVPlayerLayer` on the native route (see the note at the top of `View/AetherPlayerView.swift`). The engine's `docs/formats.md` section "Native subtitle renditions" states that PiP / AirPlay / external displays composite only `AVPlayerLayer` content and never the host's view tree, which is why every text track is served as a real `SUBTITLES` rendition - so a rendition's captions are precisely what the layer draws. **`app.staticTexts["Subtitle rendering proof"]` can therefore never match on this route, even when the words are plainly visible in the picture.**
-3. **Every failure happened after a pause, with the clip already at 0:10.** The interface activity log of run `42309608676`: `t=68.28 / 70.42 / 73.13` tap `video.playPause` three times (clock 2 -> 3 -> 6), `t=77.49` opens the subtitle menu, `t=80.42` picks English - **the player was paused when the track was chosen**. The case then waits 20 s for the cue; the failure screenshot shows clock `0:10` with the picture parked at the end. The fixture's only cue is `00:00:00.000 --> 00:00:10.000`, span `[0,10)`, so no cue is due at the end. The historical Mac evidence was captured while **playing**, which is a different situation.
-
-**Root cause (for "the client has no cue")**: no path delivers cue text to the host on `.remoteBypass` - the engine clears `subtitleCues`, `RemoteHLSCueClockObserver` exists only with injected sidecars and measures an offset rather than publishing text, and AVPlayer draws captions as pixels outside the accessibility tree. "Cue lost" is thus the route design plus the case's assertion and timing, not data dropped somewhere.
-
-**Next steps (one of three; none implemented, awaiting the choice)**:
-
-- **A. Add an engine interface**: publish the cue text AVPlayer actually presents on `.remoteBypass`. `RemoteHLSCueClockObserver`'s delegate already receives `strings` and only feeds them to `RemoteHLSCueClock`; a `presentedSubtitleLines` beside that offset (the output is non-suppressing, so system rendering is unaffected) lets the client's existing overlay draw them, with accessibility and assertions both working.
-- **B. Fix the case's assertion and material**: assert pixels or OCR while playing, choose the track during playback, and use a 30 s fixture with subtitles so the end is out of reach. No product change.
-- **C. Change the surface**: hand `.remoteBypass` captions to `AVPlayerViewController`, or attach a suppressing legible output of our own (which would cost PiP / AirPlay captions).
-
-Evidence: `E:/Temp/nk-diag/engine.log` (44 lines, with `AE#154 legible group surfaced 2` and `legible select ordinal=0 (英语)`, no `AE#616`), `E:/Temp/nk-diag/uitests-run.log` (the timings above), `E:/Temp/nk-diag/shot1.png` (clock 0:10, no caption); archived in `E:/Code/deliveries/2026-11-07-hls-subtitle-diagnosis/`.
-
-## The standard protocol's streaming screen moved to verified on 2026-11-06
-
-Both cases in `UITests/ZZStandardAIStreamTests.swift` pass on CI's iPhone 17 Pro / iOS 26.5 simulator (run `42193319262`): the 「正在写…」 row and the growing text while the answer is written, the 「流式」 label and the four pieces when it finishes, `stream:true` in exactly one request; and on a cut stream, `源返回错误:AI stream ended before completion` with the half answer not kept. The evidence and the three fixes the cases themselves needed are in [STATUS](STATUS.md).
-
-Still unverified: a real device, a real vendor's incremental behaviour and an iOS 26 runtime. Whether a provider sends response headers before any body byte was added on 2026-11-07: the client now decides the status as soon as a rejected head arrives and stops reading the body (see [STATUS](STATUS.md)).
-
-## Playback since AetherEngine 7.58.0: the picture advancing is verified, the rest is not (updated 2026-11-06)
-
-**Update**: `testVideoPlaysTheSourcesClip` passes on CI run `42199314431`, and the case now requires the engine clock to grow within 4 s - so the picture does advance and the source's declared `Referer` reaches the engine (see the same day's entry in [STATUS](STATUS.md)). Subtitles, HLS, cancellation, background and PiP listed below have still not been re-run on 7.58.0.
-
-### Original record
-
-The playback engine moved from `7.53.1` to `7.58.0` on the strength of an API-surface comparison plus CI: with line numbers stripped, the two releases' public declarations were compared line by line and **all 21 symbols we use are still there**. The five declarations that disappeared exist under the same or a new name in 7.58.0 (`SoftwarePiPSource.timeRange()` still returns `CMTimeRange`; `isPaused` moved from `engine?.state != .playing` to a snapshot read). CI `42153619870` compiled the app, ran 482 kit tests and built the package - **which is not the same as playback working**.
-
-Not re-run: playing a video on a device or simulator (8 s or more with the picture advancing), subtitle track switching, an HLS main playlist, cancelling playback, background behaviour. 7.56.0 made the software PiP source build its own controller (`SoftwarePiPSource.makePictureInPictureController()`), while our PiP code still uses the older `pip.update(player:software:)` shape - it compiles, but `AVPictureInPictureController` is unsupported on the simulator anyway, so whether the behaviour changed cannot be judged there.
-
-Next: replay once on the simulator with the local HTTP media fixture in `UITests/Fixtures`, covering at least advancing picture and subtitles; PiP and background stay device-only items.
-
-## Where the service capabilities stand on 2026-11-05
-
-Verified (simulator, iPhone 17 / iOS 27.2, through the app's own entry points): the empty list; importing from the system file picker; the row showing name, version and permissions; swipe removal with its confirmation; a package without `service.json` refused with `服务包未被接受：service: package has no service.json`; `ping` answering directly; a service's `fetch` going through the app (the fixture recorded a request with the app's user agent); and a storage-only package refused by name when it fetches.
-
-CI-only evidence (Kit 473 tests): the `describe()` method list, the Keychain storage and 「账号值」 screen, and `ServiceCallWithSecrets` refusing a missing key or a withheld permission.
-
-Not verified: entering account values and running on a real device, third-party packages, any mechanism for a package to declare which keys it needs (there is none; the person chooses the names), and how Core's `secrets` and the client's Keychain behave after a device lock.
-
-
-## PiP and background remain device items as of 2026-11-05
-
-On a simulator `AVPictureInPictureController.isPictureInPictureSupported()` is false, so the player never draws its PiP button (`App/VideoPlayerView.swift:503`) and PiP cannot be verified there; background shows only that the process lives (`app_state=4`), while background playback and audio need a device. Video playback, the three download cases, and the standard AI and Magpie fixture loops all pass on iPhone 17 / iOS 27.2 - see the same-day [STATUS](STATUS.md) entry.
-
-## Theme HTTPS install and long-press arranging became verified on 2026-11-05
-
-Against a real local CA and the 18791/18792 fixtures, the three theme-link cases (HTTPS install/select/relaunch, an invalid theme keeping the selection, and plain HTTP refused by the client) pass 3/3 on iPhone 17 / iOS 27.2; `testBoardLongPressAndSizeSurviveRelaunch` passes 1/1; and the 16 light/dark screenshots across iPhone and iPad portrait/landscape show no cropping, overlap or unreadable text. The earlier "skipped because the fixture is missing" record is no longer the current state.
-
-Still unverified: an iOS 26 runtime (this machine has 27.2 only), a real device, background/lock screen, Live Activity, PiP, actual speakers and real accounts; landscape element measurements are unreliable, so those conclusions are whole-image statistics plus visual review. See the same-day [STATUS](STATUS.md) entry.
-
-# What is not verified yet
+# Still unverified boundaries
 
 [简体中文](UNVERIFIED.md) | English
 
-## The index entry reaches main, and the0.3.6 candidate (2026-11-04)
-
-Core `25e5ca3` is published on main with all four CI jobs passing; iOS main `e64847e` pins it, and its product code matches the Mac-tested `107286d` file for file. On the Mac isolated copy, `swift test --filter SourceLibrary --no-parallel` recorded13 tests/4 suites with0 failures and the index identity case actually executed and passed; the device App Release build and the UI-test compilation both exited0.
-
-Still unverified: UI tests were compiled only; device installation, background/lock screen, Live Activity, PiP, real audio output and real accounts remain separate; this Windows machine cannot run Swift tests for Mac, so those counts belong only to the logs the worker returned.
-
-## Core313951e main integration and candidate IPA acceptance (2026-11-04)
-
-Core `313951e157a18e524f4c0c80c46d78abee662f2b` was published on main while retaining its single commit and tested tree. Both source-main pins match; Core CI41814080991 passed Linux, Windows, macOS Go and Apple SDK/Swift smoke jobs. iOS candidate c751085 passed CI41815696096. Original logs confirm443 tests/82 suites and XCTest31/0, with device App and UI-test compilation passed. The unsigned candidate IPA is29,478,302 bytes, SHA256 `9cebc4f5c07ab2f5de252d70ac446fd52e9e46dbe24880b1541980385e4742bd`. GitHub artifact digest, both ZIP CRC layers, App/Widget0.3.5/17, minimum26.0 and the full embedded Core313 marker passed.
-
-Main product source matches tested c751085; only this documentation is added. Swift business logic is unchanged and retains its existing duplicate-key text compatibility parser; consumption of Go's structured error object is not claimed. UI was compiled only, with no new UI/device execution. Public0.3.5 and AltStore retain the previous Coreccb package; this candidate does not replace the release. Receipt/original logs: `E:/Temp/nk-313-consumer/ios-accepted.json` and `ios-ci-logs.zip`. Delivery: `E:/Code/deliveries/2026-11-04-core-313951e/`.
-
-## Release 0.3.5 / build 17 and subscription acceptance (2026-11-04)
-
-Public tag `v0.3.5` points to `7c0d61bf03b774e804abfd4297e065bcb87a3e65`, with Core `ccb626825bc116dad3b3e9a082867fd22c09caf4`. CI41791891766 passed Core/Kit, device App build, UI-test compilation, IPA packaging and publication at that exact release commit; it did not execute UI tests. Compared with accepted combination bac68cda, the only non-Markdown difference is App/Widget version metadata in project.yml. The prior 443 tests/82 suites and 31 XCTest counts remain attributed to that combination's original logs.
-
-The public IPA returned HTTP200 and 29,478,760 bytes; SHA-256 `34091cbbaa23db16b95f34d1ee86a4909c3b0e99a649216274f6760efcc801bd` matches the GitHub asset. ZIP CRC, App/Widget0.3.5/17, iOS26.0 minimum and the full Core marker passed. Bilingual release notes were written and read back identically. AltStore refresh41797483555 succeeded. GitHub Raw, CNB and the fixed Release endpoint all returned HTTP200, with legacy fields, flat versions and stable channel matching the new version/build/size/minimumOS/URL. Icon HTTP200 and actual decoding also passed.
-
-Delivery: [unsigned 0.3.5 IPA and receipts](../../deliveries/2026-11-04-nekularity-035/README.en.md); original acceptance records: `E:/Temp/nk-ios-035-evidence/`. This adds no historical full-UI count. Signed devices, background/lock-screen, Live Activity, PiP, speakers and real accounts remain separate. Older entries below retain the state and scope of their own execution.
-
-## Core ccb6268 integrated; CI and candidate IPA verified (2026-11-04)
-
-The iOS main pin is now `ccb626825bc116dad3b3e9a082867fd22c09caf4`. CI41780802099 passed Core build, Kit execution, device App build, UITests compilation and IPA packaging at `bac68cdad3920ef76b299f59a2a8196e9b518add`. Downloaded original logs confirm Swift Testing443 tests /82 suites passed, plus31 XCTest cases with0 failures. UI tests were compiled, not executed.
-
-The unsigned candidate IPA is 29478759 bytes, SHA-256 `27b901290665bda5731c04ddeb28270a086318f47d6375c0b061762ab1e33d2c`. GitHub artifact digest, both ZIP CRC layers, App/Widget0.3.4/16, iOS26.0 minimum and Core marker passed. After plugin download timeout/address validation failure, GitHub CLI using the same laincat account retrieved original logs and resumed the artifact; HTTP206 range and final artifact digest matched. Receipt: `E:/Temp/nk-core-source-release/ios-accepted.json`.
-
-Integration leaves tested product/test sources unchanged; subsequent differences are evidence documentation only. No new release tag was created: public0.3.4/AltStore still contain Core3be57b5. Historical UI, device, background, PiP and account scopes are not upgraded. Desktop main remains3be57b5; its ccb candidate passed Windows consumption and is under the existing Orca Worker for Mac.
-
-## Release 0.3.4 and download image integrity repair verified (2026-11-04)
-
-Orca Worker fixed two actual defects on base ac8e2b6/Core 3be57b5: offline bytes no longer repeat source onResponse, while decoded modifyImage remains enabled; raw validates post-onResponse bytes with a 64-pixel thumbnail, following existing mirror fallback or DownloadStore failure/retry instead of completing a corrupt chapter. Valid PNG/JPEG bytes remain unchanged. Existing corrupt chapters are not deleted automatically and still require user removal and redownload.
-
-Actual Core with isolated URLProtocol fixtures produced 4 tests/7 issues on the old implementation, covering duplicate-transform not an image, accepted HTTP 200 garbage and an unrequested mirror. All six new regressions passed. Xcode 27.2(27B52)/Swift 6.4.2 final `swift test --no-parallel` passed 436 tests/81 suites/0 failures. The final simulator build-for-testing passed, and serial BadImage→Reads passed 2/2 in one invocation(58.922/52.680s): actual local HTTP garbage produced a retry row, restored PNG retried successfully, and reopening the downloaded chapter after server shutdown exposed the actual 第 1 页 Image. Initial fixture actor compilation, incorrect 1 页 versus actual 1/1 waiting, and port-release failures remain recorded separately from the final product result.
-
-Original logs remain on Mac under `/tmp/nk-ac8-image-integrity/`: `swift-test-final.log`, `ui-build-final.log`, and `ui-targeted2.log`. Windows `E:/Temp/nk-ios-034-evidence/mac-image-integrity-report.json` is a Worker-reported receipt, not a copy of those logs. Mac lacked tree-sitter and ran rules across 173 files only; syntax parsing is not counted as passed.
-
-Lead recovered the 25575-byte patch with SHA256 691086b271d0a46cfc1cc9f11db1ffe8fe5bb961712240fd968f912cec7dee75; all four integrated Git file hashes exactly match the Mac-tested files. Receipt: `E:/Temp/nk-ios-034-evidence/patch-integrated.json`. App/Widget 0.3.4/16 are published at tag commit 66454e86f4aa3e1bbba94f64cb29b56783513a82. CI 41749091496 passed attempt 1. The public IPA returned HTTP 200/29,459,904 bytes with SHA256 c31d240513f2f82d97a507d8255bf586a28a8e518eff03d3a027c16f6571454c; ZIP CRC, both versions/minimum 26.0 and the Core 3be marker passed. AltStore refresh 41752744406 succeeded: repository main e81249d and GitHub Raw/CNB/fixed Release public endpoints all contain 0.3.4/16 with matching versions, size, minimum OS and URL; the icon returned HTTP 200 and actually decoded. Delivery: `E:/Code/deliveries/2026-11-04-nekularity-034/README.en.md`; receipts: `E:/Temp/nk-ios-034-evidence/release-accepted.json` and `altstore-accepted.json`. The Core pin remains 3be57b5. This does not increase historical full UI 27/0/0 or cover devices/background/real accounts.
-
-## Simulator position restoration across App processes (Orca Worker report, 2026-11-04)
-
-On the dedicated simulator with 0.3.4/16 and Core 3be57b5, App PID 2020 played the 30-second HLS fixture to 7.211756 seconds, paused, and closed the player page normally before the App was terminated. PID 2099 reentered through search and the episode page for the same video source: its diagnostic start was 7.000000 seconds, and autoplay reached 8.342057 seconds about 2.08 seconds later. After correcting the test's PID thousands-separator parsing, the targeted XCTest passed 1 test/0 failures. Disk history read after the entire run was 7 seconds/30 seconds/23%; it was not a separately captured snapshot between the two processes.
-
-This establishes simulator cross-process position restoration through that search/episode path. It does not establish direct entry from Continue Watching/local entries or device, background, or PiP behavior. The diagnostic build temporarily read PID, start position and player clock; product source was restored, rebuilt and installed, and the restored VideoPlayerView.swift SHA is 0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37. Original logs remain on Mac under `/tmp/nk-ios-cross-process-resume-evidence/`; `E:/Temp/nk-ios-034-evidence/cross-process-worker-report.json` is a Worker report, not a copy of those logs. Direct-entry UI validation is deferred to the planned UI/UX reconstruction.
-
-## Mac closure and Core main results (2026-11-04)
-
-After user unlock, Orca Worker started the verified c545212 package with isolated data and closed its native window once; the original process exited 0 without a signal. Core single-root main c0f0dfa passed all three-OS Go and Apple SDK/Swift CI jobs on its own SHA. See [STATUS](STATUS.en.md); device, account and distribution choices remain external.
-
-## Mac theme and build follow-up (2026-11-04)
-
-The original Orca Worker reported all four populated-cover appearance/orientation cases, two dark-label contrast ratios of 4.665:1, and the exact 736e364 local 430-test/80-suite build and IPA. Detail entry proves navigation only: its missing source prevents full content-loading acceptance. The local Xcode 27.2/SDK 27.2 IPA is recorded separately from the public CI artifact. See [STATUS](STATUS.en.md). Valid/corrupt/restored offline-image cases pass; the complete tested files and serial-isolation repair are integrated at a7b5fbd, with historical full-suite counts unchanged.
-
-## Release 0.3.3 acceptance update (2026-11-04)
-
-0.3.3/15 at 736e364 is published: CI attempt 2 passed; IPA HTTP 200/29,457,850 bytes, digest, App/Widget metadata and Core pin verified. After the generation-step authentication repair, AltStore repository data and all three public endpoints agree on 0.3.3/15. See [STATUS](STATUS.en.md) for receipts. Orca Worker accepted valid/corrupt/restored offline-page cases without product changes; the tests are integrated at a7b5fbd, with a serial negative→positive run passing 2/0. Other delegated Mac tasks require their own terminal reports; device/background/account items remain external.
-
-## Offline-page assertion and serial isolation verified (2026-11-04)
-
-Review found that `testDownloadedChapterReadsWithNoServer` only waits for the Keep Page button after stopping the loopback server. ReaderView's toolbar exists before image decoding, and its enabled state only reflects the URL list. The earlier test pass therefore does not independently prove decoded downloaded images. Historical 27/0/0 counts remain unchanged; same-title download navigation is not promoted to image-rendering acceptance.
-
-The tested change is integrated: after server shutdown it waits for the page image exposed by ReaderPage's successful CGImage branch, and the negative control returns HTTP 200 with undecodable bytes. On the dedicated simulator, Orca Worker passed the positive case in39.920s, the negative control in61.470s (toolbar assertion held while the image predicate failed within8s), and the restored-image rerun in40.572s.
-
-Review then found that the negative case's corrupt chapter made the following positive case skip downloading. A single serial invocation reproduced FAIL at NekularityUITests.swift:1204 (2 tests/1 failure). Calling the existing removeDownloadedProbeChapter at the start of the positive case made both pass in one invocation (63.733s and53.172s). Both final test files match the Mac-tested SHA byte-for-byte with LF endings; product code is unchanged and the historical full-UI27/0/0 count remains unchanged. Logs: `/tmp/nk-offline-image-evidence/`; Lead receipt: `E:/Temp/nk-offline-image-evidence/mac-receipt.json`. This covers only the targeted simulator case, not a device or full-suite rerun.
-
-## Targeted thirty-second HLS resume accepted (2026-11-04)
-
-Orca Worker played thirty-second local media on the dedicated signed simulator and closed it by swipe and button. Positions before closure were 7.24/7.30 seconds; both persisted 7 seconds of 30, or 23%. On automatic reopening, without touching pause, play or subtitle controls, both started at 7.00; early App/engine/source clocks were 9.60/9.50 seconds. CoreMedia reported postSeekPosition 7.000000 in both cases; the approximately 2.5 seconds elapsed includes autoplay and UI sampling. After temporary read-only diagnostics were removed, the app was rebuilt and installed with VideoPlayerView SHA 0daef0ed11c4cd12e4918ed0f89d30e8066a37c75011974a94f1d76c1fdbff37, matching the previously tested source. The Git master playlist uses LF/110 bytes; the Windows CRLF copy uses 114 bytes; remaining media digests matched. Logs: `/tmp/nk-hls30-resume-evidence/`; receipt: `E:/Temp/nk-ios-033-evidence/hls30-mac-receipt.json`. The original ten-second failure logs remain: later actions near the end may trigger normal replay, but its precise caller is not established. This acceptance covers simulator page dismissal and reopening, not cross-process, background or device behavior.
-
-## Mac targeted fixes recovered; HLS reopening still needs review (2026-11-04)
-
-Orca Worker completed targeted acceptance of downloaded-comic identity, accessibility layout and HLS subtitles. DownloadsView retains source/comic identity: both old rows displayed “甲章”; after repair the same-title entries are distinct and deleting one leaves the other present and navigable. DiscoverView uses one column at accessibility sizes: Favorites no longer wraps character by character, discovery/settings endpoints are accessible above the bar, and ordinary text retains two columns/order. Actual HLS playback shows selected Chinese/English text and removes it when off, with correct media Referer and Range 206. This does not establish automatic default selection, audio or device acceptance.
-
-With progress reporting centralized in onDisappear, swipe and button exits both persist seconds 7/percent 70; the old swipe created no shelf.json. Earlier reopening acceptance remains FAIL: start 7 was passed, but pos 1.5 and a seek completion target 0 were observed. Additional logs show about 2.7 seconds of playback from seven seconds before pausing, then subtitle selection and another play request. This may invoke normal replay near the ten-second clip's end; the cause is not confirmed. A subsequent initial-position check with thirty-second media passed, as recorded above; it does not establish the original ten-second seek caller. The existing strict greater-than-five-second resume rule remains unchanged.
-
-All three files were recovered byte-for-byte and integrated into main, matching the Mac-tested SHA values. The combined App/UITests incremental Mac build-for-testing passed at `/tmp/nk-downloads-identity-evidence/ios-build.log`. Individual runtime evidence is under `/tmp/nk-downloads-identity-evidence/`, `/tmp/nk-largetext-fix-evidence/`, `/tmp/nk-ios-hls-evidence/` and `/tmp/nk-ios-evidence-resume/`; Lead receipt: `E:/Temp/nk-ios-033-evidence/mac-ui-receipt.json`. No full UI rerun occurred. The experimental removal of the second play call was not adopted; 0.3.3/15 remains unpublished, resume has passed targeted follow-up, and final CI/IPA verification remains pending.
-
-## Theme matrix follow-up: empty states reviewed; largest text and iPad are now verified (2026-11-05)
-
-**This section's scope has been superseded.** On 2026-11-05 the full suite was re-run on an iPad Pro 11-inch (M5)/iOS 27.2 and on an iPhone 17/iOS 27.2 at the largest accessibility text size (AX5): iPad 29 cases/23 passed/6 skipped/0 failed, AX5 29 cases/20 passed/9 skipped/0 failed. Neither run still failed on a one-character-per-line Favorites card or on content behind the bar, and settings scrolled to 外观 with all three 跟随系统/亮/暗 states was measured on the simulator as well (dark survived a relaunch). Details in the 2026-11-05 entry of [STATUS](STATUS.en.md).
-
-Still **not** verified: real devices, background/lock screen, Live Activity, PiP, actual speaker output and real accounts. The text below is that earlier run's record (2026-11-04), kept as history.
-
-Orca Worker completed three theme-link cases and individually read all eight discovery/settings images and AX trees across light/dark and portrait/landscape. Portrait app.frame is 402×874 pt with 1206×2622-pixel images; landscape is 874×402 pt with 2622×1206-pixel images. All four states have correct orientation and nonblank captures; initially cropped XCTest landscape captures were excluded. Landscape is a wider viewport on the same iPhone simulator, not iPad or foldable hardware. Evidence: `/tmp/nk-theme-matrix-evidence/visual-review.md`; Lead scope receipt: `E:/Temp/nk-theme-matrix-review/receipt.json`.
-
-Discovery coverage is limited to empty states: normal-size cards/two columns and light/dark appearance were correct. Lower content sits behind the native tab bar; this has not established that scrolling cannot reach the final content. Dark settings blue text appeared dim, without a quantitative contrast finding. At maximum accessibility text size, the Favorites card wraps one character per line and needs a minimal layout repair. The AI settings row initially sits behind the bar, but discover.search, discover.browse and settings.ai each actually opened when tapped; log: large-actions.log. This does not accept all content or largest-text layout.
-
-No product changes were made. System appearance and text size were restored; the ending theme follows system. Initial orientation is unknown; the run ended portrait and retained its fixture CA/theme. Remaining coverage includes the largest-text repair, populated cover lists and the scroll endpoint; the three passed link paths do not need a repeated full suite.
-
-## Core 3be57b5 integrated into main; final CI/IPA accepted (2026-11-04)
-
-Current main pins `3be57b5ceb848bb9623c090abc463764add14de4`, including Swift streaming response-head/chunk forwarding, immediate Core binding after successful Magpie sign-in, and the byte-exact real-Core regressions. Product and test sources remain identical to tested combination `357434677c7fd389ccc512965027a5e456021658`; only integration documentation and removal of temporary candidate-branch CI triggering differ.
-
-GitHub Actions `41689864772` succeeded at that exact candidate: Core build, executed Kit tests, device App build, UITests compilation, and IPA packaging/upload all passed. The downloaded unsigned IPA is 29,455,523 bytes, SHA-256 `e12e8e8f97f2541717fd2f3dded6199bd75e8b2a09d4e8a3bdf1dc3c76214634`; App/Widget are both 0.3.2/14, minimum iOS 26.0, and the App binary contains the expected Core pin. Artifact digest and both ZIP CRC checks pass; receipt: `E:/Temp/nk-ios-final-integration/receipt.json`. The plugin's address validation refused the full CI-log download, so only step outcomes are reported, without inventing a test count.
-
-CI only compiled UI tests. Orca Worker's two actual signed-simulator AI UI results are detailed below; tested product files match this combination. This IPA is not a new release: public v0.3.2/AltStore still serves the older 4f213ff package. The existing Worker is executing the theme matrix and has the current desktop Mac package queued. Devices/background/PiP/Live Activity, real accounts and normal Mac window closure remain outside acceptance. Historical main/pin/pending statements below retain their original context; this section describes current integration.
-
-## Standard AI signed-simulator HTTP/UI acceptance (2026-11-04)
-
-Orca Worker passed 1/1 in 183.049 seconds on d3672a8/Core 3be57b5 plus the verified Magpie binding fix, using only dedicated simulator 72DFD602-9D8E-40BB-8F96-DA3668ABE7C7 and fixture-key. Chat/Responses/Messages displayed their expected Fixture replies, explicitly marked as whole responses. UI stop produced peer_closed for slow request 22 with no expiry. A model-catalog 401 displayed the exact error without increasing existing Chat-answer count; this is not a separate chat-response 401 UI test. After terminate/launch without reentering the key, Clear Key remained available, the 18796/v1 root was restored and requests 24/25 were authorized. Final requests 16–25 were authorized without Cookie. This establishes simulator-App Keychain restoration, not host Keychain, real accounts or refresh.
-
-The first three failures were driver insertion of /v1v1, incorrectly requiring mode on a waiting event and a 401 assertion matching old history. The corrected driver passed without standard-AI product changes. Logs/xcresult/screenshots: `/tmp/nk-standardai-acceptance/evidence/`; Lead receipt: `E:/Temp/nk-standardai-ui-acceptance/receipt.json`. Full Kit and Magpie UI were not rerun; the earlier ad8 address candidate was not integrated. MagpieSignInBindingTests.swift was received exactly: 2713 bytes, SHA-256 4ebc5f612ac17b4c5c8d5c74335c356a52984207ef46a832c865f496ca6eef6e, matching the two Mac-passed real-Core binding regressions.
-
-**Targeted iOS Magpie UI passed (2026-11-04)**: Orca Worker passed 1/1 in 78.729 seconds on dedicated simulator 72DFD602-9D8E-40BB-8F96-DA3668ABE7C7, based on d3672a8/Core 3be57b5. The missing sign-in button came from Keychain -34018 in an unsigned test build; CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- fixed that condition. A subsequent product defect saved successful sign-in credentials without binding the current Core, so models used default port 18797 instead of entered 52970. The fix calls core.setAuth after saving immediate/polled success. Both real-Core binding regressions failed on old code; the fix passed 15/15 related Mac tests plus App/UITests compilation. Actual UI sign-in, models, visible first text before tail release, stopping request 3 with peer_closed, and App relaunch retaining auth and completing 第一段 第二段🐾 all pass with refresh count one. Product SHA-256 7b54e432e5d4fa37fa4e359c53f078a125078310aaf4e8ee17638e1d1328bd8b exactly matches the Lead candidate; both regression test sources have been byte/hash-verified and added to the candidate. Evidence under `/tmp/nk-d367-acceptance/ios-diagnostic/`: binding-fixed.log, ui-binding-fixed.log, ui-binding-fixed.xcresult, events.jsonl; Lead receipt: `E:/Temp/nk-magpie-binding/receipt.json`. This validates simulator-App auth persistence, not host Keychain or physical devices. Only package records were preloaded, so UI package import is not established. Earlier failure logs remain; the existing d367 CI artifact excludes this later fix.
-
-**New-pin Mac real-HTTP integration (2026-11-03)**: Orca Worker mac-validate-2 passed 1 test/1 suite at Nekularity `d3672a8`/Core `3be57b5` through real URLSessionTransport→CoreHost/CoreStreamHost→gomobile CoreMagpie→loopback HTTP. Models, first text “第一段 ” before tail release, peer_closed for cancelled request ID 3, exact SavedAuth file persistence and a rebuilt instance completing “第一段 第二段🐾” all pass. Refresh count stayed one; four provider requests were authorized without Cookie. The SDK was built from a clean exact-pin Core checkout; macOS slice SHA-256: 24c00ca89b47cd80529063924f56d6a39f5304481174dca12712d0115e71f366.
-
-Focused log: `/tmp/nk-d367-acceptance/evidence/acceptance-test-02.log`; events: `events-final.json`; SDK provenance: `sdk-identity.log`; Lead receipt: `E:/Temp/nk-3be-candidates/mac-http-acceptance.json`. The first attempt only failed to compile test code because Swift 6 forbids Thread.isMainThread in an async context; the corrected test passed with no product Sources/ changes. Optional 503, full Kit, App build, iOS UI and Keychain were not run in this round. CI 41661859155 has now succeeded at exact d3672a8: Core build, executed Kit tests, App/UITests compilation and IPA packaging pass. Download verification on 2026-11-04 found an unsigned IPA of 29,455,876 bytes, SHA-256 7590d8ebcdf67b4fed8bd191e187f0337ba144cde6baf7f5fe033229fcd4f77c. App/Widget are both 0.3.2/14 with minimum iOS 26.0, and the App binary contains Core pin 3be57b5. Artifact digest and both ZIP CRCs pass; receipt/log: `E:/Temp/nk-ios-d367-ci/receipt.json`, `verify.log`. UI tests were compiled, not executed in this CI; publishing was skipped and AltStore was not updated. This does not establish device or iOS UI acceptance.
-
-**Magpie local HTTP fixture (2026-11-03)**: Added `scripts/fixtures/magpie-http/`, containing an IPv4-loopback-only server and importable provider package with remote models, fake-credential refresh, held SSE bodies, targeted release, peer closure and HTTP 503. Using published Core `3be57b5` public mobile Magpie APIs over real HTTP, the Lead verified first text before body completion, cancellation observed as peer_closed, file-persisted SavedAuth consumed by a rebuilt instance with only one refresh, Unicode answers and error propagation. ReadPackageArchive/LoadPackage/Auth also verified the packaged files. Logs and ZIP: `E:/Temp/nk-magpie-http-evidence/`; see the [fixture guide](../scripts/fixtures/magpie-http/README.en.md). This verifies a Windows Go host, not Swift URLSession, Keychain, app restart or iOS UI. Main remains pinned to 4f213ff; client acceptance must save refreshed auth and read it after an actual restart.
-
-**Core publication and consumer candidates (2026-11-03)**: Core main is now published as `3be57b5`, with functional source identical to `6129f59`, which passed all four jobs in CI `41631619233`. Tree-preserving fold receipt: `E:/Temp/core-stream-release/publish-receipt.json`. New isolated pin candidates are Nekularity `ea87eb5` and Nekophage `f7b99d1`, both selecting 3be57b5. Desktop seven-check and actual binary-version validation pass; For iOS candidate `ea87eb5`, Mac CI `41638119772` passed Kit tests and compiled the app and UI tests; the downloaded unsigned IPA SHA-256, ZIP CRC, App/Widget 0.3.2/14, minimum iOS 26.0 and Core marker were verified. UI tests were not executed. Swift early-head candidate `65eba9f` failed the Kit test step in CI `41635149850`; all three focused assertions at `77c2c6` also failed on Mac. The first termination is under diagnosis, and this candidate is not integrated into the new-pin branch. Core can deliver text incrementally when hosts provide early headers, while old client hosts remain delayed and the standard AI screen still returns whole replies. New-pin windows, Mac consumer, UI and device acceptance cannot reuse old-version results. Both client main pins remain 4f213ff.
-**Desktop main integration (2026-11-03)**: the earlier confusion between Nekophage's working branch and main has been corrected. Before integration, actual main was `28be4bd`/Core `214e778`; inspection log `E:/Temp/core-magpie-first-chunk-evidence/desktop-main-ref.log`. The `fix/subtitle-record-cap` branch has now fast-forwarded actual main to `67fc877`, pinned to `4f213ff`, with the source branch retained. WebView probe isolation was ported and accidentally tracked Python bytecode removed. Seven checks and isolated Windows reading pass: two decoded pages, double-page layout, 55% progress and reopening at 1200, with only the current chapter's storage key. Receipt `E:/Temp/nk-desktop-integration/receipt.json`. The `a079ce7`/Core `b55c1a4` Windows package remains a separate candidate, pending new-pin macOS consumer acceptance. Nekularity main remains pinned to `4f213ff`.
-
-**Standard-interface HTTP errors pass Mac Kit regression; the screen remains pending**: `bb77b5d` is integrated through `9af6148`. The Orca Worker passed four targeted cases and the full 425/78 suites, and restoring the old implementation failed two error cases. Windows loopback checks and Mac URLProtocol tests have separate evidence, neither replacing real HTTP/UI screen results. A Mac receipt is available for address candidate `ad8e191`; model listing still fails and the cause is unproven. See STATUS.
-
-**Standard-interface entry still disagrees with request configuration**: `ad8e191` compiles on Mac and the Orca Worker reports five display/clear/relaunch passes, but catalogs still fail with `no host` and zero fixture requests; replies/cancellation/error UI remain unaccepted. Offline plist reads disagree with app read-back. Layer-by-layer byte comparison is needed; a stale snapshot is not an established cause. The Lead's same-pin Go reproduction distinguishes complete, single-slash and `/v1` inputs; see STATUS.
-
-**Earlier b55c1a4 candidate acceptance record**: Core `b55c1a4` integrates actual connection cancellation; consumer candidates are iOS `b39e6b0` and desktop functional source `a079ce7`, with main pins unchanged. New-pin iOS CI/IPA acceptance passes, but UI has not run. Windows installed local HLS, captions, cross-process resume, authentication and Range are accepted; new-pin macOS and audio/device acceptance remain pending. Magpie transport receives chunks but plugin text still waits until the body ends, reproduced on loopback; UI streaming cannot be claimed. See STATUS.
-
-**Magpie chat cancellation is fixed but not yet in clients**: at `2c9c83b`, `ChatCancel` only dropped the handle and left blocked `Host.HTTP`/`StreamOpen`/`StreamNext` running; branch `fix/magpie-chat-cancel` gives each chat its own runtime and closes it. Five targeted race cases and the full fixture run (22 packages, 559 PASS/0 FAIL/1 SKIP) pass. Evidence is Windows fake hosts, not iOS UI, devices or a real vendor, and no client pin changed.
-
-**Standard-interface cancellation passes compilation and unit regression**: code from `77b969f` is integrated into main; Mac Kit 421/77 suites, five targeted cases and App/UITests compilation pass. Negative controls and logs are in STATUS. Real HTTP/UI behavior on the standard-interface screen, real accounts and first-network-chunk timing remain unverified; this path still returns whole responses. Published v0.3.2 does not contain the fix.
-
-**Release verified; devices still pending**: `v0.3.2` release CI `41578147149` succeeded on all 13 steps; the IPA answers HTTP 200 at 29,418,522 bytes with SHA-256 `f59afe889def90131a8994a59a92571b6acc823679431d37c16c032f29bc8737`, both bundles report 0.3.2/14 with minimum iOS 26.0, and the package carries pin `4f213ff` (the old `8e14aad` is gone). AltStore `468761a` serves 0.3.2/14 in the stable track and first flat version, with a 200 icon and a 206 ranged IPA response; the cnb mirror and release entry already serve it, while `raw.githubusercontent.com` returned 0.3.1 on the first check and 0.3.2 about twelve minutes later, which is CDN caching lag (all three entries now read 0.3.2). Whole-job CI log download was refused by the plugin address safety check and not bypassed, so CI conclusions rest on job/step states. The Mac acceptance of tree `9498b4c` (416 tests/76 suites, full UI 27/0/0) is in STATUS. Devices, background/lock-screen, PiP, Live Activity and real accounts remain unverified.
-
-**Historical receipts reconciled**: `1888cd3` full UI is 27/0/0; `ed09c82` passes 416 unit tests and two download UI cases; `61197f8` search passes, FAILS when intentionally broken, and passes after restoration. Results retain their individual commit attribution; the separate full combined-candidate result now belongs to `9498b4c`. Three old CAs are removed by fingerprint; the newer `1888cd3` CA `C0E33FBD155EF2C9…` remains until 2026-12-03, so the test trust store is not empty.
-
-**Download archive isolation and retry pass unit regression**: `2d9f555` passes 2/2 and 398/398 on macOS, `7550c12` adds 4/4 new cases with 402/402, and `920b94a` passes 6/6 write-path cases across four runs with 404/404, `b3860ea` passes 7/7 across four runs with 405/405, `afe1259` passes 8/8 across four runs with 406/406, and `9f15203` passes 9/9 across four runs with 407/407 in the full suite. Coverage is temporary directories, manifests and injected closures only; devices, the downloads screen and live networks remain unverified, the UI entry for retrying a failed chapter now has simulator coverage (two consecutive runs at `6037f6a`, both from a dirty starting point with the chapter already downloaded, both passing), and it now lasts across launches as well (`0.3.1`): the request and the reason are written to `failures.json`, a relaunch keeps the row retryable through the app's `fallbackFetch`, and a failure row can be dismissed on its own. What is still unverified is the same path on a device, in the background and on a live network. The functional limits are part of the record: an interrupted chapter restarts from page 1 (there is no resume), queued work does not survive an app restart, and downloads in the background or with the screen locked, including the Live Activity, are unverified; partial folders nothing refers to after a reopen are deleted rather than resumed.
-
-**Interface changes executed; visual matrix deferred**: `5f15769` builds App/UITests on a Mac and passes the complete UI suite 26/26; `81eb017` builds and passes three targeted interaction cases, though its full suite was not run. Light/dark narrow/wide captures, correctly oriented three-column captures, Dynamic Type and Reduce Motion remain unverified, and the large-text truncation issue is known and unfixed; these are the visual items the user asked to defer. The 24/24 and release evidence below belong to earlier commits and stay separate from this round.
-
-Updated 2026-11-03. The latest reconciled full Mac UI run is `9498b4c`: 27 PASS / 0 FAIL / 0 SKIP, log `/tmp/nk-949-evidence/full-ui.log`, agreeing with class counts and the xcresult summary. The earlier same count at `1888cd3` retains its own execution record. The following `95818c5` (0.3.1 build) result is retained as history: **27 tests / 23 passed / 4 skipped / 0 failed** from a clean start (`/tmp/nk-95818c5-ui-fullsuite.log`). All four skips in that run were missing prerequisites: the video source and HTTPS fixture/test CA. Later the video case passed separately with a new five-source seed (28.276 s), and the theme cases passed 3/3 separately with the fixture at `17ba4c5`. That run retains its 23/4 count; the later `1888cd3` full 27/0/0 run with both prerequisites ready has its own log and does not rewrite the older result. The earlier `5d9a5a1` run of **24 / PASS 24 / FAIL 0 / SKIP 0** remains the result of that commit (its suite composition differed), and is not reused as the current conclusion. Historical note, 2026-11-02: `5d9a5a1dfd5ce0e9d58fead6371d5cc4b3f842c4`: an Orca Worker uninstalled the app, reinstalled and reseeded the same dedicated simulator, confirmed Themes was empty before launch, and executed **24 cases / PASS 24 / FAIL 0 / SKIP 0** (`/tmp/nk-ui-full-5d9a5a1.log`). All three theme-link cases and the three-column case passed; the earlier 19/19 at `8acbb78` is historical. Long-press entry and resize persistence after relaunch are verified. An earlier Orca Worker separately passed the drag/relaunch case on App `7586982` and cross-checked `homeBlocksV2`; this was not another full-suite execution. Original test commit `33be2af` is on the remote validation branch and integrated into main as `9b2b3e6`; the test file matches the Mac-executed version, and Windows only adds Swift parsing. Eight light/dark discovery/settings captures cover iPhone 402 pt/two columns and iPad 1032 pt/four columns. Five later end-of-scroll captures on `211cd64` confirm that footers do not intersect the pill (about 21–43 pt clearance), with no need for extra bottom margin. Later `5d7022d` established three-column geometry at 874 pt landscape content width; rotated captures and dark-mode top clipping still need another capture. The iPhone bottom captures cannot simultaneously show the TMDB note, which has scrolled to the top. Theme HTTPS install/select/relaunch and invalid JSON passed at `5d7022d`; plaintext HTTP refusal passed separately on App `a526add`. Mac Theme unit tests executed 8/8 at `9005dca` and 12/12 at `6bb7933`. At `9f7840f`, Theme tests execute 12/12 with 0.015 s refusal, while the full UI run did not pass. The Worker originally reported 24 cases / PASS 22 / FAIL 2 / SKIP 0, but listed two assertions in only one failing method; failed-case totals still need reconciliation. The theme-test order dependency is fixed in `5d9a5a1`, whose full 24/24 receipt has arrived. Release CI `41465697611` for 0.2.7/build 9 passed: the IPA downloads with HTTP 200, 29,368,112 bytes and SHA-256 `182f62cf2aea32d6b8183effd0f0f31aede1deeab4270ce02d22b6a12bc8b7f3`; the packaged App/Widget are both 0.2.7/9 and contain the theme HTTPS rejection text. AltStore workflow `41471135708` moved the stable track and first flat entry to 0.2.7/9, with the icon at 200 and ranged IPA at 206. The IPA is unsigned, so signed installation, on-device launch and this version's on-device interface remain unverified; the older release's checks are not reused. Results from different commits do not form one run. Devices/background behavior and real accounts remain unverified. Release build `41431641042` for `0.2.6` (build 8) is green; the downloaded IPA is 29,361,985 bytes with matching App/Widget versions and HTTP 200, and both the AltStore repository and subscription list that version. CI unit tests and simulator UI execution are separate evidence; old-version test counts are not reused as current results.
-
-One measured fact belongs next to that, so "above the floor" is not the whole story: the contrast of each accent against the text colour it selects is `#3482FF` 3.63:1, `#6BA4FF` 8.38:1 (dark text) and `#0A84FF` 3.65:1. All clear the 3:1 floor the code uses for large text, but the first and third are below WCAG AA's 4.5:1 for body text — an existing palette decision, not changed here, recorded so the numbers are not lost.
-
-The contrast criterion for the three accents still comes from `accentTextFollowsTheAccent` and the code; the general light/dark layout captures do not separately measure contrast for all three accents. The three shipped accents resolve to white text on `#3482FF`, dark text on `#6BA4FF`, and white text on `#0A84FF`.
-
-Earlier evidence: **this tree compiles.** GitHub Actions run `41316459367` (commit `71c8c97`) built the pinned Core, ran the four repository checks, generated the project, compiled the app with `xcodebuild` on macOS, and produced an unsigned IPA (18.9 MB). The worry that the commits after `b9fdf3c` had never seen a compiler is now settled.
-
-Compiling is not behaving. CI runs `swift test`, but only compiles the iPhone interface cases; the Mac Orca Worker executes them on a simulator. Real devices, accounts and servers remain separate gaps below.
-
-## Local fixture for the theme-link UI cases
-
-The three cases in `UITests/ZZThemeLinkTests.swift` need HTTPS on `127.0.0.1:18791` (valid/invalid JSON), HTTP on `127.0.0.1:18792`, and a test CA trusted in that simulator. The server and three JSON files now live in `UITests/Fixtures/theme/`; certificates and keys are generated at runtime and not committed. After generating the Xcode project, run `sh scripts/theme-fixture.sh <UDID>` to serve, add the simulator-only CA, preflight and execute the three cases. The script keeps the certificate directory, reports fingerprints/expiry and never resets the keychain. Without listeners the cases still `XCTSkip`; missing fixtures or expired certificates cannot count as passes.
-
-Evidence provenance: run on 2026-11-02 by an Orca Worker on the dedicated simulator `0A67B65C-9EB9-4504-B7C6-7A8EC74DA1A0` with App `a526add`; UI test commit `aeead82` was cherry-picked as `3167a5e`. HTTP case: the alert names `https`, the test theme never appears in the list, the plaintext server receives 0 requests, and the Themes directory gains no file. HTTPS install/select/relaunch and the invalid-JSON error path are earlier passes on the same fixture. The earlier CA lasted two days; the new CA for the latest full `5d9a5a1` run lasts one day, expires around 2026-11-03 and remains in the dedicated simulator trust store. Temporary services and themes from that run are removed; later reruns need a rebuilt fixture and valid CA, and missing/expired fixtures cannot count as passes.
-
-## What the build proved
-
-| Item | Evidence |
-|---|---|
-| The kit and the app compile against the real iOS SDK | The "Build unsigned device app" step of run `41316459367` succeeded |
-| The IPA packaging path works | "Package unsigned IPA" and the artifact upload succeeded in the same run |
-| The repository checks pass on macOS too | The same run's check step: `check-docs`, `check-partitions`, `check-core-pin`, `check-kit-core-calls`, `check-swift` (152 files really parsed, tree-sitter installed) |
-| The Core pin is reproducible | The same run fetched and built Core at `214e7782190d` first |
-
-The first real compile found four errors that no static check of mine could see, all now fixed: `ComicDetails`' rating fields decoded into `Comic` (**which would have failed every details screen**), a static method on a `@MainActor` class called from a nonisolated context, two `status == errSecSuccess || errSecItemNotFound` comparisons that treat `OSStatus` as `Bool`, and then twelve interface errors in the app target (a style ternary, `Environment` argument order, optional chaining, the PiP content source and its cross-thread snapshot).
-
-## Still unverified
-
-Archive lifetime fix `ed09c82` has passed its Mac build, 416 unit tests and two download UI cases. The strong-capture negative control fails and passes after restoration. Combined `9498b4c` now passes 416 unit tests and the full UI suite 27/0/0; release and external-condition checks remain, and the fix is no longer marked unexecuted.
-
-| Commit | What changed | Where it stands | What is left |
-|---|---|---|---|
-| Truncation notice | Reads `outcome` from Core's events and shows "hit the length limit" in the chat screen | **Compiled and tested** (build `381f2a6` is green) | Make a model answer to its max_tokens and see the notice appear |
-| Bangumi support | Account, five collection states, episodes, weekly calendar, reminder join | **Compiled and tested** (`v0.2.0` build is green, 359 tests) | Connect a real token on a device |
-| `33c5c7a` | `seed-simulator.sh` writes into the environment actually in use | Script-level, not compiled | Whether a seeded run really shows the five sources |
-| cue overlay | Text cues drawn from `$subtitleCues`, following `clock.$sourceTime` | Compiles | One subtitle-bearing source played, cues appearing in time |
-| software-route PiP | `AVPictureInPictureSampleBufferPlaybackDelegate` | Compiles; the content source is now built from a layer, and the two synchronous answers live in a lock-guarded snapshot | One software-decoded title (VP9/AV1) going into PiP on a device |
-| `198d1ad` | Airing reminders: kit planning plus `UNUserNotificationCenter` | Compiles | On a device, turn it on and check the count; the seven planning tests |
-| `43decff` | Plex video source and Node fixture tests | `node plugins/plex.test.mjs` passes its five cases | Installed as a source and loaded once by Core's own runtime |
-| `ab1ebbb` | Details read and show `stars`/`likesCount`/`isLiked` | Compiles (the fields moved from `Comic` to `ComicDetails`) | A rating number visible on a details screen from a live source |
-| `a4ead24` | Closing the player writes the position back to the server | Compiles | Play one server item and close it; the three write-back tests |
-| `0031190` `40e0962` | The release workflow is back in the repo; version 0.2.0 | **Verified**: a manual trigger now builds and uploads | Only a tag takes the release branch, and none has been pushed |
-| `27dd92c` | Three home cards; reading lists filter out videos | Compiles | Rendering the home screen; the two `HomeLayout` tests |
-| `467b9c5` `4db8265` | Duplicate zip page names, danmaku row identity, integer timestamps | Compiles, low risk | The matching unit tests |
-| `017522b` | Server paging and a 30 s timeout | Compiles | Whether the media library lists anything (needs a real server) |
-| `7787b3b` | `PlaybackProgress` consolidates the arithmetic | Compiles (this was the biggest worry, now ruled out) | Durations and resume position on three screens |
-| `a693a63` | Zip CRC checking | Compiles | The four import tests |
-| `6ffe7d7` | `VideoPlayerView` argument order | Compiles | The player screen as it actually draws |
-| `4b80a57` | Import moved off the main actor, `importComic` is async | Compiles | Import a folder and a `.cbz` |
-| `e460fba` | Unreadable files are copied aside | Compiles | Break a store file and check the copy is left behind |
-| `6d7dc5d` | The migration crash window | Compiles | The three upgrade tests; one real upgrade on a device |
-
-## Needs real conditions
-
-| Item | What is missing |
-|---|---|
-| Media server connect, browse, play, progress write-back | A Jellyfin/Emby address and account |
-| 即将播出 | A TMDB key |
-| Pixiv following and bookmarks after signing in | A real Pixiv account |
-| Picture in Picture, lock-screen playback, notifications firing | A real device |
-| Local videos and imported comics | Files on a real device |
-
-## Checking this list itself
-
-```sh
-git log --oneline b9fdf3c..HEAD
-```
-
-Every commit that **touched code or scripts** should appear in the table; pure documentation commits are not listed because they do not compile. Writing this file is how `a4ead24` (progress write-back) was found missing from it — the list drifts, so it has to be checkable in one command.
-
-## How to run it
+This page lists only the hardware, runtime, real-account and live-site boundaries that remain **unverified**. Behaviour already proven by CI unit tests or simulator UI tests is tracked in [STATUS.en.md](STATUS.en.md), and external device handoff steps live in [HANDOFF.en.md](HANDOFF.en.md).
+
+## Real device and OS runtime boundaries
+
+| Item | Existing engineering evidence | Still missing |
+|---|---|---|
+| Signed install and device launch | Unsigned IPA archive and simulator runs (CI `42743715195`) | Signed install on physical hardware, first launch and upgrade migration |
+| Actual iOS 26 runtime | Primarily exercised on CI simulator / Xcode 27 runtimes | Verification on physical iOS 26 hardware |
+| Background / lock-screen playback and PiP | Simulator loopback playback and resume; simulator reports `AVPictureInPictureController.isPictureInPictureSupported() == false`, so the PiP button never renders | Starting PiP on a real device, backgrounding/locking, and software-decode (VP9/AV1) PiP |
+| Subtitles on AirPlay / external displays | In-simulator AVPlayer subtitle rendering, switching and off | Physical AirPlay and external display verification |
+| Physical speaker audio | HLS fixtures have no audio track and only prove video clock advancement | Real audio-bearing media heard through device speakers/headphones |
+| Download Live Activity hardware rendering | Kit state-machine tests and simulator failure-retry UI (`42545229418`) | Lock-screen / Dynamic Island presentation on hardware, background updates, denied permission and dismissal after retry |
+| Notification permission and airing reminders | Kit scheduling tests and compilation | Real notification delivery after granting permission on a device |
+
+## Live network, accounts and deferred services
+
+| Item | Existing engineering evidence | Still missing |
+|---|---|---|
+| Public HTTP source compatibility | `CleartextPolicy` unit tests, `lrr.tvc-16.science` exception and loopback UI | Real feedback from user-installed public HTTP sources under default-HTTPS ATS |
+| Real Standard AI endpoints | Simulator streaming output, cancel and 401 header rejection (`ZZStandardAIStreamTests`) | Live OpenAI / Anthropic streaming, `max_tokens` truncation notice, server-side stop confirmation and credential restore after relaunch |
+| Real Magpie provider accounts | Local loopback HTTP fixture and mock-credential tests | User-authorized provider sign-in, token refresh, quota behaviour and relaunch restore |
+| Media servers and external services | Model decoding, write-back logic and unit tests | Live Jellyfin / Emby / Plex server browse, playback and progress write-back; Bangumi token; TMDB key; Pixiv sign-in |
+| Local file import and large-shelf device feel | Kit import / CRC / corrupt-store rescue unit tests | Physical-device `.cbz` / folder / video import and long-term large-shelf responsiveness |
+
+## How to rerun engineering checks
+
+On a machine with macOS, Xcode, Go and XcodeGen:
 
 ```sh
 sh scripts/fetch-core.sh
-NK_UI_TESTS=1 NK_UI_SEED=/tmp/seed.json NK_UI_SEED_REPLACE=1 sh scripts/verify-ios.sh
+sh scripts/verify-ios.sh
 ```
 
-CI now runs `swift test --no-parallel --verbose`; `xcodebuild build-for-testing` still only compiles interface cases. Execute UI cases with `test-without-building` on the Mac, reporting the commit, total, failures and skips while keeping full logs. New cases require rebuilding the test target; old products cannot validate new source.
+Pass `NK_UI_TESTS=1` to run the simulator UI suite as well (optionally with `NK_UI_SEED`, `NK_UI_SEED_REPLACE=1` and `NK_UI_ONLY`), or dispatch `.github/workflows/ios-release.yml` with `ui_tests` enabled. Report the commit hash, pass/fail/skip counts and device boundary; never treat simulator passes as physical-device sign-off.
