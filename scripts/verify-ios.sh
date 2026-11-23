@@ -63,13 +63,6 @@ else
 	say "SKIP  surface check: no Vendor/VeneraCatCore.xcframework and no go"
 fi
 
-# 0b. The Core the app reports must be the Core it is built against.
-if sh scripts/check-core-pin.sh >"$out/core-pin.log" 2>&1; then
-	pass "sh scripts/check-core-pin.sh" "$out/core-pin.log"
-else
-	fail "sh scripts/check-core-pin.sh" "$out/core-pin.log"
-fi
-
 # 0c. ATS: does the plist carry the policy, and can this machine prove it reaches
 # the app? Without XcodeGen it says SKIP, which is not a failure.
 if sh scripts/verify-ats.sh >"$out/ats.log" 2>&1; then

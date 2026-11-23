@@ -120,9 +120,6 @@ struct MagpieProvidersView: View {
                 }
                 .disabled(busy)
             } footer: {
-                // A bug report should be able to name the Core it ran. The value is
-                // checked against scripts/core-version by check-core-pin.sh, so it
-                // cannot quietly describe a different build.
                 Text(buildLine)
                     .font(.footnote)
                     .foregroundStyle(.secondary)

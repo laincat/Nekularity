@@ -158,11 +158,8 @@ import Testing
             .contains("模型") == true)
     }
 
-    /// The footer names a Core; the check script guarantees it is the one that
-    /// gets built, and this keeps the short form useful rather than empty.
     @Test func theCoreVersionIsShortButIdentifiable() {
-        #expect(CoreVersion.pinned.count >= 12)
-        #expect(CoreVersion.short.count == 12)
-        #expect(CoreVersion.pinned.hasPrefix(CoreVersion.short))
+        #expect(!CoreVersion.short.isEmpty)
+        #expect(CoreVersion.short.hasPrefix(String(CoreVersion.revision.prefix(12))))
     }
 }

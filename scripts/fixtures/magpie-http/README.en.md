@@ -49,5 +49,5 @@ From the repository root (CI and the local machine run the same line):
 python3 scripts/fixtures/magpie-http/run.py build/core
 ```
 
-`build/core` is the pinned Core checkout produced by `scripts/fetch-core.sh`; on a local machine it can point at any Core directory, and the second argument is the evidence directory. The script starts the fixture on a random `127.0.0.1` port, makes real HTTP calls through the public `mobile.NewMagpieWithStream`, asserts seven behaviours and exits non-zero on any failure; logs go to `build/magpie-http-probe/core-http.log` and `events.json`. It needs no account, network or Keychain, but it **does not replace** the iOS interface, Swift transport or device acceptance.
+`build/core` is the checkout of Core's upstream `main` produced by `scripts/fetch-core.sh`; on a local machine it can point at any Core directory, and the second argument is the evidence directory. The script starts the fixture on a random `127.0.0.1` port, makes real HTTP calls through the public `mobile.NewMagpieWithStream`, asserts seven behaviours and exits non-zero on any failure; logs go to `build/magpie-http-probe/core-http.log` and `events.json`. It needs no account, network or Keychain, but it **does not replace** the iOS interface, Swift transport or device acceptance.
 

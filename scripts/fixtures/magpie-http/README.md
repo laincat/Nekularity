@@ -49,5 +49,5 @@ Windows 已用发布 Core `3be57b5` 的 `mobile.NewMagpieWithStream` 发真实 H
 python3 scripts/fixtures/magpie-http/run.py build/core
 ```
 
-`build/core` 是 `scripts/fetch-core.sh` 按 pin 取出的 Core 源码；本机也可以直接指向本地 Core 目录，第二个参数是证据输出目录。脚本在 `127.0.0.1` 的随机端口起夹具，用公共 `mobile.NewMagpieWithStream` 发真实 HTTP 请求，断言七项行为，任一失败返回非零退出码；日志写入 `build/magpie-http-probe/core-http.log` 与 `events.json`。它不需要账号、网络或钥匙串，但**不能替代** iOS 界面、Swift 传输或真机验收。
+`build/core` 是 `scripts/fetch-core.sh` 取出的 Core 上游 `main` 源码；本机也可以直接指向本地 Core 目录，第二个参数是证据输出目录。脚本在 `127.0.0.1` 的随机端口起夹具，用公共 `mobile.NewMagpieWithStream` 发真实 HTTP 请求，断言七项行为，任一失败返回非零退出码；日志写入 `build/magpie-http-probe/core-http.log` 与 `events.json`。它不需要账号、网络或钥匙串，但**不能替代** iOS 界面、Swift 传输或真机验收。
 

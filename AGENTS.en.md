@@ -103,10 +103,6 @@ Swift Testing runs the tests in a suite **in parallel** by default. A shared sta
 
 When delivering a **new file** (a script, a plist), `scripts/make-transfer.sh --inline FILE` prints its md5 and its text. This is measured, not theoretical: sending a link in one message and the hashes in another went missing twice. Whole packages still go through a gist (many files, too long to paste), but a few dozen lines do not need that extra uncertainty.
 
-## The pin message is generated too
-
-The pin lives in four places and the other machine checks hashes. Typing those hashes by hand has gone wrong three times, twice by leaving a placeholder. `scripts/make-pin-message.sh` prints the whole block with the values read from the files — the same rule as `make-transfer.sh`: if a message contains a hash, a person should not be typing it.
-
 ## The docs on a verification machine may be old
 
 A transfer package often carries only code and tests, so `docs/` on that machine lags behind the repository. Its `check-docs.sh` still runs — it compares pairs and structure — but **its passing is not evidence that the repository's docs are current**; that is settled by the run before pushing.

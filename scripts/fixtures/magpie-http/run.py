@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the Magpie loopback fixture against the pinned VeneraCat Core.
+"""Run the Magpie loopback fixture against a VeneraCat Core checkout.
 
     python3 scripts/fixtures/magpie-http/run.py [CORE_CHECKOUT] [EVIDENCE_DIR]
 

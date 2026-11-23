@@ -20,21 +20,19 @@ permissions:
 
 jobs:
   ipa:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.27.1'
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_26.6.app
+          go-version: stable
       - name: Install XcodeGen
         run: brew install xcodegen
-      - name: Build pinned Core
+      - name: Build Core
         run: sh scripts/fetch-core.sh
       - name: Magpie loopback HTTP acceptance
-        # Real HTTP against the pinned Core's public mobile API: model list,
+        # Real HTTP against Core's public mobile API: model list,
         # refreshed credentials, first text before the body completes, the peer
         # closing on cancellation, a targeted release, Unicode and HTTP 503.
         # It needs no account or network and fails on any of the seven checks.
@@ -67,7 +65,6 @@ jobs:
           fi
           run_check sh scripts/check-docs.sh
           run_check sh scripts/check-partitions.sh
-          run_check sh scripts/check-core-pin.sh
           run_check python3 scripts/check-kit-core-calls.py
           run_check python3 scripts/check-video-json.py
           run_check python3 scripts/check-magpie-event.py
@@ -125,7 +122,7 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/uitests-build.log"
       - name: Keep interface build diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Nekularity-ui-build-diagnostics
           path: |
@@ -239,7 +236,7 @@ jobs:
           fi
       - name: Keep interface run diagnostics
         if: always() && inputs.ui_tests
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Nekularity-ui-run-diagnostics
           path: |
@@ -255,7 +252,7 @@ jobs:
           cp -R "$RUNNER_TEMP/nekularity-derived/Build/Products/Release-iphoneos/Nekularity.app" "$RUNNER_TEMP/package/Payload/"
           cd "$RUNNER_TEMP/package"
           zip -qry "$GITHUB_WORKSPACE/Nekularity.ipa" Payload
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Nekularity-unsigned-ipa
           path: Nekularity.ipa

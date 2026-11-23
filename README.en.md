@@ -40,7 +40,7 @@ xcodegen generate                # generates Nekularity.xcodeproj
 open Nekularity.xcodeproj
 ```
 
-`scripts/core-version` names the Core branch, tag or commit to use. A local Core checkout also works: `scripts/fetch-core.sh ../VeneraCat-Core`.
+The build uses Core's upstream `main` by default. A local Core checkout also works with `scripts/fetch-core.sh '../VeneraCat Core'`.
 
 ## Installing a provider package
 

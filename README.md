@@ -40,7 +40,7 @@ xcodegen generate                # 生成 Nekularity.xcodeproj
 open Nekularity.xcodeproj
 ```
 
-`scripts/core-version` 写明要使用的 Core 分支、标签或提交。也可以传入本地 Core 目录:`scripts/fetch-core.sh ../VeneraCat-Core`。
+默认构建 Core 的上游 `main`。也可以传入本地 Core 目录:`scripts/fetch-core.sh '../VeneraCat Core'`。
 
 ## 装一个供应商包
 
