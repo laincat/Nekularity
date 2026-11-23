@@ -3,8 +3,9 @@ import Observation
 
 /// Installed comic sources and the indexes they come from.
 ///
-/// Every change to the installed set is written back to `plugins.json`
-/// through Core's records, so the next launch restores the same sources.
+/// Every change to the installed set runs through a serialized commit path that
+/// writes `plugins.json` before cleaning up side state and rolls Core back if
+/// persistence fails, so memory and disk never diverge into a half-updated state.
 @MainActor @Observable
 public final class SourceLibrary {
     public private(set) var sources: [PluginRecord] = []
@@ -13,6 +14,10 @@ public final class SourceLibrary {
 
     @ObservationIgnored public let core: CoreClient
     @ObservationIgnored private let fetch: @Sendable (URL) async throws -> Data
+    @ObservationIgnored private var mutating = false
+    @ObservationIgnored private var mutationWaiters: [CheckedContinuation<Void, Never>] = []
+    /// Optional persistence override for tests simulating disk write failures.
+    @ObservationIgnored var recordsWriter: (@Sendable (String) throws -> Void)?
 
     /// `fetch` downloads index and script files. It is separate from the
     /// source transport: these requests carry no source cookies.
@@ -32,10 +37,12 @@ public final class SourceLibrary {
 
     /// Restores persisted sources. Call once at launch.
     public func restore() async {
-        if let json = core.host.store.loadRecordsJSON() {
-            restoreFailures = (try? await core.restore(recordsJSON: json)) ?? [:]
+        _ = try? await withMutation {
+            if let json = core.host.store.loadRecordsJSON() {
+                restoreFailures = (try? await core.restore(recordsJSON: json)) ?? [:]
+            }
+            await refresh()
         }
-        await refresh()
     }
 
     public func refresh() async {
@@ -45,16 +52,16 @@ public final class SourceLibrary {
     /// Installs a script given as text (paste or file import).
     @discardableResult
     public func install(script: String, origin: String) async throws -> PluginRecord {
-        let rec = try await core.installComicSource(script, origin: origin)
-        try await persist()
-        return rec
+        try await commitInstall(mode: .script, body: script, origin: origin, indexURL: "")
     }
 
     /// Downloads and installs a script from url, updating the source when
     /// its key is already installed.
     @discardableResult
     public func install(from url: URL, indexURL: URL? = nil) async throws -> PluginRecord {
-        try await installOrReplace(body: try await text(url), origin: url.absoluteString, indexURL: indexURL?.absoluteString ?? "")
+        let body = try await text(url)
+        return try await commitInstall(mode: .url, body: body, origin: url.absoluteString,
+                                       indexURL: indexURL?.absoluteString ?? "")
     }
 
     /// Installs or updates the entry of an index.
@@ -62,37 +69,53 @@ public final class SourceLibrary {
     public func install(entry: IndexEntry, indexURL: URL) async throws -> PluginRecord {
         guard let url = URL(string: entry.url) else { throw CoreError("invalid script URL \(entry.url)") }
         let body = try await text(url)
-        if sources.contains(where: { $0.key == entry.key }) {
-            let rec = try await core.replace(key: entry.key, type: "comic", body: body, origin: url.absoluteString,
-                                             indexURL: indexURL.absoluteString)
-            try await persist()
-            return rec
-        }
-        // Core validates the script's executed identity against the index key.
-        // A generic duplicate-key fallback must not update another installed source.
-        let rec = try await core.installComicEntry(entry, body: body, indexURL: indexURL)
-        try await persist()
-        return rec
+        return try await commitInstall(mode: .indexEntry(entry, indexURL), body: body,
+                                       origin: url.absoluteString, indexURL: indexURL.absoluteString)
     }
 
-    /// Core is the only one that knows a script's key, so try to install
-    /// and fall back to replacing when the key is taken.
-    private func installOrReplace(body: String, origin: String, indexURL: String) async throws -> PluginRecord {
-        let rec: PluginRecord
-        do {
-            rec = try await core.installComicSource(body, origin: origin, indexURL: indexURL)
-        } catch let e as CoreError {
-            // Core refuses a second install of a key it already holds, and it has
-            // worded that two ways: "already installed: <key>" and
-            // "key(<key>) already exists". Matching only the older wording meant
-            // the replace below never ran, so every update of an installed source
-            // failed with the very error that was supposed to trigger the update.
-            guard let key = Self.existingKey(in: e.message),
-                  sources.contains(where: { $0.key == key }) else { throw e }
-            rec = try await core.replace(key: key, type: "comic", body: body, origin: origin, indexURL: indexURL)
+    private enum InstallMode {
+        case script
+        case url
+        case indexEntry(IndexEntry, URL)
+    }
+
+    /// Single serialized commit path for all install and update variants.
+    private func commitInstall(mode: InstallMode, body: String, origin: String, indexURL: String) async throws -> PluginRecord {
+        try await withMutation {
+            let existingKeys = Set((try await core.plugins()).map(\.key))
+            let previousRecordsJSON = try await core.recordsJSON()
+            let rec: PluginRecord
+            switch mode {
+            case .script:
+                rec = try await core.installComicSource(body, origin: origin, indexURL: indexURL)
+            case .url:
+                do {
+                    rec = try await core.installComicSource(body, origin: origin, indexURL: indexURL)
+                } catch let error as CoreError {
+                    guard let key = Self.existingKey(in: error.message),
+                          existingKeys.contains(key) else { throw error }
+                    rec = try await core.replace(key: key, type: "comic", body: body, origin: origin, indexURL: indexURL)
+                }
+            case .indexEntry(let entry, let index):
+                if existingKeys.contains(entry.key) {
+                    rec = try await core.replace(key: entry.key, type: "comic", body: body, origin: origin,
+                                                 indexURL: index.absoluteString)
+                } else {
+                    // Core validates the script's executed identity against the index key.
+                    rec = try await core.installComicEntry(entry, body: body, indexURL: index)
+                }
+            }
+            do {
+                try await persistRecords()
+            } catch {
+                await rollbackInstall(key: rec.key, existedBefore: existingKeys.contains(rec.key),
+                                      previousRecordsJSON: previousRecordsJSON)
+                await refresh()
+                throw error
+            }
+            await refresh()
+            return rec
         }
-        try await persist()
-        return rec
     }
 
     /// The key Core names when it refuses to install a source it already has.
@@ -152,7 +175,8 @@ public final class SourceLibrary {
     /// blaming a source for a fact about how it was installed.
     public func updateAll() async -> [SourceUpdate] {
         var results: [SourceUpdate] = []
-        for source in sources {
+        let snapshot = (try? await core.plugins()) ?? sources
+        for source in snapshot {
             guard let origin = source.origin, let url = URL(string: origin),
                   url.scheme?.hasPrefix("http") == true else { continue }
             let before = source.version
@@ -169,15 +193,39 @@ public final class SourceLibrary {
     }
 
     public func remove(_ key: String) async throws {
-        try await core.remove(key: key)
-        try core.host.store.removeSource(key: key)
-        core.host.cookies.clear(partition: CookiePartition.comic(key))
-        try await persist()
+        try await withMutation {
+            let previousRecordsJSON = try await core.recordsJSON()
+            try await core.remove(key: key)
+            do {
+                try await persistRecords()
+            } catch {
+                if let single = Self.recordJSON(for: key, in: previousRecordsJSON) {
+                    _ = try? await core.restore(recordsJSON: single)
+                }
+                await refresh()
+                throw error
+            }
+            try core.host.store.removeSource(key: key)
+            core.host.cookies.clear(partition: CookiePartition.comic(key))
+            await refresh()
+        }
     }
 
     public func setEnabled(_ key: String, _ on: Bool) async throws {
-        try await core.setEnabled(key: key, on)
-        try await persist()
+        try await withMutation {
+            let previousEnabled = (try? await core.plugins())?.first(where: { $0.key == key })?.enabled
+            try await core.setEnabled(key: key, on)
+            do {
+                try await persistRecords()
+            } catch {
+                if let previousEnabled {
+                    try? await core.setEnabled(key: key, previousEnabled)
+                }
+                await refresh()
+                throw error
+            }
+            await refresh()
+        }
     }
 
     /// Downloads an index.json and compares it with the installed sources.
@@ -187,9 +235,47 @@ public final class SourceLibrary {
 
     // MARK: Helpers
 
-    private func persist() async throws {
-        try core.host.store.saveRecordsJSON(try await core.recordsJSON())
-        await refresh()
+    private func withMutation<T>(_ body: @MainActor () async throws -> T) async throws -> T {
+        if mutating {
+            await withCheckedContinuation { continuation in
+                mutationWaiters.append(continuation)
+            }
+        }
+        mutating = true
+        defer {
+            if mutationWaiters.isEmpty {
+                mutating = false
+            } else {
+                let next = mutationWaiters.removeFirst()
+                next.resume()
+            }
+        }
+        return try await body()
+    }
+
+    private func persistRecords() async throws {
+        let json = try await core.recordsJSON()
+        if let recordsWriter {
+            try recordsWriter(json)
+        } else {
+            try core.host.store.saveRecordsJSON(json)
+        }
+    }
+
+    private func rollbackInstall(key: String, existedBefore: Bool, previousRecordsJSON: String) async {
+        try? await core.remove(key: key)
+        if existedBefore, let single = Self.recordJSON(for: key, in: previousRecordsJSON) {
+            _ = try? await core.restore(recordsJSON: single)
+        }
+    }
+
+    nonisolated static func recordJSON(for key: String, in recordsJSON: String) -> String? {
+        guard let parsed = try? JSONValue.parse(recordsJSON),
+              let items = parsed.array,
+              let matched = items.first(where: { $0["key"]?.stringValue == key }) else {
+            return nil
+        }
+        return JSONValue.array([matched]).jsonText
     }
 
     private func text(_ url: URL) async throws -> String {

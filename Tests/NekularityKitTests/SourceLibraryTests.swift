@@ -82,6 +82,92 @@ struct SourceLibraryTests {
         #expect(lib.sources.first?.version == "1.0.0")
     }
 
+    @Test func indexEntryUpdatesAlreadyInstalledSource() async throws {
+        let updated = script.replacingOccurrences(of: "1.0.0", with: "2.0.0")
+        let root = URL(filePath: NSTemporaryDirectory()).appending(path: UUID().uuidString)
+        let lib = try library(root) { _ in Data(updated.utf8) }
+        _ = try await lib.install(script: script, origin: "https://index.test/mini.js")
+        let entry = IndexEntry(name: "Mini", key: "mini", version: "2.0.0", url: "https://index.test/mini.js")
+        let rec = try await lib.install(entry: entry, indexURL: URL(string: "https://index.test/index.json")!)
+        #expect(rec.key == "mini")
+        #expect(rec.version == "2.0.0")
+        #expect(lib.sources.first?.version == "2.0.0")
+    }
+
+    @Test func persistenceFailureRollsBackNewInstall() async throws {
+        let root = URL(filePath: NSTemporaryDirectory()).appending(path: UUID().uuidString)
+        let lib = try library(root)
+        lib.recordsWriter = { _ in throw CoreError("disk full") }
+        await #expect(throws: (any Error).self) {
+            _ = try await lib.install(script: script, origin: "test")
+        }
+        await lib.refresh()
+        #expect(lib.sources.isEmpty)
+        #expect(lib.core.host.store.loadRecordsJSON() == nil)
+    }
+
+    @Test func persistenceFailureRollsBackReplacementAndMatchesDisk() async throws {
+        let root = URL(filePath: NSTemporaryDirectory()).appending(path: UUID().uuidString)
+        let updated = script.replacingOccurrences(of: "1.0.0", with: "2.0.0")
+        let lib = try library(root) { _ in Data(updated.utf8) }
+        _ = try await lib.install(script: script, origin: "https://index.test/mini.js")
+        lib.recordsWriter = { _ in throw CoreError("disk full") }
+        await #expect(throws: (any Error).self) {
+            _ = try await lib.install(from: URL(string: "https://index.test/mini.js")!)
+        }
+        await lib.refresh()
+        #expect(lib.sources.map(\.key) == ["mini"])
+        #expect(lib.sources.first?.version == "1.0.0")
+
+        let reopened = try library(root)
+        await reopened.restore()
+        #expect(reopened.sources.map(\.key) == ["mini"])
+        #expect(reopened.sources.first?.version == "1.0.0")
+    }
+
+    @Test func removePersistenceFailureKeepsSourceDataAndCookies() async throws {
+        let root = URL(filePath: NSTemporaryDirectory()).appending(path: UUID().uuidString)
+        let lib = try library(root)
+        _ = try await lib.install(script: script, origin: "test")
+        try lib.core.host.store.saveData(key: "mini", dataKey: "token", json: #""abc""#)
+        let url = URL(string: "https://mini.example/page")!
+        lib.core.host.cookies.save(partition: CookiePartition.comic("mini"), url: url,
+                                   cookies: [WireCookie(name: "sid", value: "keep")])
+        lib.recordsWriter = { _ in throw CoreError("disk full") }
+        await #expect(throws: (any Error).self) {
+            try await lib.remove("mini")
+        }
+        await lib.refresh()
+        #expect(lib.sources.map(\.key) == ["mini"])
+        #expect(try lib.core.host.store.loadData(key: "mini", dataKey: "token") == #""abc""#)
+        #expect(lib.core.host.cookies.cookies(partition: CookiePartition.comic("mini"), url: url).map(\.value) == ["keep"])
+    }
+
+    @Test func concurrentInstallsSerializeAndMatchPersistedRecords() async throws {
+        let alpha = """
+        class Alpha extends ComicSource {
+            name = "Alpha"; key = "alpha"; version = "1.0.0"
+            search = { load: async (keyword, options, page) => ({ comics: [], maxPage: 1 }) }
+        }
+        """
+        let beta = """
+        class Beta extends ComicSource {
+            name = "Beta"; key = "beta"; version = "1.0.0"
+            search = { load: async (keyword, options, page) => ({ comics: [], maxPage: 1 }) }
+        }
+        """
+        let root = URL(filePath: NSTemporaryDirectory()).appending(path: UUID().uuidString)
+        let lib = try library(root)
+        async let first = lib.install(script: alpha, origin: "test")
+        async let second = lib.install(script: beta, origin: "test")
+        _ = try await (first, second)
+        #expect(Set(lib.sources.map(\.key)) == ["alpha", "beta"])
+
+        let reopened = try library(root)
+        await reopened.restore()
+        #expect(Set(reopened.sources.map(\.key)) == ["alpha", "beta"])
+    }
+
     /// A script that is not a comic source is refused, and nothing is left behind.
     @Test func aBrokenScriptIsRefusedAndNothingIsStored() async throws {
         let lib = try library(URL(filePath: NSTemporaryDirectory()).appending(path: UUID().uuidString))

@@ -235,19 +235,12 @@ final class SettingsModel {
             cookieValues = Array(repeating: "", count: cookieFields.count)
         }
         do {
-            let declared = try await library.core.settings(key: key)
-            settings = declared
-            values = [:]
+            let snapshot = try await library.loadSettings(key: key)
+            settings = snapshot.settings
+            values = snapshot.values
             texts = [:]
-            let store = library.core.host.store
-            for setting in declared {
-                if let stored = try store.loadSetting(key: key, settingKey: setting.key),
-                   let value = try? JSONValue.parse(stored) {
-                    values[setting.key] = value
-                } else if let fallback = setting.default {
-                    values[setting.key] = fallback
-                }
-                texts[setting.key] = values[setting.key]?.stringValue ?? ""
+            for setting in snapshot.settings {
+                texts[setting.key] = snapshot.values[setting.key]?.stringValue ?? ""
             }
         } catch {
             self.error = error.localizedDescription
@@ -277,15 +270,10 @@ final class SettingsModel {
     /// the value was accepted by the source's validator.
     @discardableResult
     func save(_ library: SourceLibrary, key: String, setting: SourceSetting, value: JSONValue) async -> Bool {
-        if setting.kind == .text {
-            if let pattern = setting.validator, !pattern.isEmpty,
-               let regex = try? NSRegularExpression(pattern: pattern),
-               value.stringValue.map({ regex.firstMatch(in: $0, range: NSRange(location: 0, length: $0.utf16.count)) == nil }) ?? false {
+        do {
+            guard try library.saveSetting(key: key, setting: setting, value: value) else {
                 return false
             }
-        }
-        do {
-            try library.core.host.store.saveSetting(key: key, settingKey: setting.key, json: value.jsonText)
             values[setting.key] = value
             texts[setting.key] = value.stringValue ?? ""
             error = nil
@@ -338,7 +326,7 @@ extension SettingsModel {
         callbackBusy = setting
         defer { callbackBusy = nil }
         do {
-            let answer = try await library.core.callSettingCallback(key: key, setting: setting)
+            let answer = try await library.runSettingCallback(key: key, setting: setting)
             callbackAnswers[setting] = answer.isEmpty ? "已执行" : answer
         } catch {
             callbackAnswers[setting] = error.localizedDescription
