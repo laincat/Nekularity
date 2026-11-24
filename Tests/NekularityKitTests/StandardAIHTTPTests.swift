@@ -59,6 +59,14 @@ struct StandardAIHTTPTests {
         }
     }
 
+    /// A rejected request never becomes an answer.
+    ///
+    /// Core classifies a provider failure without retaining the provider's own
+    /// words (`aiapi.ClassifyHTTPResponse`): the message Core hands back is one
+    /// of its fixed sentences, so an upstream body that quotes a key cannot
+    /// travel through the bridge into a log or a bug report. The kit therefore
+    /// reports the status and Core's classification, and must not surface the
+    /// provider's text.
     @Test func HTTPFailuresCannotBecomeAssistantReplies() async throws {
         for standard in StandardProtocol.allCases {
             for status in [401, 503] {
@@ -71,12 +79,20 @@ struct StandardAIHTTPTests {
                     Issue.record("HTTP \(status) returned a normal \(standard) assistant reply")
                 } catch let error as StandardAIError {
                     #expect(error.message.contains("HTTP \(status)"))
-                    if status == 401 { #expect(error.message.contains("invalid fixture key")) }
+                    // Core's classification, not the fixture provider's sentence.
+                    #expect(!error.message.contains("invalid fixture key"))
+                    let lower = error.message.lowercased()
+                    if status == 401 {
+                        #expect(lower.contains("api key") || lower.contains("auth"),
+                                "HTTP 401 should read as an auth failure: \(error.message)")
+                    }
                 }
             }
         }
     }
 
+    /// An error envelope inside HTTP 200 is still a failure, and is classified
+    /// the same way: the provider's own wording stays upstream.
     @Test func providerErrorsInsideHTTP200AreFailures() async throws {
         for standard in StandardProtocol.allCases {
             let (api, config, root, _) = try client(standard, status: 200,
@@ -87,7 +103,9 @@ struct StandardAIHTTPTests {
                                         messages: [StandardMessage(role: "user", content: "hi")])
                 Issue.record("an in-band \(standard) provider error became an assistant reply")
             } catch let error as StandardAIError {
-                #expect(error.message == "fixture rate limit")
+                #expect(!error.message.contains("fixture rate limit"))
+                #expect(error.message.lowercased().contains("rate limit"),
+                        "an in-band provider error should read as a rate limit: \(error.message)")
             }
         }
     }
