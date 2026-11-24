@@ -91,6 +91,24 @@ public struct StandardAIWireRequest: Decodable, Sendable {
     public var partition: String?
 }
 
+/// A provider failure Core has already classified.
+///
+/// Core no longer hands the provider's own words back: `aiapi.ClassifyHTTPResponse`
+/// keeps the status, a fixed safe sentence, a retry hint and a shared error code,
+/// and drops the upstream body, which can quote a credential. The classification
+/// travels beside the answer, so a caller reads it from here instead of guessing
+/// from a body that correctly no longer exists.
+public struct StandardAIProviderError: Decodable, Sendable, Hashable {
+    /// `auth_failed`, `rate_limit`, `quota_exhausted`, `content_blocked`,
+    /// `upstream_error`, `cancelled`, `invalid_request`, `invalid_format`,
+    /// `masking_failed` or `unknown`.
+    public var code: String
+    public var message: String
+    public var status: Int?
+    public var retryable: Bool
+    public var retryAfter: Int64?
+}
+
 /// What came back from a standard endpoint.
 public struct StandardAIAnswer: Decodable, Sendable {
     public var status: Int
@@ -100,6 +118,10 @@ public struct StandardAIAnswer: Decodable, Sendable {
     /// False whenever the reply was not delivered incrementally. Core cannot
     /// stream yet, so a caller must show this rather than pretend.
     public var streamed: Bool
+    /// Core's classification of a failure, when there was one. A rejected
+    /// request carries it beside an empty body; a provider error envelope
+    /// inside HTTP 200 carries it beside the raw body.
+    public var error: StandardAIProviderError? = nil
 
     public var body: Data { Data(base64Encoded: bodyBase64) ?? Data() }
 
@@ -136,9 +158,18 @@ public final class StandardAI: @unchecked Sendable {
             providerError = nil
         }
         guard (200..<300).contains(answer.status) else {
+            // Core drops the upstream body on a rejected request, so the
+            // classification is the only description there is — and the only
+            // one that is safe to show.
+            if let failure = answer.error {
+                throw StandardAIError("接口返回 HTTP \(answer.status): \(failure.message)")
+            }
             let detail = providerError.map { ": " + $0 } ?? ""
             throw StandardAIError("接口返回 HTTP \(answer.status)\(detail)")
         }
+        // An error envelope inside HTTP 200 is still a failure: some providers
+        // answer the status line politely and the refusal in the body.
+        if let failure = answer.error { throw StandardAIError(failure.message) }
         if let providerError { throw StandardAIError(providerError) }
         return StandardAIReply(status: answer.status, text: Self.text(from: answer, protocol: config.protocol),
                                raw: answer.bodyText, streamed: answer.streamed)
