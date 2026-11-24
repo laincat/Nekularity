@@ -46,14 +46,15 @@ if [ -n "$missing" ]; then
 	exit 1
 fi
 
-# The standard-protocol, URL-rule, novel and shared-collection entry points
-# Core exports beside Magpie. Checking them here catches a stale xcframework
-# before the Swift build fails or drops a capability.
+# The standard-protocol, URL-rule, novel, adaptation and shared-collection
+# entry points Core exports beside Magpie. Checking them here catches a stale
+# xcframework before the Swift build fails or drops a capability.
 missing_core=''
 for one in \
 	')buildAIRequest:' ')buildAIModelsRequest:' ')sendAIRequest:' \
 	')normalizeURL:' \
 	')novelPopular:' ')novelSearch:' ')novelDetail:' ')novelChapter:' \
+	')adaptChapter:' ')renderPanel:' ')renderStoryboard:' \
 	')parseSourceCollection:' ')verifySourceArtifact:'; do
 	if ! grep -q -- "$one" "$header"; then
 		missing_core="$missing_core $one"
@@ -66,4 +67,4 @@ if [ -n "$missing_core" ]; then
 	exit 1
 fi
 
-echo "check-core-surface: $(basename "$framework") exposes 18 Magpie, 3 standard AI, 1 URL rule, 4 novel and 2 collection entry points"
+echo "check-core-surface: $(basename "$framework") exposes 18 Magpie, 3 standard AI, 1 URL rule, 4 novel, 3 adapt and 2 collection entry points"

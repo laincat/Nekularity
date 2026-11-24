@@ -49,6 +49,60 @@ public struct CoreError: Error, LocalizedError, Sendable {
         message.lowercased().contains("novel: not found")
     }
 
+    /// Core's adaptation pipeline hit a configured call or token budget cap.
+    public var isBudgetExceeded: Bool {
+        let lower = message.lowercased()
+        return lower.contains("adapt: budget exceeded") || lower.contains("budget_exceeded")
+    }
+
+    /// Core's image renderer reported that the upstream model blocked a panel for safety/policy.
+    public var isContentBlocked: Bool {
+        let lower = message.lowercased()
+        return lower.contains("adapt: image generation blocked")
+            || lower.contains("blocked by content policy")
+            || lower.contains("content_blocked")
+    }
+
+    /// Core's adaptation pipeline received invalid storyboard JSON from the text model.
+    public var isInvalidStoryboard: Bool {
+        let lower = message.lowercased()
+        return lower.contains("adapt: invalid storyboard") || lower.contains("invalid_storyboard")
+    }
+
+    /// Core's adaptation pipeline found no usable text in the chapter.
+    public var isEmptyChapter: Bool {
+        let lower = message.lowercased()
+        return lower.contains("adapt: chapter text is empty") || lower.contains("empty_chapter")
+    }
+
+    /// Core rejected invalid adaptation arguments (missing project/ids/key/model,
+    /// unsupported protocol/provider, bad reference base64, or mismatched checkpoint).
+    public var isInvalidAdaptArgument: Bool {
+        let lower = message.lowercased()
+        return lower.contains("mobile: invalid adapt")
+            || lower.contains("mobile: invalid render")
+            || lower.contains("mobile: adapt ")
+            || lower.contains("mobile: unsupported adapt ")
+            || lower.contains("adapt: nil project")
+            || lower.contains("adapt: nil text generator")
+            || lower.contains("adapt: checkpoint ")
+            || lower.contains("adapt: storyboard ")
+            || lower.contains("adapt: panel ")
+            || (lower.contains("adapt: ") && lower.contains("base url"))
+    }
+
+    /// Translates an adaptation error code and optional raw message from Core into
+    /// a user-facing Chinese sentence.
+    public static func readableAdapt(code: String?, message: String?) -> String {
+        if let code, let parsed = AdaptErrorCode(rawValue: code.lowercased()), parsed != .error {
+            return parsed.readableMessage
+        }
+        if let message, !message.isEmpty {
+            return readable(message)
+        }
+        return AdaptErrorCode.error.readableMessage
+    }
+
     /// Core speaks English and its text is what a developer needs; the
     /// interface is Chinese. Well-known failures get a Chinese sentence, and
     /// anything else keeps Core's own words after a Chinese prefix, so a
@@ -59,6 +113,45 @@ public struct CoreError: Error, LocalizedError, Sendable {
         func has(_ needle: String) -> Bool { lower.contains(needle) }
         if has("canceled") || has("cancelled") || has("已取消") {
             return "操作已取消"
+        }
+        if has("adapt: budget exceeded") || has("budget_exceeded") {
+            return AdaptErrorCode.budgetExceeded.readableMessage
+        }
+        if has("adapt: image generation blocked") || has("blocked by content policy") || has("content_blocked") {
+            return AdaptErrorCode.contentBlocked.readableMessage
+        }
+        if has("adapt: invalid storyboard") || has("invalid_storyboard") {
+            return AdaptErrorCode.invalidStoryboard.readableMessage
+        }
+        if has("adapt: chapter text is empty") || has("empty_chapter") {
+            return AdaptErrorCode.emptyChapter.readableMessage
+        }
+        if has("mobile: adapt text apikey is required") || has("mobile: adapt image apikey is required") {
+            return "请先配置有效的模型 API Key"
+        }
+        if has("mobile: adapt text model is required") || has("mobile: adapt image model is required") {
+            return "请先选择或填写模型名称"
+        }
+        if has("mobile: unsupported adapt text protocol") {
+            return "不支持的文本模型协议,请使用 OpenAI Chat、OpenAI Responses 或 Anthropic Messages"
+        }
+        if has("mobile: unsupported adapt image provider") {
+            return "不支持的绘图服务提供方,请选择 Gemini 或 OpenAI"
+        }
+        if has("mobile: invalid adapt reference image base64") {
+            return "参考图数据格式无效"
+        }
+        if has("adapt: checkpoint ") {
+            return "断点与当前章节或分块设置不匹配,请重新开始或使用对应的断点"
+        }
+        if has("adapt: storyboard ") || has("adapt: panel ") {
+            return "找不到对应的分镜或画格"
+        }
+        if has("mobile: invalid adapt") || has("mobile: invalid render")
+            || has("mobile: adapt ") || has("adapt: nil project")
+            || has("adapt: nil text generator")
+            || (has("adapt: ") && has("base url")) {
+            return "改编请求参数无效,请检查配置后重试"
         }
         if has("no such source") || has("source not found") || has("unknown source") {
             return "找不到这个漫画源,可能已被删除"
@@ -1150,5 +1243,43 @@ extension CoreClient {
             }
         }
         return try Self.decode(NovelChapterContent.self, json)
+    }
+}
+
+// MARK: - Novel adaptation (Wave 4B)
+
+/// Resumable chapter-to-storyboard adaptation and static comic panel rendering.
+/// Core enforces budgets, chunking, strict JSON validation, cross-chapter
+/// character merging, and content-policy detection over the host bridge
+/// (with `Cookies: false`); persistence and image caching belong to this kit.
+extension CoreClient {
+    public func adaptChapter(_ request: AdaptChapterRequest) async throws -> AdaptChapterResponse {
+        let requestJSON = String(decoding: try JSONEncoder().encode(request), as: UTF8.self)
+        let json = try await run { core, callID in
+            try Self.call {
+                core.adaptChapter(callID, requestJSON: requestJSON, error: $0)
+            }
+        }
+        return try Self.decode(AdaptChapterResponse.self, json)
+    }
+
+    public func renderPanel(_ request: RenderPanelRequest) async throws -> RenderPanelResponse {
+        let requestJSON = String(decoding: try JSONEncoder().encode(request), as: UTF8.self)
+        let json = try await run { core, callID in
+            try Self.call {
+                core.renderPanel(callID, requestJSON: requestJSON, error: $0)
+            }
+        }
+        return try Self.decode(RenderPanelResponse.self, json)
+    }
+
+    public func renderStoryboard(_ request: RenderStoryboardRequest) async throws -> RenderStoryboardResponse {
+        let requestJSON = String(decoding: try JSONEncoder().encode(request), as: UTF8.self)
+        let json = try await run { core, callID in
+            try Self.call {
+                core.renderStoryboard(callID, requestJSON: requestJSON, error: $0)
+            }
+        }
+        return try Self.decode(RenderStoryboardResponse.self, json)
     }
 }

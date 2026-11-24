@@ -958,6 +958,1145 @@ public struct SourceCollectionCheck: Codable, Sendable, Hashable {
     }
 }
 
+// MARK: - Novel adaptation models (Wave 4B)
+
+/// Rendering state of one storyboard panel (mirrors Core `adapt.ImageStatus`).
+public enum AdaptImageStatus: String, Codable, Sendable, Hashable, CaseIterable {
+    case pending
+    case generating
+    case done
+    case failed
+}
+
+/// Purpose of a reference image passed to Core's image renderer (mirrors Core `adapt.ImageRefKind`).
+public enum AdaptImageRefKind: String, Codable, Sendable, Hashable, CaseIterable {
+    case style
+    case character
+}
+
+/// Supported static comic image providers in Core `mobile/adapt.go`.
+public enum AdaptImageProvider: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
+    case gemini
+    case openai
+
+    public var id: String { rawValue }
+}
+
+/// Machine-readable error codes returned by Core `mobile/adapt.go` on partial or failed runs.
+public enum AdaptErrorCode: String, Codable, Sendable, Hashable, CaseIterable {
+    case budgetExceeded = "budget_exceeded"
+    case contentBlocked = "content_blocked"
+    case invalidStoryboard = "invalid_storyboard"
+    case emptyChapter = "empty_chapter"
+    case canceled = "canceled"
+    case deadlineExceeded = "deadline_exceeded"
+    case error = "error"
+
+    /// Human-readable Chinese description for UI display.
+    public var readableMessage: String {
+        switch self {
+        case .budgetExceeded:
+            "已达到改编预算上限,可在提高预算后从断点继续"
+        case .contentBlocked:
+            "该分镜画面触发了模型内容安全拦截,可调整提示词后重试"
+        case .invalidStoryboard:
+            "模型返回的分镜 JSON 格式无效,请重试或更换模型"
+        case .emptyChapter:
+            "章节正文为空,无法生成分镜"
+        case .canceled:
+            "操作已取消"
+        case .deadlineExceeded:
+            "网络超时,请稍后重试"
+        case .error:
+            "改编处理失败,请稍后重试"
+        }
+    }
+}
+
+/// Reference image passed inline to Core's image renderer (mirrors Core `adaptImageRefWire`).
+public struct AdaptImageRef: Codable, Sendable, Hashable {
+    public var id: String?
+    public var kind: AdaptImageRefKind?
+    public var label: String?
+    public var mimeType: String?
+    public var dataBase64: String?
+
+    public init(
+        id: String? = nil,
+        kind: AdaptImageRefKind? = nil,
+        label: String? = nil,
+        mimeType: String? = nil,
+        dataBase64: String? = nil
+    ) {
+        self.id = id
+        self.kind = kind
+        self.label = label
+        self.mimeType = mimeType
+        self.dataBase64 = dataBase64
+    }
+
+    public init(
+        id: String? = nil,
+        kind: AdaptImageRefKind? = nil,
+        label: String? = nil,
+        mimeType: String? = nil,
+        data: Data
+    ) {
+        self.init(
+            id: id,
+            kind: kind,
+            label: label,
+            mimeType: mimeType,
+            dataBase64: data.isEmpty ? nil : data.base64EncodedString()
+        )
+    }
+
+    /// Decoded raw image bytes when `dataBase64` is valid base64.
+    public var decodedData: Data? {
+        guard let dataBase64, !dataBase64.isEmpty else { return nil }
+        return Data(base64Encoded: dataBase64)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, kind, label, mimeType, dataBase64, data
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(String.self, forKey: .id)
+        kind = try c.decodeIfPresent(AdaptImageRefKind.self, forKey: .kind)
+        label = try c.decodeIfPresent(String.self, forKey: .label)
+        mimeType = try c.decodeIfPresent(String.self, forKey: .mimeType)
+        if let b64 = try c.decodeIfPresent(String.self, forKey: .dataBase64), !b64.isEmpty {
+            dataBase64 = b64
+        } else {
+            dataBase64 = try c.decodeIfPresent(String.self, forKey: .data)
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(id, forKey: .id)
+        try c.encodeIfPresent(kind, forKey: .kind)
+        try c.encodeIfPresent(label, forKey: .label)
+        try c.encodeIfPresent(mimeType, forKey: .mimeType)
+        try c.encodeIfPresent(dataBase64, forKey: .dataBase64)
+    }
+}
+
+/// Local comic style reference metadata (mirrors Core `adapt.StyleRef`).
+public struct AdaptStyleRef: Codable, Sendable, Hashable {
+    public var comicSourceKey: String?
+    public var comicID: String?
+    public var comicTitle: String?
+    public var referencePageIDs: [String]
+    public var styleNotes: String?
+
+    public init(
+        comicSourceKey: String? = nil,
+        comicID: String? = nil,
+        comicTitle: String? = nil,
+        referencePageIDs: [String] = [],
+        styleNotes: String? = nil
+    ) {
+        self.comicSourceKey = comicSourceKey
+        self.comicID = comicID
+        self.comicTitle = comicTitle
+        self.referencePageIDs = referencePageIDs
+        self.styleNotes = styleNotes
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case comicSourceKey
+        case comicID = "comicId"
+        case comicTitle
+        case referencePageIDs = "referencePageIds"
+        case styleNotes
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        comicSourceKey = try c.decodeIfPresent(String.self, forKey: .comicSourceKey)
+        comicID = try c.decodeIfPresent(String.self, forKey: .comicID)
+        comicTitle = try c.decodeIfPresent(String.self, forKey: .comicTitle)
+        referencePageIDs = (try? c.decodeIfPresent([String].self, forKey: .referencePageIDs)) ?? []
+        styleNotes = try c.decodeIfPresent(String.self, forKey: .styleNotes)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(comicSourceKey, forKey: .comicSourceKey)
+        try c.encodeIfPresent(comicID, forKey: .comicID)
+        try c.encodeIfPresent(comicTitle, forKey: .comicTitle)
+        if !referencePageIDs.isEmpty {
+            try c.encode(referencePageIDs, forKey: .referencePageIDs)
+        }
+        try c.encodeIfPresent(styleNotes, forKey: .styleNotes)
+    }
+}
+
+/// Cross-chapter character identity (mirrors Core `adapt.Character`).
+public struct AdaptCharacter: Codable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var name: String
+    public var aliases: [String]
+    public var appearance: String?
+    public var outfit: String?
+    public var traits: [String]
+    public var firstChapterID: String?
+    public var notes: String?
+
+    public init(
+        id: String,
+        name: String,
+        aliases: [String] = [],
+        appearance: String? = nil,
+        outfit: String? = nil,
+        traits: [String] = [],
+        firstChapterID: String? = nil,
+        notes: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.aliases = aliases
+        self.appearance = appearance
+        self.outfit = outfit
+        self.traits = traits
+        self.firstChapterID = firstChapterID
+        self.notes = notes
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, aliases, appearance, outfit, traits
+        case firstChapterID = "firstChapterId"
+        case notes
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decodeIfPresent(String.self, forKey: .id)) ?? ""
+        name = (try? c.decodeIfPresent(String.self, forKey: .name)) ?? ""
+        aliases = (try? c.decodeIfPresent([String].self, forKey: .aliases)) ?? []
+        appearance = try c.decodeIfPresent(String.self, forKey: .appearance)
+        outfit = try c.decodeIfPresent(String.self, forKey: .outfit)
+        traits = (try? c.decodeIfPresent([String].self, forKey: .traits)) ?? []
+        firstChapterID = try c.decodeIfPresent(String.self, forKey: .firstChapterID)
+        notes = try c.decodeIfPresent(String.self, forKey: .notes)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        if !aliases.isEmpty { try c.encode(aliases, forKey: .aliases) }
+        try c.encodeIfPresent(appearance, forKey: .appearance)
+        try c.encodeIfPresent(outfit, forKey: .outfit)
+        if !traits.isEmpty { try c.encode(traits, forKey: .traits) }
+        try c.encodeIfPresent(firstChapterID, forKey: .firstChapterID)
+        try c.encodeIfPresent(notes, forKey: .notes)
+    }
+}
+
+/// Canonical character roster of an `AdaptProject` (mirrors Core `adapt.CharacterSheet`).
+public struct AdaptCharacterSheet: Codable, Sendable, Hashable {
+    public var characters: [AdaptCharacter]
+
+    public init(characters: [AdaptCharacter] = []) {
+        self.characters = characters
+    }
+
+    enum CodingKeys: String, CodingKey { case characters }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        characters = (try? c.decodeIfPresent([AdaptCharacter].self, forKey: .characters)) ?? []
+    }
+}
+
+/// One dialogue, thought, narration, or SFX line in a panel (mirrors Core `adapt.Dialogue`).
+public struct AdaptDialogue: Codable, Sendable, Hashable {
+    public var speaker: String?
+    public var text: String
+    public var kind: String?
+
+    public init(speaker: String? = nil, text: String, kind: String? = nil) {
+        self.speaker = speaker
+        self.text = text
+        self.kind = kind
+    }
+
+    enum CodingKeys: String, CodingKey { case speaker, text, kind }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        speaker = try c.decodeIfPresent(String.self, forKey: .speaker)
+        text = (try? c.decodeIfPresent(String.self, forKey: .text)) ?? ""
+        kind = try c.decodeIfPresent(String.self, forKey: .kind)
+    }
+}
+
+/// Single static comic frame inside a scene (mirrors Core `adapt.Panel`).
+public struct AdaptPanel: Codable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var shot: String
+    public var action: String
+    public var characters: [String]
+    public var dialogues: [AdaptDialogue]
+    public var prompt: String
+    public var imageStatus: AdaptImageStatus
+    public var imageRefID: String?
+    public var imageError: String?
+
+    public init(
+        id: String,
+        shot: String,
+        action: String,
+        characters: [String] = [],
+        dialogues: [AdaptDialogue] = [],
+        prompt: String,
+        imageStatus: AdaptImageStatus = .pending,
+        imageRefID: String? = nil,
+        imageError: String? = nil
+    ) {
+        self.id = id
+        self.shot = shot
+        self.action = action
+        self.characters = characters
+        self.dialogues = dialogues
+        self.prompt = prompt
+        self.imageStatus = imageStatus
+        self.imageRefID = imageRefID
+        self.imageError = imageError
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, shot, action, characters, dialogues, prompt, imageStatus
+        case imageRefID = "imageRefId"
+        case imageError
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decodeIfPresent(String.self, forKey: .id)) ?? ""
+        shot = (try? c.decodeIfPresent(String.self, forKey: .shot)) ?? ""
+        action = (try? c.decodeIfPresent(String.self, forKey: .action)) ?? ""
+        characters = (try? c.decodeIfPresent([String].self, forKey: .characters)) ?? []
+        dialogues = (try? c.decodeIfPresent([AdaptDialogue].self, forKey: .dialogues)) ?? []
+        prompt = (try? c.decodeIfPresent(String.self, forKey: .prompt)) ?? ""
+        imageStatus = (try? c.decodeIfPresent(AdaptImageStatus.self, forKey: .imageStatus)) ?? .pending
+        imageRefID = try c.decodeIfPresent(String.self, forKey: .imageRefID)
+        imageError = try c.decodeIfPresent(String.self, forKey: .imageError)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(shot, forKey: .shot)
+        try c.encode(action, forKey: .action)
+        if !characters.isEmpty { try c.encode(characters, forKey: .characters) }
+        if !dialogues.isEmpty { try c.encode(dialogues, forKey: .dialogues) }
+        try c.encode(prompt, forKey: .prompt)
+        try c.encode(imageStatus, forKey: .imageStatus)
+        try c.encodeIfPresent(imageRefID, forKey: .imageRefID)
+        try c.encodeIfPresent(imageError, forKey: .imageError)
+    }
+}
+
+/// Group of consecutive panels sharing a location and mood (mirrors Core `adapt.Scene`).
+public struct AdaptScene: Codable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var setting: String
+    public var mood: String?
+    public var panels: [AdaptPanel]
+
+    public init(id: String, setting: String, mood: String? = nil, panels: [AdaptPanel] = []) {
+        self.id = id
+        self.setting = setting
+        self.mood = mood
+        self.panels = panels
+    }
+
+    enum CodingKeys: String, CodingKey { case id, setting, mood, panels }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decodeIfPresent(String.self, forKey: .id)) ?? ""
+        setting = (try? c.decodeIfPresent(String.self, forKey: .setting)) ?? ""
+        mood = try c.decodeIfPresent(String.self, forKey: .mood)
+        panels = (try? c.decodeIfPresent([AdaptPanel].self, forKey: .panels)) ?? []
+    }
+}
+
+/// Adapted panel script for one novel chapter (mirrors Core `adapt.Storyboard`).
+public struct AdaptStoryboard: Codable, Sendable, Hashable {
+    public var chapterID: String
+    public var chapterTitle: String?
+    public var scenes: [AdaptScene]
+
+    public init(chapterID: String, chapterTitle: String? = nil, scenes: [AdaptScene] = []) {
+        self.chapterID = chapterID
+        self.chapterTitle = chapterTitle
+        self.scenes = scenes
+    }
+
+    /// Total number of panels across all scenes in this chapter.
+    public var panelCount: Int {
+        scenes.reduce(0) { $0 + $1.panels.count }
+    }
+
+    /// Number of panels whose `imageStatus` is `.done`.
+    public var donePanelCount: Int {
+        scenes.reduce(0) { total, scene in
+            total + scene.panels.filter { $0.imageStatus == .done }.count
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case chapterID = "chapterId"
+        case chapterTitle, scenes
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        chapterID = (try? c.decodeIfPresent(String.self, forKey: .chapterID)) ?? ""
+        chapterTitle = try c.decodeIfPresent(String.self, forKey: .chapterTitle)
+        scenes = (try? c.decodeIfPresent([AdaptScene].self, forKey: .scenes)) ?? []
+    }
+}
+
+/// Spending caps enforced by Core before every text/image generation call (mirrors Core `adapt.Budget`).
+/// Zero fields mean unlimited.
+public struct AdaptBudget: Codable, Sendable, Hashable {
+    public var maxCalls: Int64
+    public var maxImageCalls: Int64
+    public var maxInputTokens: Int64
+    public var maxOutputTokens: Int64
+    public var maxTotalTokens: Int64
+
+    public init(
+        maxCalls: Int64 = 0,
+        maxImageCalls: Int64 = 0,
+        maxInputTokens: Int64 = 0,
+        maxOutputTokens: Int64 = 0,
+        maxTotalTokens: Int64 = 0
+    ) {
+        self.maxCalls = maxCalls
+        self.maxImageCalls = maxImageCalls
+        self.maxInputTokens = maxInputTokens
+        self.maxOutputTokens = maxOutputTokens
+        self.maxTotalTokens = maxTotalTokens
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case maxCalls, maxImageCalls, maxInputTokens, maxOutputTokens, maxTotalTokens
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        maxCalls = (try? c.decodeIfPresent(Int64.self, forKey: .maxCalls)) ?? 0
+        maxImageCalls = (try? c.decodeIfPresent(Int64.self, forKey: .maxImageCalls)) ?? 0
+        maxInputTokens = (try? c.decodeIfPresent(Int64.self, forKey: .maxInputTokens)) ?? 0
+        maxOutputTokens = (try? c.decodeIfPresent(Int64.self, forKey: .maxOutputTokens)) ?? 0
+        maxTotalTokens = (try? c.decodeIfPresent(Int64.self, forKey: .maxTotalTokens)) ?? 0
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        if maxCalls > 0 { try c.encode(maxCalls, forKey: .maxCalls) }
+        if maxImageCalls > 0 { try c.encode(maxImageCalls, forKey: .maxImageCalls) }
+        if maxInputTokens > 0 { try c.encode(maxInputTokens, forKey: .maxInputTokens) }
+        if maxOutputTokens > 0 { try c.encode(maxOutputTokens, forKey: .maxOutputTokens) }
+        if maxTotalTokens > 0 { try c.encode(maxTotalTokens, forKey: .maxTotalTokens) }
+    }
+}
+
+/// Cumulative generator calls and token counts (mirrors Core `adapt.Usage`).
+public struct AdaptUsage: Codable, Sendable, Hashable {
+    public var calls: Int64
+    public var imageCalls: Int64
+    public var inputTokens: Int64
+    public var outputTokens: Int64
+    public var totalTokens: Int64
+
+    public init(
+        calls: Int64 = 0,
+        imageCalls: Int64 = 0,
+        inputTokens: Int64 = 0,
+        outputTokens: Int64 = 0,
+        totalTokens: Int64 = 0
+    ) {
+        self.calls = calls
+        self.imageCalls = imageCalls
+        self.inputTokens = inputTokens
+        self.outputTokens = outputTokens
+        self.totalTokens = totalTokens
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case calls, imageCalls, inputTokens, outputTokens, totalTokens
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        calls = (try? c.decodeIfPresent(Int64.self, forKey: .calls)) ?? 0
+        imageCalls = (try? c.decodeIfPresent(Int64.self, forKey: .imageCalls)) ?? 0
+        inputTokens = (try? c.decodeIfPresent(Int64.self, forKey: .inputTokens)) ?? 0
+        outputTokens = (try? c.decodeIfPresent(Int64.self, forKey: .outputTokens)) ?? 0
+        totalTokens = (try? c.decodeIfPresent(Int64.self, forKey: .totalTokens)) ?? 0
+    }
+}
+
+/// Serialisable adaptation workspace for one novel (mirrors Core `adapt.Project`).
+public struct AdaptProject: Codable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var novelSourceKey: String?
+    public var novelID: String?
+    public var title: String
+    public var styleRef: AdaptStyleRef?
+    public var characters: AdaptCharacterSheet
+    public var storyboards: [String: AdaptStoryboard]
+    public var budget: AdaptBudget
+    public var usage: AdaptUsage
+
+    public init(
+        id: String,
+        novelSourceKey: String? = nil,
+        novelID: String? = nil,
+        title: String,
+        styleRef: AdaptStyleRef? = nil,
+        characters: AdaptCharacterSheet = AdaptCharacterSheet(),
+        storyboards: [String: AdaptStoryboard] = [:],
+        budget: AdaptBudget = AdaptBudget(),
+        usage: AdaptUsage = AdaptUsage()
+    ) {
+        self.id = id
+        self.novelSourceKey = novelSourceKey
+        self.novelID = novelID
+        self.title = title
+        self.styleRef = styleRef
+        self.characters = characters
+        self.storyboards = storyboards
+        self.budget = budget
+        self.usage = usage
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, novelSourceKey
+        case novelID = "novelId"
+        case title, styleRef, characters, storyboards, budget, usage
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decodeIfPresent(String.self, forKey: .id)) ?? ""
+        novelSourceKey = try c.decodeIfPresent(String.self, forKey: .novelSourceKey)
+        novelID = try c.decodeIfPresent(String.self, forKey: .novelID)
+        title = (try? c.decodeIfPresent(String.self, forKey: .title)) ?? ""
+        styleRef = try c.decodeIfPresent(AdaptStyleRef.self, forKey: .styleRef)
+        characters = (try? c.decodeIfPresent(AdaptCharacterSheet.self, forKey: .characters)) ?? AdaptCharacterSheet()
+        if let rawMap = try? c.decodeIfPresent([String: AdaptStoryboard?].self, forKey: .storyboards) {
+            storyboards = rawMap.compactMapValues { $0 }
+        } else {
+            storyboards = [:]
+        }
+        budget = (try? c.decodeIfPresent(AdaptBudget.self, forKey: .budget)) ?? AdaptBudget()
+        usage = (try? c.decodeIfPresent(AdaptUsage.self, forKey: .usage)) ?? AdaptUsage()
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encodeIfPresent(novelSourceKey, forKey: .novelSourceKey)
+        try c.encodeIfPresent(novelID, forKey: .novelID)
+        try c.encode(title, forKey: .title)
+        try c.encodeIfPresent(styleRef, forKey: .styleRef)
+        try c.encode(characters, forKey: .characters)
+        if !storyboards.isEmpty { try c.encode(storyboards, forKey: .storyboards) }
+        try c.encode(budget, forKey: .budget)
+        try c.encode(usage, forKey: .usage)
+    }
+}
+
+/// Resumable multi-chunk chapter adaptation state (mirrors Core `adapt.AdaptCheckpoint`).
+public struct AdaptCheckpoint: Codable, Sendable, Hashable {
+    public var chapterID: String
+    public var chapterTitle: String?
+    public var totalChunks: Int
+    public var completedChunks: Int
+    public var maxChunkRunes: Int
+    public var storyboard: AdaptStoryboard?
+    public var characters: AdaptCharacterSheet
+    public var addedCharacters: [AdaptCharacter]
+    public var usage: AdaptUsage
+    public var sceneSeq: Int
+    public var panelSeq: Int
+
+    public init(
+        chapterID: String,
+        chapterTitle: String? = nil,
+        totalChunks: Int,
+        completedChunks: Int,
+        maxChunkRunes: Int = 0,
+        storyboard: AdaptStoryboard? = nil,
+        characters: AdaptCharacterSheet = AdaptCharacterSheet(),
+        addedCharacters: [AdaptCharacter] = [],
+        usage: AdaptUsage = AdaptUsage(),
+        sceneSeq: Int = 0,
+        panelSeq: Int = 0
+    ) {
+        self.chapterID = chapterID
+        self.chapterTitle = chapterTitle
+        self.totalChunks = totalChunks
+        self.completedChunks = completedChunks
+        self.maxChunkRunes = maxChunkRunes
+        self.storyboard = storyboard
+        self.characters = characters
+        self.addedCharacters = addedCharacters
+        self.usage = usage
+        self.sceneSeq = sceneSeq
+        self.panelSeq = panelSeq
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case chapterID = "chapterId"
+        case chapterTitle, totalChunks, completedChunks, maxChunkRunes
+        case storyboard, characters, addedCharacters, usage, sceneSeq, panelSeq
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        chapterID = (try? c.decodeIfPresent(String.self, forKey: .chapterID)) ?? ""
+        chapterTitle = try c.decodeIfPresent(String.self, forKey: .chapterTitle)
+        totalChunks = (try? c.decodeIfPresent(Int.self, forKey: .totalChunks)) ?? 0
+        completedChunks = (try? c.decodeIfPresent(Int.self, forKey: .completedChunks)) ?? 0
+        maxChunkRunes = (try? c.decodeIfPresent(Int.self, forKey: .maxChunkRunes)) ?? 0
+        storyboard = try c.decodeIfPresent(AdaptStoryboard.self, forKey: .storyboard)
+        characters = (try? c.decodeIfPresent(AdaptCharacterSheet.self, forKey: .characters)) ?? AdaptCharacterSheet()
+        addedCharacters = (try? c.decodeIfPresent([AdaptCharacter].self, forKey: .addedCharacters)) ?? []
+        usage = (try? c.decodeIfPresent(AdaptUsage.self, forKey: .usage)) ?? AdaptUsage()
+        sceneSeq = (try? c.decodeIfPresent(Int.self, forKey: .sceneSeq)) ?? 0
+        panelSeq = (try? c.decodeIfPresent(Int.self, forKey: .panelSeq)) ?? 0
+    }
+}
+
+/// Chunking and checkpoint resume options (mirrors Core `adapt.AdaptOptions`).
+public struct AdaptOptions: Codable, Sendable, Hashable {
+    public var maxChunkRunes: Int?
+    public var checkpoint: AdaptCheckpoint?
+
+    public init(maxChunkRunes: Int? = nil, checkpoint: AdaptCheckpoint? = nil) {
+        self.maxChunkRunes = maxChunkRunes
+        self.checkpoint = checkpoint
+    }
+}
+
+/// Chapter adaptation summary (mirrors Core `adapt.AdaptResult`).
+public struct AdaptResult: Codable, Sendable, Hashable {
+    public var storyboard: AdaptStoryboard?
+    public var addedCharacters: [AdaptCharacter]
+    public var chunks: Int
+    public var completedChunks: Int
+    public var usage: AdaptUsage
+    public var checkpoint: AdaptCheckpoint?
+
+    public init(
+        storyboard: AdaptStoryboard? = nil,
+        addedCharacters: [AdaptCharacter] = [],
+        chunks: Int = 0,
+        completedChunks: Int = 0,
+        usage: AdaptUsage = AdaptUsage(),
+        checkpoint: AdaptCheckpoint? = nil
+    ) {
+        self.storyboard = storyboard
+        self.addedCharacters = addedCharacters
+        self.chunks = chunks
+        self.completedChunks = completedChunks
+        self.usage = usage
+        self.checkpoint = checkpoint
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case storyboard, addedCharacters, chunks, completedChunks, usage, checkpoint
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        storyboard = try c.decodeIfPresent(AdaptStoryboard.self, forKey: .storyboard)
+        addedCharacters = (try? c.decodeIfPresent([AdaptCharacter].self, forKey: .addedCharacters)) ?? []
+        chunks = (try? c.decodeIfPresent(Int.self, forKey: .chunks)) ?? 0
+        completedChunks = (try? c.decodeIfPresent(Int.self, forKey: .completedChunks)) ?? 0
+        usage = (try? c.decodeIfPresent(AdaptUsage.self, forKey: .usage)) ?? AdaptUsage()
+        checkpoint = try c.decodeIfPresent(AdaptCheckpoint.self, forKey: .checkpoint)
+    }
+}
+
+/// Ephemeral text-model configuration sent to Core `AdaptChapter` (mirrors `adaptTextConfigWire`).
+///
+/// Carries an `apiKey` in memory for the single Core call; never persist this
+/// struct to disk.
+public struct AdaptTextConfig: Codable, Sendable, Hashable {
+    public var `protocol`: StandardProtocol
+    public var baseURL: String?
+    public var apiKey: String
+    public var anthropicVersion: String?
+    public var partition: String?
+    public var model: String
+    public var maxTokens: Int?
+    public var temperature: Double?
+    public var jsonMode: Bool?
+    public var reasoningEffort: String?
+
+    public init(
+        protocol standard: StandardProtocol,
+        baseURL: String? = nil,
+        apiKey: String,
+        anthropicVersion: String? = nil,
+        partition: String? = StandardAI.partition,
+        model: String,
+        maxTokens: Int? = nil,
+        temperature: Double? = nil,
+        jsonMode: Bool? = nil,
+        reasoningEffort: String? = nil
+    ) {
+        self.protocol = standard
+        self.baseURL = baseURL
+        self.apiKey = apiKey
+        self.anthropicVersion = anthropicVersion
+        self.partition = partition
+        self.model = model
+        self.maxTokens = maxTokens
+        self.temperature = temperature
+        self.jsonMode = jsonMode
+        self.reasoningEffort = reasoningEffort
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case `protocol`
+        case baseURL = "baseUrl"
+        case apiKey, anthropicVersion, partition, model, maxTokens, temperature, jsonMode, reasoningEffort
+    }
+}
+
+/// Ephemeral image-model configuration sent to Core `RenderPanel` / `RenderStoryboard`
+/// (mirrors `adaptImageConfigWire`). Never persist this struct to disk.
+public struct AdaptImageConfig: Codable, Sendable, Hashable {
+    public var provider: AdaptImageProvider
+    public var baseURL: String?
+    public var apiKey: String
+    public var model: String
+    public var partition: String?
+    public var responseModalities: [String]?
+    public var size: String?
+    public var quality: String?
+    public var outputFormat: String?
+    public var responseFormat: String?
+
+    public init(
+        provider: AdaptImageProvider,
+        baseURL: String? = nil,
+        apiKey: String,
+        model: String,
+        partition: String? = StandardAI.partition,
+        responseModalities: [String]? = nil,
+        size: String? = nil,
+        quality: String? = nil,
+        outputFormat: String? = nil,
+        responseFormat: String? = nil
+    ) {
+        self.provider = provider
+        self.baseURL = baseURL
+        self.apiKey = apiKey
+        self.model = model
+        self.partition = partition
+        self.responseModalities = responseModalities
+        self.size = size
+        self.quality = quality
+        self.outputFormat = outputFormat
+        self.responseFormat = responseFormat
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case provider
+        case baseURL = "baseUrl"
+        case apiKey, model, partition, responseModalities, size, quality, outputFormat, responseFormat
+    }
+}
+
+/// Panel and storyboard rendering options (mirrors Core `adaptRenderOptionsWire`).
+public struct AdaptRenderOptions: Codable, Sendable, Hashable {
+    public var aspectRatio: String?
+    public var size: String?
+    public var maxRetries: Int?
+    public var forceRerender: Bool
+    public var continueOnError: Bool
+    public var styleReferences: [AdaptImageRef]
+    public var characterReferences: [String: [AdaptImageRef]]
+    public var feedbackCharacterRefs: Bool
+
+    public init(
+        aspectRatio: String? = nil,
+        size: String? = nil,
+        maxRetries: Int? = nil,
+        forceRerender: Bool = false,
+        continueOnError: Bool = false,
+        styleReferences: [AdaptImageRef] = [],
+        characterReferences: [String: [AdaptImageRef]] = [:],
+        feedbackCharacterRefs: Bool = false
+    ) {
+        self.aspectRatio = aspectRatio
+        self.size = size
+        self.maxRetries = maxRetries
+        self.forceRerender = forceRerender
+        self.continueOnError = continueOnError
+        self.styleReferences = styleReferences
+        self.characterReferences = characterReferences
+        self.feedbackCharacterRefs = feedbackCharacterRefs
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case aspectRatio, size, maxRetries, forceRerender, continueOnError
+        case styleReferences, characterReferences, feedbackCharacterRefs
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        aspectRatio = try c.decodeIfPresent(String.self, forKey: .aspectRatio)
+        size = try c.decodeIfPresent(String.self, forKey: .size)
+        maxRetries = try c.decodeIfPresent(Int.self, forKey: .maxRetries)
+        forceRerender = (try? c.decodeIfPresent(Bool.self, forKey: .forceRerender)) ?? false
+        continueOnError = (try? c.decodeIfPresent(Bool.self, forKey: .continueOnError)) ?? false
+        styleReferences = (try? c.decodeIfPresent([AdaptImageRef].self, forKey: .styleReferences)) ?? []
+        characterReferences = (try? c.decodeIfPresent([String: [AdaptImageRef]].self, forKey: .characterReferences)) ?? [:]
+        feedbackCharacterRefs = (try? c.decodeIfPresent(Bool.self, forKey: .feedbackCharacterRefs)) ?? false
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(aspectRatio, forKey: .aspectRatio)
+        try c.encodeIfPresent(size, forKey: .size)
+        try c.encodeIfPresent(maxRetries, forKey: .maxRetries)
+        if forceRerender { try c.encode(true, forKey: .forceRerender) }
+        if continueOnError { try c.encode(true, forKey: .continueOnError) }
+        if !styleReferences.isEmpty { try c.encode(styleReferences, forKey: .styleReferences) }
+        if !characterReferences.isEmpty { try c.encode(characterReferences, forKey: .characterReferences) }
+        if feedbackCharacterRefs { try c.encode(true, forKey: .feedbackCharacterRefs) }
+    }
+}
+
+/// Request payload for Core `AdaptChapter` (mirrors `adaptChapterRequestWire`).
+public struct AdaptChapterRequest: Codable, Sendable, Hashable {
+    public var project: AdaptProject
+    public var chapter: NovelChapter
+    public var content: NovelChapterContent
+    public var text: AdaptTextConfig
+    public var options: AdaptOptions?
+
+    public init(
+        project: AdaptProject,
+        chapter: NovelChapter,
+        content: NovelChapterContent,
+        text: AdaptTextConfig,
+        options: AdaptOptions? = nil
+    ) {
+        self.project = project
+        self.chapter = chapter
+        self.content = content
+        self.text = text
+        self.options = options
+    }
+}
+
+/// Response payload from Core `AdaptChapter` (mirrors `adaptChapterResponseWire`).
+public struct AdaptChapterResponse: Codable, Sendable, Hashable {
+    public var completed: Bool
+    public var project: AdaptProject
+    public var result: AdaptResult?
+    public var error: String?
+    public var errorCode: String?
+
+    public var parsedErrorCode: AdaptErrorCode? {
+        errorCode.flatMap(AdaptErrorCode.init(rawValue:))
+    }
+
+    public init(
+        completed: Bool,
+        project: AdaptProject,
+        result: AdaptResult? = nil,
+        error: String? = nil,
+        errorCode: String? = nil
+    ) {
+        self.completed = completed
+        self.project = project
+        self.result = result
+        self.error = error
+        self.errorCode = errorCode
+    }
+}
+
+/// Request payload for Core `RenderPanel` (mirrors `renderPanelRequestWire`).
+public struct RenderPanelRequest: Codable, Sendable, Hashable {
+    public var project: AdaptProject
+    public var chapterID: String
+    public var sceneID: String?
+    public var panelID: String
+    public var image: AdaptImageConfig
+    public var options: AdaptRenderOptions?
+
+    public init(
+        project: AdaptProject,
+        chapterID: String,
+        sceneID: String? = nil,
+        panelID: String,
+        image: AdaptImageConfig,
+        options: AdaptRenderOptions? = nil
+    ) {
+        self.project = project
+        self.chapterID = chapterID
+        self.sceneID = sceneID
+        self.panelID = panelID
+        self.image = image
+        self.options = options
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case project
+        case chapterID = "chapterId"
+        case sceneID = "sceneId"
+        case panelID = "panelId"
+        case image, options
+    }
+}
+
+/// Response payload from Core `RenderPanel` (mirrors `renderPanelResponseWire`).
+public struct RenderPanelResponse: Codable, Sendable, Hashable {
+    public var project: AdaptProject
+    public var sceneID: String
+    public var panelID: String
+    public var refID: String?
+    public var skipped: Bool
+    public var mimeType: String?
+    public var dataBase64: String?
+    public var revisedPrompt: String?
+    public var usage: AdaptUsage
+
+    /// Decoded raw image bytes when the panel was rendered and returned inline.
+    public var imageData: Data? {
+        guard let dataBase64, !dataBase64.isEmpty else { return nil }
+        return Data(base64Encoded: dataBase64)
+    }
+
+    public init(
+        project: AdaptProject,
+        sceneID: String,
+        panelID: String,
+        refID: String? = nil,
+        skipped: Bool = false,
+        mimeType: String? = nil,
+        dataBase64: String? = nil,
+        revisedPrompt: String? = nil,
+        usage: AdaptUsage = AdaptUsage()
+    ) {
+        self.project = project
+        self.sceneID = sceneID
+        self.panelID = panelID
+        self.refID = refID
+        self.skipped = skipped
+        self.mimeType = mimeType
+        self.dataBase64 = dataBase64
+        self.revisedPrompt = revisedPrompt
+        self.usage = usage
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case project
+        case sceneID = "sceneId"
+        case panelID = "panelId"
+        case refID = "refId"
+        case skipped, mimeType, dataBase64, revisedPrompt, usage
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        project = try c.decode(AdaptProject.self, forKey: .project)
+        sceneID = (try? c.decodeIfPresent(String.self, forKey: .sceneID)) ?? ""
+        panelID = (try? c.decodeIfPresent(String.self, forKey: .panelID)) ?? ""
+        refID = try c.decodeIfPresent(String.self, forKey: .refID)
+        skipped = (try? c.decodeIfPresent(Bool.self, forKey: .skipped)) ?? false
+        mimeType = try c.decodeIfPresent(String.self, forKey: .mimeType)
+        dataBase64 = try c.decodeIfPresent(String.self, forKey: .dataBase64)
+        revisedPrompt = try c.decodeIfPresent(String.self, forKey: .revisedPrompt)
+        usage = (try? c.decodeIfPresent(AdaptUsage.self, forKey: .usage)) ?? AdaptUsage()
+    }
+}
+
+/// Request payload for Core `RenderStoryboard` (mirrors `renderStoryboardRequestWire`).
+public struct RenderStoryboardRequest: Codable, Sendable, Hashable {
+    public var project: AdaptProject
+    public var chapterID: String
+    public var image: AdaptImageConfig
+    public var options: AdaptRenderOptions?
+
+    public init(
+        project: AdaptProject,
+        chapterID: String,
+        image: AdaptImageConfig,
+        options: AdaptRenderOptions? = nil
+    ) {
+        self.project = project
+        self.chapterID = chapterID
+        self.image = image
+        self.options = options
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case project
+        case chapterID = "chapterId"
+        case image, options
+    }
+}
+
+/// One rendered panel image returned by `RenderStoryboard` (mirrors `renderedPanelImageWire`).
+public struct RenderedPanelImage: Codable, Sendable, Hashable {
+    public var sceneID: String
+    public var panelID: String
+    public var refID: String
+    public var mimeType: String
+    public var dataBase64: String
+
+    public var imageData: Data? {
+        Data(base64Encoded: dataBase64)
+    }
+
+    public init(sceneID: String, panelID: String, refID: String, mimeType: String, dataBase64: String) {
+        self.sceneID = sceneID
+        self.panelID = panelID
+        self.refID = refID
+        self.mimeType = mimeType
+        self.dataBase64 = dataBase64
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case sceneID = "sceneId"
+        case panelID = "panelId"
+        case refID = "refId"
+        case mimeType, dataBase64
+    }
+}
+
+/// One failed panel reported by `RenderStoryboard` (mirrors `panelFailureWire`).
+public struct AdaptPanelFailure: Codable, Sendable, Hashable {
+    public var sceneID: String
+    public var panelID: String
+    public var error: String
+    public var errorCode: String
+
+    public var parsedErrorCode: AdaptErrorCode? {
+        AdaptErrorCode(rawValue: errorCode)
+    }
+
+    public init(sceneID: String, panelID: String, error: String, errorCode: String) {
+        self.sceneID = sceneID
+        self.panelID = panelID
+        self.error = error
+        self.errorCode = errorCode
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case sceneID = "sceneId"
+        case panelID = "panelId"
+        case error, errorCode
+    }
+}
+
+/// Summary of one `RenderStoryboard` execution (mirrors `renderSummaryWire`).
+public struct RenderSummary: Codable, Sendable, Hashable {
+    public var chapterID: String
+    public var rendered: Int
+    public var skipped: Int
+    public var failed: Int
+    public var blocked: Int
+    public var usage: AdaptUsage
+    public var failures: [AdaptPanelFailure]
+
+    public init(
+        chapterID: String,
+        rendered: Int = 0,
+        skipped: Int = 0,
+        failed: Int = 0,
+        blocked: Int = 0,
+        usage: AdaptUsage = AdaptUsage(),
+        failures: [AdaptPanelFailure] = []
+    ) {
+        self.chapterID = chapterID
+        self.rendered = rendered
+        self.skipped = skipped
+        self.failed = failed
+        self.blocked = blocked
+        self.usage = usage
+        self.failures = failures
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case chapterID = "chapterId"
+        case rendered, skipped, failed, blocked, usage, failures
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        chapterID = (try? c.decodeIfPresent(String.self, forKey: .chapterID)) ?? ""
+        rendered = (try? c.decodeIfPresent(Int.self, forKey: .rendered)) ?? 0
+        skipped = (try? c.decodeIfPresent(Int.self, forKey: .skipped)) ?? 0
+        failed = (try? c.decodeIfPresent(Int.self, forKey: .failed)) ?? 0
+        blocked = (try? c.decodeIfPresent(Int.self, forKey: .blocked)) ?? 0
+        usage = (try? c.decodeIfPresent(AdaptUsage.self, forKey: .usage)) ?? AdaptUsage()
+        failures = (try? c.decodeIfPresent([AdaptPanelFailure].self, forKey: .failures)) ?? []
+    }
+}
+
+/// Response payload from Core `RenderStoryboard` (mirrors `renderStoryboardResponseWire`).
+public struct RenderStoryboardResponse: Codable, Sendable, Hashable {
+    public var completed: Bool
+    public var project: AdaptProject
+    public var result: RenderSummary
+    public var images: [RenderedPanelImage]
+    public var error: String?
+    public var errorCode: String?
+
+    public var parsedErrorCode: AdaptErrorCode? {
+        errorCode.flatMap(AdaptErrorCode.init(rawValue:))
+    }
+
+    public init(
+        completed: Bool,
+        project: AdaptProject,
+        result: RenderSummary,
+        images: [RenderedPanelImage] = [],
+        error: String? = nil,
+        errorCode: String? = nil
+    ) {
+        self.completed = completed
+        self.project = project
+        self.result = result
+        self.images = images
+        self.error = error
+        self.errorCode = errorCode
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case completed, project, result, images, error, errorCode
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        completed = (try? c.decodeIfPresent(Bool.self, forKey: .completed)) ?? false
+        project = try c.decode(AdaptProject.self, forKey: .project)
+        result = try c.decode(RenderSummary.self, forKey: .result)
+        images = (try? c.decodeIfPresent([RenderedPanelImage].self, forKey: .images)) ?? []
+        error = try c.decodeIfPresent(String.self, forKey: .error)
+        errorCode = try c.decodeIfPresent(String.self, forKey: .errorCode)
+    }
+}
+
 // MARK: - Lenient decoding helpers
 
 struct Lenient<T: Decodable & Sendable>: Decodable, Sendable {
