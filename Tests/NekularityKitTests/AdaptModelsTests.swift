@@ -87,7 +87,9 @@ struct AdaptModelsTests {
             options: AdaptOptions(maxChunkRunes: 1800, checkpoint: checkpoint)
         )
 
-        let encoded = try JSONEncoder().encode(request)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.withoutEscapingSlashes]
+        let encoded = try encoder.encode(request)
         let encodedText = String(decoding: encoded, as: UTF8.self)
         #expect(encodedText.contains(#""novelId":"n1""#))
         #expect(encodedText.contains(#""baseUrl":"https://ai.example.test/v1""#))
