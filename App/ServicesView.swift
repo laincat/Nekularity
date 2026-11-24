@@ -16,6 +16,7 @@ struct ServicesView: View {
     @State private var pendingRun: ServiceRecord?
     /// The package whose account values are being edited.
     @State private var accountsFor: ServiceRecord?
+    @State private var accessFor: ServiceRecord?
 
     var body: some View {
         List {
@@ -49,7 +50,7 @@ struct ServicesView: View {
             } header: {
                 Text("已安装")
             } footer: {
-                Text("服务由 Core 校验、解包与记录；账号值由客户端保存，不会写进 Core。运行一个服务还需要宿主与账号，这一版尚未接入。")
+                Text("可在服务包的菜单里管理账号值与内置功能授权。")
             }
         }
         .navigationTitle("服务")
@@ -84,6 +85,17 @@ struct ServicesView: View {
         }
         .sheet(item: $pendingRun) { record in
             ServiceRunSheet(record: record, methods: services.offeredMethods(for: record.id))
+        }
+        .sheet(item: $accountsFor) { record in
+            ServiceAccountsView(record: record)
+        }
+        .confirmationDialog("允许内置功能调用服务包？", isPresented: Binding(
+            get: { accessFor != nil },
+            set: { if !$0 { accessFor = nil } }), presenting: accessFor) { record in
+            Button("允许") { services.setStructuredAccess(true, for: record) }
+            Button("撤销授权", role: .destructive) { services.setStructuredAccess(false, for: record) }
+        } message: { record in
+            Text("\(record.name) 可经由宿主访问网络，并读取为这个包保存的账号值。授权只适用于当前包版本。")
         }
         .task { services.reload() }
         .refreshable { services.reload() }
@@ -129,6 +141,13 @@ struct ServicesView: View {
                 accountsFor = record
             } label: {
                 Label("账号值…", systemImage: "key")
+            }
+            if [KnownServiceID.bangumi, KnownServiceID.tmdb, KnownServiceID.trakt].contains(record.id) {
+                Button {
+                    accessFor = record
+                } label: {
+                    Label("内置功能授权…", systemImage: "checkmark.shield")
+                }
             }
         }
     }

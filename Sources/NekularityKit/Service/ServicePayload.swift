@@ -15,12 +15,6 @@ public enum ServicePayload {
 
     /// Whether the text parses as JSON. `normalized` first, so empty passes.
     public static func isValid(_ text: String) -> Bool {
-        let body = normalized(text)
-        guard let data = body.data(using: .utf8) else { return false }
-        // fragmentsAllowed: `42`, `true`, `"text"` and `null` are JSON values a
-        // method may take, and without this option the parser only accepts an
-        // object or an array - which would reject the default `null` payload.
-        return (try? JSONSerialization.jsonObject(with: data,
-                                                  options: [.fragmentsAllowed])) != nil
+        (try? JSONValue.parse(normalized(text))) != nil
     }
 }

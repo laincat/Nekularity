@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Security
 
 /// Where a Bangumi token is kept.
 ///
@@ -97,23 +98,31 @@ public final class BangumiStore {
     public private(set) var calendar: [BangumiCalendarDay] = []
     public private(set) var failure: String?
     public private(set) var busy = false
-    /// True when a token is stored, so a screen can say "connected" without
-    /// reading the Keychain on every redraw.
-    public private(set) var hasToken = false
+    public var hasToken: Bool {
+        hasLegacyToken || serviceBridge.flatMap {
+            try? $0.accounts.values(service: BangumiServiceAdapter.id)[BangumiServiceAdapter.tokenKey]
+        }?.isEmpty == false
+    }
+
+    private var hasLegacyToken = false
 
     private let tokens: any BangumiTokenStore
+    private let serviceBridge: ServicePackageBridge?
     private let makeClient: @Sendable (String?) -> BangumiClient
 
     public init(tokens: any BangumiTokenStore = KeychainBangumiTokenStore(),
+                serviceBridge: ServicePackageBridge? = nil,
                 makeClient: @escaping @Sendable (String?) -> BangumiClient = { BangumiClient.live(token: $0) }) {
         self.tokens = tokens
+        self.serviceBridge = serviceBridge
         self.makeClient = makeClient
-        hasToken = ((try? tokens.load()) ?? nil)?.isEmpty == false
+        hasLegacyToken = (try? tokens.load())?.isEmpty == false
     }
 
-    private var client: BangumiClient? {
-        guard let token = (try? tokens.load()) ?? nil, !token.isEmpty else { return nil }
-        return makeClient(token)
+    private func client(anonymous: Bool = false) -> BangumiClient {
+        var client = makeClient(anonymous ? nil : try? tokens.load())
+        client.service = serviceBridge.map { BangumiServiceAdapter(bridge: $0) }
+        return client
     }
 
     /// Checks the token against Bangumi before keeping it: a token that only fails
@@ -127,9 +136,23 @@ public final class BangumiStore {
         busy = true
         defer { busy = false }
         do {
+            if let serviceBridge {
+                let candidate = MemoryServiceAccounts()
+                let id = BangumiServiceAdapter.id
+                let key = BangumiServiceAdapter.tokenKey
+                try candidate.set(service: id, key: key, value: token)
+                if let me = try await serviceBridge.invoke(id, method: "account.me", secretKeys: [key],
+                                                           accounts: candidate, as: BangumiUser.self) {
+                    try serviceBridge.accounts.set(service: id, key: key, value: token)
+                    user = me
+                    failure = nil
+                    await refresh()
+                    return
+                }
+            }
             let me = try await makeClient(token).me()
             try tokens.save(token)
-            hasToken = true
+            hasLegacyToken = true
             user = me
             failure = nil
             await refresh()
@@ -139,16 +162,22 @@ public final class BangumiStore {
     }
 
     public func signOut() {
-        try? tokens.remove()
-        hasToken = false
-        user = nil
-        collections = []
-        failure = nil
+        do {
+            try tokens.remove()
+            hasLegacyToken = false
+            try serviceBridge?.accounts.remove(service: BangumiServiceAdapter.id, key: BangumiServiceAdapter.tokenKey)
+            user = nil
+            collections = []
+            failure = nil
+        } catch {
+            failure = "无法清除 Bangumi 凭据"
+        }
     }
 
     /// Reloads the collections, optionally only one state.
     public func refresh(type: CollectionType? = nil) async {
-        guard let client else { return }
+        guard hasToken else { return }
+        let client = client()
         busy = true
         defer { busy = false }
         do {
@@ -164,7 +193,7 @@ public final class BangumiStore {
     /// needs no account and a signed-out screen still wants it.
     public func loadCalendar() async {
         do {
-            calendar = try await makeClient(nil).calendar()
+            calendar = try await client(anonymous: true).calendar()
             failure = nil
         } catch {
             failure = BangumiErrorText.readable(error)
@@ -172,9 +201,9 @@ public final class BangumiStore {
     }
 
     public func search(_ keyword: String, type: Int = 2) async -> [BangumiSubject] {
-        guard let client else { return [] }
         do {
-            let found = try await client.search(keyword: keyword, type: type)
+            if !hasToken, try await serviceBridge?.installed(BangumiServiceAdapter.id) != true { return [] }
+            let found = try await client().search(keyword: keyword, type: type)
             failure = nil
             return found
         } catch {
@@ -187,7 +216,8 @@ public final class BangumiStore {
     /// screen.
     public func detail(subjectID: Int) async -> (subject: BangumiSubject, episodes: [BangumiEpisode],
                                                  collection: BangumiCollection?)? {
-        guard let client else { return nil }
+        guard hasToken else { return nil }
+        let client = client()
         do {
             let subject = try await client.subject(id: subjectID)
             let episodes = try await client.episodes(subjectID: subjectID)
@@ -202,9 +232,9 @@ public final class BangumiStore {
 
     public func set(type: CollectionType, rate: Int? = nil, epStatus: Int? = nil,
                     for subjectID: Int) async {
-        guard let client else { return }
+        guard hasToken else { return }
         do {
-            try await client.setCollection(subjectID: subjectID, type: type,
+            try await client().setCollection(subjectID: subjectID, type: type,
                                            rate: rate, epStatus: epStatus)
             await refresh()
         } catch {
@@ -215,9 +245,9 @@ public final class BangumiStore {
     /// Marks one episode watched and moves the local count with it, so the row can
     /// show the change before the next refresh lands.
     public func markWatched(subjectID: Int, episodeID: Int) async {
-        guard let client else { return }
+        guard hasToken else { return }
         do {
-            try await client.markWatched(subjectID: subjectID, episodeID: episodeID)
+            try await client().markWatched(subjectID: subjectID, episodeID: episodeID)
             await refresh()
         } catch {
             failure = BangumiErrorText.readable(error)
@@ -230,7 +260,8 @@ public final class BangumiStore {
     /// already knows how to turn a `SeriesInfo` into a notification, so Bangumi
     /// only has to answer in that shape.
     public func airingShows(now: Date = Date()) async -> [SeriesInfo] {
-        guard let client else { return [] }
+        guard hasToken else { return [] }
+        let client = client()
         let watching = collections.filter { $0.type == .doing }
             .prefix(Self.airingLimit)
         var shows: [SeriesInfo] = []

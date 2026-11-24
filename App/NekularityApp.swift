@@ -170,6 +170,11 @@ final class AppModel {
             // with no connection at all.
             let downloads = DownloadStore(root: root.appending(path: "Downloads", directoryHint: .isDirectory))
             let images = ImageLoader.forDownloads(core: core, downloads: downloads)
+            let services = ServiceStore(
+                directory: root.appending(path: "Services", directoryHint: .isDirectory),
+                host: host,
+                accounts: KeychainServiceAccounts(service: profiles.keychainService(for: profiles.activeID) + ".services"))
+            let serviceBridge = services.makeBridge()
             state = .ready(Environment(
                 library: library,
                 images: images,
@@ -187,7 +192,8 @@ final class AppModel {
                     tokens: KeychainMediaTokenStore(service: profiles.keychainService(for: profiles.activeID) + ".media")),
                 metadata: MetadataStore(
                     directory: root,
-                    keys: KeychainMetadataKeyStore(service: profiles.keychainService(for: profiles.activeID) + ".tmdb")),
+                    keys: KeychainMetadataKeyStore(service: profiles.keychainService(for: profiles.activeID) + ".tmdb"),
+                    serviceBridge: serviceBridge),
                 intros: IntroStore(directory: root),
                 local: LocalComicStore(directory: root),
                 glossary: TagGlossaryStore(directory: root),
@@ -196,12 +202,9 @@ final class AppModel {
                 switchProfile: { [weak self] id in await self?.switchProfile(to: id) },
                 bangumi: BangumiStore(
                     tokens: KeychainBangumiTokenStore(
-                        service: profiles.keychainService(for: profiles.activeID) + ".bangumi")),
-                services: ServiceStore(
-                    directory: root.appending(path: "Services", directoryHint: .isDirectory),
-                    host: host,
-                    accounts: KeychainServiceAccounts(
-                        service: profiles.keychainService(for: profiles.activeID) + ".services"))))
+                        service: profiles.keychainService(for: profiles.activeID) + ".bangumi"),
+                    serviceBridge: serviceBridge),
+                services: services))
         } catch {
             started = false
             state = .failed(error.localizedDescription)

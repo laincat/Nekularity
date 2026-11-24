@@ -35,6 +35,8 @@ public final class ServiceStore {
     public private(set) var run: RunResult?
 
     private let directory: URL
+    private let defaults: UserDefaults
+    private var activeStructuredCalls = 0
     /// This client's side of Core, needed to run a service: the package's HTTP
     /// goes through it, so the transport, cookies and certificates stay here.
     private let host: CoreHost?
@@ -44,10 +46,11 @@ public final class ServiceStore {
     /// Services live beside the sources of the environment they belong to, so a
     /// profile switch takes them along without anyone copying anything.
     public init(directory: URL, host: CoreHost? = nil,
-                accounts: ServiceAccounts = MemoryServiceAccounts()) {
+                accounts: ServiceAccounts = MemoryServiceAccounts(), defaults: UserDefaults = .standard) {
         self.directory = directory
         self.host = host
         self.accounts = accounts
+        self.defaults = defaults
     }
 
     public var dataDir: String { directory.path(percentEncoded: false) }
@@ -55,6 +58,43 @@ public final class ServiceStore {
     /// The methods that belong to this package, never another one's.
     public func offeredMethods(for id: String) -> [ServiceMethod] {
         methodsFor == id ? methods : []
+    }
+
+    public func allowsStructuredAccess(_ record: ServiceRecord) -> Bool {
+        guard let digest = record.sha256 else { return false }
+        return defaults.string(forKey: accessKey(record.id)) == digest
+    }
+
+    public func setStructuredAccess(_ allowed: Bool, for record: ServiceRecord) {
+        defaults.set(allowed ? record.sha256 : nil, forKey: accessKey(record.id))
+    }
+
+    private func accessKey(_ id: String) -> String { "serviceAccess.\(dataDir).\(id)" }
+
+    public func makeBridge() -> ServicePackageBridge {
+        ServicePackageBridge(accounts: accounts, find: { [dataDir] id in
+            try await Task.detached { try CoreService.list(dataDir: dataDir).first { $0.id == id } }.value
+        }, grants: { [self] record in
+            await allowsStructuredAccess(record) ? ["network", "secrets"] : []
+        }, run: { [self] record, method, payload, granted, secrets in
+            try await runStructured(record, method: method, payload: payload, granted: granted, secrets: secrets)
+        })
+    }
+
+    private func runStructured(_ record: ServiceRecord, method: String, payload: String,
+                               granted: [String], secrets: [String: String]) async throws -> String {
+        guard let host, !installing, allowsStructuredAccess(record) else {
+            throw ServiceBridgeError.executionFailed(service: record.id, method: method)
+        }
+        activeStructuredCalls += 1
+        defer { activeStructuredCalls -= 1 }
+        return try await Task.detached { [dataDir] in
+            guard try CoreService.manifest(dataDir: dataDir, id: record.id) == record else {
+                throw ServiceBridgeError.executionFailed(service: record.id, method: method)
+            }
+            return try CoreService.call(host: host, dataDir: dataDir, id: record.id, method: method,
+                                        payload: payload, granted: granted, secrets: secrets)
+        }.value
     }
 
 
@@ -73,6 +113,10 @@ public final class ServiceStore {
     /// The digest is computed here and handed to Core, so the record says what
     /// was actually installed rather than what a listing claimed.
     public func install(from url: URL) async {
+        guard !installing, activeStructuredCalls == 0 else {
+            error = "服务包正在使用，请稍后再安装"
+            return
+        }
         installing = true
         defer { installing = false }
         do {
@@ -101,8 +145,13 @@ public final class ServiceStore {
     }
 
     public func remove(_ id: String) {
+        guard !installing, activeStructuredCalls == 0 else {
+            error = "服务包正在使用，请稍后再移除"
+            return
+        }
         do {
             try CoreService.remove(dataDir: dataDir, id: id)
+            defaults.removeObject(forKey: accessKey(id))
             // The package's code is gone, so its account values and any runtime
             // Core still holds for it must go too: a reinstalled package must
             // not inherit either.

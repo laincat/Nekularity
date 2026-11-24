@@ -221,15 +221,14 @@ struct MediaHubView: View {
     /// seen; a name that matches nothing is left alone rather than retried on
     /// every visit.
     private func identifyShows() async {
-        guard metadata.hasKey, let key = metadata.apiKey() else { return }
-        let client = TMDBClient.live(apiKey: key)
+        guard metadata.hasKey else { return }
         let names = Set(serverRows.flatMap { row in row.items.map(\.series) }.filter { !$0.isEmpty })
         var looked = 0
         for name in names {
             guard looked < 6 else { break }
             if metadata.series.values.contains(where: { $0.name == name }) { continue }
             looked += 1
-            _ = try? await metadata.identify(title: name, client: client)
+            _ = try? await metadata.identify(title: name)
         }
     }
 }

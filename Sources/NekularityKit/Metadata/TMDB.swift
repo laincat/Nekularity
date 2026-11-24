@@ -63,6 +63,52 @@ public struct MetadataError: LocalizedError, Sendable {
     public var errorDescription: String? { message }
 }
 
+/// One artwork asset returned by TMDB (poster, backdrop, or logo).
+public struct TMDBImageAsset: Codable, Hashable, Sendable {
+    public var filePath: String
+    public var url: String
+    public var width: Int?
+    public var height: Int?
+    public var aspectRatio: Double?
+    public var language: String?
+
+    public init(
+        filePath: String,
+        url: String,
+        width: Int? = nil,
+        height: Int? = nil,
+        aspectRatio: Double? = nil,
+        language: String? = nil
+    ) {
+        self.filePath = filePath
+        self.url = url
+        self.width = width
+        self.height = height
+        self.aspectRatio = aspectRatio
+        self.language = language
+    }
+}
+
+/// Artwork bundle for a show: posters, backdrops, and logos.
+public struct TMDBArtwork: Codable, Hashable, Sendable {
+    public var seriesID: Int
+    public var posters: [TMDBImageAsset]
+    public var backdrops: [TMDBImageAsset]
+    public var logos: [TMDBImageAsset]
+
+    public init(
+        seriesID: Int,
+        posters: [TMDBImageAsset] = [],
+        backdrops: [TMDBImageAsset] = [],
+        logos: [TMDBImageAsset] = []
+    ) {
+        self.seriesID = seriesID
+        self.posters = posters
+        self.backdrops = backdrops
+        self.logos = logos
+    }
+}
+
 /// The Movie Database, as far as this app needs it.
 ///
 /// TMDB issues two kinds of key: a v3 key that goes in the query string and a v4
@@ -86,6 +132,8 @@ public struct TMDBClient: Sendable {
     public var apiKey: String
     public var language: String
     public var send: @Sendable (Request) async throws -> Response
+    var service: ServicePackageBridge?
+    static let serviceKey = "api_key"
 
     public init(apiKey: String, language: String = "zh-CN",
                 send: @escaping @Sendable (Request) async throws -> Response) {
@@ -125,6 +173,9 @@ public struct TMDBClient: Sendable {
     public func search(query: String) async throws -> [SeriesInfo] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
+        if let found = try await serviceResult("series.search", ("query", .string(trimmed)), as: [ServiceSeries].self) {
+            return found.map(\.info)
+        }
         let response = try await send(request("/3/search/tv", query: ["query": trimmed]))
         try expectOK(response, what: "搜索剧集")
         struct Answer: Decodable {
@@ -150,6 +201,12 @@ public struct TMDBClient: Sendable {
 
     /// One show, including the next episode it has not aired yet.
     public func series(id: Int) async throws -> SeriesInfo {
+        if let found = try await serviceResult("series.detail", ("id", .integer(id)), as: ServiceSeries.self) {
+            guard found.id == id else {
+                throw ServiceBridgeError.invalidResponse(service: KnownServiceID.tmdb, method: "series.detail")
+            }
+            return found.info
+        }
         let response = try await send(request("/3/tv/\(id)"))
         try expectOK(response, what: "读取剧集")
         struct Answer: Decodable {
@@ -182,6 +239,74 @@ public struct TMDBClient: Sendable {
                                                   name: episode.name ?? "")
         }
         return info
+    }
+
+    /// Posters, backdrops and logos for one TV series.
+    public func artwork(id: Int) async throws -> TMDBArtwork {
+        if let artwork = try await serviceResult("series.artwork", ("id", .integer(id)), as: TMDBArtwork.self) {
+            guard artwork.seriesID == id else {
+                throw ServiceBridgeError.invalidResponse(service: KnownServiceID.tmdb, method: "series.artwork")
+            }
+            return artwork
+        }
+        let response = try await send(request("/3/tv/\(id)/images"))
+        try expectOK(response, what: "读取图集")
+        struct Answer: Decodable {
+            struct RawImage: Decodable {
+                var file_path: String
+                var width: Int?
+                var height: Int?
+                var aspect_ratio: Double?
+                var iso_639_1: String?
+            }
+            var id: Int?
+            var posters: [RawImage]?
+            var backdrops: [RawImage]?
+            var logos: [RawImage]?
+        }
+        let answer = try decode(Answer.self, from: response, what: "图集")
+        func map(_ items: [Answer.RawImage]?, width: Int) -> [TMDBImageAsset] {
+            (items ?? []).compactMap { item in
+                guard let url = Self.imageURL(item.file_path, width: width) else { return nil }
+                return TMDBImageAsset(
+                    filePath: item.file_path,
+                    url: url,
+                    width: item.width,
+                    height: item.height,
+                    aspectRatio: item.aspect_ratio,
+                    language: item.iso_639_1
+                )
+            }
+        }
+        return TMDBArtwork(
+            seriesID: answer.id ?? id,
+            posters: map(answer.posters, width: 500),
+            backdrops: map(answer.backdrops, width: 780),
+            logos: map(answer.logos, width: 500)
+        )
+    }
+
+    private struct ServiceSeries: Decodable, Sendable {
+        var id: Int
+        var name: String
+        var overview: String?
+        var poster: String?
+        var firstAirDate: String?
+        var nextEpisode: SeriesInfo.Episode?
+        var status: String?
+
+        var info: SeriesInfo {
+            SeriesInfo(source: "tmdb", id: id, name: name, overview: overview ?? "", poster: poster,
+                       firstAirDate: firstAirDate, nextEpisode: nextEpisode, status: status ?? "")
+        }
+    }
+
+    private func serviceResult<Response: Decodable & Sendable>(
+        _ method: String, _ field: (String, JSONValue), as type: Response.Type
+    ) async throws -> Response? {
+        let payload = JSONValue.serviceArguments(field, ("language", .string(language)))
+        return try await service?.invokeIfInstalled(KnownServiceID.tmdb, method: method, payload: payload,
+                                                    secretKeys: [Self.serviceKey], as: type)
     }
 
     public static func imageURL(_ path: String?, width: Int = 342) -> String? {

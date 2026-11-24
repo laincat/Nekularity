@@ -322,21 +322,17 @@ struct SettingsView: View {
     /// Saving is also the check: a key that the source rejects is worse than no
     /// key, because the calendar would then quietly show nothing for ever.
     private func saveKey() {
-        do {
-            try metadata.setKey(tmdbKey)
-            let client = TMDBClient.live(apiKey: tmdbKey.trimmingCharacters(in: .whitespacesAndNewlines))
-            metadataNote = "正在验证…"
-            Task {
-                do {
-                    let found = try await client.search(query: "Severance")
-                    metadataNote = found.isEmpty ? "key 可用" : "key 可用,能查到剧集"
-                } catch {
-                    metadataNote = error.localizedDescription
-                }
-                tmdbKey = ""
+        let key = tmdbKey
+        tmdbKey = ""
+        metadataNote = "正在验证…"
+        Task {
+            do {
+                try await metadata.setPreferredKey(key)
+                let found = try await metadata.search(query: "Severance")
+                metadataNote = found.isEmpty ? "key 可用" : "key 可用,能查到剧集"
+            } catch {
+                metadataNote = error.localizedDescription
             }
-        } catch {
-            metadataNote = error.localizedDescription
         }
     }
 

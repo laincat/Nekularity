@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Security
 
 /// Where the metadata key is kept.
 ///
@@ -91,20 +92,26 @@ public final class MetadataStore {
     /// Everything looked up, keyed by `source/id`.
     public private(set) var series: [String: SeriesInfo] = [:]
     public private(set) var failure: String?
-    /// True when a key is stored, so the interface can say "connected" without
-    /// reading the Keychain on every redraw.
-    public private(set) var hasKey = false
+    public var hasKey: Bool {
+        hasLegacyKey || service.flatMap {
+            try? $0.accounts.values(service: KnownServiceID.tmdb)[TMDBClient.serviceKey]
+        }?.isEmpty == false
+    }
 
+    private var hasLegacyKey = false
     private let directory: URL
     private let file: URL
     private let keys: any MetadataKeyStore
+    private let service: ServicePackageBridge?
 
-    public init(directory: URL, keys: any MetadataKeyStore = KeychainMetadataKeyStore()) {
+    public init(directory: URL, keys: any MetadataKeyStore = KeychainMetadataKeyStore(),
+                serviceBridge: ServicePackageBridge? = nil) {
         self.directory = directory
         file = directory.appending(path: "metadata.json")
         self.keys = keys
+        service = serviceBridge
         load()
-        hasKey = (try? keys.load())?.isEmpty == false
+        hasLegacyKey = (try? keys.load())?.isEmpty == false
     }
 
     private func load() {
@@ -137,11 +144,39 @@ public final class MetadataStore {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
             try keys.remove()
-            hasKey = false
+            hasLegacyKey = false
+            try service?.accounts.remove(service: KnownServiceID.tmdb, key: TMDBClient.serviceKey)
         } else {
             try keys.save(trimmed)
-            hasKey = true
+            hasLegacyKey = true
         }
+    }
+
+    public func setPreferredKey(_ key: String) async throws {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty, let service, try await service.installed(KnownServiceID.tmdb) {
+            try service.accounts.set(service: KnownServiceID.tmdb, key: TMDBClient.serviceKey, value: trimmed)
+        } else {
+            try setKey(trimmed)
+        }
+    }
+
+    private func routedClient(_ fallback: TMDBClient? = nil) -> TMDBClient {
+        let key = apiKey() ?? ""
+        var client = fallback ?? TMDBClient.live(apiKey: key)
+        if fallback == nil, key.isEmpty {
+            client.send = { _ in throw MetadataError("请先设置 TMDB API key") }
+        }
+        client.service = service
+        return client
+    }
+
+    public func search(query: String) async throws -> [SeriesInfo] {
+        try await routedClient().search(query: query)
+    }
+
+    public func artwork(id: Int) async throws -> TMDBArtwork {
+        try await routedClient().artwork(id: id)
     }
 
     /// A cached answer that is still fresh.
@@ -160,10 +195,10 @@ public final class MetadataStore {
 
     /// Looks one show up, using the cache when it is fresh.
     @discardableResult
-    public func lookup(id: Int, client: TMDBClient) async throws -> SeriesInfo {
+    public func lookup(id: Int, client: TMDBClient? = nil) async throws -> SeriesInfo {
         let key = "tmdb/\(id)"
         if let hit = cached(key) { return hit }
-        let info = try await client.series(id: id)
+        let info = try await routedClient(client).series(id: id)
         remember(info)
         return info
     }
@@ -171,10 +206,10 @@ public final class MetadataStore {
     /// Which show a title probably is. One result is the common case; zero is an
     /// answer too, and a title that matches several shows stays unresolved rather
     /// than being guessed at.
-    public func identify(title: String, client: TMDBClient) async throws -> SeriesInfo? {
+    public func identify(title: String, client: TMDBClient? = nil) async throws -> SeriesInfo? {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
-        let matches = try await client.search(query: trimmed)
+        let matches = try await routedClient(client).search(query: trimmed)
         guard let best = matches.first else { return nil }
         let exact = matches.filter { $0.name.compare(trimmed, options: .caseInsensitive) == .orderedSame }
         guard exact.count <= 1 else { return nil }
