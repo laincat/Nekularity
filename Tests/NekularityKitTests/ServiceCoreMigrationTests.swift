@@ -76,7 +76,7 @@ private final class ServiceHTTPFixture: URLProtocol, @unchecked Sendable {
       if (method !== 'account.me' || JSON.parse(text) !== null) throw new Error('wrong request');
       const response = fetch(base + '/account', { method: 'GET', headers });
       if (!response.ok || response.status !== 200) throw new Error('expected HTTP 200');
-      return { ok: true, service: 'service.bangumi', method, data: JSON.parse(response.text()) };
+      return { ok: true, service: 'service.bangumi', method, data: JSON.parse(response.body) };
     }
     """
     try Data(manifest.utf8).write(to: root.appending(path: "service.json"))
