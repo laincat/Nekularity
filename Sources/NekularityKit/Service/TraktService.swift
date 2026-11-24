@@ -11,7 +11,7 @@ public struct TraktAccount: Decodable, Hashable, Sendable {
 }
 
 public struct TraktItem: Codable, Hashable, Sendable {
-    public enum Kind: String, Codable, Sendable { case movie, show, episode }
+    public enum Kind: String, Codable, Sendable { case movie, show, season, episode }
 
     public let kind: Kind
     public let id: Int
@@ -61,18 +61,29 @@ public struct TraktService: TraktProvider {
     }
 
     public func account() async throws -> TraktAccount {
-        try await route("account.me", as: TraktAccount.self) { try await $0.account() }
+        if let account = try await read("account.me", as: TraktAccount.self) { return account }
+        guard let fallback else { throw ServiceBridgeError.notInstalled(Self.id) }
+        return try await fallback.account()
     }
 
     public func search(query: String) async throws -> [TraktItem] {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return [] }
-        return try await route("search", .serviceArguments(("query", .string(query))),
-                               authenticated: false, as: [TraktItem].self) { try await $0.search(query: query) }
+        let payload = JSONValue.serviceArguments(("query", .string(query)), ("type", .string("movie,show,episode")))
+        if let found = try await bridge.invokeIfInstalled(Self.id, method: "metadata.search", payload: payload,
+                                                          secretKeys: [Self.clientKey], as: ServiceItems<WireItem>.self) {
+            return found.items.compactMap(\.model)
+        }
+        guard let fallback else { throw ServiceBridgeError.notInstalled(Self.id) }
+        return try await fallback.search(query: query)
     }
 
     public func watchlist() async throws -> [TraktItem] {
-        try await route("watchlist.list", as: [TraktItem].self) { try await $0.watchlist() }
+        if let found = try await read("watchlist.list", as: ServiceItems<WireItem>.self) {
+            return found.items.compactMap(\.model)
+        }
+        guard let fallback else { throw ServiceBridgeError.notInstalled(Self.id) }
+        return try await fallback.watchlist()
     }
 
     public func setWatchlist(_ item: TraktItem, included: Bool) async throws {
@@ -81,7 +92,14 @@ public struct TraktService: TraktProvider {
     }
 
     public func history() async throws -> [TraktHistoryEntry] {
-        try await route("history.list", as: [TraktHistoryEntry].self) { try await $0.history() }
+        if let found = try await read("history.list", as: ServiceItems<WireItem>.self) {
+            return found.items.compactMap { row in
+                guard let item = row.model, let watchedAt = row.watchedAt else { return nil }
+                return TraktHistoryEntry(item: item, watchedAt: watchedAt)
+            }
+        }
+        guard let fallback else { throw ServiceBridgeError.notInstalled(Self.id) }
+        return try await fallback.history()
     }
 
     public func record(_ item: TraktItem, watchedAt: String) async throws {
@@ -90,27 +108,35 @@ public struct TraktService: TraktProvider {
     }
 
     public func scrobble(_ action: TraktScrobbleAction, item: TraktItem, progress: Double) async throws {
-        guard progress.isFinite, (0...100).contains(progress), item.kind != .show else {
-            throw ServiceBridgeError.invalidPayload(service: Self.id, method: "scrobble")
+        let method = "scrobble.\(action.rawValue)"
+        guard progress.isFinite, (0...100).contains(progress), item.kind == .movie || item.kind == .episode else {
+            throw ServiceBridgeError.invalidPayload(service: Self.id, method: method)
         }
-        let payload = JSONValue.serviceArguments(("item", reference(item)), ("action", .string(action.rawValue)),
-                                                 ("progress", .number(String(progress))))
-        try await write("scrobble", payload) { try await $0.scrobble(action, item: item, progress: progress) }
+        let media = JSONValue.serviceArguments(("ids", .serviceArguments(("trakt", .integer(item.id)))))
+        let payload = JSONValue.serviceArguments((item.kind.rawValue, media), ("progress", .number(String(progress))))
+        try await write(method, payload) { try await $0.scrobble(action, item: item, progress: progress) }
     }
 
     private func reference(_ item: TraktItem) -> JSONValue {
         .serviceArguments(("kind", .string(item.kind.rawValue)), ("id", .integer(item.id)))
     }
 
-    private func route<Response: Decodable & Sendable>(
-        _ method: String, _ payload: JSONValue = .null, authenticated: Bool = true, as type: Response.Type,
-        fallback call: (any TraktProvider) async throws -> Response
-    ) async throws -> Response {
-        if let result = try await bridge.invokeIfInstalled(Self.id, method: method, payload: payload,
-                                                           secretKeys: authenticated ? [Self.clientKey, Self.authKey] : [Self.clientKey],
-                                                           as: type) { return result }
-        guard let fallback else { throw ServiceBridgeError.notInstalled(Self.id) }
-        return try await call(fallback)
+    private struct WireItem: Decodable, Sendable {
+        struct IDs: Decodable, Sendable { let trakt: Int? }
+        let type: String
+        let title: String
+        let year: Int?
+        let ids: IDs?
+        let watchedAt: String?
+
+        var model: TraktItem? {
+            guard let kind = TraktItem.Kind(rawValue: type), let id = ids?.trakt else { return nil }
+            return TraktItem(kind: kind, id: id, title: title, year: year)
+        }
+    }
+
+    private func read<Response: Decodable & Sendable>(_ method: String, as type: Response.Type) async throws -> Response? {
+        try await bridge.invokeIfInstalled(Self.id, method: method, secretKeys: [Self.clientKey, Self.authKey], as: type)
     }
 
     private func write(_ method: String, _ payload: JSONValue,

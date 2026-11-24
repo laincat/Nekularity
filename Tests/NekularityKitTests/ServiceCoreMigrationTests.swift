@@ -32,10 +32,11 @@ private final class ServiceHTTPFixture: URLProtocol, @unchecked Sendable {
     let manifest = #"{"id":"service.bangumi","name":"Fixture","version":"1","kind":"service.js","entry":"index.mjs","permissions":["network","secrets","storage"]}"#
     let source = """
     export function handle(method, text) {
-      if (secret('token') !== 'core-fixture-token') throw new Error('expected the scoped token');
-      if (method === 'write') { storageSet('credential', secret('token')); return null; }
+      if (secret('access_token') !== 'core-fixture-token') throw new Error('expected the scoped token');
+      if (method === 'write') { storageSet('credential', secret('access_token')); return null; }
       if (method !== 'account.me' || JSON.parse(text) !== null) throw new Error('wrong request');
-      return JSON.parse(fetch('https://service-bridge.example.test/account'));
+      const data = JSON.parse(fetch('https://service-bridge.example.test/account'));
+      return { ok: true, service: 'service.bangumi', method, data };
     }
     """
     try Data(manifest.utf8).write(to: root.appending(path: "service.json"))
@@ -55,23 +56,28 @@ private final class ServiceHTTPFixture: URLProtocol, @unchecked Sendable {
     let host = CoreHost(store: try SourceStore(root: root), cookies: cookies, transport: transport)
     let accounts = MemoryServiceAccounts()
     let id = KnownServiceID.bangumi
-    try accounts.set(service: id, key: "token", value: "core-fixture-token")
+    try accounts.set(service: id, key: "access_token", value: "core-fixture-token")
     let store = ServiceStore(directory: root.appending(path: "services-root"), host: host,
                              accounts: accounts, defaults: defaults)
     await store.install(from: root.appending(path: "fixture.zip"))
     let record = try #require(store.records.first, "\(store.error ?? "")")
-    let bridge = store.makeBridge()
+    let bridge = store.makeBridge(requireAuthorization: false)
+    let preferred = store.makeBridge()
+    #expect(try await preferred.installed(id) == false)
     await #expect(throws: ServiceBridgeError.permissionDenied(service: id, missing: ["network", "secrets"])) {
-        try await bridge.invokeIfInstalled(id, method: "account.me", secretKeys: ["token"], as: BangumiUser.self)
+        try await bridge.invokeIfInstalled(id, method: "account.me", secretKeys: ["access_token"], as: BangumiUser.self)
     }
     store.setStructuredAccess(true, for: record)
-    let user = try await bridge.invokeIfInstalled(id, method: "account.me", secretKeys: ["token"], as: BangumiUser.self)
+    #expect(try await preferred.installed(id))
+    let user = try await bridge.invokeIfInstalled(id, method: "account.me", secretKeys: ["access_token"], as: BangumiUser.self)
     #expect(user?.username == "from-host")
     await #expect(throws: ServiceBridgeError.executionFailed(service: id, method: "write")) {
-        try await bridge.invokeIfInstalled(id, method: "write", secretKeys: ["token"], as: ServiceAcknowledgement.self)
+        try await bridge.invokeIfInstalled(id, method: "write", secretKeys: ["access_token"], as: ServiceAcknowledgement.self)
     }
+    store.setStructuredAccess(false, for: record)
+    #expect(try await preferred.installed(id) == false)
     store.remove(id)
-    #expect(try await !bridge.installed(id))
+    #expect(try await bridge.installed(id) == false)
     #expect(try accounts.values(service: id).isEmpty)
 }
 #endif

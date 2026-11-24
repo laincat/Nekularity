@@ -94,8 +94,8 @@ public struct BangumiClient: Sendable {
         guard !trimmed.isEmpty else { return [] }
         let payload = JSONValue.serviceArguments(("keyword", .string(trimmed)), ("type", .integer(type)),
                                                  ("limit", .integer(limit)))
-        if let result = try await service?.call("subject.search", payload, as: [BangumiSubject].self) {
-            return result
+        if let result = try await service?.call("metadata.search", payload, as: ServiceItems<BangumiServiceAdapter.Subject>.self) {
+            return result.items.map(\.model)
         }
         struct Body: Encodable {
             var keyword: String
@@ -160,9 +160,9 @@ public struct BangumiClient: Sendable {
     }
 
     public func subject(id: Int) async throws -> BangumiSubject {
-        let payload = JSONValue.serviceArguments(("subject_id", .integer(id)))
-        if let result = try await service?.call("subject.detail", payload, as: BangumiSubject.self) {
-            return result
+        let payload = JSONValue.serviceArguments(("subjectId", .integer(id)))
+        if let result = try await service?.call("metadata.detail", payload, as: BangumiServiceAdapter.Subject.self) {
+            return result.model
         }
         let response = try await send(request("/v0/subjects/\(id)"))
         try expectOK(response, what: "读取条目")
@@ -180,9 +180,8 @@ public struct BangumiClient: Sendable {
     /// measured 2026-11-01, ONE PIECE has 1155 episodes, so any cap below that
     /// truncates a real show without saying so.
     public func episodes(subjectID: Int, type: Int = 0) async throws -> [BangumiEpisode] {
-        let payload = JSONValue.serviceArguments(("subject_id", .integer(subjectID)), ("type", .integer(type)))
-        if let result = try await service?.call("subject.episodes", payload, as: [BangumiEpisode].self) {
-            return result
+        if let service, let episodes = try await packageEpisodes(service, subjectID: subjectID, type: type) {
+            return episodes
         }
         struct Answer: Decodable { var data: [BangumiEpisode]; var total: Int? }
         var all: [BangumiEpisode] = []
@@ -206,9 +205,24 @@ public struct BangumiClient: Sendable {
         return all
     }
 
+    private func packageEpisodes(_ service: BangumiServiceAdapter, subjectID: Int, type: Int) async throws -> [BangumiEpisode]? {
+        var all: [BangumiEpisode] = []
+        for offset in stride(from: 0, to: Self.episodeLimit, by: 100) {
+            let payload = JSONValue.serviceArguments(("subjectId", .integer(subjectID)), ("includeEpisodes", .bool(true)),
+                                                     ("episodeType", .integer(type)), ("episodeOffset", .integer(offset)))
+            guard let detail = try await service.call("metadata.detail", payload, as: BangumiServiceAdapter.Subject.self) else {
+                if offset == 0 { return nil }
+                throw ServiceBridgeError.notInstalled(BangumiServiceAdapter.id)
+            }
+            let page = (detail.episodes ?? []).prefix(100).map(\.model)
+            all.append(contentsOf: page)
+            if page.count < 100 { break }
+        }
+        return all
+    }
+
     /// What airs on each weekday. Needs no account.
     public func calendar() async throws -> [BangumiCalendarDay] {
-        if let result = try await service?.call("calendar.list", as: [BangumiCalendarDay].self) { return result }
         let response = try await send(request("/calendar"))
         try expectOK(response, what: "读取每日放送")
         return try decode([BangumiCalendarDay].self, from: response, what: "每日放送")
@@ -219,10 +233,12 @@ public struct BangumiClient: Sendable {
     /// This account's collections, newest first. `-/` means "whoever the token is".
     public func collections(type: CollectionType? = nil, subjectType: Int = 2,
                             limit: Int = 50) async throws -> [BangumiCollection] {
-        let payload = JSONValue.serviceArguments(("subject_type", .integer(subjectType)), ("limit", .integer(limit)),
+        let payload = JSONValue.serviceArguments(("subjectType", .integer(subjectType)), ("limit", .integer(limit)),
                                                  ("type", type.map { .integer($0.rawValue) }))
-        if let result = try await service?.call("collection.list", payload, authenticated: true,
-                                                as: [BangumiCollection].self) { return result }
+        if let result = try await service?.call("collection.get", payload, authenticated: true,
+                                                as: ServiceItems<BangumiServiceAdapter.Collection>.self) {
+            return result.items.map(\.model)
+        }
         var query = ["subject_type": "\(subjectType)", "limit": "\(limit)"]
         if let type { query["type"] = "\(type.rawValue)" }
         let response = try await send(request("/v0/users/-/collections", query: query))
@@ -239,9 +255,11 @@ public struct BangumiClient: Sendable {
 
     /// One subject's place in this account's collections, if it has one.
     public func collection(subjectID: Int) async throws -> BangumiCollection? {
-        let payload = JSONValue.serviceArguments(("subject_id", .integer(subjectID)))
+        let payload = JSONValue.serviceArguments(("subjectId", .integer(subjectID)))
         if let result = try await service?.call("collection.get", payload, authenticated: true,
-                                                as: BangumiCollection?.self) { return result }
+                                                as: BangumiServiceAdapter.CollectionDetail.self) {
+            return result.item?.model
+        }
         let response = try await send(request("/v0/users/-/collections/\(subjectID)"))
         if response.status == 404 {
             // Without a token the same 404 means "signed out", and answering nil
@@ -258,9 +276,9 @@ public struct BangumiClient: Sendable {
     /// Puts a subject in a collection state, creating the entry when it is new.
     public func setCollection(subjectID: Int, type: CollectionType, rate: Int? = nil,
                               epStatus: Int? = nil, comment: String? = nil) async throws {
-        let payload = JSONValue.serviceArguments(("subject_id", .integer(subjectID)), ("type", .integer(type.rawValue)),
+        let payload = JSONValue.serviceArguments(("subjectId", .integer(subjectID)), ("type", .integer(type.rawValue)),
                                                  ("rate", rate.map(JSONValue.integer)),
-                                                 ("ep_status", epStatus.map(JSONValue.integer)),
+                                                 ("epStatus", epStatus.map(JSONValue.integer)),
                                                  ("comment", comment.map(JSONValue.string)))
         if try await service?.call("collection.update", payload, authenticated: true,
                                     as: ServiceAcknowledgement.self) != nil { return }
@@ -284,8 +302,9 @@ public struct BangumiClient: Sendable {
     /// Marks one episode watched. Bangumi keeps the count itself, so this is a
     /// separate endpoint from the collection.
     public func markWatched(subjectID: Int, episodeID: Int) async throws {
-        let payload = JSONValue.serviceArguments(("subject_id", .integer(subjectID)), ("episode_id", .integer(episodeID)))
-        if try await service?.call("episode.markWatched", payload, authenticated: true,
+        let payload = JSONValue.serviceArguments(("subjectId", .integer(subjectID)),
+                                                 ("episodeIds", .array([.integer(episodeID)])), ("type", .integer(2)))
+        if try await service?.call("episode.update", payload, authenticated: true,
                                     as: ServiceAcknowledgement.self) != nil { return }
         struct Body: Encodable { var episodeID: Int; var type: Int
             enum CodingKeys: String, CodingKey { case type; case episodeID = "episode_id" } }

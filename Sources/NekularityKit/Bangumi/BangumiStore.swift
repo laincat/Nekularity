@@ -181,8 +181,10 @@ public final class BangumiStore {
         busy = true
         defer { busy = false }
         do {
-            if user == nil { user = try await client.me() }
-            collections = try await client.collections(type: type)
+            let account = try await client.me()
+            let entries = try await client.collections(type: type)
+            user = account
+            collections = entries
             failure = nil
         } catch {
             failure = BangumiErrorText.readable(error)

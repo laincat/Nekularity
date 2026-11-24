@@ -18,9 +18,14 @@ private actor ServiceFixture {
 
     func answer(_ record: ServiceRecord, _ method: String, _ payload: String,
                 _ grants: [String], _ secrets: [String: String]) throws -> String {
-        calls.append(Call(id: record.id, method: method, args: try JSONValue.parse(payload), grants: grants, secrets: secrets))
-        guard let response = replies[method] else { throw CoreServiceError.core("do not display this token: fake-secret") }
-        return response
+        let args = try JSONValue.parse(payload)
+        calls.append(Call(id: record.id, method: method, args: args, grants: grants, secrets: secrets))
+        let replyKey = method == "collection.get" && args["subjectId"] != nil ? "collection.get.one" : method
+        guard let response = replies[replyKey] else { throw CoreServiceError.core("do not display this token: fake-secret") }
+        if response == "unsupported" {
+            return #"{"ok":false,"service":"\#(record.id)","method":"\#(method)","error":{"code":"UNSUPPORTED_METHOD"}}"#
+        }
+        return #"{"ok":true,"service":"\#(record.id)","method":"\#(method)","data":\#(response)}"#
     }
 
     nonisolated func bridge(id: String?, accounts: any ServiceAccounts = MemoryServiceAccounts(),
@@ -38,17 +43,15 @@ struct ServiceBridgeTests {
     @Test func bangumiRoutesAccountSearchDetailAndProgress() async throws {
         let fixture = ServiceFixture([
             "account.me": #"{"id":1,"username":"reader"}"#,
-            "subject.search": #"[{"id":12,"name":"番剧"}]"#,
-            "subject.detail": #"{"id":12,"name":"番剧"}"#,
-            "subject.episodes": #"[{"id":8,"sort":"1.5"}]"#,
-            "collection.list": #"[{"subject_id":12,"type":3,"ep_status":2}]"#,
-            "collection.get": "null",
-            "collection.update": #"{"ok":true}"#,
-            "episode.markWatched": "null",
-            "calendar.list": "[]",
+            "metadata.search": #"{"items":[{"id":"12","type":"2","name":"Anime","nameCn":"番剧","score":8.5}]}"#,
+            "metadata.detail": #"{"id":12,"name":"Anime","nameCn":"番剧","totalEpisodes":13,"episodes":[{"id":8,"sort":"1.5","nameCn":"番外"}]}"#,
+            "collection.get": #"{"items":[{"subjectId":12,"type":3,"epStatus":2}]}"#,
+            "collection.get.one": #"{"item":null}"#,
+            "collection.update": #"{"updated":true}"#,
+            "episode.update": #"{"updated":true}"#,
         ])
         let accounts = MemoryServiceAccounts()
-        try accounts.set(service: KnownServiceID.bangumi, key: "token", value: "bgm-fixture")
+        try accounts.set(service: KnownServiceID.bangumi, key: "access_token", value: "bgm-fixture")
         try accounts.set(service: KnownServiceID.bangumi, key: "other", value: "never needed")
         try accounts.set(service: KnownServiceID.trakt, key: "token", value: "other-account")
         var client = BangumiClient(token: "legacy") { _ in
@@ -64,24 +67,24 @@ struct ServiceBridgeTests {
         #expect(try await client.collection(subjectID: 12) == nil)
         try await client.setCollection(subjectID: 12, type: .doing, epStatus: 3)
         try await client.markWatched(subjectID: 12, episodeID: 8)
-        #expect(try await client.calendar().isEmpty)
         let calls = await fixture.calls
-        #expect(calls.count == 9)
+        #expect(calls.count == 8)
         #expect(calls.allSatisfy { $0.id == KnownServiceID.bangumi && !$0.grants.contains("storage") })
-        #expect(calls[0].secrets == ["token": "bgm-fixture"])
+        #expect(calls[0].secrets == ["access_token": "bgm-fixture"])
         #expect(calls[1].secrets.isEmpty)
         #expect(calls[1].args["keyword"] == .string("番剧"))
         #expect(calls[1].args["limit"] == .integer(5))
-        #expect(calls[6].args["ep_status"] == .integer(3))
-        #expect(calls[7].args["episode_id"] == .integer(8))
+        #expect(calls[3].args["includeEpisodes"] == .bool(true))
+        #expect(calls[6].args["epStatus"] == .integer(3))
+        #expect(calls[7].args["episodeIds"] == .array([.integer(8)]))
         #expect(!calls.contains { $0.args.jsonText.contains("legacy") || $0.args.jsonText.contains("bgm-fixture") })
     }
 
     @Test func tmdbRoutesSearchDetailAndArtwork() async throws {
         let fixture = ServiceFixture([
-            "series.search": #"[{"id":42,"name":"Show"}]"#,
-            "series.detail": #"{"id":42,"name":"Show","nextEpisode":{"airDate":"2026-11-01","season":2,"number":3,"name":"New"}}"#,
-            "series.artwork": #"{"seriesID":42,"posters":[{"filePath":"/p.jpg","url":"https://image.tmdb.org/t/p/w500/p.jpg"}],"backdrops":[],"logos":[]}"#,
+            "metadata.search": #"{"items":[{"id":42,"title":"Show"}]}"#,
+            "metadata.detail": #"{"id":42,"title":"Show","releaseDate":"2026-11-01","status":"Returning Series"}"#,
+            "artwork.list": #"{"id":42,"posters":[{"filePath":"/p.jpg","url":"https://image.tmdb.org/t/p/w500/p.jpg"}],"backdrops":[],"logos":[]}"#,
         ])
         let accounts = MemoryServiceAccounts()
         try accounts.set(service: KnownServiceID.tmdb, key: "api_key", value: "tmdb-fixture")
@@ -91,23 +94,24 @@ struct ServiceBridgeTests {
         }
         client.service = fixture.bridge(id: KnownServiceID.tmdb, accounts: accounts)
         #expect(try await client.search(query: "  Show ").first?.source == "tmdb")
-        #expect(try await client.series(id: 42).nextEpisode?.number == 3)
+        #expect(try await client.series(id: 42).firstAirDate == "2026-11-01")
         #expect(try await client.artwork(id: 42).posters.first?.filePath == "/p.jpg")
         let calls = await fixture.calls
-        #expect(calls.map(\.method) == ["series.search", "series.detail", "series.artwork"])
+        #expect(calls.map(\.method) == ["metadata.search", "metadata.detail", "artwork.list"])
         #expect(calls.allSatisfy { $0.id == KnownServiceID.tmdb && $0.secrets == ["api_key": "tmdb-fixture"] })
         #expect(calls[0].args["query"] == .string("Show"))
         #expect(calls[0].args["language"] == .string("ja-JP"))
+        #expect(calls[0].args["mediaType"] == .string("tv"))
         #expect(calls[2].args["id"] == .integer(42))
     }
 
     @Test func traktRoutesReadsAndWrites() async throws {
-        let item = #"{"kind":"episode","id":12,"title":"Episode"}"#
+        let item = #"{"type":"episode","ids":{"trakt":12},"title":"Episode","watchedAt":"2026-11-05T00:00:00Z"}"#
         let fixture = ServiceFixture([
             "account.me": #"{"username":"viewer"}"#,
-            "search": "[\(item)]", "watchlist.list": "[\(item)]", "watchlist.set": "null",
-            "history.list": #"[{"item":\#(item),"watchedAt":"2026-11-05T00:00:00Z"}]"#,
-            "history.add": #"{"ok":true}"#, "scrobble": "null",
+            "metadata.search": #"{"items":[\#(item)]}"#, "watchlist.list": #"{"items":[\#(item)]}"#,
+            "watchlist.set": "unsupported", "history.list": #"{"items":[\#(item)]}"#,
+            "history.add": "unsupported", "scrobble.stop": #"{"action":"scrobble","progress":87.5}"#,
         ])
         let accounts = MemoryServiceAccounts()
         try accounts.set(service: KnownServiceID.trakt, key: "client_id", value: "trakt-client")
@@ -117,23 +121,26 @@ struct ServiceBridgeTests {
         let found = try await service.search(query: "  Episode ")
         let episode = try #require(found.first)
         #expect(try await service.watchlist() == found)
-        try await service.setWatchlist(episode, included: false)
+        await #expect(throws: ServiceBridgeError.unsupportedMethod(service: KnownServiceID.trakt, method: "watchlist.set")) {
+            try await service.setWatchlist(episode, included: false)
+        }
         let history = try await service.history()
         let date = try #require(history.first?.watchedAt)
         #expect(history.first?.item == episode)
-        try await service.record(episode, watchedAt: date)
+        await #expect(throws: ServiceBridgeError.unsupportedMethod(service: KnownServiceID.trakt, method: "history.add")) {
+            try await service.record(episode, watchedAt: date)
+        }
         try await service.scrobble(.stop, item: episode, progress: 87.5)
         let calls = await fixture.calls
-        #expect(calls.map(\.method) == ["account.me", "search", "watchlist.list", "watchlist.set", "history.list", "history.add", "scrobble"])
+        #expect(calls.map(\.method) == ["account.me", "metadata.search", "watchlist.list", "watchlist.set", "history.list", "history.add", "scrobble.stop"])
         #expect(calls[1].args["query"] == .string("Episode"))
         #expect(calls[1].secrets == ["client_id": "trakt-client"])
         #expect(calls[3].args["included"] == .bool(false))
         #expect(calls[5].args["watchedAt"] == .string(date))
-        #expect(calls[6].args["item"]?["id"] == .integer(12))
-        #expect(calls[6].args["action"] == .string("stop"))
+        #expect(calls[6].args["episode"]?["ids"]?["trakt"] == .integer(12))
         #expect(calls[6].args["progress"] == .number("87.5"))
         #expect(calls[6].secrets == ["client_id": "trakt-client", "access_token": "trakt-token"])
-        await #expect(throws: ServiceBridgeError.invalidPayload(service: KnownServiceID.trakt, method: "scrobble")) {
+        await #expect(throws: ServiceBridgeError.invalidPayload(service: KnownServiceID.trakt, method: "scrobble.stop")) {
             try await service.scrobble(.stop, item: episode, progress: .nan)
         }
     }
@@ -159,18 +166,18 @@ struct ServiceBridgeTests {
     }
 
     @Test func packageFailuresAreSanitizedAndNeverTriggerFallback() async throws {
-        let fixture = ServiceFixture(["subject.detail": #"{"wrong":true}"#, "episode.markWatched": #"{"ok":false}"#])
+        let fixture = ServiceFixture(["metadata.detail": #"{"wrong":true}"#, "episode.update": "unsupported"])
         let id = KnownServiceID.bangumi
         let accounts = MemoryServiceAccounts()
-        try accounts.set(service: id, key: "token", value: "fake-secret")
+        try accounts.set(service: id, key: "access_token", value: "fake-secret")
         var client = BangumiClient { _ in
             Issue.record("a package failure must never trigger fallback")
             return .init(status: 500)
         }
         client.service = BangumiServiceAdapter(bridge: fixture.bridge(id: id, accounts: accounts))
         await #expect(throws: ServiceBridgeError.executionFailed(service: id, method: "account.me")) { try await client.me() }
-        await #expect(throws: ServiceBridgeError.invalidResponse(service: id, method: "subject.detail")) { try await client.subject(id: 1) }
-        await #expect(throws: ServiceBridgeError.invalidResponse(service: id, method: "episode.markWatched")) {
+        await #expect(throws: ServiceBridgeError.invalidResponse(service: id, method: "metadata.detail")) { try await client.subject(id: 1) }
+        await #expect(throws: ServiceBridgeError.unsupportedMethod(service: id, method: "episode.update")) {
             try await client.markWatched(subjectID: 1, episodeID: 2)
         }
     }

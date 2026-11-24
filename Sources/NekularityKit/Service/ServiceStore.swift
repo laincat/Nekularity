@@ -71,9 +71,16 @@ public final class ServiceStore {
 
     private func accessKey(_ id: String) -> String { "serviceAccess.\(dataDir).\(id)" }
 
-    public func makeBridge() -> ServicePackageBridge {
-        ServicePackageBridge(accounts: accounts, find: { [dataDir] id in
-            try await Task.detached { try CoreService.list(dataDir: dataDir).first { $0.id == id } }.value
+    /// The app selects a package once its installed digest has been authorized.
+    /// Explicit package callers can still inspect the permission denial.
+    public func makeBridge(requireAuthorization: Bool = true) -> ServicePackageBridge {
+        ServicePackageBridge(accounts: accounts, find: { [self, dataDir] id in
+            let record = try await Task.detached { try CoreService.list(dataDir: dataDir).first { $0.id == id } }.value
+            guard let record else { return nil }
+            if requireAuthorization {
+                guard await allowsStructuredAccess(record) else { return nil }
+            }
+            return record
         }, grants: { [self] record in
             await allowsStructuredAccess(record) ? ["network", "secrets"] : []
         }, run: { [self] record, method, payload, granted, secrets in
@@ -86,15 +93,17 @@ public final class ServiceStore {
         guard let host, !installing, allowsStructuredAccess(record) else {
             throw ServiceBridgeError.executionFailed(service: record.id, method: method)
         }
+        // Core currently discards fetch's method, headers and body. A GET can
+        // succeed on the same URL as a write and would report a false update.
+        let writes = [KnownServiceID.bangumi: ["collection.update", "episode.update"],
+                      KnownServiceID.trakt: ["scrobble.start", "scrobble.stop"]]
+        if writes[record.id]?.contains(method) == true {
+            throw ServiceBridgeError.transportUnavailable(service: record.id, method: method)
+        }
         activeStructuredCalls += 1
         defer { activeStructuredCalls -= 1 }
-        return try await Task.detached { [dataDir] in
-            guard try CoreService.manifest(dataDir: dataDir, id: record.id) == record else {
-                throw ServiceBridgeError.executionFailed(service: record.id, method: method)
-            }
-            return try CoreService.call(host: host, dataDir: dataDir, id: record.id, method: method,
-                                        payload: payload, granted: granted, secrets: secrets)
-        }.value
+        return try await CoreService.callStructured(host: host, dataDir: dataDir, record: record,
+                                                    method: method, payload: payload, granted: granted, secrets: secrets)
     }
 
 

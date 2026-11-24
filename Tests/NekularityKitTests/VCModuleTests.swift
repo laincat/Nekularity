@@ -5,10 +5,12 @@ import Testing
 @MainActor
 struct VCModuleTests {
     private static let header = """
+    #!id=reader-preferences
     #!name=阅读偏好示例
     #!desc=阅读配置覆盖
     #!version=0.1.0
     #!format=veneracat-module/1-draft
+    #!requires=settings-module.v1
     """
 
     private func body(_ settings: String) -> Data {
@@ -22,6 +24,7 @@ struct VCModuleTests {
     @Test func parsesTemplateWithBOMAndCRLF() throws {
         let text = Self.header + "\n\n[Reader]\npage-gap = 8\nkeep-screen-on = true\n\n; comment\n"
         let document = try VCModuleDocument.parse("\u{FEFF}" + text.replacingOccurrences(of: "\n", with: "\r\n"))
+        #expect(document.id == "reader-preferences")
         #expect(document.name == "阅读偏好示例")
         #expect(document.description == "阅读配置覆盖")
         #expect(document.version == "0.1.0")
@@ -39,6 +42,9 @@ struct VCModuleTests {
         }
         #expect(throws: VCModuleError.unsupportedFormat) {
             try VCModuleDocument.parse(Self.header.replacingOccurrences(of: "1-draft", with: "2") + "\n[Reader]\npage-gap=8")
+        }
+        #expect(throws: VCModuleError.unsupportedCapability("network")) {
+            try VCModuleDocument.parse(Self.header.replacingOccurrences(of: "settings-module.v1", with: "network") + "\n[Reader]\npage-gap=8")
         }
         #expect(throws: VCModuleError.invalidUTF8) { try VCModuleDocument.parse(Data([0xff])) }
         #expect(throws: VCModuleError.tooLarge) {

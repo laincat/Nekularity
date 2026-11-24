@@ -128,6 +128,47 @@ public enum CoreService {
         return out ?? "null"
     }
 
+    private static let queue = DispatchQueue(label: "nekularity.service", qos: .userInitiated, attributes: .concurrent)
+
+    static func callStructured(host: CoreHost, dataDir: String, record: ServiceRecord,
+                               method: String, payload: String, granted: [String],
+                               secrets: [String: String]) async throws -> String {
+        var error: NSError?
+        guard let created = MobileNewServiceRunner(host, dataDir, &error) else {
+            throw CoreServiceError.core("无法启动服务运行器")
+        }
+        // The Go runner synchronizes cancellation with a call on the queue.
+        nonisolated(unsafe) let runner = created
+        defer { runner.close() }
+        let id = runner.newCall()
+        let values = String(decoding: try JSONEncoder().encode(secrets), as: UTF8.self)
+        do {
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
+                    queue.async {
+                        do {
+                            guard try manifest(dataDir: dataDir, id: record.id) == record else {
+                                throw ServiceBridgeError.executionFailed(service: record.id, method: method)
+                            }
+                            var error: NSError?
+                            let response = runner.call(id, id_: record.id, method: method, payload: payload,
+                                                       granted: granted.joined(separator: ","), secretsJSON: values, error: &error)
+                            if let error { throw CoreServiceError.core(error.localizedDescription) }
+                            continuation.resume(returning: response)
+                        } catch {
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                }
+            } onCancel: {
+                runner.cancel(id)
+            }
+        } catch {
+            try Task.checkCancellation()
+            throw error
+        }
+    }
+
     /// What the package offers to press, as it describes itself.
     ///
     /// A service without a `describe` export answers with an empty list: it is

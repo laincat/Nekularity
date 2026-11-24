@@ -93,9 +93,9 @@ public final class MetadataStore {
     public private(set) var series: [String: SeriesInfo] = [:]
     public private(set) var failure: String?
     public var hasKey: Bool {
-        hasLegacyKey || service.flatMap {
-            try? $0.accounts.values(service: KnownServiceID.tmdb)[TMDBClient.serviceKey]
-        }?.isEmpty == false
+        if hasLegacyKey { return true }
+        guard let service, let values = try? service.accounts.values(service: KnownServiceID.tmdb) else { return false }
+        return TMDBClient.serviceKeys.contains { values[$0]?.isEmpty == false }
     }
 
     private var hasLegacyKey = false
@@ -145,7 +145,9 @@ public final class MetadataStore {
         if trimmed.isEmpty {
             try keys.remove()
             hasLegacyKey = false
-            try service?.accounts.remove(service: KnownServiceID.tmdb, key: TMDBClient.serviceKey)
+            for key in TMDBClient.serviceKeys {
+                try service?.accounts.remove(service: KnownServiceID.tmdb, key: key)
+            }
         } else {
             try keys.save(trimmed)
             hasLegacyKey = true
@@ -155,7 +157,11 @@ public final class MetadataStore {
     public func setPreferredKey(_ key: String) async throws {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty, let service, try await service.installed(KnownServiceID.tmdb) {
-            try service.accounts.set(service: KnownServiceID.tmdb, key: TMDBClient.serviceKey, value: trimmed)
+            let key = trimmed.contains(".") ? "api_read_token" : "api_key"
+            try service.accounts.set(service: KnownServiceID.tmdb, key: key, value: trimmed)
+            for other in TMDBClient.serviceKeys where other != key {
+                try service.accounts.remove(service: KnownServiceID.tmdb, key: other)
+            }
         } else {
             try setKey(trimmed)
         }

@@ -6,6 +6,7 @@ public enum VCModuleError: Error, LocalizedError, Equatable, Sendable {
     case syntax(line: Int, reason: String)
     case missingHeader(String)
     case unsupportedFormat
+    case unsupportedCapability(String)
     case invalidIdentifier(String)
     case moduleNotFound(String)
     case pathEscape(String)
@@ -18,6 +19,7 @@ public enum VCModuleError: Error, LocalizedError, Equatable, Sendable {
         case .syntax(let line, let reason): "模块第 \(line) 行：\(reason)"
         case .missingHeader(let name): "模块缺少元信息 #!\(name)"
         case .unsupportedFormat: "仅支持模块格式 \(VCModuleDocument.supportedFormat)"
+        case .unsupportedCapability(let name): "模块要求未提供的能力：\(name)"
         case .invalidIdentifier(let id): "模块标识无效：\(id)"
         case .moduleNotFound(let id): "找不到已安装的模块：\(id)"
         case .pathEscape(let name): "模块存储路径无效：\(name)"
@@ -46,6 +48,7 @@ public struct VCModuleDocument: Hashable, Sendable {
     public static let supportedFormat = "veneracat-module/1-draft"
     public static let maximumBytes = 64 * 1024
 
+    public let id: String?
     public let name: String
     public let description: String?
     public let version: String
@@ -85,7 +88,7 @@ public struct VCModuleDocument: Hashable, Sendable {
             let key = assignment[0].trimmingCharacters(in: .whitespaces)
             let value = assignment[1].trimmingCharacters(in: .whitespaces)
             if header {
-                guard !inReaderSection, ["name", "desc", "version", "format"].contains(key), headers[key] == nil else {
+                guard !inReaderSection, ["id", "name", "desc", "version", "format", "requires"].contains(key), headers[key] == nil else {
                     throw VCModuleError.syntax(line: number, reason: "元信息未知、重复或位于分节内")
                 }
                 headers[key] = value
@@ -105,7 +108,11 @@ public struct VCModuleDocument: Hashable, Sendable {
         guard let name = headers["name"], !name.isEmpty else { throw VCModuleError.missingHeader("name") }
         guard let version = headers["version"], !version.isEmpty else { throw VCModuleError.missingHeader("version") }
         guard !settings.isEmpty else { throw VCModuleError.syntax(line: 1, reason: "至少需要一个阅读设置") }
-        return Self(name: name, description: headers["desc"], version: version, settings: settings)
+        if let id = headers["id"], !VCModuleIdentifier.isValid(id) { throw VCModuleError.invalidIdentifier(id) }
+        if let capability = headers["requires"], capability != "settings-module.v1" {
+            throw VCModuleError.unsupportedCapability(capability)
+        }
+        return Self(id: headers["id"], name: name, description: headers["desc"], version: version, settings: settings)
     }
 
     private static func parseValue(_ raw: String, for key: VCModuleSettingKey) -> VCModuleSettingValue? {
