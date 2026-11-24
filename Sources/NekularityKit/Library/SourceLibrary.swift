@@ -34,6 +34,8 @@ public final class SourceLibrary {
     }
 
     public var comicSources: [PluginRecord] { sources.filter(\.isComic) }
+    public var novelSources: [PluginRecord] { sources.filter(\.isNovel) }
+    public var videoSources: [PluginRecord] { sources.filter(\.isVideo) }
 
     /// Restores persisted sources. Call once at launch.
     public func restore() async {
@@ -52,16 +54,43 @@ public final class SourceLibrary {
     /// Installs a script given as text (paste or file import).
     @discardableResult
     public func install(script: String, origin: String) async throws -> PluginRecord {
-        try await commitInstall(mode: .script, body: script, origin: origin, indexURL: "")
+        try await install(type: PluginRecord.comicType, script: script, origin: origin)
     }
 
-    /// Downloads and installs a script from url, updating the source when
+    /// Installs a script of an explicit Core plugin type (`comic`, `novel-js`,
+    /// `video-js`, `kazumi-rule`).
+    @discardableResult
+    public func install(type: String, script: String, origin: String, sha256: String = "") async throws -> PluginRecord {
+        try await commitInstall(mode: .script(type: type, sha256: sha256), body: script, origin: origin, indexURL: "")
+    }
+
+    /// Installs a `novel-js` script given as text.
+    @discardableResult
+    public func installNovel(script: String, origin: String, sha256: String = "") async throws -> PluginRecord {
+        try await install(type: PluginRecord.novelJSType, script: script, origin: origin, sha256: sha256)
+    }
+
+    /// Downloads and installs a comic script from url, updating the source when
     /// its key is already installed.
     @discardableResult
     public func install(from url: URL, indexURL: URL? = nil) async throws -> PluginRecord {
+        try await install(type: PluginRecord.comicType, from: url, indexURL: indexURL)
+    }
+
+    /// Downloads and installs a plugin of an explicit Core type from url,
+    /// updating the source when its key is already installed.
+    @discardableResult
+    public func install(type: String, from url: URL, indexURL: URL? = nil, sha256: String = "") async throws -> PluginRecord {
         let body = try await text(url)
-        return try await commitInstall(mode: .url, body: body, origin: url.absoluteString,
+        return try await commitInstall(mode: .url(type: type, sha256: sha256), body: body, origin: url.absoluteString,
                                        indexURL: indexURL?.absoluteString ?? "")
+    }
+
+    /// Downloads and installs a `novel-js` script from url, updating an
+    /// already-installed source with the same key.
+    @discardableResult
+    public func installNovel(from url: URL, indexURL: URL? = nil, sha256: String = "") async throws -> PluginRecord {
+        try await install(type: PluginRecord.novelJSType, from: url, indexURL: indexURL, sha256: sha256)
     }
 
     /// Installs or updates the entry of an index.
@@ -73,10 +102,71 @@ public final class SourceLibrary {
                                        origin: url.absoluteString, indexURL: indexURL.absoluteString)
     }
 
+    /// Parses a shared source collection JSON document through Core using the
+    /// client's declared capabilities (including `novel-source.js`).
+    public func parseCollection(
+        _ data: String,
+        sourceURL: URL,
+        platform: String = "ios",
+        capabilities: [String] = SourceCollection.defaultCapabilities
+    ) async throws -> SourceCollectionCheck {
+        try await core.parseSourceCollection(
+            data,
+            sourceURL: sourceURL.absoluteString,
+            platform: platform,
+            capabilities: capabilities
+        )
+    }
+
+    /// Downloads and parses a shared source collection from `url`.
+    public func loadCollection(
+        _ url: URL,
+        platform: String = "ios",
+        capabilities: [String] = SourceCollection.defaultCapabilities
+    ) async throws -> SourceCollectionCheck {
+        try await parseCollection(try await text(url), sourceURL: url, platform: platform, capabilities: capabilities)
+    }
+
+    /// Downloads, verifies and installs one compatible entry from a shared
+    /// source collection (including `novel-source.js` entries).
+    @discardableResult
+    public func install(
+        collectionEntry entry: SourceCollection.Entry,
+        from collectionURL: URL,
+        platform: String = "ios",
+        capabilities: [String] = SourceCollection.defaultCapabilities
+    ) async throws -> PluginRecord {
+        let compat = entry.compatibility(platform: platform, capabilities: capabilities)
+        guard compat.compatible else {
+            throw CoreError("collection entry \(entry.id) is incompatible: missing \(compat.missing.joined(separator: ", "))")
+        }
+        guard entry.status != "planned", let artifact = entry.artifact else {
+            throw CoreError("collection entry \(entry.id) has no installable artifact")
+        }
+        guard let pluginType = entry.pluginType else {
+            throw CoreError("collection entry \(entry.id) uses unsupported kind \(entry.kind)")
+        }
+        guard let artifactURL = URL(string: artifact.url) else {
+            throw CoreError("invalid artifact URL \(artifact.url)")
+        }
+        let data = try await fetch(artifactURL)
+        try await core.verifySourceArtifact(artifact, data: data)
+        guard let body = String(data: data, encoding: .utf8) else {
+            throw CoreError("\(artifactURL.lastPathComponent) is not UTF-8 text")
+        }
+        return try await commitInstall(
+            mode: .collectionEntry(type: pluginType, expectedKey: entry.key, sha256: artifact.sha256),
+            body: body,
+            origin: artifactURL.absoluteString,
+            indexURL: collectionURL.absoluteString
+        )
+    }
+
     private enum InstallMode {
-        case script
-        case url
+        case script(type: String, sha256: String)
+        case url(type: String, sha256: String)
         case indexEntry(IndexEntry, URL)
+        case collectionEntry(type: String, expectedKey: String?, sha256: String)
     }
 
     /// Single serialized commit path for all install and update variants.
@@ -86,23 +176,50 @@ public final class SourceLibrary {
             let previousRecordsJSON = try await core.recordsJSON()
             let rec: PluginRecord
             switch mode {
-            case .script:
-                rec = try await core.installComicSource(body, origin: origin, indexURL: indexURL)
-            case .url:
+            case .script(let type, let sha256):
+                rec = try await core.installPlugin(type: type, body: body, origin: origin, indexURL: indexURL, sha256: sha256)
+            case .url(let type, let sha256):
                 do {
-                    rec = try await core.installComicSource(body, origin: origin, indexURL: indexURL)
+                    rec = try await core.installPlugin(type: type, body: body, origin: origin, indexURL: indexURL, sha256: sha256)
                 } catch let error as CoreError {
                     guard let key = Self.existingKey(in: error.message),
                           existingKeys.contains(key) else { throw error }
-                    rec = try await core.replace(key: key, type: "comic", body: body, origin: origin, indexURL: indexURL)
+                    rec = try await core.replace(key: key, type: type, body: body, origin: origin, indexURL: indexURL, sha256: sha256)
                 }
             case .indexEntry(let entry, let index):
                 if existingKeys.contains(entry.key) {
-                    rec = try await core.replace(key: entry.key, type: "comic", body: body, origin: origin,
+                    rec = try await core.replace(key: entry.key, type: PluginRecord.comicType, body: body, origin: origin,
                                                  indexURL: index.absoluteString)
                 } else {
                     // Core validates the script's executed identity against the index key.
                     rec = try await core.installComicEntry(entry, body: body, indexURL: index)
+                }
+            case .collectionEntry(let type, let expectedKey, let sha256):
+                if let expectedKey, !expectedKey.isEmpty {
+                    if existingKeys.contains(expectedKey) {
+                        rec = try await core.replace(key: expectedKey, type: type, body: body, origin: origin,
+                                                     indexURL: indexURL, sha256: sha256)
+                    } else {
+                        let installed = try await core.installPlugin(type: type, body: body, origin: origin,
+                                                                     indexURL: indexURL, sha256: sha256)
+                        if installed.key != expectedKey {
+                            await rollbackInstall(key: installed.key, existedBefore: false,
+                                                  previousRecordsJSON: previousRecordsJSON)
+                            await refresh()
+                            throw CoreError("plugin: the script declares a different key (\(installed.key), expected \(expectedKey))")
+                        }
+                        rec = installed
+                    }
+                } else {
+                    do {
+                        rec = try await core.installPlugin(type: type, body: body, origin: origin,
+                                                           indexURL: indexURL, sha256: sha256)
+                    } catch let error as CoreError {
+                        guard let key = Self.existingKey(in: error.message),
+                              existingKeys.contains(key) else { throw error }
+                        rec = try await core.replace(key: key, type: type, body: body, origin: origin,
+                                                     indexURL: indexURL, sha256: sha256)
+                    }
                 }
             }
             do {
@@ -181,7 +298,7 @@ public final class SourceLibrary {
                   url.scheme?.hasPrefix("http") == true else { continue }
             let before = source.version
             do {
-                let rec = try await install(from: url, indexURL: source.indexUrl.flatMap(URL.init(string:)))
+                let rec = try await install(type: source.type, from: url, indexURL: source.indexUrl.flatMap(URL.init(string:)))
                 results.append(SourceUpdate(key: rec.key, name: rec.name, from: before, to: rec.version))
             } catch {
                 results.append(SourceUpdate(key: source.key, name: source.name, from: before, to: before,
@@ -195,6 +312,7 @@ public final class SourceLibrary {
     public func remove(_ key: String) async throws {
         try await withMutation {
             let previousRecordsJSON = try await core.recordsJSON()
+            let removed = (try? await core.plugins())?.first(where: { $0.key == key })
             try await core.remove(key: key)
             do {
                 try await persistRecords()
@@ -207,6 +325,9 @@ public final class SourceLibrary {
             }
             try core.host.store.removeSource(key: key)
             core.host.cookies.clear(partition: CookiePartition.comic(key))
+            if removed?.isVideo == true {
+                core.host.cookies.clear(partition: CookiePartition.video(key))
+            }
             await refresh()
         }
     }

@@ -24,7 +24,7 @@ fi
 # declare. Keep this list in step with Sources/NekularityKit/Magpie/CoreMagpie.swift.
 # The Objective-C selectors, which is what the header declares; Swift's imported
 # names differ (cancelSignIn: becomes cancelSign(in:)).
-selectors='auth: authorize: call: cancelSignIn: chatCancel: chatNext: chatStart: checkin: close loadPackage: models: planRoute: poll: readPackageArchive: savedAuth: setAuth: setPluginOptions: usage: usageSummary:'
+selectors='auth: authorize: call: cancelSignIn: chatCancel: chatNext: chatStart: checkin: close loadPackage: models: poll: readPackageArchive: savedAuth: setAuth: setPluginOptions: usage: usageSummary:'
 
 missing=''
 for one in $selectors; do
@@ -46,24 +46,24 @@ if [ -n "$missing" ]; then
 	exit 1
 fi
 
-# The standard-protocol entry points Core exports beside Magpie. A framework
-# built before them still compiles the client and fails only when a user opens
-# the screen, so they are checked here too. The URL rule belongs with them:
-# the client asks Core to fill in a missing scheme.
+# The standard-protocol, URL-rule, novel and shared-collection entry points
+# Core exports beside Magpie. Checking them here catches a stale xcframework
+# before the Swift build fails or drops a capability.
 missing_core=''
-for one in ')buildAIRequest:' ')buildAIModelsRequest:' ')sendAIRequest:' ')normalizeURL:'; do
+for one in \
+	')buildAIRequest:' ')buildAIModelsRequest:' ')sendAIRequest:' \
+	')normalizeURL:' \
+	')novelPopular:' ')novelSearch:' ')novelDetail:' ')novelChapter:' \
+	')parseSourceCollection:' ')verifySourceArtifact:'; do
 	if ! grep -q -- "$one" "$header"; then
 		missing_core="$missing_core $one"
 	fi
 done
 if [ -n "$missing_core" ]; then
-	printf 'check-core-surface: the framework is older than the standard AI screen
-' >&2
-	printf '  missing:%s
-' "$missing_core" >&2
-	printf '  rebuild it with scripts/fetch-core.sh
-' >&2
+	printf 'check-core-surface: the framework is older than this client\n' >&2
+	printf '  missing:%s\n' "$missing_core" >&2
+	printf '  rebuild it with scripts/fetch-core.sh\n' >&2
 	exit 1
 fi
 
-echo "check-core-surface: $(basename "$framework") exposes 19 Magpie, 3 standard AI and 1 URL rule"
+echo "check-core-surface: $(basename "$framework") exposes 18 Magpie, 3 standard AI, 1 URL rule, 4 novel and 2 collection entry points"

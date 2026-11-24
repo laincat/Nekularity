@@ -27,6 +27,7 @@ struct NekularityApp: App {
                         .environment(env.library)
                         .environment(env.prompts)
                         .environment(env.shelf)
+                        .environment(env.novelShelf)
                         .environment(env.searches)
                         .environment(env.downloads)
                         .environment(env.themes)
@@ -68,6 +69,8 @@ final class AppModel {
         let prompts: PromptCenter
         /// Reading history and favourites.
         let shelf: ShelfStore
+        /// Novel bookshelf entries and chapter reading progress.
+        let novelShelf: NovelShelfStore
         /// Keywords the reader searched for.
         let searches: SearchHistoryStore
         /// Installed AI provider packages and their accounts, separate from
@@ -173,6 +176,7 @@ final class AppModel {
                 prompts: prompts,
                 shelf: ShelfStore(directory: root,
                                   filename: ProcessInfo.processInfo.environment["NK_SHELF_FILE"] ?? "shelf.json"),
+                novelShelf: NovelShelfStore(directory: root),
                 searches: SearchHistoryStore(directory: root),
                 magpie: magpie,
                 downloads: downloads,
@@ -212,6 +216,7 @@ final class AppModel {
     func flushShelf() {
         if case .ready(let env) = state {
             env.shelf.flush()
+            env.novelShelf.flush()
         }
     }
 

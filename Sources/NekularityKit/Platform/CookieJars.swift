@@ -30,6 +30,9 @@ public struct WireCookie: Codable, Sendable, Hashable {
 public enum CookiePartition {
     public static func comic(_ key: String) -> String { "comic:" + key }
     public static func video(_ key: String) -> String { "video:" + key }
+    /// Core's `novel-js` runtime shares `comic/js`'s host HTTP bridge, so its
+    /// cookies live in the `comic:<key>` partition.
+    public static func novel(_ key: String) -> String { comic(key) }
 
     /// Whether a partition belongs to a content source rather than to one of
     /// the app's own endpoints (AI, Magpie, a service, the collection index).

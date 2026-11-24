@@ -29,6 +29,26 @@ public struct CoreError: Error, LocalizedError, Sendable {
         message.lowercased().contains("webview login handle is no longer valid")
     }
 
+    /// Core reported that the requested plugin key is not installed.
+    public var isNotInstalled: Bool {
+        message.lowercased().contains("not installed")
+    }
+
+    /// Core reported that the plugin exists but is currently disabled.
+    public var isDisabled: Bool {
+        message.lowercased().contains("plugin: disabled")
+    }
+
+    /// Core reported that a plugin of another kind (e.g. comic/video vs novel) was invoked.
+    public var isWrongPluginType: Bool {
+        message.lowercased().contains("not this kind of plugin")
+    }
+
+    /// Core's novel provider reported that the novel or chapter was not found.
+    public var isNovelNotFound: Bool {
+        message.lowercased().contains("novel: not found")
+    }
+
     /// Core speaks English and its text is what a developer needs; the
     /// interface is Chinese. Well-known failures get a Chinese sentence, and
     /// anything else keeps Core's own words after a Chinese prefix, so a
@@ -48,6 +68,15 @@ public struct CoreError: Error, LocalizedError, Sendable {
         }
         if has("not installed") {
             return "漫画源还未安装"
+        }
+        if has("plugin: disabled") {
+            return "该源已停用,请先在源管理中启用"
+        }
+        if has("not this kind of plugin") {
+            return "该源类型不匹配,无法执行此操作"
+        }
+        if has("novel: not found") {
+            return "源里找不到这部小说或章节"
         }
         if has("timeout") || has("deadline exceeded") {
             return "网络超时,请稍后重试"
@@ -159,13 +188,31 @@ public final class CoreClient: @unchecked Sendable {
 
     // MARK: Plugins
 
+    /// Installs a plugin of the given Core type (`comic`, `video-js`, `novel-js`,
+    /// `kazumi-rule`). `origin` and `indexURL` record where it came from; `sha256`
+    /// is checked when given.
+    public func installPlugin(
+        type: String,
+        body: String,
+        origin: String,
+        indexURL: String = "",
+        sha256: String = ""
+    ) async throws -> PluginRecord {
+        let out = try await run { core, id in
+            try Self.call { core.install(id, typ: type, body: body, origin: origin, indexURL: indexURL, sha256: sha256, error: $0) }
+        }
+        return try Self.decode(PluginRecord.self, out)
+    }
+
     /// Installs a comic source script. `origin` and `indexURL` record where
     /// it came from; `sha256` is checked when given.
     public func installComicSource(_ body: String, origin: String, indexURL: String = "", sha256: String = "") async throws -> PluginRecord {
-        let out = try await run { core, id in
-            try Self.call { core.install(id, typ: "comic", body: body, origin: origin, indexURL: indexURL, sha256: sha256, error: $0) }
-        }
-        return try Self.decode(PluginRecord.self, out)
+        try await installPlugin(type: PluginRecord.comicType, body: body, origin: origin, indexURL: indexURL, sha256: sha256)
+    }
+
+    /// Installs a `novel-js` source script.
+    public func installNovelSource(_ body: String, origin: String, indexURL: String = "", sha256: String = "") async throws -> PluginRecord {
+        try await installPlugin(type: PluginRecord.novelJSType, body: body, origin: origin, indexURL: indexURL, sha256: sha256)
     }
 
     /// Installs a new comic index entry after Core checks its executed identity.
@@ -214,6 +261,34 @@ public final class CoreClient: @unchecked Sendable {
     public func compareComicIndex(_ data: String, indexURL: String) async throws -> ComicIndex {
         let out = try await run(cancellable: false) { core, _ in try Self.call { core.compareComicIndex(data, indexURL: indexURL, error: $0) } }
         return try Self.decode(ComicIndex.self, out)
+    }
+
+    /// Parses a shared `veneracat-source/1-draft` collection and evaluates
+    /// per-entry platform and capability compatibility through Core.
+    public func parseSourceCollection(
+        _ data: String,
+        sourceURL: String,
+        platform: String = "ios",
+        capabilities: [String] = SourceCollection.defaultCapabilities
+    ) async throws -> SourceCollectionCheck {
+        let capabilitiesJSON = String(decoding: try JSONEncoder().encode(capabilities), as: UTF8.self)
+        let out = try await run(cancellable: false) { core, _ in
+            try Self.call {
+                core.parseSourceCollection(data, sourceURL: sourceURL, platform: platform,
+                                           capabilitiesJSON: capabilitiesJSON, error: $0)
+            }
+        }
+        return try Self.decode(SourceCollectionCheck.self, out)
+    }
+
+    /// Verifies downloaded artifact bytes against a collection entry's declared
+    /// size and SHA-256 digest through Core.
+    public func verifySourceArtifact(_ artifact: SourceCollection.Artifact, data: Data) async throws {
+        let artifactJSON = String(decoding: try JSONEncoder().encode(artifact), as: UTF8.self)
+        let encodedData = data.base64EncodedString()
+        try await run(cancellable: false) { core, _ in
+            try core.verifySourceArtifact(artifactJSON, dataBase64: encodedData)
+        }
     }
 
     // MARK: Standard AI
@@ -1032,5 +1107,48 @@ extension CoreClient {
             }
         }
         return try Self.decode(VideoPlay.self, json)
+    }
+}
+
+// MARK: - Novel providers
+
+/// Novel providers answer with popular lists, search results, novel metadata
+/// (including chapter lists) and raw chapter HTML. Core runs the isolated
+/// `novel-js` runtime; sanitisation and text extraction belong to this kit.
+extension CoreClient {
+    public func novelPopular(key: String, page: Int = 1) async throws -> NovelPage {
+        let json = try await run { core, callID in
+            try Self.call {
+                core.novelPopular(callID, key: key, page: max(1, page), error: $0)
+            }
+        }
+        return try Self.decode(NovelPage.self, json)
+    }
+
+    public func novelSearch(key: String, keyword: String, page: Int = 1) async throws -> NovelPage {
+        let json = try await run { core, callID in
+            try Self.call {
+                core.novelSearch(callID, key: key, keyword: keyword, page: max(1, page), error: $0)
+            }
+        }
+        return try Self.decode(NovelPage.self, json)
+    }
+
+    public func novelDetail(key: String, id novelID: String) async throws -> NovelDetail {
+        let json = try await run { core, callID in
+            try Self.call {
+                core.novelDetail(callID, key: key, id_: novelID, error: $0)
+            }
+        }
+        return try Self.decode(NovelDetail.self, json)
+    }
+
+    public func novelChapter(key: String, novelID: String, chapterID: String) async throws -> NovelChapterContent {
+        let json = try await run { core, callID in
+            try Self.call {
+                core.novelChapter(callID, key: key, novelID: novelID, chapterID: chapterID, error: $0)
+            }
+        }
+        return try Self.decode(NovelChapterContent.self, json)
     }
 }

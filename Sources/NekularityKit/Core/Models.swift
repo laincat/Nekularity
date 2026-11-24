@@ -16,8 +16,15 @@ public struct PluginRecord: Codable, Sendable, Hashable, Identifiable {
     public var attribution: Attribution?
     public var warnings: [String]?
 
+    public static let comicType = "comic"
+    public static let videoJSType = "video-js"
+    public static let novelJSType = "novel-js"
+    public static let kazumiRuleType = "kazumi-rule"
+    public static let builtinType = "builtin"
+
     public var id: String { key }
-    public var isComic: Bool { type == "comic" }
+    public var isComic: Bool { type == Self.comicType }
+    public var isNovel: Bool { type == Self.novelJSType }
 }
 
 /// Optional author and homepage. Missing values are shown as missing.
@@ -615,6 +622,340 @@ public struct ComicDetails: Decodable, Sendable {
 /// Images of one chapter from `comic.loadEp`.
 public struct ChapterImages: Decodable, Sendable {
     public var images: [String]
+}
+
+// MARK: - Novel models
+
+/// One novel entry in a popular list or search result (mirrors Core `novel.Item`).
+public struct NovelItem: Codable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var title: String
+    public var cover: String?
+    public var author: String?
+
+    public init(id: String, title: String, cover: String? = nil, author: String? = nil) {
+        self.id = id
+        self.title = title
+        self.cover = cover
+        self.author = author
+    }
+
+    enum CodingKeys: String, CodingKey { case id, title, cover, author }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenientString(.id) ?? ""
+        title = c.lenientString(.title) ?? ""
+        cover = c.lenientString(.cover)
+        author = c.lenientString(.author)
+    }
+}
+
+/// One page of novel items returned by `NovelPopular` or `NovelSearch` (mirrors Core `novel.Page`).
+public struct NovelPage: Codable, Sendable, Hashable {
+    public var items: [NovelItem]
+    /// 0 when the source did not report a page limit.
+    public var maxPage: Int
+
+    public init(items: [NovelItem], maxPage: Int = 0) {
+        self.items = items
+        self.maxPage = maxPage
+    }
+
+    enum CodingKeys: String, CodingKey { case items, maxPage }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = (try? c.decodeIfPresent([Lenient<NovelItem>].self, forKey: .items))?.compactMap(\.value) ?? []
+        maxPage = c.lenientInt(.maxPage) ?? 0
+    }
+}
+
+/// One chapter entry in a novel's table of contents (mirrors Core `novel.Chapter`).
+public struct NovelChapter: Codable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var title: String
+    public var time: String?
+
+    public init(id: String, title: String, time: String? = nil) {
+        self.id = id
+        self.title = title
+        self.time = time
+    }
+
+    enum CodingKeys: String, CodingKey { case id, title, time }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenientString(.id) ?? ""
+        title = c.lenientString(.title) ?? ""
+        time = c.lenientString(.time)
+    }
+}
+
+/// Metadata and chapter list returned by `NovelDetail` (mirrors Core `novel.Detail`).
+public struct NovelDetail: Codable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var title: String
+    public var cover: String?
+    public var author: String?
+    public var summary: String?
+    public var status: String?
+    public var tags: [String]
+    public var chapters: [NovelChapter]
+
+    public init(
+        id: String,
+        title: String,
+        cover: String? = nil,
+        author: String? = nil,
+        summary: String? = nil,
+        status: String? = nil,
+        tags: [String] = [],
+        chapters: [NovelChapter] = []
+    ) {
+        self.id = id
+        self.title = title
+        self.cover = cover
+        self.author = author
+        self.summary = summary
+        self.status = status
+        self.tags = tags
+        self.chapters = chapters
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, cover, author, summary, status, tags, chapters
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenientString(.id) ?? ""
+        title = c.lenientString(.title) ?? ""
+        cover = c.lenientString(.cover)
+        author = c.lenientString(.author)
+        summary = c.lenientString(.summary)
+        status = c.lenientString(.status)
+        tags = (try? c.decodeIfPresent([String].self, forKey: .tags)) ?? []
+        chapters = (try? c.decodeIfPresent([Lenient<NovelChapter>].self, forKey: .chapters))?.compactMap(\.value) ?? []
+    }
+}
+
+/// Raw chapter HTML returned by `NovelChapter` (mirrors Core `novel.ChapterContent`).
+///
+/// Core returns the HTML verbatim without altering it; sanitisation and
+/// plain-text paragraph extraction happen in `NovelTextExtractor`.
+public struct NovelChapterContent: Codable, Sendable, Hashable {
+    public var html: String
+
+    public init(html: String) {
+        self.html = html
+    }
+
+    enum CodingKeys: String, CodingKey { case html }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        html = (try? c.decodeIfPresent(String.self, forKey: .html)) ?? ""
+    }
+}
+
+// MARK: - Shared source collection models
+
+/// Shared cross-platform source collection (mirrors Core `subscription.Collection`).
+public struct SourceCollection: Codable, Sendable, Hashable, Identifiable {
+    public static let schema = "veneracat-source/1-draft"
+    public static let capabilityComicJS = "comic-source.js"
+    public static let capabilityVideoJS = "video-source.js"
+    public static let capabilityNovelJS = "novel-source.js"
+    public static let defaultCapabilities: [String] = [
+        capabilityComicJS,
+        capabilityVideoJS,
+        capabilityNovelJS,
+    ]
+
+    public struct Support: Codable, Sendable, Hashable {
+        public var platforms: [String]
+        public var requiresCapabilities: [String]
+
+        public init(platforms: [String], requiresCapabilities: [String]) {
+            self.platforms = platforms
+            self.requiresCapabilities = requiresCapabilities
+        }
+    }
+
+    public struct Artifact: Codable, Sendable, Hashable {
+        public var url: String
+        public var sha256: String
+        public var bytes: Int64
+
+        public init(url: String, sha256: String, bytes: Int64) {
+            self.url = url
+            self.sha256 = sha256
+            self.bytes = bytes
+        }
+    }
+
+    public struct Design: Codable, Sendable, Hashable {
+        public var url: String
+        public var sha256: String
+
+        public init(url: String, sha256: String) {
+            self.url = url
+            self.sha256 = sha256
+        }
+    }
+
+    public struct Entry: Codable, Sendable, Hashable, Identifiable {
+        public var id: String
+        public var kind: String
+        public var name: String
+        public var version: String
+        public var status: String
+        public var key: String?
+        public var license: String?
+        public var supports: Support
+        public var artifact: Artifact?
+        public var design: Design?
+
+        public init(
+            id: String,
+            kind: String,
+            name: String,
+            version: String,
+            status: String,
+            key: String? = nil,
+            license: String? = nil,
+            supports: Support,
+            artifact: Artifact? = nil,
+            design: Design? = nil
+        ) {
+            self.id = id
+            self.kind = kind
+            self.name = name
+            self.version = version
+            self.status = status
+            self.key = key
+            self.license = license
+            self.supports = supports
+            self.artifact = artifact
+            self.design = design
+        }
+
+        /// Maps a collection entry kind or capability requirement onto Core's
+        /// `plugin.Type` string, or nil when this client cannot install it.
+        public var pluginType: String? {
+            switch kind {
+            case PluginRecord.comicType, "comic-source", SourceCollection.capabilityComicJS:
+                return PluginRecord.comicType
+            case PluginRecord.videoJSType, "video-source", SourceCollection.capabilityVideoJS:
+                return PluginRecord.videoJSType
+            case PluginRecord.novelJSType, "novel-source", SourceCollection.capabilityNovelJS:
+                return PluginRecord.novelJSType
+            case PluginRecord.kazumiRuleType:
+                return PluginRecord.kazumiRuleType
+            default:
+                if supports.requiresCapabilities.contains(SourceCollection.capabilityNovelJS) {
+                    return PluginRecord.novelJSType
+                }
+                return nil
+            }
+        }
+
+        public var isInstallable: Bool {
+            status != "planned" && artifact != nil && pluginType != nil
+        }
+
+        /// Evaluates platform and capability compatibility locally (mirroring Core's rule).
+        public func compatibility(
+            platform: String = "ios",
+            capabilities: [String] = SourceCollection.defaultCapabilities
+        ) -> SourceCollectionCompatibility {
+            var missing: [String] = []
+            if !supports.platforms.contains(platform) {
+                missing.append("platform:\(platform)")
+            }
+            let available = Set(capabilities)
+            for capability in supports.requiresCapabilities where !available.contains(capability) {
+                missing.append(capability)
+            }
+            return SourceCollectionCompatibility(id: id, compatible: missing.isEmpty, missing: missing)
+        }
+    }
+
+    public var schema: String
+    public var id: String
+    public var name: String
+    public var version: String
+    public var description: String?
+    public var entries: [Entry]
+
+    enum CodingKeys: String, CodingKey {
+        case schema = "$schema"
+        case id, name, version, description, entries
+    }
+
+    public init(
+        schema: String = SourceCollection.schema,
+        id: String,
+        name: String,
+        version: String,
+        description: String? = nil,
+        entries: [Entry]
+    ) {
+        self.schema = schema
+        self.id = id
+        self.name = name
+        self.version = version
+        self.description = description
+        self.entries = entries
+    }
+}
+
+/// Compatibility report for one entry in a `SourceCollection`.
+public struct SourceCollectionCompatibility: Codable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var compatible: Bool
+    public var missing: [String]
+
+    public init(id: String, compatible: Bool, missing: [String] = []) {
+        self.id = id
+        self.compatible = compatible
+        self.missing = missing
+    }
+
+    enum CodingKeys: String, CodingKey { case id, compatible, missing }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        compatible = try c.decode(Bool.self, forKey: .compatible)
+        missing = (try? c.decodeIfPresent([String].self, forKey: .missing)) ?? []
+    }
+}
+
+/// Core's `ParseSourceCollection` output: parsed collection plus per-entry compatibility rows.
+public struct SourceCollectionCheck: Codable, Sendable, Hashable {
+    public var collection: SourceCollection
+    public var compatibility: [SourceCollectionCompatibility]
+
+    public init(collection: SourceCollection, compatibility: [SourceCollectionCompatibility]) {
+        self.collection = collection
+        self.compatibility = compatibility
+    }
+
+    public func compatibility(for entryID: String) -> SourceCollectionCompatibility? {
+        compatibility.first { $0.id == entryID }
+    }
+
+    public func isCompatible(_ entryID: String) -> Bool {
+        compatibility(for: entryID)?.compatible == true
+    }
+
+    public var compatibleEntries: [SourceCollection.Entry] {
+        let allowed = Set(compatibility.filter(\.compatible).map(\.id))
+        return collection.entries.filter { allowed.contains($0.id) }
+    }
 }
 
 // MARK: - Lenient decoding helpers
