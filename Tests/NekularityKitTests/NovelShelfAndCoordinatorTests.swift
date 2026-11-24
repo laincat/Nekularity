@@ -178,8 +178,7 @@ struct NovelShelfStoreTests {
         let store = NovelShelfStore(directory: dir)
         #expect(store.lastError != nil)
         #expect(store.items.isEmpty)
-        let files = try FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
-        #expect(files.contains { $0.lastPathComponent.hasPrefix("novel_shelf.json.broken-") })
+        #expect(!StoreRescue.copies(of: file).isEmpty)
     }
 }
 

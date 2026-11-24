@@ -86,6 +86,12 @@ final class TransportStub: URLProtocol, @unchecked Sendable {
             headers["Content-Length"] = String(reply.body.count)
             let response = HTTPURLResponse(url: url, statusCode: reply.status,
                                            httpVersion: "HTTP/1.1", headerFields: headers)!
+            if (301...308).contains(reply.status),
+               let location = reply.headers["Location"],
+               let nextURL = URL(string: location, relativeTo: url)?.absoluteURL {
+                self.client?.urlProtocol(self, wasRedirectedTo: URLRequest(url: nextURL), redirectResponse: response)
+                return
+            }
             self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             if !reply.body.isEmpty { self.client?.urlProtocol(self, didLoad: reply.body) }
             self.client?.urlProtocolDidFinishLoading(self)

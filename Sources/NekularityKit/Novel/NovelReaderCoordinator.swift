@@ -82,7 +82,8 @@ public final class NovelReaderCoordinator {
             }
         } catch {
             if generation == requestGeneration {
-                state = .failed(CoreError.readable(error.localizedDescription))
+                let message = (error as? CoreError)?.errorDescription ?? CoreError.readable(error.localizedDescription)
+                state = .failed(message)
             }
         }
     }
@@ -132,7 +133,8 @@ public final class NovelReaderCoordinator {
             }
         } catch {
             if generation == requestGeneration {
-                state = .failed(CoreError.readable(error.localizedDescription))
+                let message = (error as? CoreError)?.errorDescription ?? CoreError.readable(error.localizedDescription)
+                state = .failed(message)
             }
         }
     }
