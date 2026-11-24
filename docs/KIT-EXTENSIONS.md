@@ -20,4 +20,4 @@ Core 调用服务包导出的 `handle(method, payloadText)`。有参数时传 JS
 
 Bangumi 的账号、收藏和进度方法需要 `access_token`。TMDB 接受 `api_read_token` 或 `api_key`。Trakt 搜索需要 `client_id`，账号相关方法额外需要 `access_token`。这些值来自当前环境的 `ServiceAccounts`。内置功能授权绑定到安装存档的摘要，调用仅授予必需且包已声明的 `network` 和 `secrets`。现有 Bangumi 和 TMDB 凭据保留在原 Keychain，确认包未安装时继续供内置客户端使用。可以在服务包账号或对应设置里单独录入包凭据。Trakt 需要调用方提供 `TraktProvider` 才有回退，现有 App 没有内置 Trakt 客户端。
 
-当前 Core 服务宿主只提供 `fetch(url)` 的 GET 请求。认证请求头、POST、PATCH 或 PUT 依赖 Core 扩展 HTTP 契约。Sources 已发布三份通过离线夹具验证的包。本仓库离线用例验证 Swift 请求、响应、权限与回退，并通过实际安装的夹具包验证 Core 和 `CoreHost` 调用链。
+服务包使用 Core `c164ea7` 起提供的 `fetch(url, init)` HTTP 契约，经 `CoreHost` 转发方法、请求头、正文与响应状态。Sources 已发布三份通过离线夹具验证的包。本仓库离线用例覆盖 Swift 请求、响应、权限与回退，并通过实际安装的夹具包检查认证 GET 和 PATCH 的头、正文与状态。

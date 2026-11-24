@@ -93,13 +93,6 @@ public final class ServiceStore {
         guard let host, !installing, allowsStructuredAccess(record) else {
             throw ServiceBridgeError.executionFailed(service: record.id, method: method)
         }
-        // Core currently discards fetch's method, headers and body. A GET can
-        // succeed on the same URL as a write and would report a false update.
-        let writes = [KnownServiceID.bangumi: ["collection.update", "episode.update"],
-                      KnownServiceID.trakt: ["scrobble.start", "scrobble.stop"]]
-        if writes[record.id]?.contains(method) == true {
-            throw ServiceBridgeError.transportUnavailable(service: record.id, method: method)
-        }
         activeStructuredCalls += 1
         defer { activeStructuredCalls -= 1 }
         return try await CoreService.callStructured(host: host, dataDir: dataDir, record: record,

@@ -15,7 +15,6 @@ public enum ServiceBridgeError: Error, LocalizedError, Equatable, Sendable {
     case invalidPayload(service: String, method: String)
     case invalidResponse(service: String, method: String)
     case unsupportedMethod(service: String, method: String)
-    case transportUnavailable(service: String, method: String)
 
     public var errorDescription: String? {
         switch self {
@@ -27,7 +26,6 @@ public enum ServiceBridgeError: Error, LocalizedError, Equatable, Sendable {
         case .invalidPayload(let id, let method): "服务包 \(id) 的 \(method) 收到了无效的请求参数"
         case .invalidResponse(let id, let method): "服务包 \(id) 的 \(method) 返回了无法解析的数据"
         case .unsupportedMethod(let id, let method): "服务包 \(id) 尚不支持 \(method)"
-        case .transportUnavailable(let id, let method): "当前 Core 的服务 HTTP 接口无法执行 \(id) 的 \(method)"
         }
     }
 }

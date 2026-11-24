@@ -8,15 +8,47 @@ private final class ServiceHTTPFixture: URLProtocol, @unchecked Sendable {
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
-        guard let url = request.url, url.absoluteString == "https://service-bridge.example.test/account",
-              request.httpMethod == "GET",
-              let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil) else {
+        guard let url = request.url, url.host == "service-bridge.example.test",
+              request.value(forHTTPHeaderField: "Authorization") == "Bearer core-fixture-token" else {
             client?.urlProtocol(self, didFailWithError: URLError(.badURL))
             return
         }
+        let status: Int
+        let body: String
+        switch (request.httpMethod, url.path) {
+        case ("GET", "/account"):
+            status = 200
+            body = #"{"id":10,"username":"from-host"}"#
+        case ("PATCH", "/episode"):
+            let expected = Data(#"{"type":2}"#.utf8)
+            status = requestBody() == expected && request.value(forHTTPHeaderField: "Content-Type") == "application/json" ? 202 : 400
+            body = ""
+        default:
+            status = 405
+            body = ""
+        }
+        guard let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: nil) else {
+            client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
+            return
+        }
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Data(#"{"id":10,"username":"from-host"}"#.utf8))
+        client?.urlProtocol(self, didLoad: Data(body.utf8))
         client?.urlProtocolDidFinishLoading(self)
+    }
+
+    private func requestBody() -> Data? {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return nil }
+        stream.open()
+        defer { stream.close() }
+        var result = Data()
+        var buffer = [UInt8](repeating: 0, count: 128)
+        while true {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count < 0 { return nil }
+            if count == 0 { return result }
+            result.append(contentsOf: buffer.prefix(count))
+        }
     }
 
     override func stopLoading() {}
@@ -32,11 +64,19 @@ private final class ServiceHTTPFixture: URLProtocol, @unchecked Sendable {
     let manifest = #"{"id":"service.bangumi","name":"Fixture","version":"1","kind":"service.js","entry":"index.mjs","permissions":["network","secrets","storage"]}"#
     let source = """
     export function handle(method, text) {
-      if (secret('access_token') !== 'core-fixture-token') throw new Error('expected the scoped token');
-      if (method === 'write') { storageSet('credential', secret('access_token')); return null; }
+      const token = secret('access_token');
+      if (method === 'write') { storageSet('credential', token); return null; }
+      const headers = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+      const base = 'https://service-bridge.example.test';
+      if (method === 'episode.update') {
+        const response = fetch(base + '/episode', { method: 'PATCH', headers, body: text });
+        if (!response.ok || response.status !== 202) throw new Error('expected HTTP 202');
+        return { ok: true, service: 'service.bangumi', method, data: { updated: true } };
+      }
       if (method !== 'account.me' || JSON.parse(text) !== null) throw new Error('wrong request');
-      const data = JSON.parse(fetch('https://service-bridge.example.test/account'));
-      return { ok: true, service: 'service.bangumi', method, data };
+      const response = fetch(base + '/account', { method: 'GET', headers });
+      if (!response.ok || response.status !== 200) throw new Error('expected HTTP 200');
+      return { ok: true, service: 'service.bangumi', method, data: JSON.parse(response.text()) };
     }
     """
     try Data(manifest.utf8).write(to: root.appending(path: "service.json"))
@@ -71,6 +111,10 @@ private final class ServiceHTTPFixture: URLProtocol, @unchecked Sendable {
     #expect(try await preferred.installed(id))
     let user = try await bridge.invokeIfInstalled(id, method: "account.me", secretKeys: ["access_token"], as: BangumiUser.self)
     #expect(user?.username == "from-host")
+    let accepted = try await bridge.invokeIfInstalled(id, method: "episode.update",
+                                                       payload: .serviceArguments(("type", .integer(2))),
+                                                       secretKeys: ["access_token"], as: ServiceAcknowledgement.self)
+    #expect(accepted != nil)
     await #expect(throws: ServiceBridgeError.executionFailed(service: id, method: "write")) {
         try await bridge.invokeIfInstalled(id, method: "write", secretKeys: ["access_token"], as: ServiceAcknowledgement.self)
     }
